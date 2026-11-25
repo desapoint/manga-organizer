@@ -13,6 +13,7 @@ backups/
 *.log
 node_modules/
 dist/
+/publish/
 bin/
 obj/
 .venv/

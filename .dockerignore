@@ -1,0 +1,14 @@
+**
+!LICENSE
+!THIRD-PARTY-NOTICES.txt
+!client/
+!client/package*.json
+!client/index.html
+!client/tsconfig.json
+!client/src/
+!client/src/**
+!src/
+!src/MangaOrganizer.Server/
+!src/MangaOrganizer.Server/*.cs
+!src/MangaOrganizer.Server/*.csproj
+!src/MangaOrganizer.Server/packages.lock.json
