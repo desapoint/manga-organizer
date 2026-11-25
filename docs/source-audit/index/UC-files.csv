@@ -1,0 +1,1895 @@
+Path,Classification,Bytes
+".dockerignore","other",1010
+".env.example","other",12110
+".github/FUNDING.yml","config/resource",409
+".github/ISSUE_TEMPLATE/bug_report.md","documentation",391
+".github/ISSUE_TEMPLATE/config.yml","config/resource",575
+".github/ISSUE_TEMPLATE/feature_request.md","documentation",250
+".github/PULL_REQUEST_TEMPLATE.md","documentation",571
+".github/actionlint.yaml","config/resource",206
+".github/dependabot.yml","config/resource",4968
+".github/workflows/ci.yml","build/deploy",12205
+".github/workflows/codeql.yml","build/deploy",742
+".github/workflows/desktop.yml","build/deploy",17566
+".github/workflows/engine-canary.yml","build/deploy",9206
+".github/workflows/engine-pack.yml","build/deploy",10215
+".github/workflows/ios-release.yml","build/deploy",8784
+".github/workflows/release.yml","build/deploy",26564
+".github/workflows/translate-pack.yml","build/deploy",7346
+".gitignore","other",1917
+"CHANGELOG.md","documentation",680985
+"CODE_OF_CONDUCT.md","documentation",2592
+"CONTRIBUTING.md","documentation",3762
+"Dockerfile.aio","build/deploy",6717
+"LICENSE","other",16726
+"README.md","documentation",26301
+"SECURITY.md","documentation",3491
+"bff/.dockerignore","other",37
+"bff/Dockerfile","build/deploy",3110
+"bff/docker-entrypoint.sh","other",12211
+"bff/openapi.yaml","config/resource",800112
+"bff/package-lock.json","config/resource",127803
+"bff/package.json","build/deploy",1334
+"bff/src/env.ts","source candidate",14891
+"bff/src/lib/activityLog.ts","source candidate",7101
+"bff/src/lib/ageRating.ts","source candidate",4764
+"bff/src/lib/altTitles.ts","source candidate",19627
+"bff/src/lib/anilist.ts","source candidate",29553
+"bff/src/lib/anilistLimit.ts","source candidate",6206
+"bff/src/lib/anilistPolicy.ts","source candidate",3951
+"bff/src/lib/anilistRelated.ts","source candidate",19579
+"bff/src/lib/anilistScores.ts","source candidate",5301
+"bff/src/lib/apiDocs.ts","source candidate",1749
+"bff/src/lib/appVersion.ts","source candidate",2117
+"bff/src/lib/archive.ts","source candidate",101765
+"bff/src/lib/archiveBoundaries.ts","source candidate",3856
+"bff/src/lib/archiveCaps.ts","source candidate",4838
+"bff/src/lib/archivePace.ts","source candidate",14834
+"bff/src/lib/archivePlan.ts","source candidate",18169
+"bff/src/lib/audit.ts","source candidate",4376
+"bff/src/lib/auth.ts","source candidate",45623
+"bff/src/lib/authMode.ts","source candidate",6838
+"bff/src/lib/authorNames.ts","source candidate",3868
+"bff/src/lib/autoDetails.ts","source candidate",17600
+"bff/src/lib/autoDetailsSql.ts","source candidate",2836
+"bff/src/lib/autoFollow.ts","source candidate",31345
+"bff/src/lib/autoHero.ts","source candidate",50524
+"bff/src/lib/autofix.ts","source candidate",103496
+"bff/src/lib/backend.ts","source candidate",6007
+"bff/src/lib/backup.ts","source candidate",21709
+"bff/src/lib/backupExtensions.ts","source candidate",33805
+"bff/src/lib/badges.ts","source candidate",4025
+"bff/src/lib/blockedPurge.ts","source candidate",11787
+"bff/src/lib/borrowNames.ts","source candidate",13527
+"bff/src/lib/bulkChapterDelete.ts","source candidate",30764
+"bff/src/lib/bulkNewest.ts","source candidate",16763
+"bff/src/lib/caseVariant.ts","source candidate",800
+"bff/src/lib/catalogRootGuard.ts","source candidate",5347
+"bff/src/lib/chapterCleanup.ts","source candidate",37222
+"bff/src/lib/chapterFailures.ts","source candidate",7117
+"bff/src/lib/chapterFallback.ts","source candidate",22381
+"bff/src/lib/chapterRanges.ts","source candidate",5002
+"bff/src/lib/clientAddr.ts","source candidate",18913
+"bff/src/lib/color.ts","source candidate",1832
+"bff/src/lib/comments.ts","source candidate",12215
+"bff/src/lib/confirmTitle.ts","source candidate",8012
+"bff/src/lib/contentScope.ts","source candidate",8246
+"bff/src/lib/copyLanguage.ts","source candidate",6238
+"bff/src/lib/copyRouter.ts","source candidate",5103
+"bff/src/lib/coverSelection.ts","source candidate",1446
+"bff/src/lib/coverTitleOcr.ts","source candidate",14651
+"bff/src/lib/coverTitleQuality.ts","source candidate",14926
+"bff/src/lib/db.ts","source candidate",3274
+"bff/src/lib/deletedGhosts.ts","source candidate",3519
+"bff/src/lib/desktop.ts","source candidate",16309
+"bff/src/lib/desktopGuard.ts","source candidate",2187
+"bff/src/lib/desktopUser.ts","source candidate",2888
+"bff/src/lib/deviceRing.ts","source candidate",5408
+"bff/src/lib/directionSignals.ts","source candidate",3996
+"bff/src/lib/discoverIdentity.ts","source candidate",27759
+"bff/src/lib/discoveryHub.ts","source candidate",14656
+"bff/src/lib/discoveryHubSchema.ts","source candidate",502
+"bff/src/lib/downloadActivity.ts","source candidate",17250
+"bff/src/lib/downloadCensus.ts","source candidate",17976
+"bff/src/lib/downloadJobs.ts","source candidate",7180
+"bff/src/lib/downloader.ts","source candidate",52767
+"bff/src/lib/editions.ts","source candidate",16979
+"bff/src/lib/engineHealth.ts","source candidate",19755
+"bff/src/lib/enrich.ts","source candidate",13764
+"bff/src/lib/extensionEngine.ts","source candidate",14841
+"bff/src/lib/extensionMonitor.ts","source candidate",26742
+"bff/src/lib/extensionRank.ts","source candidate",8460
+"bff/src/lib/externalReaderSchema.ts","source candidate",3274
+"bff/src/lib/externalReading.ts","source candidate",10317
+"bff/src/lib/extraCopies.ts","source candidate",18902
+"bff/src/lib/favorites.ts","source candidate",2077
+"bff/src/lib/fill.ts","source candidate",15099
+"bff/src/lib/findScope.ts","source candidate",3328
+"bff/src/lib/findSources.ts","source candidate",92160
+"bff/src/lib/fingerprint.ts","source candidate",5519
+"bff/src/lib/fingerprintJob.ts","source candidate",11183
+"bff/src/lib/finishDownloads.ts","source candidate",8441
+"bff/src/lib/followLimit.ts","source candidate",2794
+"bff/src/lib/fsAtomic.ts","source candidate",5657
+"bff/src/lib/fsGuard.ts","source candidate",7860
+"bff/src/lib/gate.ts","source candidate",4164
+"bff/src/lib/genres.ts","source candidate",1718
+"bff/src/lib/githubRelease.ts","source candidate",6811
+"bff/src/lib/groupStats.ts","source candidate",12456
+"bff/src/lib/health.ts","source candidate",140321
+"bff/src/lib/healthDisk.ts","source candidate",9764
+"bff/src/lib/healthFiles.ts","source candidate",5314
+"bff/src/lib/healthIgnore.ts","source candidate",8783
+"bff/src/lib/healthKit.ts","source candidate",3324
+"bff/src/lib/healthSummary.ts","source candidate",8396
+"bff/src/lib/healthTrackers.ts","source candidate",4523
+"bff/src/lib/heldTwice.ts","source candidate",7076
+"bff/src/lib/heroFrame.ts","source candidate",2431
+"bff/src/lib/hiddenChapters.ts","source candidate",10780
+"bff/src/lib/htmlText.ts","source candidate",8950
+"bff/src/lib/httpLimits.ts","source candidate",325
+"bff/src/lib/ids.ts","source candidate",1267
+"bff/src/lib/imageCache.ts","source candidate",11426
+"bff/src/lib/imageChapter.ts","source candidate",6331
+"bff/src/lib/imageExt.ts","source candidate",1793
+"bff/src/lib/importEnhancementSchema.ts","source candidate",1151
+"bff/src/lib/importMatchReview.ts","source candidate",2072
+"bff/src/lib/importMetadata.ts","source candidate",4529
+"bff/src/lib/importProgress.ts","source candidate",7950
+"bff/src/lib/incognito.ts","source candidate",1710
+"bff/src/lib/installPing.ts","source candidate",7098
+"bff/src/lib/junkPages.ts","source candidate",4176
+"bff/src/lib/kitsu.ts","source candidate",1560
+"bff/src/lib/komga.ts","source candidate",4663
+"bff/src/lib/komgaDto.ts","source candidate",41736
+"bff/src/lib/komgaGhosts.ts","source candidate",12465
+"bff/src/lib/komgaProgress.ts","source candidate",18016
+"bff/src/lib/komgaSession.ts","source candidate",6439
+"bff/src/lib/koreaderDigest.ts","source candidate",1438
+"bff/src/lib/koreaderHash.ts","source candidate",2697
+"bff/src/lib/lang.ts","source candidate",8224
+"bff/src/lib/library.ts","source candidate",82353
+"bff/src/lib/libraryAdmin.ts","source candidate",90314
+"bff/src/lib/libraryFolders.ts","source candidate",7862
+"bff/src/lib/libraryMove.ts","source candidate",5858
+"bff/src/lib/libraryNumbers.ts","source candidate",11145
+"bff/src/lib/libraryReader.ts","source candidate",1388
+"bff/src/lib/limits.ts","source candidate",1911
+"bff/src/lib/listingProgress.ts","source candidate",21503
+"bff/src/lib/lists.ts","source candidate",9165
+"bff/src/lib/localSeriesArt.ts","source candidate",8226
+"bff/src/lib/loginPassword.ts","source candidate",823
+"bff/src/lib/longStrip.ts","source candidate",1431
+"bff/src/lib/mainSource.ts","source candidate",15648
+"bff/src/lib/mangadexList.ts","source candidate",3766
+"bff/src/lib/mangaupdates.ts","source candidate",5949
+"bff/src/lib/manualAttach.ts","source candidate",14425
+"bff/src/lib/matchCheck.ts","source candidate",26380
+"bff/src/lib/memberDefaults.ts","source candidate",7559
+"bff/src/lib/mergeLeftovers.ts","source candidate",5140
+"bff/src/lib/migrate.ts","source candidate",176953
+"bff/src/lib/naming.ts","source candidate",15412
+"bff/src/lib/nextUp.ts","source candidate",2883
+"bff/src/lib/nextUpRule.ts","source candidate",2259
+"bff/src/lib/noticeChapters.ts","source candidate",23619
+"bff/src/lib/noticeSettings.ts","source candidate",3284
+"bff/src/lib/notify/guard.ts","source candidate",9092
+"bff/src/lib/notify/index.ts","source candidate",13985
+"bff/src/lib/notify/kinds.ts","source candidate",9880
+"bff/src/lib/notify/send.ts","source candidate",6300
+"bff/src/lib/notify/template.ts","source candidate",3460
+"bff/src/lib/numbering.ts","source candidate",68001
+"bff/src/lib/oidc.ts","source candidate",9688
+"bff/src/lib/onDeck.ts","source candidate",7134
+"bff/src/lib/onlineMatch.ts","source candidate",6330
+"bff/src/lib/otherTitles.ts","source candidate",2559
+"bff/src/lib/ownedCatalog.ts","source candidate",58014
+"bff/src/lib/pace.ts","source candidate",20814
+"bff/src/lib/pageCleanupFiles.ts","source candidate",20820
+"bff/src/lib/pageCount.ts","source candidate",1421
+"bff/src/lib/pageHash.ts","source candidate",8537
+"bff/src/lib/pageHashJob.ts","source candidate",10762
+"bff/src/lib/partAlias.ts","source candidate",11084
+"bff/src/lib/partial.ts","source candidate",25822
+"bff/src/lib/platform.ts","source candidate",2203
+"bff/src/lib/postingOrder.ts","source candidate",39898
+"bff/src/lib/privateAdmin.ts","source candidate",7517
+"bff/src/lib/privateFence.ts","source candidate",840
+"bff/src/lib/privateLibrarySchema.ts","source candidate",4539
+"bff/src/lib/profileTokens.ts","source candidate",2137
+"bff/src/lib/profiles.ts","source candidate",4580
+"bff/src/lib/progress.ts","source candidate",5607
+"bff/src/lib/progressRules.ts","source candidate",2345
+"bff/src/lib/publicConnection.ts","source candidate",3222
+"bff/src/lib/push.ts","source candidate",8903
+"bff/src/lib/readers/epub.ts","source candidate",4869
+"bff/src/lib/readers/pdf.ts","source candidate",5645
+"bff/src/lib/readingDirection.ts","source candidate",12862
+"bff/src/lib/readingInsights.ts","source candidate",5659
+"bff/src/lib/readingTime.ts","source candidate",14644
+"bff/src/lib/relPath.ts","source candidate",2235
+"bff/src/lib/releaseRadar.ts","source candidate",21334
+"bff/src/lib/releases.ts","source candidate",14452
+"bff/src/lib/rematch.ts","source candidate",6332
+"bff/src/lib/repair.ts","source candidate",131588
+"bff/src/lib/repairEstimate.ts","source candidate",5709
+"bff/src/lib/repairRuns.ts","source candidate",16527
+"bff/src/lib/replaceSource.ts","source candidate",12607
+"bff/src/lib/rescan.ts","source candidate",82304
+"bff/src/lib/retireSource.ts","source candidate",4650
+"bff/src/lib/runtime.ts","source candidate",6948
+"bff/src/lib/safeFetch.ts","source candidate",9066
+"bff/src/lib/said.ts","source candidate",78457
+"bff/src/lib/scanOrder.ts","source candidate",1857
+"bff/src/lib/scanlatorPrefs.ts","source candidate",3476
+"bff/src/lib/scoutMemory.ts","source candidate",6016
+"bff/src/lib/scoutRequests.ts","source candidate",3336
+"bff/src/lib/searchAll.ts","source candidate",29351
+"bff/src/lib/secretbox.ts","source candidate",2814
+"bff/src/lib/securityHeaders.ts","source candidate",1260
+"bff/src/lib/selectChapters.ts","source candidate",1513
+"bff/src/lib/seriesArt.ts","source candidate",7644
+"bff/src/lib/seriesGaps.ts","source candidate",2311
+"bff/src/lib/seriesLang.ts","source candidate",7129
+"bff/src/lib/seriesListing.ts","source candidate",51698
+"bff/src/lib/seriesSources.ts","source candidate",6841
+"bff/src/lib/seriesType.ts","source candidate",3659
+"bff/src/lib/seriesTypeSignals.ts","source candidate",5563
+"bff/src/lib/setAside.ts","source candidate",2577
+"bff/src/lib/smartLists.ts","source candidate",5357
+"bff/src/lib/solverVersion.ts","source candidate",1459
+"bff/src/lib/sourceCheck.ts","source candidate",8025
+"bff/src/lib/sourceDiagnosis.ts","source candidate",36120
+"bff/src/lib/sourceEvidence.ts","source candidate",9508
+"bff/src/lib/sourceHealth.ts","source candidate",20196
+"bff/src/lib/sourceHunt.ts","source candidate",32843
+"bff/src/lib/sourceLeftovers.ts","source candidate",25171
+"bff/src/lib/sourcePageRules.ts","source candidate",876
+"bff/src/lib/sourcePrefs.ts","source candidate",5027
+"bff/src/lib/sourceProbe.ts","source candidate",21927
+"bff/src/lib/sourceScout.ts","source candidate",45787
+"bff/src/lib/sourceStanding.ts","source candidate",7184
+"bff/src/lib/sourceWatchdog.ts","source candidate",14288
+"bff/src/lib/sources/budget.ts","source candidate",2022
+"bff/src/lib/sources/builtins.ts","source candidate",885
+"bff/src/lib/sources/customSites.ts","source candidate",3568
+"bff/src/lib/sources/dates.ts","source candidate",2473
+"bff/src/lib/sources/detect.ts","source candidate",2811
+"bff/src/lib/sources/engines/madara.ts","source candidate",15118
+"bff/src/lib/sources/engines/manganato.ts","source candidate",21326
+"bff/src/lib/sources/engines/mangathemesia.ts","source candidate",6409
+"bff/src/lib/sources/fake.ts","source candidate",9777
+"bff/src/lib/sources/flaresolverr.ts","source candidate",27042
+"bff/src/lib/sources/imageHosts.ts","source candidate",4394
+"bff/src/lib/sources/imgAttr.ts","source candidate",8550
+"bff/src/lib/sources/index.ts","source candidate",1786
+"bff/src/lib/sources/loader.ts","source candidate",6430
+"bff/src/lib/sources/mangadex.ts","source candidate",22586
+"bff/src/lib/sources/mangadexLangs.ts","source candidate",3913
+"bff/src/lib/sources/offline.ts","source candidate",4535
+"bff/src/lib/sources/reload.ts","source candidate",1980
+"bff/src/lib/sources/sdk.ts","source candidate",752
+"bff/src/lib/sources/slug.ts","source candidate",2897
+"bff/src/lib/sources/suwayomi/auth.ts","source candidate",10856
+"bff/src/lib/sources/suwayomi/cache.ts","source candidate",8940
+"bff/src/lib/sources/suwayomi/client.ts","source candidate",16754
+"bff/src/lib/sources/suwayomi/creatorFilters.ts","source candidate",2186
+"bff/src/lib/sources/suwayomi/engineBrowser.ts","source candidate",5337
+"bff/src/lib/sources/suwayomi/enginePin.ts","source candidate",3143
+"bff/src/lib/sources/suwayomi/engineSolver.ts","source candidate",6825
+"bff/src/lib/sources/suwayomi/engineState.ts","source candidate",2924
+"bff/src/lib/sources/suwayomi/extensions.ts","source candidate",21078
+"bff/src/lib/sources/suwayomi/installLock.ts","source candidate",2617
+"bff/src/lib/sources/suwayomi/langs.ts","source candidate",7812
+"bff/src/lib/sources/suwayomi/operations.ts","source candidate",11203
+"bff/src/lib/sources/suwayomi/prefs.ts","source candidate",12539
+"bff/src/lib/sources/suwayomi/register.ts","source candidate",23792
+"bff/src/lib/sources/suwayomi/siteSessions.ts","source candidate",15621
+"bff/src/lib/sources/suwayomi/sources.ts","source candidate",25442
+"bff/src/lib/sources/types.ts","source candidate",13788
+"bff/src/lib/sourcesOverview.ts","source candidate",13984
+"bff/src/lib/specialChapters.ts","source candidate",6702
+"bff/src/lib/spreadJoin.ts","source candidate",12482
+"bff/src/lib/spreadMarks.ts","source candidate",4692
+"bff/src/lib/spreadMeasure.ts","source candidate",8212
+"bff/src/lib/ssrfGuard.ts","source candidate",6643
+"bff/src/lib/tachibk.ts","source candidate",14110
+"bff/src/lib/titleArt.ts","source candidate",30027
+"bff/src/lib/titleExtraction.ts","source candidate",53139
+"bff/src/lib/titleExtractionBatch.ts","source candidate",26340
+"bff/src/lib/titleExtractionWorker.ts","source candidate",4423
+"bff/src/lib/titleLogoLibrary.ts","source candidate",6621
+"bff/src/lib/titleLogoProvider.ts","source candidate",20789
+"bff/src/lib/titleLogoScan.ts","source candidate",10136
+"bff/src/lib/titleMaskProjection.ts","source candidate",1814
+"bff/src/lib/titleMaskRaster.ts","source candidate",3987
+"bff/src/lib/titleMatch.ts","source candidate",3782
+"bff/src/lib/titleNumbers.ts","source candidate",8960
+"bff/src/lib/totp.ts","source candidate",4103
+"bff/src/lib/trackerPace.ts","source candidate",995
+"bff/src/lib/trackerProviders.ts","source candidate",58241
+"bff/src/lib/trackerRecs.ts","source candidate",22439
+"bff/src/lib/trackerRecsCore.ts","source candidate",7896
+"bff/src/lib/trackers.ts","source candidate",40687
+"bff/src/lib/translate/bubbles.ts","source candidate",3758
+"bff/src/lib/translate/engine.ts","source candidate",11899
+"bff/src/lib/translate/llm.ts","source candidate",5809
+"bff/src/lib/translate/ocr.ts","source candidate",6062
+"bff/src/lib/translate/ocrCore.ts","source candidate",7738
+"bff/src/lib/translate/ocrWorker.ts","source candidate",8576
+"bff/src/lib/translate/pages.ts","source candidate",6815
+"bff/src/lib/translate/pin.ts","source candidate",3284
+"bff/src/lib/translate/prompt.ts","source candidate",5433
+"bff/src/lib/translate/queue.ts","source candidate",4173
+"bff/src/lib/translate/render.ts","source candidate",15267
+"bff/src/lib/trending.ts","source candidate",5758
+"bff/src/lib/updater.ts","source candidate",104259
+"bff/src/lib/verifyFiles.ts","source candidate",17737
+"bff/src/lib/visibility.ts","source candidate",35920
+"bff/src/lib/webRoot.ts","source candidate",6695
+"bff/src/routes/admin.ts","source candidate",396703
+"bff/src/routes/archive.ts","source candidate",4556
+"bff/src/routes/auth.ts","source candidate",67344
+"bff/src/routes/autoHero.ts","source candidate",1684
+"bff/src/routes/catalog.ts","source candidate",79243
+"bff/src/routes/comments.ts","source candidate",9864
+"bff/src/routes/discoveryHub.ts","source candidate",3186
+"bff/src/routes/downloads.ts","source candidate",7667
+"bff/src/routes/externalReaders.ts","source candidate",1256
+"bff/src/routes/findSources.ts","source candidate",16833
+"bff/src/routes/images.ts","source candidate",84929
+"bff/src/routes/komgaCompat.ts","source candidate",37382
+"bff/src/routes/kosync.ts","source candidate",7573
+"bff/src/routes/notify.ts","source candidate",14003
+"bff/src/routes/numbering.ts","source candidate",12117
+"bff/src/routes/opds.ts","source candidate",34809
+"bff/src/routes/pageCleanup.ts","source candidate",7350
+"bff/src/routes/personal.ts","source candidate",82545
+"bff/src/routes/privateLibrary.ts","source candidate",11716
+"bff/src/routes/recommendations.ts","source candidate",3251
+"bff/src/routes/rescan.ts","source candidate",6707
+"bff/src/routes/sources.ts","source candidate",300174
+"bff/src/routes/titleArt.ts","source candidate",3261
+"bff/src/routes/titleExtraction.ts","source candidate",6567
+"bff/src/routes/translate.ts","source candidate",6348
+"bff/src/routes/upload.ts","source candidate",19494
+"bff/src/server.ts","source candidate",61135
+"bff/test/accountLock.int.test.ts","test candidate",12986
+"bff/test/activityLog.int.test.ts","test candidate",12241
+"bff/test/addAsync.test.ts","test candidate",12090
+"bff/test/addSeries.int.test.ts","test candidate",68144
+"bff/test/adminPromotion.int.test.ts","test candidate",2984
+"bff/test/adminStats.int.test.ts","test candidate",9799
+"bff/test/adultFilter.int.test.ts","test candidate",20310
+"bff/test/adultFilterSql.test.ts","test candidate",7469
+"bff/test/adultLibrary.int.test.ts","test candidate",34943
+"bff/test/ageRating.int.test.ts","test candidate",10904
+"bff/test/ageRatingOnAdd.int.test.ts","test candidate",10148
+"bff/test/aioParity.test.ts","test candidate",9378
+"bff/test/altTitles.int.test.ts","test candidate",32311
+"bff/test/altTitles.test.ts","test candidate",7399
+"bff/test/anilistQuota.int.test.ts","test candidate",11117
+"bff/test/anilistRelated.int.test.ts","test candidate",32178
+"bff/test/anilistRelated.test.ts","test candidate",10566
+"bff/test/anilistScores.int.test.ts","test candidate",11551
+"bff/test/anilistUrl.test.ts","test candidate",2398
+"bff/test/apitokens.int.test.ts","test candidate",14182
+"bff/test/appVersion.test.ts","test candidate",2522
+"bff/test/archive.int.test.ts","test candidate",102648
+"bff/test/archiveCaps.test.ts","test candidate",5724
+"bff/test/archiveFormats.test.ts","test candidate",13374
+"bff/test/archivePace.test.ts","test candidate",20141
+"bff/test/archivePacing.test.ts","test candidate",8351
+"bff/test/archivePlan.test.ts","test candidate",16496
+"bff/test/archiveRoutes.int.test.ts","test candidate",23846
+"bff/test/artOverview.int.test.ts","test candidate",4625
+"bff/test/authMode.test.ts","test candidate",4316
+"bff/test/authorFilter.int.test.ts","test candidate",5552
+"bff/test/authorNames.test.ts","test candidate",3599
+"bff/test/autoDetails.int.test.ts","test candidate",19331
+"bff/test/autoFollow.int.test.ts","test candidate",46569
+"bff/test/autoHero.int.test.ts","test candidate",19193
+"bff/test/autoHero.test.ts","test candidate",9658
+"bff/test/autofix.int.test.ts","test candidate",71515
+"bff/test/autofixExtensions.int.test.ts","test candidate",32375
+"bff/test/autofixScrub.test.ts","test candidate",6142
+"bff/test/autofixUnloaded.int.test.ts","test candidate",19523
+"bff/test/avatarFrames.int.test.ts","test candidate",5659
+"bff/test/backendDefault.test.ts","test candidate",3538
+"bff/test/backendGate.test.ts","test candidate",3083
+"bff/test/backfillSchedule.test.ts","test candidate",4486
+"bff/test/backup.int.test.ts","test candidate",12219
+"bff/test/backupDiscover.int.test.ts","test candidate",5143
+"bff/test/backupExtensions.int.test.ts","test candidate",33016
+"bff/test/backupFollowers.int.test.ts","test candidate",5581
+"bff/test/backupHour.int.test.ts","test candidate",10263
+"bff/test/backupHour.test.ts","test candidate",8684
+"bff/test/backupSchedule.test.ts","test candidate",8875
+"bff/test/backupSkips.test.ts","test candidate",8846
+"bff/test/backupStore.int.test.ts","test candidate",17901
+"bff/test/badges.test.ts","test candidate",2537
+"bff/test/blockedGroups.int.test.ts","test candidate",26936
+"bff/test/bookOverrides.int.test.ts","test candidate",7275
+"bff/test/bookmarks.int.test.ts","test candidate",7071
+"bff/test/borrowNames.int.test.ts","test candidate",13520
+"bff/test/buildCache.test.ts","test candidate",5540
+"bff/test/bulk.int.test.ts","test candidate",7032
+"bff/test/bulkDeleteCrash.int.test.ts","test candidate",12435
+"bff/test/bulkMonitorDelete.int.test.ts","test candidate",22955
+"bff/test/bulkNewest.int.test.ts","test candidate",23495
+"bff/test/caseVariantOnDisk.test.ts","test candidate",1863
+"bff/test/catalogRootGuard.int.test.ts","test candidate",6429
+"bff/test/chapterActions.int.test.ts","test candidate",74475
+"bff/test/chapterCleanup.int.test.ts","test candidate",33952
+"bff/test/chapterCleanup.test.ts","test candidate",6761
+"bff/test/chapterComments.int.test.ts","test candidate",19869
+"bff/test/chapterFallback.int.test.ts","test candidate",24091
+"bff/test/chapterNames.int.test.ts","test candidate",11774
+"bff/test/chapterRanges.int.test.ts","test candidate",24165
+"bff/test/chapterRanges.test.ts","test candidate",3234
+"bff/test/chapterSpellings.test.ts","test candidate",5492
+"bff/test/cleanupBareMount.int.test.ts","test candidate",11616
+"bff/test/cleanupCoverPage.int.test.ts","test candidate",13428
+"bff/test/cleanupWhy.int.test.ts","test candidate",11453
+"bff/test/clientIpHygiene.test.ts","test candidate",2950
+"bff/test/clientZone.test.ts","test candidate",17750
+"bff/test/conditionBounds.test.ts","test candidate",2651
+"bff/test/consentSurface.test.ts","test candidate",5053
+"bff/test/consoleNamesInDocs.test.ts","test candidate",8601
+"bff/test/copyLanguage.int.test.ts","test candidate",15552
+"bff/test/copyLanguage.test.ts","test candidate",5632
+"bff/test/copyPages.int.test.ts","test candidate",7145
+"bff/test/copyRouter.int.test.ts","test candidate",6621
+"bff/test/copyRouter.test.ts","test candidate",3573
+"bff/test/coverPicker.int.test.ts","test candidate",7495
+"bff/test/coverProxy.test.ts","test candidate",10612
+"bff/test/coverRedirectHeaders.test.ts","test candidate",6288
+"bff/test/coverSolverGuard.test.ts","test candidate",13246
+"bff/test/coverTitleOcr.test.ts","test candidate",10076
+"bff/test/coverTitleQuality.test.ts","test candidate",12361
+"bff/test/coverUrlGuard.int.test.ts","test candidate",12244
+"bff/test/creatorSearch.test.ts","test candidate",2982
+"bff/test/currentJwtAuthority.int.test.ts","test candidate",3083
+"bff/test/dates.test.ts","test candidate",1598
+"bff/test/deleteUnreadable.int.test.ts","test candidate",12355
+"bff/test/deployCompose.test.ts","test candidate",26565
+"bff/test/desktopAuth.int.test.ts","test candidate",11948
+"bff/test/desktopAuth.test.ts","test candidate",16085
+"bff/test/desktopBackup.test.ts","test candidate",6192
+"bff/test/desktopCopy.test.ts","test candidate",16158
+"bff/test/desktopOff.test.ts","test candidate",5711
+"bff/test/desktopParity.test.ts","test candidate",8457
+"bff/test/desktopPaths.test.ts","test candidate",6525
+"bff/test/desktopProfiles.int.test.ts","test candidate",5729
+"bff/test/desktopRoutes.test.ts","test candidate",13398
+"bff/test/desktopSwitchHygiene.test.ts","test candidate",22855
+"bff/test/devDbInit.test.ts","test candidate",10068
+"bff/test/deviceRing.int.test.ts","test candidate",10298
+"bff/test/directionSignals.test.ts","test candidate",6988
+"bff/test/discoverIdentity.int.test.ts","test candidate",24663
+"bff/test/discoverIdentity.test.ts","test candidate",4931
+"bff/test/discoverSources.int.test.ts","test candidate",13579
+"bff/test/discoveryHub.int.test.ts","test candidate",17609
+"bff/test/diskGuard.test.ts","test candidate",3180
+"bff/test/docsRecipes.test.ts","test candidate",3289
+"bff/test/downloadActivity.int.test.ts","test candidate",14178
+"bff/test/downloadBlame.int.test.ts","test candidate",15523
+"bff/test/downloadCancel.int.test.ts","test candidate",14545
+"bff/test/downloadPacing.int.test.ts","test candidate",4410
+"bff/test/downloadsView.int.test.ts","test candidate",36917
+"bff/test/editions.int.test.ts","test candidate",29831
+"bff/test/engineCache.test.ts","test candidate",19379
+"bff/test/engineCanaryScripts.test.ts","test candidate",14408
+"bff/test/engineHealth.test.ts","test candidate",30190
+"bff/test/engineLive.test.ts","test candidate",6533
+"bff/test/enginePins.test.ts","test candidate",8539
+"bff/test/engineRecovery.int.test.ts","test candidate",4150
+"bff/test/engineRedirect.test.ts","test candidate",4170
+"bff/test/engineRetry.test.ts","test candidate",7144
+"bff/test/engineState.test.ts","test candidate",7608
+"bff/test/engineSwitch.test.ts","test candidate",5140
+"bff/test/entrypointEmbedded.test.ts","test candidate",14140
+"bff/test/envflag.test.ts","test candidate",1655
+"bff/test/errorHandler.int.test.ts","test candidate",5522
+"bff/test/extensionCatalog.int.test.ts","test candidate",25985
+"bff/test/extensionLangs.int.test.ts","test candidate",10572
+"bff/test/extensionMonitor.int.test.ts","test candidate",13325
+"bff/test/extensionMonitor.test.ts","test candidate",31354
+"bff/test/extensionPrefs.int.test.ts","test candidate",13168
+"bff/test/extensionRank.test.ts","test candidate",9237
+"bff/test/extensionRepos.int.test.ts","test candidate",25186
+"bff/test/extensionsEngine.int.test.ts","test candidate",25430
+"bff/test/extensionsEngineOff.int.test.ts","test candidate",4863
+"bff/test/externalReaders.int.test.ts","test candidate",14254
+"bff/test/extraCopies.int.test.ts","test candidate",26401
+"bff/test/fakeSource.test.ts","test candidate",17219
+"bff/test/fakeSuwayomi.test.ts","test candidate",49463
+"bff/test/favoritesOrder.int.test.ts","test candidate",7391
+"bff/test/favoritesSort.int.test.ts","test candidate",5017
+"bff/test/fetchRotation.int.test.ts","test candidate",25078
+"bff/test/fetchWhole.int.test.ts","test candidate",8715
+"bff/test/fileOps.int.test.ts","test candidate",26403
+"bff/test/fill.int.test.ts","test candidate",29233
+"bff/test/fill.test.ts","test candidate",8779
+"bff/test/fillScanProgress.int.test.ts","test candidate",8556
+"bff/test/filters.int.test.ts","test candidate",8373
+"bff/test/findSources.int.test.ts","test candidate",86331
+"bff/test/findTheirName.int.test.ts","test candidate",11116
+"bff/test/fingerprint.test.ts","test candidate",8201
+"bff/test/fingerprintJob.int.test.ts","test candidate",13546
+"bff/test/finishDownloads.int.test.ts","test candidate",27077
+"bff/test/finishLanes.int.test.ts","test candidate",8884
+"bff/test/finishedOnce.int.test.ts","test candidate",9801
+"bff/test/fixtures/captureSuwayomiSchema.mjs","test candidate",6637
+"bff/test/fixtures/conformFakeSuwayomi.mjs","test candidate",10820
+"bff/test/fixtures/fakeSuwayomi.ts","test candidate",12244
+"bff/test/fixtures/fakeSuwayomiEngine.mjs","test candidate",112498
+"bff/test/fixtures/koreader-partialmd5-vectors.json","test candidate",18136
+"bff/test/fixtures/suwayomi-v2.3.2243-schema.json","test candidate",110137
+"bff/test/fixtures/suwayomi-v2.4.2366-schema.json","test candidate",111653
+"bff/test/fixtures/v0.48.4-required-columns.json","test candidate",3347
+"bff/test/fixtures/v0.49.0-required-columns.json","test candidate",3826
+"bff/test/fixtures/v0.51.0-required-columns.json","test candidate",4009
+"bff/test/fixtures/v0.95.0-required-columns.json","test candidate",5499
+"bff/test/fixtures/webtoons-posts.json","test candidate",31341
+"bff/test/foldersTwice.int.test.ts","test candidate",4026
+"bff/test/followLimit.int.test.ts","test candidate",6881
+"bff/test/followLimit.test.ts","test candidate",2036
+"bff/test/forgetSeries.int.test.ts","test candidate",55525
+"bff/test/fsAtomic.test.ts","test candidate",2661
+"bff/test/fsGuard.test.ts","test candidate",5386
+"bff/test/gate.test.ts","test candidate",4843
+"bff/test/gemsIncognito.int.test.ts","test candidate",4679
+"bff/test/genreOverview.int.test.ts","test candidate",9244
+"bff/test/genres.test.ts","test candidate",1729
+"bff/test/githubApiUrl.test.ts","test candidate",1776
+"bff/test/globalFetch.test.ts","test candidate",4318
+"bff/test/groupStats.test.ts","test candidate",14384
+"bff/test/groupUpgrade.int.test.ts","test candidate",18654
+"bff/test/groupsAndVersions.int.test.ts","test candidate",25390
+"bff/test/health.int.test.ts","test candidate",138933
+"bff/test/healthBySeries.int.test.ts","test candidate",7055
+"bff/test/healthDisk.int.test.ts","test candidate",6878
+"bff/test/healthDisk.test.ts","test candidate",5565
+"bff/test/healthFiles.int.test.ts","test candidate",7233
+"bff/test/healthIgnore.int.test.ts","test candidate",8758
+"bff/test/healthNotes.test.ts","test candidate",1286
+"bff/test/healthSummary.int.test.ts","test candidate",7689
+"bff/test/healthTrackers.int.test.ts","test candidate",5578
+"bff/test/heldTwice.int.test.ts","test candidate",13113
+"bff/test/heroBackdrop.test.ts","test candidate",4934
+"bff/test/hiddenChapters.int.test.ts","test candidate",32889
+"bff/test/homeRails.int.test.ts","test candidate",9481
+"bff/test/htmlText.test.ts","test candidate",8143
+"bff/test/httpLimits.test.ts","test candidate",1558
+"bff/test/imageBearer.int.test.ts","test candidate",10933
+"bff/test/imageChapter.int.test.ts","test candidate",13517
+"bff/test/imageExt.test.ts","test candidate",3599
+"bff/test/imgAttr.test.ts","test candidate",7908
+"bff/test/importBatch.int.test.ts","test candidate",170257
+"bff/test/importMatchReview.test.ts","test candidate",2129
+"bff/test/importProgress.int.test.ts","test candidate",16711
+"bff/test/incognito.int.test.ts","test candidate",10039
+"bff/test/inlineAdminScope.int.test.ts","test candidate",4157
+"bff/test/installConsent.int.test.ts","test candidate",6176
+"bff/test/installLock.test.ts","test candidate",2191
+"bff/test/installPing.test.ts","test candidate",7078
+"bff/test/junkOverrideAccess.int.test.ts","test candidate",6370
+"bff/test/junkPages.int.test.ts","test candidate",7104
+"bff/test/keepReadingHide.int.test.ts","test candidate",6064
+"bff/test/komgaCompat.int.test.ts","test candidate",49988
+"bff/test/komgaContract.test.ts","test candidate",30290
+"bff/test/komgaGhosts.int.test.ts","test candidate",41664
+"bff/test/komgaProgress.int.test.ts","test candidate",14276
+"bff/test/koreaderHash.test.ts","test candidate",1500
+"bff/test/lang.test.ts","test candidate",5202
+"bff/test/languageGuard.int.test.ts","test candidate",25231
+"bff/test/lastCopyGuard.int.test.ts","test candidate",8475
+"bff/test/libBooksRoot.test.ts","test candidate",3144
+"bff/test/libraries.int.test.ts","test candidate",12433
+"bff/test/libraryAccess.int.test.ts","test candidate",9383
+"bff/test/libraryAdmin.int.test.ts","test candidate",14321
+"bff/test/libraryManage.int.test.ts","test candidate",53880
+"bff/test/libraryMove.int.test.ts","test candidate",27551
+"bff/test/libraryReader.int.test.ts","test candidate",5434
+"bff/test/libraryReader.test.ts","test candidate",930
+"bff/test/libraryRootGone.int.test.ts","test candidate",22602
+"bff/test/limits.test.ts","test candidate",2135
+"bff/test/listSort.int.test.ts","test candidate",8629
+"bff/test/listingProgress.int.test.ts","test candidate",32573
+"bff/test/lists.int.test.ts","test candidate",19634
+"bff/test/localSeriesArt.int.test.ts","test candidate",9653
+"bff/test/logLevel.test.ts","test candidate",1976
+"bff/test/longStrip.test.ts","test candidate",1730
+"bff/test/madaraListing.test.ts","test candidate",13041
+"bff/test/madaraNotAListing.test.ts","test candidate",3650
+"bff/test/mainSource.int.test.ts","test candidate",23734
+"bff/test/managedProfiles.int.test.ts","test candidate",7774
+"bff/test/mangadexLang.test.ts","test candidate",10155
+"bff/test/mangadexLangs.int.test.ts","test candidate",12284
+"bff/test/mangadexLatest.test.ts","test candidate",4891
+"bff/test/mangadexLimiter.test.ts","test candidate",7147
+"bff/test/mangadexRating.test.ts","test candidate",2585
+"bff/test/manganatoChapters.test.ts","test candidate",6021
+"bff/test/manganatoListing.test.ts","test candidate",7725
+"bff/test/manganatoPages.test.ts","test candidate",5470
+"bff/test/manganatoSeries.test.ts","test candidate",4702
+"bff/test/mangaupdatesTracker.test.ts","test candidate",13548
+"bff/test/manualAttach.int.test.ts","test candidate",17642
+"bff/test/matchCheck.int.test.ts","test candidate",34043
+"bff/test/meTalk.int.test.ts","test candidate",3345
+"bff/test/memberDefaults.int.test.ts","test candidate",21585
+"bff/test/migrate.int.test.ts","test candidate",83419
+"bff/test/migrateDdl.test.ts","test candidate",1453
+"bff/test/nameRule.int.test.ts","test candidate",9745
+"bff/test/naming.test.ts","test candidate",14317
+"bff/test/narrowSources.test.ts","test candidate",780
+"bff/test/networkSettings.int.test.ts","test candidate",8649
+"bff/test/nextUp.int.test.ts","test candidate",10243
+"bff/test/nextUp.test.ts","test candidate",2952
+"bff/test/notesVisibility.int.test.ts","test candidate",10609
+"bff/test/noticeChapters.int.test.ts","test candidate",31473
+"bff/test/noticeRanges.int.test.ts","test candidate",15795
+"bff/test/noticeSurfaces.int.test.ts","test candidate",19670
+"bff/test/notifySend.test.ts","test candidate",22781
+"bff/test/notifyTargets.int.test.ts","test candidate",40224
+"bff/test/numbering.int.test.ts","test candidate",67895
+"bff/test/numberingRoutes.int.test.ts","test candidate",21831
+"bff/test/ocrWorkerLifecycle.test.ts","test candidate",3786
+"bff/test/offlineDates.int.test.ts","test candidate",6880
+"bff/test/oidc.test.ts","test candidate",7484
+"bff/test/oidcCallbackBounds.int.test.ts","test candidate",6386
+"bff/test/oidcLinkByUsername.int.test.ts","test candidate",8386
+"bff/test/onDeck.int.test.ts","test candidate",7074
+"bff/test/onlineMatch.int.test.ts","test candidate",34293
+"bff/test/onlineMatch.test.ts","test candidate",18338
+"bff/test/opdsPse.int.test.ts","test candidate",38414
+"bff/test/opdsShelves.int.test.ts","test candidate",9316
+"bff/test/opdsToken.int.test.ts","test candidate",13396
+"bff/test/openapiCoverage.test.ts","test candidate",9174
+"bff/test/otherTitles.int.test.ts","test candidate",8667
+"bff/test/otherTitles.unit.test.ts","test candidate",2010
+"bff/test/outboundGuard.test.ts","test candidate",7032
+"bff/test/pace.test.ts","test candidate",26831
+"bff/test/pacePersists.test.ts","test candidate",13153
+"bff/test/pageCleanup.int.test.ts","test candidate",14043
+"bff/test/pageCleanupFiles.test.ts","test candidate",10657
+"bff/test/pageConcurrency.test.ts","test candidate",12639
+"bff/test/pageFit.int.test.ts","test candidate",5966
+"bff/test/pageForScreen.test.ts","test candidate",4064
+"bff/test/pageHash.test.ts","test candidate",14116
+"bff/test/pageHashJob.int.test.ts","test candidate",7781
+"bff/test/pageOrder.int.test.ts","test candidate",3065
+"bff/test/pageProgress.test.ts","test candidate",2208
+"bff/test/pageProgressFetch.test.ts","test candidate",2362
+"bff/test/partAlias.test.ts","test candidate",10991
+"bff/test/partialChapter.test.ts","test candidate",23221
+"bff/test/partialComplete.int.test.ts","test candidate",33065
+"bff/test/passwordlessProfile.int.test.ts","test candidate",10182
+"bff/test/pdfEpub.test.ts","test candidate",14543
+"bff/test/planOnAdd.int.test.ts","test candidate",13208
+"bff/test/postingOrder.test.ts","test candidate",46460
+"bff/test/predicateHygiene.test.ts","test candidate",12130
+"bff/test/preview.int.test.ts","test candidate",9511
+"bff/test/privateAdminResponse.int.test.ts","test candidate",2922
+"bff/test/privateLibrary.int.test.ts","test candidate",37388
+"bff/test/profileDowngrade.int.test.ts","test candidate",6302
+"bff/test/profileLocalPick.int.test.ts","test candidate",5899
+"bff/test/profileSwitch.int.test.ts","test candidate",8534
+"bff/test/profileTokenDomains.test.ts","test candidate",2396
+"bff/test/profileZone.int.test.ts","test candidate",9927
+"bff/test/profiles.test.ts","test candidate",1857
+"bff/test/progress.int.test.ts","test candidate",5029
+"bff/test/progressOrdering.int.test.ts","test candidate",6704
+"bff/test/prunedBooks.int.test.ts","test candidate",16264
+"bff/test/publicConnection.test.ts","test candidate",6169
+"bff/test/pushGuards.int.test.ts","test candidate",9600
+"bff/test/readingDirection.int.test.ts","test candidate",28573
+"bff/test/readingInsights.int.test.ts","test candidate",9056
+"bff/test/readingTime.int.test.ts","test candidate",10899
+"bff/test/readingTime.test.ts","test candidate",9487
+"bff/test/rebase.test.ts","test candidate",4160
+"bff/test/recommendationsRoute.int.test.ts","test candidate",3458
+"bff/test/recoveryCodes.int.test.ts","test candidate",6475
+"bff/test/refreshLost.int.test.ts","test candidate",13442
+"bff/test/refreshRace.int.test.ts","test candidate",6773
+"bff/test/register.int.test.ts","test candidate",9582
+"bff/test/relPath.test.ts","test candidate",12186
+"bff/test/releasePipeline.test.ts","test candidate",65925
+"bff/test/releaseRadar.int.test.ts","test candidate",20981
+"bff/test/releaseRadar.test.ts","test candidate",12917
+"bff/test/releases.test.ts","test candidate",12049
+"bff/test/reloadWindow.int.test.ts","test candidate",5515
+"bff/test/rematch.int.test.ts","test candidate",14057
+"bff/test/repair.int.test.ts","test candidate",93677
+"bff/test/repairEstimate.test.ts","test candidate",3486
+"bff/test/repairRoutes.int.test.ts","test candidate",41061
+"bff/test/repairRuns.test.ts","test candidate",3955
+"bff/test/repoHygiene.test.ts","test candidate",2211
+"bff/test/rescan.int.test.ts","test candidate",82764
+"bff/test/retireSource.int.test.ts","test candidate",12788
+"bff/test/routeWiring.int.test.ts","test candidate",14551
+"bff/test/run-shards.mjs","test candidate",6494
+"bff/test/sanitize.test.ts","test candidate",5836
+"bff/test/scan.int.test.ts","test candidate",22008
+"bff/test/scanDepth.int.test.ts","test candidate",8036
+"bff/test/scanLayouts.int.test.ts","test candidate",9128
+"bff/test/scanOrder.test.ts","test candidate",1548
+"bff/test/scanResilience.int.test.ts","test candidate",25817
+"bff/test/scanWalk.test.ts","test candidate",10049
+"bff/test/scanlatorPrefs.int.test.ts","test candidate",13794
+"bff/test/scanlatorStamp.int.test.ts","test candidate",5694
+"bff/test/scanlatorsGlobal.int.test.ts","test candidate",4771
+"bff/test/scoutOrder.test.ts","test candidate",4274
+"bff/test/scoutWords.int.test.ts","test candidate",7280
+"bff/test/searchAll.int.test.ts","test candidate",45736
+"bff/test/searchCards.test.ts","test candidate",2209
+"bff/test/searchPages.int.test.ts","test candidate",5105
+"bff/test/secretbox.test.ts","test candidate",3163
+"bff/test/securityHeaders.test.ts","test candidate",3905
+"bff/test/selectChapters.test.ts","test candidate",2026
+"bff/test/seriesGaps.int.test.ts","test candidate",6779
+"bff/test/seriesLang.int.test.ts","test candidate",7761
+"bff/test/seriesListing.int.test.ts","test candidate",27457
+"bff/test/seriesListing.test.ts","test candidate",20087
+"bff/test/seriesMeta.int.test.ts","test candidate",10464
+"bff/test/seriesOverrides.int.test.ts","test candidate",6369
+"bff/test/seriesSource.int.test.ts","test candidate",5143
+"bff/test/seriesSources.int.test.ts","test candidate",16738
+"bff/test/seriesTypeSignals.test.ts","test candidate",7872
+"bff/test/sessionIpChange.int.test.ts","test candidate",2683
+"bff/test/sessionLineage.int.test.ts","test candidate",10224
+"bff/test/settingsV558.int.test.ts","test candidate",5631
+"bff/test/setupRace.int.test.ts","test candidate",4821
+"bff/test/siteLanguage.int.test.ts","test candidate",10984
+"bff/test/siteLanguage.test.ts","test candidate",3204
+"bff/test/siteOffline.int.test.ts","test candidate",9964
+"bff/test/siteOffline.test.ts","test candidate",8864
+"bff/test/siteRoutes.int.test.ts","test candidate",11315
+"bff/test/siteSessions.test.ts","test candidate",16786
+"bff/test/slug.test.ts","test candidate",2404
+"bff/test/smartLists.test.ts","test candidate",5065
+"bff/test/smartSweep.int.test.ts","test candidate",14084
+"bff/test/softDelete.int.test.ts","test candidate",12631
+"bff/test/solverBackup.test.ts","test candidate",20054
+"bff/test/solverConcurrency.test.ts","test candidate",2293
+"bff/test/solverDownloads.int.test.ts","test candidate",14564
+"bff/test/solverGuard.test.ts","test candidate",2641
+"bff/test/solverQueue.test.ts","test candidate",5248
+"bff/test/solverReset.test.ts","test candidate",3151
+"bff/test/solverVersion.test.ts","test candidate",7139
+"bff/test/sourceAccess.int.test.ts","test candidate",27452
+"bff/test/sourceAdultRating.int.test.ts","test candidate",12751
+"bff/test/sourceCheck.int.test.ts","test candidate",29102
+"bff/test/sourceCleanupConfirmation.test.ts","test candidate",3494
+"bff/test/sourceDiagnosis.test.ts","test candidate",33904
+"bff/test/sourceEvidence.test.ts","test candidate",10714
+"bff/test/sourceFilter.test.ts","test candidate",4274
+"bff/test/sourceFilters.int.test.ts","test candidate",16462
+"bff/test/sourceHunt.int.test.ts","test candidate",21352
+"bff/test/sourceLang.test.ts","test candidate",5687
+"bff/test/sourceLeftovers.int.test.ts","test candidate",36974
+"bff/test/sourceLimitSwitch.int.test.ts","test candidate",6458
+"bff/test/sourceOrder.int.test.ts","test candidate",11469
+"bff/test/sourcePasswordThrottle.int.test.ts","test candidate",2782
+"bff/test/sourcePopular.test.ts","test candidate",5392
+"bff/test/sourceProbe.test.ts","test candidate",17439
+"bff/test/sourceScout.int.test.ts","test candidate",20749
+"bff/test/sourceSlow.int.test.ts","test candidate",5018
+"bff/test/sourceStanding.test.ts","test candidate",6396
+"bff/test/sourceWatchdog.test.ts","test candidate",13659
+"bff/test/sourcesOverview.int.test.ts","test candidate",15439
+"bff/test/specialChapters.test.ts","test candidate",3879
+"bff/test/spreadJoin.test.ts","test candidate",8450
+"bff/test/spreadMarks.int.test.ts","test candidate",9484
+"bff/test/spreadMeasure.int.test.ts","test candidate",11832
+"bff/test/ssoOnly.int.test.ts","test candidate",20024
+"bff/test/ssrfGuard.test.ts","test candidate",5344
+"bff/test/statsShape.int.test.ts","test candidate",9544
+"bff/test/suwayomiAdapter.test.ts","test candidate",36528
+"bff/test/suwayomiAuth.test.ts","test candidate",18334
+"bff/test/suwayomiClient.test.ts","test candidate",8721
+"bff/test/suwayomiCreatorSearch.test.ts","test candidate",4937
+"bff/test/suwayomiExtensions.test.ts","test candidate",21232
+"bff/test/suwayomiOff.test.ts","test candidate",1611
+"bff/test/suwayomiOperations.test.ts","test candidate",12866
+"bff/test/suwayomiPrefs.test.ts","test candidate",9824
+"bff/test/suwayomiRegister.int.test.ts","test candidate",19979
+"bff/test/sweepRunner.int.test.ts","test candidate",13563
+"bff/test/tachibk.test.ts","test candidate",12513
+"bff/test/tallStrip.int.test.ts","test candidate",6854
+"bff/test/tinyPage.test.ts","test candidate",6305
+"bff/test/titleArt.int.test.ts","test candidate",21099
+"bff/test/titleExtraction.int.test.ts","test candidate",55311
+"bff/test/titleExtractionBatch.int.test.ts","test candidate",26397
+"bff/test/titleExtractionOnlineFirst.int.test.ts","test candidate",20839
+"bff/test/titleExtractionWorker.test.ts","test candidate",4162
+"bff/test/titleLogoLibrary.int.test.ts","test candidate",10213
+"bff/test/titleLogoLibrary.test.ts","test candidate",6510
+"bff/test/titleLogoProvider.test.ts","test candidate",29383
+"bff/test/titleLogoScan.int.test.ts","test candidate",21486
+"bff/test/titleMaskProjection.test.ts","test candidate",1179
+"bff/test/titleMaskRaster.test.ts","test candidate",3794
+"bff/test/titleMatch.test.ts","test candidate",1291
+"bff/test/titleNumbering.int.test.ts","test candidate",25134
+"bff/test/titleNumbers.test.ts","test candidate",10598
+"bff/test/totpReplay.int.test.ts","test candidate",8391
+"bff/test/totpSetup.int.test.ts","test candidate",8377
+"bff/test/trackerFloor.int.test.ts","test candidate",7566
+"bff/test/trackerProviders.int.test.ts","test candidate",43320
+"bff/test/trackerReconnect.test.ts","test candidate",2312
+"bff/test/trackerRecs.int.test.ts","test candidate",24509
+"bff/test/trackerRecs.test.ts","test candidate",9605
+"bff/test/trackerStatus.test.ts","test candidate",5210
+"bff/test/trackerVerdicts.int.test.ts","test candidate",17112
+"bff/test/trackers.int.test.ts","test candidate",37767
+"bff/test/translate.int.test.ts","test candidate",18899
+"bff/test/translateEngine.test.ts","test candidate",5798
+"bff/test/translatePin.test.ts","test candidate",2546
+"bff/test/translateRender.test.ts","test candidate",8325
+"bff/test/translateText.test.ts","test candidate",9153
+"bff/test/trustProxy.test.ts","test candidate",5963
+"bff/test/trustProxyConfig.test.ts","test candidate",3171
+"bff/test/uniformPasswordRefusal.int.test.ts","test candidate",4474
+"bff/test/unmonitoredGates.test.ts","test candidate",2082
+"bff/test/unreadCounts.int.test.ts","test candidate",8178
+"bff/test/updater.int.test.ts","test candidate",109448
+"bff/test/upload.int.test.ts","test candidate",10505
+"bff/test/uploadSecurity.int.test.ts","test candidate",7813
+"bff/test/verifyFiles.int.test.ts","test candidate",34730
+"bff/test/visibility.int.test.ts","test candidate",6536
+"bff/test/visibilityFailsClosed.int.test.ts","test candidate",6644
+"bff/test/visibilityGaps.int.test.ts","test candidate",6872
+"bff/test/webRoot.int.test.ts","test candidate",16631
+"bff/test/wrappedYear.int.test.ts","test candidate",12929
+"bff/test/zipExtractionGuard.test.ts","test candidate",4707
+"bff/tsconfig.json","config/resource",1113
+"ca_profile.xml","config/resource",294
+"deploy/casaos/docker-compose.yml","build/deploy",7727
+"deploy/casaos/uchiyomi-suwayomi.yml","build/deploy",5099
+"deploy/dev-db/zz-uchiyomi.sh","build/deploy",834
+"deploy/docker-compose.external-db.yml","build/deploy",11255
+"deploy/docker-compose.split.yml","build/deploy",13447
+"deploy/docker-compose.title-extractor.yml","build/deploy",1349
+"deploy/docker-compose.yml","build/deploy",11430
+"deploy/umbrel/uchiyomi/data/backups/.gitkeep","build/deploy",0
+"deploy/umbrel/uchiyomi/data/cache/.gitkeep","build/deploy",0
+"deploy/umbrel/uchiyomi/data/config/.gitkeep","build/deploy",0
+"deploy/umbrel/uchiyomi/data/db/.gitkeep","build/deploy",0
+"deploy/umbrel/uchiyomi/data/downloads/.gitkeep","build/deploy",0
+"deploy/umbrel/uchiyomi/docker-compose.yml","build/deploy",2677
+"deploy/umbrel/uchiyomi/exports.sh","build/deploy",304
+"deploy/umbrel/uchiyomi/umbrel-app.yml","build/deploy",3054
+"desktop/.gitignore","other",427
+"desktop/README.md","documentation",5073
+"desktop/build/installer.nsh","other",1368
+"desktop/electron-builder.yml","config/resource",3511
+"desktop/engine-shim/EngineShim.java","source candidate",10016
+"desktop/engine-shim/IsolatedPreferences.java","source candidate",2438
+"desktop/engine/README.md","documentation",4483
+"desktop/engine/build-shim.mjs","other",1790
+"desktop/engine/lib/stubs.mjs","other",4418
+"desktop/engine/pack.mjs","other",8621
+"desktop/engine/run.mjs","other",3626
+"desktop/package-lock.json","config/resource",167800
+"desktop/package.json","build/deploy",1434
+"desktop/scripts/ci/engine-fixture.mjs","other",2838
+"desktop/scripts/ci/lib.mjs","other",15234
+"desktop/scripts/ci/mangadex-pick.mjs","other",6819
+"desktop/scripts/ci/product-smoke.mjs","other",39212
+"desktop/scripts/ci/record.mjs","other",502
+"desktop/scripts/ci/s2-postgres.mjs","other",13550
+"desktop/scripts/ci/s2-rows.mjs","other",3847
+"desktop/scripts/ci/s2-standard-user.ps1","other",4840
+"desktop/scripts/ci/s5-update.ps1","other",9040
+"desktop/scripts/ci/s6-keychain.mjs","other",5461
+"desktop/scripts/ci/s6-mac.sh","other",7790
+"desktop/scripts/ci/signinState.mjs","other",4096
+"desktop/scripts/ci/smoke.mjs","other",2006
+"desktop/scripts/ci/summary.mjs","other",1314
+"desktop/scripts/lib/pe-imports.mjs","other",1846
+"desktop/scripts/pg-dist.mjs","other",11798
+"desktop/scripts/release/check-feed.mjs","other",4021
+"desktop/scripts/release/check-pin.mjs","other",3148
+"desktop/scripts/release/merge-latest-mac.mjs","other",7391
+"desktop/scripts/release/pin-engine.mjs","other",5768
+"desktop/scripts/stage.mjs","other",3852
+"desktop/src/archive.js","other",18035
+"desktop/src/bff-entry.cjs","other",1671
+"desktop/src/bridge.js","other",7428
+"desktop/src/childlog.js","other",2506
+"desktop/src/engine-pin.json","config/resource",1170
+"desktop/src/engine.js","other",28535
+"desktop/src/env.js","other",5664
+"desktop/src/firstrun.html","source candidate",4689
+"desktop/src/firstrun.js","other",5223
+"desktop/src/i18n.js","other",81401
+"desktop/src/loading.html","source candidate",3084
+"desktop/src/log.js","other",1444
+"desktop/src/main.js","other",68434
+"desktop/src/paths.js","other",2910
+"desktop/src/ports.js","other",1547
+"desktop/src/postgres.js","other",32020
+"desktop/src/preload.js","other",5172
+"desktop/src/restore.js","other",6628
+"desktop/src/servermode.js","other",30251
+"desktop/src/sessionend.js","other",2672
+"desktop/src/signin.js","other",4449
+"desktop/src/solver.js","other",3426
+"desktop/src/solver/browser.ts","source candidate",32067
+"desktop/src/solver/detect.ts","source candidate",4533
+"desktop/src/solver/pool.ts","source candidate",3526
+"desktop/src/solver/protocol.ts","source candidate",9655
+"desktop/src/solver/server.ts","source candidate",13945
+"desktop/src/solver/userAgent.ts","source candidate",3478
+"desktop/src/state.js","other",2953
+"desktop/src/supervisor.js","other",18749
+"desktop/src/uncaught.js","other",2151
+"desktop/src/updates.js","other",8056
+"desktop/src/welcome.html","source candidate",18390
+"desktop/test/fixtures/fake-engine.mjs","test candidate",2279
+"desktop/test/fixtures/flaresolverr-3.5.2-detection-lists.py","test candidate",1146
+"desktop/test/fixtures/solver-requests.json","test candidate",1925
+"desktop/test/fixtures/suwayomi-v2.4.2366-FlareSolverDtos.kt","test candidate",1912
+"desktop/test/shell.archive.test.mjs","test candidate",3485
+"desktop/test/shell.bridge.test.mjs","test candidate",8568
+"desktop/test/shell.childlog.test.mjs","test candidate",4862
+"desktop/test/shell.engine.test.mjs","test candidate",17705
+"desktop/test/shell.env.test.mjs","test candidate",4483
+"desktop/test/shell.fallback.test.mjs","test candidate",15796
+"desktop/test/shell.firstrun.test.mjs","test candidate",3978
+"desktop/test/shell.i18n.test.mjs","test candidate",2119
+"desktop/test/shell.restore.test.mjs","test candidate",10013
+"desktop/test/shell.servercert.test.mjs","test candidate",24347
+"desktop/test/shell.servermode.test.mjs","test candidate",40964
+"desktop/test/shell.sessionend.test.mjs","test candidate",4855
+"desktop/test/shell.signin.test.mjs","test candidate",4687
+"desktop/test/shell.startupNavigation.test.mjs","test candidate",3407
+"desktop/test/shell.state.test.mjs","test candidate",2902
+"desktop/test/shell.supervisor.test.mjs","test candidate",15464
+"desktop/test/shell.traps.test.mjs","test candidate",4395
+"desktop/test/shell.uncaught.test.mjs","test candidate",5225
+"desktop/test/shell.updates.test.mjs","test candidate",4404
+"desktop/test/smoke.digest.test.mjs","test candidate",3286
+"desktop/test/smoke.lib.test.mjs","test candidate",2765
+"desktop/test/smoke.mangadex.test.mjs","test candidate",13268
+"desktop/test/smoke.s2.test.mjs","test candidate",5669
+"desktop/test/smoke.signin.test.mjs","test candidate",3125
+"desktop/test/solver.contract.test.ts","test candidate",31467
+"desktop/test/solver.electron.test.ts","test candidate",22141
+"desktop/test/solver.pool.test.ts","test candidate",2361
+"desktop/tsconfig.check.json","config/resource",543
+"desktop/tsconfig.json","config/resource",674
+"docker-compose.yml","build/deploy",15741
+"docs/COMPARISON.md","documentation",11961
+"docs/CONFIGURATION.md","documentation",62004
+"docs/DESKTOP.md","documentation",38274
+"docs/INSTALL.md","documentation",13994
+"docs/IOS.md","documentation",18891
+"docs/MIGRATING.md","documentation",14425
+"docs/SCREENSHOTS.md","documentation",14791
+"docs/USAGE.md","documentation",387009
+"docs/api.md","documentation",330315
+"docs/cover-title-batch.md","documentation",5186
+"docs/cover-title-verification.md","documentation",5236
+"docs/extensions.md","documentation",58760
+"docs/shots/admin-extensions.webp","documentation",92580
+"docs/shots/admin-health.webp","documentation",103984
+"docs/shots/admin-import.webp","documentation",51256
+"docs/shots/admin-libraries.webp","documentation",108792
+"docs/shots/admin-members.webp","documentation",105784
+"docs/shots/admin-providers.webp","documentation",87580
+"docs/shots/admin-settings.webp","documentation",118330
+"docs/shots/crop-addsite.webp","documentation",9356
+"docs/shots/crop-anilist.webp","documentation",26108
+"docs/shots/crop-extensions.webp","documentation",43532
+"docs/shots/crop-fix-everything.webp","documentation",34478
+"docs/shots/crop-health.webp","documentation",9672
+"docs/shots/crop-library.webp","documentation",201430
+"docs/shots/crop-radar.webp","documentation",217134
+"docs/shots/crop-ratings.webp","documentation",8242
+"docs/shots/crop-reader-comfort.webp","documentation",48284
+"docs/shots/crop-related.webp","documentation",239302
+"docs/shots/crop-repo-added.webp","documentation",40746
+"docs/shots/crop-repo-empty.webp","documentation",29520
+"docs/shots/crop-repo-toast.webp","documentation",5730
+"docs/shots/crop-sso.webp","documentation",15050
+"docs/shots/crop-tokens.webp","documentation",16124
+"docs/shots/desktop-certificate-changed.webp","documentation",86858
+"docs/shots/desktop-certificate.webp","documentation",66660
+"docs/shots/desktop-engine.webp","documentation",22768
+"docs/shots/desktop-library-folder.webp","documentation",37018
+"docs/shots/desktop-server-error.webp","documentation",34694
+"docs/shots/desktop-server.webp","documentation",28894
+"docs/shots/desktop-welcome.webp","documentation",55690
+"docs/shots/discover.webp","documentation",160318
+"docs/shots/ext-strip-1.webp","documentation",31218
+"docs/shots/ext-strip-2.webp","documentation",31716
+"docs/shots/ext-strip-3.webp","documentation",31100
+"docs/shots/home.webp","documentation",231624
+"docs/shots/library.webp","documentation",347246
+"docs/shots/login-sso.webp","documentation",514416
+"docs/shots/login.webp","documentation",521402
+"docs/shots/phone-downloads.webp","documentation",52500
+"docs/shots/phone-extensions.webp","documentation",46274
+"docs/shots/phone-home.webp","documentation",114636
+"docs/shots/phone-libraries.webp","documentation",24108
+"docs/shots/phone-library.webp","documentation",213346
+"docs/shots/phone-providers.webp","documentation",11166
+"docs/shots/phone-reader.webp","documentation",116662
+"docs/shots/phone-repo-added.webp","documentation",40010
+"docs/shots/phone-repo-empty.webp","documentation",38300
+"docs/shots/phone-settings.webp","documentation",46554
+"docs/shots/phone-sources.webp","documentation",23222
+"docs/shots/profile-security.webp","documentation",75628
+"docs/shots/profile-stats.webp","documentation",117042
+"docs/shots/reader.webp","documentation",78216
+"docs/shots/series-more.webp","documentation",162110
+"docs/shots/series.webp","documentation",181492
+"docs/shots/tour.webp","documentation",806250
+"docs/shots/wrapped.webp","documentation",49400
+"ios/.gitignore","other",118
+"ios/Config/Info.plist","other",1653
+"ios/Config/Signing.xcconfig","other",267
+"ios/DOCKER-PROTOTYPE.md","documentation",7271
+"ios/PROTOTYPE.md","documentation",11949
+"ios/Package.swift","other",410
+"ios/README.md","documentation",1446
+"ios/Sources/App/Assets.xcassets/AppIcon.appiconset/AppIcon.png","other",338549
+"ios/Sources/App/Assets.xcassets/AppIcon.appiconset/Contents.json","config/resource",157
+"ios/Sources/App/Assets.xcassets/BrandMark.imageset/Contents.json","config/resource",157
+"ios/Sources/App/Assets.xcassets/BrandMark.imageset/uchiyomi-mark.png","other",27191
+"ios/Sources/App/Assets.xcassets/Contents.json","config/resource",60
+"ios/Sources/App/NativeAppActionsBridge.swift","other",5694
+"ios/Sources/App/NativeNavigationBridge.swift","other",8136
+"ios/Sources/App/NativeWebView.swift","other",3800
+"ios/Sources/App/ReaderModel.swift","other",19363
+"ios/Sources/App/ReaderNavigationPresentation.swift","other",4253
+"ios/Sources/App/ReaderNavigationToolbar.swift","other",5231
+"ios/Sources/App/UchiyomiApp.swift","other",19727
+"ios/Sources/Core/AssetCache.swift","other",12586
+"ios/Sources/Core/Gateway.swift","other",11990
+"ios/Sources/Core/HTTP.swift","other",16287
+"ios/Sources/Core/Models.swift","other",9669
+"ios/Sources/Core/ProfileStore.swift","other",3159
+"ios/Sources/Core/RemoteClient.swift","other",15317
+"ios/Tests/CoreTests/CacheUpdateTests.swift","test candidate",15774
+"ios/Tests/CoreTests/CoreTests.swift","test candidate",8005
+"ios/Tests/CoreTests/IntegrationTests.swift","test candidate",19160
+"ios/Tests/CoreTests/NativeAuthTests.swift","test candidate",4389
+"ios/Tests/CoreTests/ProfileStoreTests.swift","test candidate",2710
+"ios/Tests/Distribution/test_build_environment.py","test candidate",4443
+"ios/Tests/Distribution/test_release.py","test candidate",20380
+"ios/Tests/Distribution/test_xtool.py","test candidate",6077
+"ios/Tests/Fixtures/auth-server.mjs","test candidate",2470
+"ios/Tests/Fixtures/server.mjs","test candidate",4567
+"ios/Tests/TransportTests/main.swift","test candidate",9771
+"ios/Tests/WebViewTests/CachedWebViewTests.swift","test candidate",45461
+"ios/Tests/WebViewTests/NativeAppActionsTests.swift","test candidate",11541
+"ios/Tests/WebViewTests/NativeNavigationTests.swift","test candidate",7061
+"ios/Tests/WebViewTests/ReaderLifecycleTests.swift","test candidate",24438
+"ios/Uchiyomi.xcodeproj/project.pbxproj","other",8358
+"ios/Uchiyomi.xcodeproj/xcshareddata/xcschemes/Uchiyomi.xcscheme","other",2372
+"ios/distribution/listing.json","build/deploy",731
+"ios/scripts/altstore-source.py","source candidate",1740
+"ios/scripts/build-linux.sh","other",2579
+"ios/scripts/build-number.py","source candidate",551
+"ios/scripts/build_number.py","source candidate",1568
+"ios/scripts/fetch-releases.py","source candidate",529
+"ios/scripts/github_release.py","source candidate",6138
+"ios/scripts/inspect-ipa.py","source candidate",3586
+"ios/scripts/inspect-linux-ipa.py","source candidate",4482
+"ios/scripts/manifest.mjs","other",479
+"ios/scripts/manifest.test.mjs","other",2789
+"ios/scripts/package.sh","other",3373
+"ios/scripts/prepare-webview-fixture.mjs","other",897
+"ios/scripts/prepare-xtool.py","source candidate",5566
+"ios/scripts/publish-release.py","source candidate",3805
+"ios/scripts/release_lib.py","source candidate",8965
+"ios/scripts/select-simulator-runtime.py","source candidate",875
+"ios/scripts/simulator_runtime.py","source candidate",1653
+"ios/scripts/source-record.py","source candidate",928
+"ios/scripts/test-auth.sh","other",747
+"ios/scripts/test-core.sh","other",658
+"ios/scripts/test-transport.sh","other",290
+"ios/scripts/test-webview.sh","other",4028
+"logo-options/README.md","documentation",692
+"logo-options/option-1.jpg","other",428088
+"logo-options/option-2.png","other",886507
+"logo-options/option-3-CHOSEN.png","other",816019
+"logo-options/option-4.jpg","other",336988
+"logo-options/previous-logo.svg","other",9658
+"logo-options/uchiyomi-master.png","other",338549
+"scripts/add-proxy.sh","other",1111
+"scripts/engine/bump.mjs","other",10931
+"scripts/engine/envCheck.mjs","other",5682
+"scripts/engine/fixture-store/index.min.json","config/resource",306
+"scripts/engine/fixture-store/repo.json","config/resource",212
+"scripts/engine/latest.mjs","other",6192
+"scripts/engine/pins.json","config/resource",1153
+"scripts/engine/report.mjs","other",12059
+"scripts/engine/schemaDiff.mjs","other",4153
+"scripts/engine/seedLocal.mjs","other",2564
+"scripts/engine/serveStatic.mjs","other",1451
+"scripts/login-wall.py","source candidate",12240
+"scripts/npm-setup.cjs","other",3240
+"scripts/og-card/card.html","source candidate",3106
+"scripts/og-card/run.sh","other",2835
+"scripts/schema.sql","source candidate",3558
+"scripts/setup.sh","other",8868
+"scripts/shots/capture.mjs","other",53171
+"scripts/shots/desktop.mjs","other",14319
+"scripts/shots/fixtures.mjs","other",31424
+"scripts/shots/record.mjs","other",12426
+"scripts/shots/run.sh","other",13506
+"scripts/site/faq-schema.py","documentation",4703
+"scripts/title-art/README.md","documentation",4821
+"scripts/title-art/build-worker.py","source candidate",2921
+"scripts/title-art/extract-cover.py","source candidate",10776
+"scripts/title-art/prepare-ocr.mjs","other",4791
+"scripts/title-art/requirements.txt","build/deploy",239
+"scripts/title-art/test_build_worker.py","test candidate",3488
+"scripts/title-art/test_extract_cover.py","test candidate",2479
+"scripts/translate-pack/build-llama.sh","other",1771
+"scripts/translate-pack/check.mjs","other",5537
+"scripts/translate-pack/pack.mjs","other",13676
+"services/title-extractor/Dockerfile","build/deploy",1440
+"services/title-extractor/NOTICE","other",681
+"services/title-extractor/README.md","documentation",12400
+"services/title-extractor/requirements.txt","build/deploy",76
+"services/title-extractor/sam_refinement.py","source candidate",10465
+"services/title-extractor/server.py","source candidate",4848
+"services/title-extractor/stroke_completion.py","source candidate",4667
+"services/title-extractor/test_sam_refinement.py","test candidate",7834
+"services/title-extractor/test_stroke_completion.py","test candidate",4867
+"services/title-extractor/test_worker.py","test candidate",18779
+"services/title-extractor/worker.py","source candidate",20083
+"sources/.gitkeep","other",0
+"templates/uchiyomi-suwayomi.xml","config/resource",7831
+"templates/uchiyomi.xml","config/resource",7418
+"web/.dockerignore","other",42
+"web/.gitignore","other",59
+"web/Dockerfile","build/deploy",874
+"web/app/admin/import/page.tsx","source candidate",56450
+"web/app/admin/page.tsx","source candidate",131160
+"web/app/collection/page.tsx","source candidate",12019
+"web/app/collections/page.tsx","source candidate",12156
+"web/app/discover/page.tsx","source candidate",59450
+"web/app/downloads/page.tsx","source candidate",11106
+"web/app/fonts/BarlowCondensed-Bold.woff2","other",22444
+"web/app/fonts/Cinzel-latin.woff2","other",25904
+"web/app/fonts/Inter-latin.woff2","other",48432
+"web/app/fonts/OFL-barlowcondensed.txt","other",4377
+"web/app/fonts/OFL-cinzel.txt","other",4383
+"web/app/fonts/README.md","documentation",1785
+"web/app/fonts/SpaceGrotesk-latin.woff2","other",22320
+"web/app/fonts/Unbounded-latin.woff2","other",50892
+"web/app/globals.css","other",46274
+"web/app/history/page.tsx","source candidate",5307
+"web/app/layout.tsx","source candidate",3971
+"web/app/library/page.tsx","source candidate",64129
+"web/app/moments/page.tsx","source candidate",13386
+"web/app/page.tsx","source candidate",19614
+"web/app/profile/page.tsx","source candidate",29337
+"web/app/providers.tsx","source candidate",6520
+"web/app/reader/page.tsx","source candidate",174788
+"web/app/search/page.tsx","source candidate",5870
+"web/app/series/page.tsx","source candidate",166427
+"web/app/updates/page.tsx","source candidate",5999
+"web/app/upload/page.tsx","source candidate",2486
+"web/app/wrapped/page.tsx","source candidate",10738
+"web/components/ActionList.tsx","source candidate",10048
+"web/components/ActivityDots.tsx","source candidate",1260
+"web/components/AddSeriesDialog.tsx","source candidate",71148
+"web/components/AdminNotifications.tsx","source candidate",26549
+"web/components/AdminSettings.tsx","source candidate",69835
+"web/components/AdultToggle.tsx","source candidate",6397
+"web/components/AppShell.tsx","source candidate",10426
+"web/components/ArchiveQueue.tsx","source candidate",19203
+"web/components/ArchiveSettings.tsx","source candidate",5753
+"web/components/AuthorLinks.tsx","source candidate",2650
+"web/components/Avatar.tsx","source candidate",1922
+"web/components/AvatarFrame.tsx","source candidate",10560
+"web/components/BadgeEmblem.tsx","source candidate",14176
+"web/components/BlockedChapters.tsx","source candidate",4270
+"web/components/BottomNav.tsx","source candidate",5241
+"web/components/Brand.tsx","source candidate",964
+"web/components/BulkChapterDeleteRun.tsx","source candidate",5595
+"web/components/ChapterFilterSheet.tsx","source candidate",2726
+"web/components/ChapterSheet.tsx","source candidate",1894
+"web/components/ChapterTalk.tsx","source candidate",22061
+"web/components/ChapterUpload.tsx","source candidate",13970
+"web/components/ChapterVersionsSheet.tsx","source candidate",8761
+"web/components/CheckForNew.tsx","source candidate",1583
+"web/components/CinematicFX.tsx","source candidate",806
+"web/components/CommandPalette.tsx","source candidate",16733
+"web/components/CompareCopiesDialog.tsx","source candidate",6678
+"web/components/ConfirmDialog.tsx","source candidate",11340
+"web/components/ConsoleLayout.tsx","source candidate",33068
+"web/components/ContentScopePicker.tsx","source candidate",4361
+"web/components/ContextMenu.tsx","source candidate",10374
+"web/components/ContinueBar.tsx","source candidate",4607
+"web/components/CoverPickerSheet.tsx","source candidate",5153
+"web/components/CoverTitleBatch.tsx","source candidate",13479
+"web/components/CoverTitleMaskEditor.tsx","source candidate",17552
+"web/components/CoverTitleRegions.tsx","source candidate",8169
+"web/components/DesktopReconnect.tsx","source candidate",2223
+"web/components/DiscoverHero.tsx","source candidate",17001
+"web/components/DiscoveryHub.tsx","source candidate",22789
+"web/components/DownloadsRing.tsx","source candidate",2110
+"web/components/EmptyState.tsx","source candidate",1519
+"web/components/EngineInstall.tsx","source candidate",5993
+"web/components/EngineSetup.tsx","source candidate",20526
+"web/components/ErrorDetailsDialog.tsx","source candidate",4647
+"web/components/ExtensionBits.tsx","source candidate",3212
+"web/components/ExtensionLanguages.tsx","source candidate",7804
+"web/components/ExtensionRepos.tsx","source candidate",8435
+"web/components/ExtensionSettings.tsx","source candidate",16689
+"web/components/ExtensionSheet.tsx","source candidate",17697
+"web/components/ExtensionsPanel.tsx","source candidate",23019
+"web/components/ExternalReaderSettings.tsx","source candidate",2425
+"web/components/FavoritesSheet.tsx","source candidate",6230
+"web/components/FindMissingDialog.tsx","source candidate",31787
+"web/components/FindSources.tsx","source candidate",32228
+"web/components/FixEverythingDialog.tsx","source candidate",23507
+"web/components/ForYouBand.tsx","source candidate",9128
+"web/components/GenreTagInput.tsx","source candidate",4314
+"web/components/GroupAvatar.tsx","source candidate",1504
+"web/components/HealthActions.tsx","source candidate",63132
+"web/components/HealthAlert.tsx","source candidate",3387
+"web/components/HealthBySeries.tsx","source candidate",9148
+"web/components/HeroCarousel.tsx","source candidate",11337
+"web/components/HeroTitle.tsx","source candidate",3461
+"web/components/HiddenChapters.tsx","source candidate",5331
+"web/components/HomeCustomize.tsx","source candidate",7737
+"web/components/HostNavigation.tsx","source candidate",2828
+"web/components/HouseBoard.tsx","source candidate",4331
+"web/components/ImportMatchSheet.tsx","source candidate",20236
+"web/components/IncognitoBanner.tsx","source candidate",2593
+"web/components/KeepReadingHidden.tsx","source candidate",2268
+"web/components/LanguageNotice.tsx","source candidate",1670
+"web/components/LibraryFilters.tsx","source candidate",22192
+"web/components/LibraryFolders.tsx","source candidate",1223
+"web/components/LibraryStart.tsx","source candidate",2969
+"web/components/LibraryToolbar.tsx","source candidate",13142
+"web/components/ListBits.tsx","source candidate",3188
+"web/components/LoginScreen.tsx","source candidate",23854
+"web/components/MangadexCard.tsx","source candidate",14590
+"web/components/MigrateSourceSheet.tsx","source candidate",18462
+"web/components/MosaicArt.tsx","source candidate",4699
+"web/components/MoveToLibrary.tsx","source candidate",9087
+"web/components/NetworkSettings.tsx","source candidate",9320
+"web/components/NumberingNotice.tsx","source candidate",7299
+"web/components/NumberingSheet.tsx","source candidate",10299
+"web/components/OfflineCover.tsx","source candidate",1479
+"web/components/OtherTitles.tsx","source candidate",1364
+"web/components/PageCleanupPanel.tsx","source candidate",13938
+"web/components/PageGrid.tsx","source candidate",5786
+"web/components/PageProgress.tsx","source candidate",1916
+"web/components/PageTile.tsx","source candidate",2922
+"web/components/PageTransition.tsx","source candidate",4294
+"web/components/PhoneHeroCover.tsx","source candidate",1315
+"web/components/PolitenessSettings.tsx","source candidate",5460
+"web/components/PreviewReader.tsx","source candidate",11663
+"web/components/PrivateLibraryManager.tsx","source candidate",6104
+"web/components/ProfileAccount.tsx","source candidate",21124
+"web/components/ProfileConnections.tsx","source candidate",32469
+"web/components/ProfileInsights.tsx","source candidate",11118
+"web/components/ProfileMenu.tsx","source candidate",8247
+"web/components/ProfileSettings.tsx","source candidate",43115
+"web/components/ProfileSwitcher.tsx","source candidate",3875
+"web/components/ProfileYou.tsx","source candidate",16113
+"web/components/ProgressRing.tsx","source candidate",11969
+"web/components/PullToRefresh.tsx","source candidate",1635
+"web/components/RatingsPanel.tsx","source candidate",10303
+"web/components/ReaderEndRadar.tsx","source candidate",3306
+"web/components/ReaderKeys.tsx","source candidate",8225
+"web/components/ReaderPage.tsx","source candidate",23266
+"web/components/ReaderSettings.tsx","source candidate",29280
+"web/components/ReaderShortcuts.tsx","source candidate",3819
+"web/components/RelatedRail.tsx","source candidate",5785
+"web/components/RepairLive.tsx","source candidate",10884
+"web/components/ReplaceDialog.tsx","source candidate",17351
+"web/components/RescanTask.tsx","source candidate",17469
+"web/components/SaveListDialog.tsx","source candidate",7057
+"web/components/ScrollRail.tsx","source candidate",4799
+"web/components/SeriesEditor.tsx","source candidate",59140
+"web/components/SeriesKeys.tsx","source candidate",11885
+"web/components/SeriesMenu.tsx","source candidate",5720
+"web/components/SeriesPrivacyControls.tsx","source candidate",5532
+"web/components/SeriesServerDownloads.tsx","source candidate",8404
+"web/components/ServerDownloadsView.tsx","source candidate",30168
+"web/components/Sidebar.tsx","source candidate",12070
+"web/components/SiteBrowserSheet.tsx","source candidate",18765
+"web/components/SourceEvidence.tsx","source candidate",4456
+"web/components/SourceHealthBody.tsx","source candidate",13981
+"web/components/SourceListSheet.tsx","source candidate",5101
+"web/components/SourcePicker.tsx","source candidate",13121
+"web/components/SourceSearchPages.tsx","source candidate",1895
+"web/components/SourceSheet.tsx","source candidate",23808
+"web/components/SourceTile.tsx","source candidate",2318
+"web/components/SourcesExplainer.tsx","source candidate",3554
+"web/components/SourcesPanel.tsx","source candidate",42607
+"web/components/SourcesSheet.tsx","source candidate",62557
+"web/components/SpineWall.tsx","source candidate",3266
+"web/components/StatusMark.tsx","source candidate",4639
+"web/components/SupplyLine.tsx","source candidate",4169
+"web/components/Switch.tsx","source candidate",1077
+"web/components/TitleExtraction.tsx","source candidate",27304
+"web/components/TitleLogoScan.tsx","source candidate",6804
+"web/components/Toast.tsx","source candidate",12752
+"web/components/TopNav.tsx","source candidate",3916
+"web/components/TraceStrip.tsx","source candidate",1702
+"web/components/TrackerAlert.tsx","source candidate",2653
+"web/components/TranslateSettings.tsx","source candidate",6227
+"web/components/cards.tsx","source candidate",41323
+"web/components/charts/Bars.tsx","source candidate",2209
+"web/components/charts/Columns.tsx","source candidate",1595
+"web/components/charts/Heatmap.tsx","source candidate",6831
+"web/components/charts/Pace.tsx","source candidate",2692
+"web/components/icons.tsx","source candidate",11049
+"web/components/settings.tsx","source candidate",52610
+"web/components/settingsArt.tsx","source candidate",7205
+"web/components/ui.tsx","source candidate",18654
+"web/docs/cover-title-automation.md","documentation",2025
+"web/lib/I18nProvider.tsx","source candidate",4944
+"web/lib/actionState.ts","source candidate",5519
+"web/lib/activity.ts","source candidate",3575
+"web/lib/adult.ts","source candidate",3904
+"web/lib/api.ts","source candidate",14868
+"web/lib/archive.ts","source candidate",23873
+"web/lib/art.ts","source candidate",6438
+"web/lib/artUpload.ts","source candidate",898
+"web/lib/auth.tsx","source candidate",30592
+"web/lib/authConfig.ts","source candidate",2166
+"web/lib/authorNames.ts","source candidate",1768
+"web/lib/autofix.ts","source candidate",22970
+"web/lib/badges.ts","source candidate",5172
+"web/lib/bulkChapterDelete.ts","source candidate",3401
+"web/lib/bulkNewest.ts","source candidate",3650
+"web/lib/cadence.ts","source candidate",3124
+"web/lib/chapterOrder.ts","source candidate",786
+"web/lib/chapterPages.ts","source candidate",4311
+"web/lib/chapterPicker.ts","source candidate",5534
+"web/lib/chapterRows.ts","source candidate",22383
+"web/lib/chapterUpload.ts","source candidate",10128
+"web/lib/chapterView.ts","source candidate",1675
+"web/lib/comments.ts","source candidate",7723
+"web/lib/compactChapters.ts","source candidate",2627
+"web/lib/confirmTitle.ts","source candidate",8012
+"web/lib/consoleOnScreen.ts","source candidate",1700
+"web/lib/contentScope.ts","source candidate",1320
+"web/lib/contextMenus.ts","source candidate",3133
+"web/lib/continueLabel.ts","source candidate",6369
+"web/lib/counted.ts","source candidate",1640
+"web/lib/coverBust.ts","source candidate",2305
+"web/lib/coverFallback.ts","source candidate",883
+"web/lib/coverTitleBatch.ts","source candidate",3331
+"web/lib/coverTitleMask.ts","source candidate",3999
+"web/lib/coverTitleRegions.ts","source candidate",2524
+"web/lib/deleteFiles.ts","source candidate",2693
+"web/lib/desktop.ts","source candidate",7036
+"web/lib/destinations.ts","source candidate",13635
+"web/lib/device.ts","source candidate",2266
+"web/lib/discoveryHub.ts","source candidate",5639
+"web/lib/downloads.ts","source candidate",26611
+"web/lib/dragReorder.ts","source candidate",12400
+"web/lib/editions.ts","source candidate",8308
+"web/lib/effects.ts","source candidate",4245
+"web/lib/engineSetup.ts","source candidate",19790
+"web/lib/errorDetails.ts","source candidate",3423
+"web/lib/extensions.ts","source candidate",19510
+"web/lib/findSources.ts","source candidate",38588
+"web/lib/forYou.ts","source candidate",4128
+"web/lib/format.ts","source candidate",19269
+"web/lib/genreTags.ts","source candidate",1868
+"web/lib/genres.ts","source candidate",2608
+"web/lib/groupAvatar.ts","source candidate",1677
+"web/lib/groupFilter.ts","source candidate",3085
+"web/lib/groupSuggest.ts","source candidate",1472
+"web/lib/healthAlert.ts","source candidate",5164
+"web/lib/healthBySeries.ts","source candidate",4142
+"web/lib/healthCopy.ts","source candidate",44270
+"web/lib/healthKeys.ts","source candidate",1655
+"web/lib/healthLinks.ts","source candidate",6947
+"web/lib/homeRails.ts","source candidate",5890
+"web/lib/hostNavigation/artwork.ts","source candidate",2551
+"web/lib/hostNavigation/chrome.ts","source candidate",736
+"web/lib/hostNavigation/controller.ts","source candidate",4538
+"web/lib/hostNavigation/ios.ts","source candidate",1703
+"web/lib/hostNavigation/model.ts","source candidate",3860
+"web/lib/hostNavigation/useHostNavigation.ts","source candidate",2408
+"web/lib/i18n.ts","source candidate",6624
+"web/lib/importBatch.ts","source candidate",25355
+"web/lib/incognito.ts","source candidate",1376
+"web/lib/insights.ts","source candidate",7820
+"web/lib/jobNotes.ts","source candidate",2660
+"web/lib/jobs.ts","source candidate",9952
+"web/lib/layers.ts","source candidate",8624
+"web/lib/libraryFolders.ts","source candidate",5180
+"web/lib/libraryLayout.ts","source candidate",2747
+"web/lib/libraryPick.ts","source candidate",1116
+"web/lib/libraryQuery.ts","source candidate",6899
+"web/lib/librarySort.ts","source candidate",7143
+"web/lib/libraryStart.ts","source candidate",1392
+"web/lib/libraryView.ts","source candidate",2328
+"web/lib/listSort.ts","source candidate",5299
+"web/lib/lists.ts","source candidate",2303
+"web/lib/mainSource.ts","source candidate",2476
+"web/lib/mangadexLangs.ts","source candidate",2920
+"web/lib/matchPreview.ts","source candidate",1485
+"web/lib/memberDefaults.ts","source candidate",2048
+"web/lib/migrateSource.ts","source candidate",1603
+"web/lib/mosaic.ts","source candidate",4536
+"web/lib/motion.ts","source candidate",787
+"web/lib/moveLibrary.ts","source candidate",4289
+"web/lib/native.ts","source candidate",2196
+"web/lib/nativeLayout.ts","source candidate",3227
+"web/lib/normTitle.ts","source candidate",631
+"web/lib/notices.ts","source candidate",13642
+"web/lib/notifyDigest.ts","source candidate",2197
+"web/lib/notifyOnlyNext.ts","source candidate",326
+"web/lib/numbering.ts","source candidate",14099
+"web/lib/offlineIdentity.ts","source candidate",6806
+"web/lib/offlineSync.ts","source candidate",1275
+"web/lib/otherTitles.ts","source candidate",1254
+"web/lib/overArt.ts","source candidate",2537
+"web/lib/pageCleanup.ts","source candidate",2429
+"web/lib/palette.ts","source candidate",603
+"web/lib/politeness.ts","source candidate",881
+"web/lib/preview.ts","source candidate",1589
+"web/lib/providerGroups.ts","source candidate",2200
+"web/lib/radar.ts","source candidate",7274
+"web/lib/ratings.ts","source candidate",4078
+"web/lib/readerAuto.ts","source candidate",3347
+"web/lib/readerCrop.ts","source candidate",8147
+"web/lib/readerDevice.ts","source candidate",5493
+"web/lib/readerFit.ts","source candidate",5061
+"web/lib/readerFlow.ts","source candidate",8709
+"web/lib/readerGesture.ts","source candidate",9536
+"web/lib/readerImageRetry.ts","source candidate",1141
+"web/lib/readerKeys.ts","source candidate",8702
+"web/lib/readerNav.ts","source candidate",2703
+"web/lib/readerPad.ts","source candidate",6012
+"web/lib/readerPagedScroll.ts","source candidate",1345
+"web/lib/readerPrefs.ts","source candidate",29835
+"web/lib/readerSpread.ts","source candidate",8632
+"web/lib/readerState.ts","source candidate",1808
+"web/lib/readerTranslate.ts","source candidate",1661
+"web/lib/readerWindow.ts","source candidate",6333
+"web/lib/readingTime.ts","source candidate",3312
+"web/lib/recommendations.ts","source candidate",1845
+"web/lib/refresh.ts","source candidate",5156
+"web/lib/refusals.ts","source candidate",2092
+"web/lib/related.ts","source candidate",2542
+"web/lib/repairRun.ts","source candidate",14073
+"web/lib/rescan.ts","source candidate",16130
+"web/lib/ring.ts","source candidate",6568
+"web/lib/safeColor.ts","source candidate",549
+"web/lib/said.ts","source candidate",105629
+"web/lib/scanlators.ts","source candidate",2983
+"web/lib/scrollMemory.ts","source candidate",4727
+"web/lib/searchMore.ts","source candidate",3701
+"web/lib/searchPoll.ts","source candidate",3495
+"web/lib/seriesActions.ts","source candidate",7735
+"web/lib/seriesBooks.ts","source candidate",1818
+"web/lib/seriesMeta.ts","source candidate",5635
+"web/lib/seriesPrefetch.ts","source candidate",2955
+"web/lib/seriesProgress.ts","source candidate",1654
+"web/lib/seriesTypes.ts","source candidate",670
+"web/lib/serverDownloads.ts","source candidate",32512
+"web/lib/settingsChoices.ts","source candidate",1721
+"web/lib/settingsIndex.admin.ts","source candidate",11359
+"web/lib/settingsIndex.profile.ts","source candidate",7773
+"web/lib/settingsIndex.ts","source candidate",11074
+"web/lib/shelves.ts","source candidate",4571
+"web/lib/showAllChapters.ts","source candidate",1173
+"web/lib/shownOnce.ts","source candidate",1547
+"web/lib/siteBrowser.ts","source candidate",8455
+"web/lib/smoothScroll.ts","source candidate",675
+"web/lib/sortValue.ts","source candidate",6657
+"web/lib/sourceAge.ts","source candidate",1776
+"web/lib/sourceCheckRun.ts","source candidate",6793
+"web/lib/sourceEvidence.ts","source candidate",17830
+"web/lib/sourceGroups.ts","source candidate",14459
+"web/lib/sourceHealth.ts","source candidate",9097
+"web/lib/sourceLeftovers.ts","source candidate",1978
+"web/lib/sourceOrder.ts","source candidate",2174
+"web/lib/sourcePrefs.ts","source candidate",6016
+"web/lib/sourcesPanel.ts","source candidate",26604
+"web/lib/spreadMarks.ts","source candidate",7742
+"web/lib/status.ts","source candidate",7417
+"web/lib/supplyLine.ts","source candidate",11041
+"web/lib/tabParam.ts","source candidate",2463
+"web/lib/tasks.ts","source candidate",21474
+"web/lib/theme.ts","source candidate",1447
+"web/lib/ticker.ts","source candidate",2778
+"web/lib/titleArt.ts","source candidate",3251
+"web/lib/titleExtraction.ts","source candidate",4950
+"web/lib/titleLogoScan.ts","source candidate",2239
+"web/lib/titleMaskRaster.ts","source candidate",3987
+"web/lib/tone.ts","source candidate",5192
+"web/lib/trackerHealth.ts","source candidate",3066
+"web/lib/trackerHelp.ts","source candidate",9092
+"web/lib/trackerPlan.ts","source candidate",853
+"web/lib/typeToSearch.ts","source candidate",3222
+"web/lib/types.ts","source candidate",38835
+"web/lib/useAutofixRun.tsx","source candidate",8108
+"web/lib/useFindRun.tsx","source candidate",7847
+"web/lib/useGamepad.ts","source candidate",3223
+"web/lib/useLiveWorks.ts","source candidate",8095
+"web/lib/useOfflineSeries.ts","source candidate",1012
+"web/lib/useReduceEffects.ts","source candidate",901
+"web/lib/useRepairRun.tsx","source candidate",10309
+"web/lib/useSectionArrival.ts","source candidate",3960
+"web/lib/useServerDownloads.ts","source candidate",2817
+"web/lib/useTitleArtPolling.ts","source candidate",1374
+"web/lib/versionLine.ts","source candidate",2603
+"web/lib/versions.ts","source candidate",3195
+"web/lib/wall.ts","source candidate",9773
+"web/next-env.d.ts","source candidate",288
+"web/next.config.mjs","other",272
+"web/nginx.conf","config/resource",6683
+"web/package-lock.json","config/resource",102645
+"web/package.json","build/deploy",1232
+"web/postcss.config.mjs","other",374
+"web/public/art/bg/action.webp","other",35600
+"web/public/art/bg/comedy.webp","other",28508
+"web/public/art/bg/drama.webp","other",33318
+"web/public/art/bg/fantasy.webp","other",34814
+"web/public/art/bg/historical.webp","other",27250
+"web/public/art/bg/horror.webp","other",16424
+"web/public/art/bg/murim.webp","other",12870
+"web/public/art/bg/mystery.webp","other",17858
+"web/public/art/bg/romance.webp","other",44382
+"web/public/art/bg/scifi.webp","other",25998
+"web/public/art/bg/sports.webp","other",35036
+"web/public/art/bg/supernatural.webp","other",10490
+"web/public/art/empty-downloads.webp","other",2348
+"web/public/art/empty-library.webp","other",4982
+"web/public/art/empty-updates.webp","other",3328
+"web/public/art/hero.webp","other",15638
+"web/public/art/login-wall.webp","other",191078
+"web/public/art/login-wall@2x.webp","other",620776
+"web/public/art/login.webp","other",29470
+"web/public/art/og.jpg","other",56859
+"web/public/art/section.webp","other",5422
+"web/public/art/splash.webp","other",13534
+"web/public/art/wrapped.webp","other",141794
+"web/public/icons/apple-touch-icon.png","other",17385
+"web/public/icons/favicon.png","other",2712
+"web/public/icons/icon-192.png","other",18904
+"web/public/icons/icon-512.png","other",83460
+"web/public/icons/maskable-512.png","other",67688
+"web/public/icons/uchiyomi-mark.png","other",27191
+"web/public/locales/ar.json","config/resource",581184
+"web/public/locales/de.json","config/resource",506390
+"web/public/locales/es.json","config/resource",497326
+"web/public/locales/fr.json","config/resource",517347
+"web/public/locales/ja.json","config/resource",561099
+"web/public/locales/pt-BR.json","config/resource",494137
+"web/public/locales/ru.json","config/resource",659505
+"web/public/locales/zh.json","config/resource",457703
+"web/public/manifest.webmanifest","other",871
+"web/public/sw.js","other",25757
+"web/scripts/mobile-assets.mjs","other",3120
+"web/test/actionList.test.ts","test candidate",18124
+"web/test/activity.test.ts","test candidate",3227
+"web/test/addSeriesDialog.test.ts","test candidate",21770
+"web/test/adminNotifications.test.ts","test candidate",11081
+"web/test/adultBanner.test.ts","test candidate",6735
+"web/test/adultFilterSettings.test.ts","test candidate",10310
+"web/test/apiRetry.test.ts","test candidate",14698
+"web/test/archive.test.ts","test candidate",18177
+"web/test/authTransition.test.ts","test candidate",16420
+"web/test/authorLinks.test.ts","test candidate",5289
+"web/test/autofix.test.ts","test candidate",42157
+"web/test/avatarFrame.test.ts","test candidate",5338
+"web/test/backupSources.test.ts","test candidate",1481
+"web/test/badgeEmblem.test.ts","test candidate",7203
+"web/test/badges.test.ts","test candidate",6167
+"web/test/blockedChapters.test.ts","test candidate",2391
+"web/test/blockedGroups.test.ts","test candidate",1252
+"web/test/browserLoginCooldown.test.ts","test candidate",2254
+"web/test/bulkChapterDelete.test.ts","test candidate",3242
+"web/test/cadence.test.ts","test candidate",3387
+"web/test/chapterOrder.test.ts","test candidate",1661
+"web/test/chapterPages.test.ts","test candidate",5234
+"web/test/chapterPicker.test.ts","test candidate",8573
+"web/test/chapterRows.test.ts","test candidate",24949
+"web/test/chapterUpload.test.ts","test candidate",10541
+"web/test/chapterView.test.ts","test candidate",4131
+"web/test/comments.test.ts","test candidate",7306
+"web/test/compactChapters.test.ts","test candidate",3284
+"web/test/compareCopies.test.ts","test candidate",1752
+"web/test/confirmTitle.test.ts","test candidate",11321
+"web/test/contentScope.test.ts","test candidate",1137
+"web/test/contextMenus.test.ts","test candidate",2266
+"web/test/continueLabel.test.ts","test candidate",9003
+"web/test/counted.test.ts","test candidate",3964
+"web/test/coverBust.test.ts","test candidate",2717
+"web/test/coverFallback.test.ts","test candidate",1162
+"web/test/coverTitleBatch.test.ts","test candidate",13007
+"web/test/coverTitleMask.test.ts","test candidate",5851
+"web/test/creatorCapabilities.test.ts","test candidate",1130
+"web/test/deleteFiles.test.ts","test candidate",5669
+"web/test/deletedGhosts.test.ts","test candidate",10780
+"web/test/desktopSession.test.ts","test candidate",15894
+"web/test/desktopSurfaces.test.ts","test candidate",29229
+"web/test/destinations.test.ts","test candidate",21587
+"web/test/discoverAdult.test.ts","test candidate",7910
+"web/test/discoverAsked.test.ts","test candidate",3537
+"web/test/discoverHero.test.ts","test candidate",7482
+"web/test/discoverSearch.test.ts","test candidate",17027
+"web/test/discoveryHub.test.ts","test candidate",10889
+"web/test/downloadsSurfaces.test.ts","test candidate",22502
+"web/test/downloadsVersion.test.ts","test candidate",1851
+"web/test/dragReorder.test.ts","test candidate",3905
+"web/test/e2e/authorWalk.mjs","test candidate",11205
+"web/test/e2e/autofixWalk.mjs","test candidate",63627
+"web/test/e2e/backlogWalk.mjs","test candidate",12096
+"web/test/e2e/coverTitleBatchWalk.mjs","test candidate",15130
+"web/test/e2e/discoveryHubWalk.mjs","test candidate",28954
+"web/test/e2e/engineWalk.mjs","test candidate",32473
+"web/test/e2e/errorDetailsWalk.mjs","test candidate",8289
+"web/test/e2e/fakeAniList.mjs","test candidate",12454
+"web/test/e2e/fakeEngine.mjs","test candidate",4419
+"web/test/e2e/fakeIdp.mjs","test candidate",3738
+"web/test/e2e/fakeSolver.mjs","test candidate",6230
+"web/test/e2e/fakeSource.mjs","test candidate",28066
+"web/test/e2e/fakeTitleExtraction.mjs","test candidate",7073
+"web/test/e2e/filenamesWalk.mjs","test candidate",14345
+"web/test/e2e/hiddenChaptersWalk.mjs","test candidate",11039
+"web/test/e2e/i18n.mjs","test candidate",12064
+"web/test/e2e/layout.mjs","test candidate",26956
+"web/test/e2e/librariesWalk.mjs","test candidate",19481
+"web/test/e2e/localeSessionWalk.mjs","test candidate",16702
+"web/test/e2e/loginCooldown.mjs","test candidate",1550
+"web/test/e2e/maintenance.mjs","test candidate",6783
+"web/test/e2e/memberDefaultsWalk.mjs","test candidate",21052
+"web/test/e2e/multiSiteExtensionWalk.mjs","test candidate",15535
+"web/test/e2e/networkCut.mjs","test candidate",2288
+"web/test/e2e/noticeChaptersWalk.mjs","test candidate",16312
+"web/test/e2e/offlineAccountRaceWalk.mjs","test candidate",17798
+"web/test/e2e/pageCleanupWalk.mjs","test candidate",11887
+"web/test/e2e/pageProgress.mjs","test candidate",4218
+"web/test/e2e/plannedOfflineEvidence.mjs","test candidate",2971
+"web/test/e2e/privateLibraryEnhancementsWalk.mjs","test candidate",23541
+"web/test/e2e/replaceWalk.mjs","test candidate",40102
+"web/test/e2e/reviewFrontendWalk.mjs","test candidate",19706
+"web/test/e2e/run-v558.sh","test candidate",1070
+"web/test/e2e/run.mjs","test candidate",116953
+"web/test/e2e/seed.py","test candidate",20352
+"web/test/e2e/seriesMore.mjs","test candidate",3504
+"web/test/e2e/sheetNavigationWalk.mjs","test candidate",3702
+"web/test/e2e/solverWalk.mjs","test candidate",16084
+"web/test/e2e/spreadOffset.mjs","test candidate",5621
+"web/test/e2e/titleArtWalk.mjs","test candidate",9617
+"web/test/e2e/titleExtractionWalk.mjs","test candidate",17993
+"web/test/e2e/titleLogoScanWalk.mjs","test candidate",10423
+"web/test/e2e/titleMaskWalk.mjs","test candidate",12306
+"web/test/e2e/up.sh","test candidate",21217
+"web/test/e2e/uploadImportEnhancementsWalk.mjs","test candidate",11700
+"web/test/e2e/v554Walk.mjs","test candidate",38284
+"web/test/e2e/v557Walk.mjs","test candidate",47423
+"web/test/e2e/v558Walk.mjs","test candidate",42983
+"web/test/e2e/v560Walk.mjs","test candidate",9086
+"web/test/e2e/v570Walk.mjs","test candidate",12888
+"web/test/e2e/v580Walk.mjs","test candidate",14157
+"web/test/e2e/v610Walk-reader.mjs","test candidate",29357
+"web/test/e2e/v610Walk.mjs","test candidate",21070
+"web/test/e2e/v620Walk.mjs","test candidate",13128
+"web/test/e2e/v630Walk.mjs","test candidate",14731
+"web/test/e2e/walk180.mjs","test candidate",9943
+"web/test/e2e/walk229.mjs","test candidate",16954
+"web/test/e2e/walk263.mjs","test candidate",20332
+"web/test/e2e/walk40.mjs","test candidate",26510
+"web/test/e2e/walk41.mjs","test candidate",41391
+"web/test/e2e/walk42.mjs","test candidate",42904
+"web/test/e2e/walk43.mjs","test candidate",49847
+"web/test/e2e/walk48.mjs","test candidate",16669
+"web/test/e2e/walk49.mjs","test candidate",114765
+"web/test/e2e/walk491.mjs","test candidate",58238
+"web/test/e2e/walkComments.mjs","test candidate",14486
+"web/test/e2e/walkTranslate.mjs","test candidate",9882
+"web/test/e2eNetworkCut.test.ts","test candidate",3798
+"web/test/e2eOfflineEvidence.test.ts","test candidate",6442
+"web/test/editions.test.ts","test candidate",12169
+"web/test/effects.test.ts","test candidate",41020
+"web/test/engineSetup.test.ts","test candidate",16054
+"web/test/errorDetails.test.ts","test candidate",4292
+"web/test/everyWord.test.ts","test candidate",25673
+"web/test/extensionRepoRow.test.ts","test candidate",14512
+"web/test/extensions.test.ts","test candidate",49273
+"web/test/fakeEngine.test.ts","test candidate",8898
+"web/test/fakeSource.test.ts","test candidate",6417
+"web/test/fakeTitleExtraction.test.ts","test candidate",4871
+"web/test/favoritesSheet.test.ts","test candidate",2538
+"web/test/findSources.test.ts","test candidate",70052
+"web/test/finishDownloads.test.ts","test candidate",3867
+"web/test/fixtures/authorNames.json","test candidate",929
+"web/test/fixtures/smartQueries.json","test candidate",2618
+"web/test/fixtures/title-logo.png","test candidate",5939
+"web/test/forYou.test.ts","test candidate",4859
+"web/test/forYouBand.test.ts","test candidate",7397
+"web/test/forgetSeries.test.ts","test candidate",12602
+"web/test/format.test.ts","test candidate",19135
+"web/test/foundFor.test.ts","test candidate",2280
+"web/test/genreTagInput.test.ts","test candidate",3401
+"web/test/groupAvatar.test.ts","test candidate",1438
+"web/test/groupFilter.test.ts","test candidate",3313
+"web/test/groupSuggest.test.ts","test candidate",2846
+"web/test/healthActions.test.ts","test candidate",58467
+"web/test/healthAlert.test.ts","test candidate",4829
+"web/test/healthBySeries.test.ts","test candidate",4209
+"web/test/healthCopy.test.ts","test candidate",29302
+"web/test/healthKeys.test.ts","test candidate",3789
+"web/test/healthLinks.test.ts","test candidate",11319
+"web/test/heatmap.test.ts","test candidate",3397
+"web/test/heroArt.test.ts","test candidate",9083
+"web/test/hiddenChapters.test.ts","test candidate",1330
+"web/test/homeRails.test.ts","test candidate",10411
+"web/test/hooks.test.ts","test candidate",4821
+"web/test/hostNavigation.test.ts","test candidate",10435
+"web/test/idleWork.test.ts","test candidate",6455
+"web/test/importBatch.test.ts","test candidate",72784
+"web/test/insights.test.ts","test candidate",9129
+"web/test/jobs.test.ts","test candidate",5181
+"web/test/keepReading.test.ts","test candidate",1478
+"web/test/languageNames.test.ts","test candidate",4249
+"web/test/layers.test.ts","test candidate",14902
+"web/test/lenisScrollers.test.ts","test candidate",7159
+"web/test/library.test.ts","test candidate",55568
+"web/test/libraryFolders.test.ts","test candidate",13131
+"web/test/libraryPick.test.ts","test candidate",2734
+"web/test/libraryStart.test.ts","test candidate",8129
+"web/test/libraryView.test.ts","test candidate",5534
+"web/test/listSort.test.ts","test candidate",10155
+"web/test/liveWorks.test.ts","test candidate",14464
+"web/test/localeCoverage.test.ts","test candidate",27198
+"web/test/mangadexLangs.test.ts","test candidate",5765
+"web/test/matchPreview.test.ts","test candidate",1907
+"web/test/memberDefaults.test.ts","test candidate",6567
+"web/test/migrateSource.test.ts","test candidate",6659
+"web/test/mosaic.test.ts","test candidate",5422
+"web/test/moveLibrary.test.ts","test candidate",8657
+"web/test/nativeHost.test.ts","test candidate",4792
+"web/test/nativeLayout.test.ts","test candidate",6061
+"web/test/networkSettings.test.ts","test candidate",3632
+"web/test/nextUpParity.test.ts","test candidate",3298
+"web/test/noPills.test.ts","test candidate",30774
+"web/test/noticeChapters.test.ts","test candidate",7493
+"web/test/notices.test.ts","test candidate",41653
+"web/test/numbering.test.ts","test candidate",36163
+"web/test/offlineAsyncOwnership.test.ts","test candidate",8398
+"web/test/offlineBlocked.test.ts","test candidate",4272
+"web/test/offlineDates.test.ts","test candidate",861
+"web/test/offlineIdentity.test.ts","test candidate",9951
+"web/test/offlineOwnership.test.ts","test candidate",4948
+"web/test/offlinePageCleanup.test.ts","test candidate",2039
+"web/test/offlineResume.test.ts","test candidate",9341
+"web/test/otherLanguage.test.ts","test candidate",1890
+"web/test/otherTitles.test.ts","test candidate",1631
+"web/test/outbox.test.ts","test candidate",5944
+"web/test/overviewFacts.test.ts","test candidate",1960
+"web/test/pageCleanup.test.ts","test candidate",6086
+"web/test/pageProgress.test.ts","test candidate",3620
+"web/test/pageTransition.test.ts","test candidate",3960
+"web/test/palette.test.ts","test candidate",1580
+"web/test/paperTone.test.ts","test candidate",2960
+"web/test/partialSurfaces.test.ts","test candidate",17808
+"web/test/perf/README.md","test candidate",16834
+"web/test/perf/fast.mjs","test candidate",8261
+"web/test/perf/interact.mjs","test candidate",6893
+"web/test/perf/lib.mjs","test candidate",15132
+"web/test/perf/profile.mjs","test candidate",8464
+"web/test/perf/reader.mjs","test candidate",5904
+"web/test/perf/scroll.mjs","test candidate",6559
+"web/test/phoneSeries.test.ts","test candidate",8226
+"web/test/politeness.test.ts","test candidate",2399
+"web/test/preview.test.ts","test candidate",2342
+"web/test/profileMenu.test.ts","test candidate",5019
+"web/test/profileSwitch.test.ts","test candidate",12328
+"web/test/profileSwitcherPortal.test.ts","test candidate",4088
+"web/test/progressPayload.test.ts","test candidate",1376
+"web/test/progressRing.test.ts","test candidate",19235
+"web/test/providerGroups.test.ts","test candidate",4662
+"web/test/providerStatus.test.ts","test candidate",7503
+"web/test/queryKeys.test.ts","test candidate",5187
+"web/test/radar.test.ts","test candidate",8438
+"web/test/rails.test.ts","test candidate",5015
+"web/test/ratingsPanel.test.ts","test candidate",12576
+"web/test/readerAuto.test.ts","test candidate",13828
+"web/test/readerContextMenu.test.ts","test candidate",3183
+"web/test/readerCrop.test.ts","test candidate",12232
+"web/test/readerDevice.test.ts","test candidate",8702
+"web/test/readerFit.test.ts","test candidate",5011
+"web/test/readerFlow.test.ts","test candidate",9212
+"web/test/readerGesture.test.ts","test candidate",13286
+"web/test/readerImageRetry.test.ts","test candidate",1681
+"web/test/readerJoin.test.ts","test candidate",9978
+"web/test/readerKeys.test.ts","test candidate",8464
+"web/test/readerNav.test.ts","test candidate",4056
+"web/test/readerPad.test.ts","test candidate",5040
+"web/test/readerPagedScroll.test.ts","test candidate",5940
+"web/test/readerPrefs.test.ts","test candidate",5580
+"web/test/readerPrefsJunk.test.ts","test candidate",5931
+"web/test/readerPrimaryButton.test.ts","test candidate",1026
+"web/test/readerResume.test.ts","test candidate",3547
+"web/test/readerShortcuts.test.ts","test candidate",2069
+"web/test/readerSourcePrefs.test.ts","test candidate",19765
+"web/test/readerSpread.test.ts","test candidate",14527
+"web/test/readerState.test.ts","test candidate",2925
+"web/test/readerTranslate.test.ts","test candidate",4025
+"web/test/readerWindow.test.ts","test candidate",11705
+"web/test/readingTime.test.ts","test candidate",7529
+"web/test/recommendations.test.ts","test candidate",3278
+"web/test/refreshFollow.test.ts","test candidate",5546
+"web/test/repairRun.test.ts","test candidate",12263
+"web/test/rescan.test.ts","test candidate",17468
+"web/test/reviewFrontend.test.ts","test candidate",5028
+"web/test/routeLinks.test.ts","test candidate",2112
+"web/test/said.test.ts","test candidate",43760
+"web/test/scanlators.test.ts","test candidate",4141
+"web/test/scrollMemory.test.ts","test candidate",8695
+"web/test/searchMore.test.ts","test candidate",5130
+"web/test/searchPoll.test.ts","test candidate",2681
+"web/test/seriesActions.test.ts","test candidate",13882
+"web/test/seriesBooks.test.ts","test candidate",2846
+"web/test/seriesDirection.test.ts","test candidate",5011
+"web/test/seriesEditor.test.ts","test candidate",25366
+"web/test/seriesPage.test.ts","test candidate",40839
+"web/test/seriesPrefetch.test.ts","test candidate",4256
+"web/test/serverDownloads.test.ts","test candidate",30562
+"web/test/settingsConsole.test.ts","test candidate",68935
+"web/test/settingsIndex.test.ts","test candidate",19078
+"web/test/shelves.test.ts","test candidate",5799
+"web/test/shotsNeutral.test.ts","test candidate",12814
+"web/test/showAllChapters.test.ts","test candidate",3775
+"web/test/shownOnce.test.ts","test candidate",1828
+"web/test/signOutQueryCache.test.ts","test candidate",3715
+"web/test/signUp.test.ts","test candidate",7138
+"web/test/siteBrowser.test.ts","test candidate",10365
+"web/test/sourceAge.test.ts","test candidate",2344
+"web/test/sourceCheckRun.test.ts","test candidate",10974
+"web/test/sourceCoverArgs.test.ts","test candidate",3242
+"web/test/sourceEvidence.test.ts","test candidate",24667
+"web/test/sourceHealth.test.ts","test candidate",27502
+"web/test/sourceLeftovers.test.ts","test candidate",2963
+"web/test/sourceOrder.test.ts","test candidate",2997
+"web/test/sourcePicker.test.ts","test candidate",28016
+"web/test/sourceStack.test.ts","test candidate",8881
+"web/test/sourceStrings.test.ts","test candidate",20852
+"web/test/sourcesPanel.test.ts","test candidate",48157
+"web/test/spreadMarks.test.ts","test candidate",12085
+"web/test/ssoOnly.test.ts","test candidate",5575
+"web/test/status.test.ts","test candidate",11140
+"web/test/supplyLine.test.ts","test candidate",10829
+"web/test/swCache.test.ts","test candidate",15141
+"web/test/swNotificationOwnership.test.ts","test candidate",11371
+"web/test/swOutboxOwnership.test.ts","test candidate",6262
+"web/test/taskResult.test.ts","test candidate",25890
+"web/test/titleArt.test.ts","test candidate",8446
+"web/test/titleExtraction.test.ts","test candidate",9568
+"web/test/titleLogoScan.test.ts","test candidate",6358
+"web/test/tokens.test.ts","test candidate",11941
+"web/test/tone.test.ts","test candidate",9188
+"web/test/totpEnablePassword.test.ts","test candidate",4316
+"web/test/trackerHealth.test.ts","test candidate",5397
+"web/test/trackerHelp.test.ts","test candidate",14093
+"web/test/typeToSearch.test.ts","test candidate",3670
+"web/test/uiRefresh.test.ts","test candidate",15069
+"web/test/uploadImportOwnership.test.ts","test candidate",4045
+"web/test/uploadProxy.test.mjs","test candidate",8203
+"web/test/v558Preferences.test.ts","test candidate",10572
+"web/test/v580Discover.test.ts","test candidate",11720
+"web/test/v580Ratings.test.ts","test candidate",21287
+"web/test/v600Library.test.ts","test candidate",36570
+"web/test/v601Fixes.test.ts","test candidate",4955
+"web/test/v610Lists.test.ts","test candidate",12311
+"web/test/v610Radar.test.ts","test candidate",6619
+"web/test/v610Related.test.ts","test candidate",17359
+"web/test/v610Small.test.ts","test candidate",7073
+"web/test/versionLine.test.ts","test candidate",6520
+"web/test/wall.test.ts","test candidate",24342
+"web/tsconfig.json","config/resource",590

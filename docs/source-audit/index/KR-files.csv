@@ -1,0 +1,245 @@
+Path,Classification,Bytes
+".forgejo/workflows/build-image.yml","config/resource",825
+".github/dependabot.yml","config/resource",1148
+".github/workflows/dockerhub.yml","build/deploy",1639
+".github/workflows/tests.yml","build/deploy",1304
+".gitignore","other",316
+"LICENSE","other",35147
+"README.md","documentation",33340
+"backend/VERSION","other",6
+"backend/mangarr/__init__.py","source candidate",245
+"backend/mangarr/adding.py","source candidate",9156
+"backend/mangarr/api/__init__.py","source candidate",0
+"backend/mangarr/api/apikeys.py","source candidate",1258
+"backend/mangarr/api/calendar.py","source candidate",3402
+"backend/mangarr/api/deps.py","source candidate",2104
+"backend/mangarr/api/import_lists.py","source candidate",7852
+"backend/mangarr/api/issues.py","source candidate",12265
+"backend/mangarr/api/library.py","source candidate",40409
+"backend/mangarr/api/library_import.py","source candidate",11976
+"backend/mangarr/api/queue.py","source candidate",11759
+"backend/mangarr/api/search.py","source candidate",12884
+"backend/mangarr/api/series.py","source candidate",33880
+"backend/mangarr/api/settings.py","source candidate",5972
+"backend/mangarr/api/system.py","source candidate",4352
+"backend/mangarr/automation.py","source candidate",12348
+"backend/mangarr/browser_setup.py","source candidate",17259
+"backend/mangarr/chapter_metadata.py","source candidate",9177
+"backend/mangarr/comicinfo.py","source candidate",13551
+"backend/mangarr/config.py","source candidate",2458
+"backend/mangarr/db.py","source candidate",6674
+"backend/mangarr/download/__init__.py","source candidate",0
+"backend/mangarr/download/cbz.py","source candidate",3670
+"backend/mangarr/download/direct.py","source candidate",12324
+"backend/mangarr/download/image_preview.py","source candidate",4452
+"backend/mangarr/download/images.py","source candidate",7157
+"backend/mangarr/download/qbittorrent.py","source candidate",7552
+"backend/mangarr/download/torrent.py","source candidate",4493
+"backend/mangarr/filename.py","source candidate",5379
+"backend/mangarr/import_lists.py","source candidate",18546
+"backend/mangarr/jobs/__init__.py","source candidate",0
+"backend/mangarr/jobs/scheduler.py","source candidate",2926
+"backend/mangarr/jobs/tasks.py","source candidate",116396
+"backend/mangarr/kavita.py","source candidate",17725
+"backend/mangarr/library/__init__.py","source candidate",0
+"backend/mangarr/library/archive_members.py","source candidate",2689
+"backend/mangarr/library/cleanup.py","source candidate",13059
+"backend/mangarr/library/importer.py","source candidate",15726
+"backend/mangarr/library/matcher.py","source candidate",21133
+"backend/mangarr/library/move.py","source candidate",3178
+"backend/mangarr/library/naming.py","source candidate",6770
+"backend/mangarr/library/publish.py","source candidate",1235
+"backend/mangarr/library/rename.py","source candidate",6152
+"backend/mangarr/library/scanner.py","source candidate",17272
+"backend/mangarr/library/volume_merge.py","source candidate",6180
+"backend/mangarr/library/zip_limits.py","source candidate",952
+"backend/mangarr/main.py","source candidate",4141
+"backend/mangarr/metadata/__init__.py","source candidate",0
+"backend/mangarr/metadata/anilist.py","source candidate",7348
+"backend/mangarr/metadata/base.py","source candidate",826
+"backend/mangarr/metadata/mangaupdates.py","source candidate",7749
+"backend/mangarr/metadata_issues.py","source candidate",23048
+"backend/mangarr/models.py","source candidate",18154
+"backend/mangarr/notifications.py","source candidate",1455
+"backend/mangarr/related.py","source candidate",7935
+"backend/mangarr/release_schedule.py","source candidate",3266
+"backend/mangarr/reset_password.py","source candidate",2580
+"backend/mangarr/schemas.py","source candidate",20641
+"backend/mangarr/security.py","source candidate",5803
+"backend/mangarr/settings_service.py","source candidate",10594
+"backend/mangarr/sign_in_throttle.py","source candidate",2481
+"backend/mangarr/sources/__init__.py","source candidate",0
+"backend/mangarr/sources/_mangafire_vrf.py","source candidate",9356
+"backend/mangarr/sources/_mangaplus_proto.py","source candidate",5600
+"backend/mangarr/sources/asura.py","source candidate",5608
+"backend/mangarr/sources/atsumaru.py","source candidate",8230
+"backend/mangarr/sources/base.py","source candidate",5965
+"backend/mangarr/sources/fanfox.py","source candidate",12763
+"backend/mangarr/sources/mangadex.py","source candidate",14962
+"backend/mangarr/sources/mangafire.py","source candidate",7827
+"backend/mangarr/sources/mangaplus.py","source candidate",8024
+"backend/mangarr/sources/nyaa.py","source candidate",2893
+"backend/mangarr/sources/queries.py","source candidate",3213
+"backend/mangarr/sources/registry.py","source candidate",4398
+"backend/mangarr/sources/routing.py","source candidate",2965
+"backend/mangarr/sources/tcbscans.py","source candidate",4915
+"backend/mangarr/sources/toonily.py","source candidate",18999
+"backend/mangarr/sources/torznab.py","source candidate",6733
+"backend/mangarr/sources/viz.py","source candidate",4923
+"backend/mangarr/sources/webtoons.py","source candidate",8977
+"backend/mangarr/sources/weebcentral.py","source candidate",6219
+"backend/mangarr/sources/wikipedia.py","source candidate",12113
+"backend/mangarr/titles.py","source candidate",9964
+"backend/mangarr/torrent_selection.py","source candidate",10614
+"backend/mangarr/util.py","source candidate",13559
+"backend/mangarr/volumes.py","source candidate",8366
+"backend/pyproject.toml","build/deploy",943
+"backend/requirements-pip.txt","build/deploy",168
+"backend/requirements.txt","build/deploy",95018
+"backend/tests/__init__.py","test candidate",0
+"backend/tests/test_apikeys.py","test candidate",2795
+"backend/tests/test_app_version.py","test candidate",6363
+"backend/tests/test_archive_member_consistency.py","test candidate",4159
+"backend/tests/test_archive_version_cache.py","test candidate",3169
+"backend/tests/test_atsumaru.py","test candidate",6047
+"backend/tests/test_automation.py","test candidate",37655
+"backend/tests/test_cbz.py","test candidate",3394
+"backend/tests/test_cbz_partial_cleanup.py","test candidate",977
+"backend/tests/test_chapter_filename_collision.py","test candidate",4861
+"backend/tests/test_chapter_metadata.py","test candidate",4095
+"backend/tests/test_cleanup.py","test candidate",12446
+"backend/tests/test_cleanup_unprovable_names.py","test candidate",5206
+"backend/tests/test_comicinfo_illegal_chars.py","test candidate",652
+"backend/tests/test_comicinfo_limits.py","test candidate",3919
+"backend/tests/test_comicinfo_mapping_conflicts.py","test candidate",8987
+"backend/tests/test_comicinfo_order.py","test candidate",1726
+"backend/tests/test_comicinfo_pages.py","test candidate",1919
+"backend/tests/test_content_proxy.py","test candidate",7438
+"backend/tests/test_dependency_lock.py","test candidate",3977
+"backend/tests/test_direct_stall.py","test candidate",25381
+"backend/tests/test_download_comicinfo_race.py","test candidate",4975
+"backend/tests/test_download_limits.py","test candidate",3178
+"backend/tests/test_fanfox.py","test candidate",8938
+"backend/tests/test_file_modes.py","test candidate",2918
+"backend/tests/test_filename_coverage.py","test candidate",9741
+"backend/tests/test_folder_pinning.py","test candidate",1347
+"backend/tests/test_grab_retry.py","test candidate",28439
+"backend/tests/test_image_optimization.py","test candidate",17743
+"backend/tests/test_image_preview.py","test candidate",5429
+"backend/tests/test_import_lists.py","test candidate",12889
+"backend/tests/test_importer.py","test candidate",11820
+"backend/tests/test_issue_invalidation.py","test candidate",7056
+"backend/tests/test_kavita.py","test candidate",20908
+"backend/tests/test_library_import.py","test candidate",18482
+"backend/tests/test_library_lost_mid_download.py","test candidate",8643
+"backend/tests/test_library_path_safety.py","test candidate",895
+"backend/tests/test_mangadex.py","test candidate",2317
+"backend/tests/test_mangadex_auth_fallback.py","test candidate",6629
+"backend/tests/test_mangafire.py","test candidate",10195
+"backend/tests/test_mangaupdates.py","test candidate",4804
+"backend/tests/test_matcher.py","test candidate",6891
+"backend/tests/test_metadata_issue_fields.py","test candidate",4637
+"backend/tests/test_metadata_issue_volume_offsets.py","test candidate",2817
+"backend/tests/test_metadata_issues.py","test candidate",50661
+"backend/tests/test_naming.py","test candidate",2549
+"backend/tests/test_new_sources.py","test candidate",11647
+"backend/tests/test_not_source_failures.py","test candidate",5668
+"backend/tests/test_notifications.py","test candidate",1636
+"backend/tests/test_nyaa.py","test candidate",3594
+"backend/tests/test_page_order.py","test candidate",3973
+"backend/tests/test_ping.py","test candidate",1126
+"backend/tests/test_preferred_title.py","test candidate",23955
+"backend/tests/test_qbittorrent.py","test candidate",7558
+"backend/tests/test_queue_retry.py","test candidate",8364
+"backend/tests/test_refresh_reconcile.py","test candidate",5231
+"backend/tests/test_related.py","test candidate",5223
+"backend/tests/test_release_schedule.py","test candidate",4604
+"backend/tests/test_rename.py","test candidate",7028
+"backend/tests/test_resync_in_flight_downloads.py","test candidate",10369
+"backend/tests/test_rl_request.py","test candidate",2356
+"backend/tests/test_sanitize_filename_edge_cases.py","test candidate",13167
+"backend/tests/test_scanner.py","test candidate",16384
+"backend/tests/test_search_failure_logging.py","test candidate",4639
+"backend/tests/test_search_scope.py","test candidate",6538
+"backend/tests/test_security.py","test candidate",31679
+"backend/tests/test_series_delete_cancels_downloads.py","test candidate",5584
+"backend/tests/test_series_delete_races.py","test candidate",8292
+"backend/tests/test_series_editor.py","test candidate",18953
+"backend/tests/test_settings_validation.py","test candidate",4447
+"backend/tests/test_shared_archive_rules.py","test candidate",22795
+"backend/tests/test_source_failure_backoff.py","test candidate",12525
+"backend/tests/test_source_routing.py","test candidate",15768
+"backend/tests/test_special_chapters.py","test candidate",3993
+"backend/tests/test_sqlite_locking.py","test candidate",6387
+"backend/tests/test_sync_respects_queue_removal.py","test candidate",7549
+"backend/tests/test_titles.py","test candidate",3030
+"backend/tests/test_toonily.py","test candidate",26019
+"backend/tests/test_torrent_import_collision.py","test candidate",7175
+"backend/tests/test_torrent_import_off_loop.py","test candidate",26039
+"backend/tests/test_torrent_scope.py","test candidate",8840
+"backend/tests/test_torrent_selection.py","test candidate",6346
+"backend/tests/test_torrent_volume_provenance.py","test candidate",3072
+"backend/tests/test_torznab.py","test candidate",23997
+"backend/tests/test_transient_failure_retry.py","test candidate",11159
+"backend/tests/test_unmounted_extra_folder.py","test candidate",4369
+"backend/tests/test_unmounted_root.py","test candidate",17391
+"backend/tests/test_user_agent.py","test candidate",197
+"backend/tests/test_util.py","test candidate",3788
+"backend/tests/test_viz.py","test candidate",820
+"backend/tests/test_volume_resync_preview.py","test candidate",3696
+"backend/tests/test_volumes.py","test candidate",5549
+"backend/tests/test_wanted_pagination.py","test candidate",1208
+"backend/tests/test_webtoons.py","test candidate",6662
+"backend/tests/test_weebcentral.py","test candidate",2107
+"backend/tests/test_wikipedia.py","test candidate",7328
+"ca_profile.xml","config/resource",470
+"docker-compose.yml","build/deploy",721
+"docker/Dockerfile","build/deploy",2704
+"docker/entrypoint.sh","build/deploy",2280
+"frontend/index.html","source candidate",823
+"frontend/package-lock.json","config/resource",44673
+"frontend/package.json","build/deploy",617
+"frontend/public/mangarr-icon.png","other",26141
+"frontend/public/mangarr-icon.svg","other",385
+"frontend/public/manifest.webmanifest","other",346
+"frontend/src/App.tsx","source candidate",1632
+"frontend/src/api/client.ts","source candidate",2503
+"frontend/src/api/types.ts","source candidate",10366
+"frontend/src/components/AddSeriesModal.tsx","source candidate",9079
+"frontend/src/components/CommandPalette.tsx","source candidate",6930
+"frontend/src/components/FolderBrowser.tsx","source candidate",1808
+"frontend/src/components/Icon.tsx","source candidate",3233
+"frontend/src/components/ImageOptimizationPreview.tsx","source candidate",6369
+"frontend/src/components/LibraryEditor.tsx","source candidate",9970
+"frontend/src/components/LibraryTools.tsx","source candidate",26992
+"frontend/src/components/MetadataIssues.tsx","source candidate",4851
+"frontend/src/components/RelatedTitles.tsx","source candidate",4295
+"frontend/src/components/SeriesAutomation.tsx","source candidate",15042
+"frontend/src/components/Sidebar.tsx","source candidate",2303
+"frontend/src/components/common.tsx","source candidate",3740
+"frontend/src/index.css","other",55222
+"frontend/src/main.tsx","source candidate",1048
+"frontend/src/pages/Activity.tsx","source candidate",8131
+"frontend/src/pages/AddSeries.tsx","source candidate",6024
+"frontend/src/pages/Calendar.tsx","source candidate",6346
+"frontend/src/pages/ImportLists.tsx","source candidate",21097
+"frontend/src/pages/Issues.tsx","source candidate",2484
+"frontend/src/pages/Library.tsx","source candidate",9310
+"frontend/src/pages/LibraryImport.tsx","source candidate",16730
+"frontend/src/pages/SeriesDetail.tsx","source candidate",67299
+"frontend/src/pages/Settings.tsx","source candidate",46002
+"frontend/src/pages/Wanted.tsx","source candidate",2659
+"frontend/src/sanitize.ts","source candidate",516
+"frontend/src/seriesSearch.ts","source candidate",1718
+"frontend/src/sources.ts","source candidate",575
+"frontend/src/vite-env.d.ts","source candidate",38
+"frontend/tests/chapter-metadata.test.mjs","test candidate",2866
+"frontend/tests/image-optimization.test.mjs","test candidate",2230
+"frontend/tests/security-dependencies.test.mjs","test candidate",2255
+"frontend/tests/source-proxy.test.mjs","test candidate",3244
+"frontend/tests/torznab.test.mjs","test candidate",1862
+"frontend/tsconfig.json","config/resource",509
+"frontend/vite.config.ts","source candidate",351
+"scripts/lock-backend.sh","other",1679
+"scripts/version.py","source candidate",6288
+"templates/mangarr.xml","config/resource",3379

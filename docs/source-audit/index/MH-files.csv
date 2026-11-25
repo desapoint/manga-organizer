@@ -1,0 +1,1484 @@
+Path,Classification,Bytes
+".editorconfig","other",971
+".gitattributes","other",304
+".github/.java-version","other",3
+".github/FUNDING.yml","config/resource",15
+".github/ISSUE_TEMPLATE/1_request_feature.yml","config/resource",1241
+".github/ISSUE_TEMPLATE/2_report_issue.yml","config/resource",3260
+".github/ISSUE_TEMPLATE/config.yml","config/resource",310
+".github/assets/logo.png","other",7639
+".github/pull_request_template.md","documentation",504
+".github/renovate.json5","other",314
+".github/workflows/build.yml","build/deploy",2406
+".github/workflows/release.yml","build/deploy",6049
+".github/workflows/update_website.yml","build/deploy",550
+".gitignore","other",183
+".idea/icon.svg","other",1923
+"AGENTS.md","documentation",2991
+"CHANGELOG.md","documentation",112868
+"CLAUDE.md","documentation",11
+"CODE_OF_CONDUCT.md","documentation",5296
+"CONTRIBUTING.md","documentation",2008
+"LICENSE","other",10173
+"README.md","documentation",4306
+"app/build.gradle.kts","build/deploy",14673
+"app/google-services.json","config/resource",1108
+"app/proguard-android-optimize.txt","other",700
+"app/proguard-rules.pro","other",3563
+"app/src/debug/res/drawable/ic_launcher_background.xml","config/resource",1140
+"app/src/debug/res/drawable/ic_launcher_foreground.xml","config/resource",1619
+"app/src/debug/res/values/colors.xml","config/resource",160
+"app/src/main/AndroidManifest.xml","config/resource",10935
+"app/src/main/aidl/mihon/app/shizuku/IShellInterface.aidl","other",170
+"app/src/main/baselineProfiles/baseline-prof.txt","other",3486831
+"app/src/main/baselineProfiles/startup-prof.txt","other",2783200
+"app/src/main/graphql/mihon/graphql/anilist/AniListAddManga.graphql","source candidate",254
+"app/src/main/graphql/mihon/graphql/anilist/AniListDeleteManga.graphql","source candidate",123
+"app/src/main/graphql/mihon/graphql/anilist/AniListGetCurrentUser.graphql","source candidate",110
+"app/src/main/graphql/mihon/graphql/anilist/AniListGetLibManga.graphql","source candidate",451
+"app/src/main/graphql/mihon/graphql/anilist/AniListGetMangaDetails.graphql","source candidate",199
+"app/src/main/graphql/mihon/graphql/anilist/AniListSearchManga.graphql","source candidate",199
+"app/src/main/graphql/mihon/graphql/anilist/AniListUpdateManga.graphql","source candidate",415
+"app/src/main/graphql/mihon/graphql/anilist/MangaFragment.graphql","source candidate",336
+"app/src/main/graphql/mihon/graphql/anilist/anilist.graphqls","other",150971
+"app/src/main/graphql/mihon/graphql/kitsu/KitsuAddLibManga.graphql","source candidate",453
+"app/src/main/graphql/mihon/graphql/kitsu/KitsuDeleteLibEntry.graphql","source candidate",230
+"app/src/main/graphql/mihon/graphql/kitsu/KitsuFindLibManga.graphql","source candidate",242
+"app/src/main/graphql/mihon/graphql/kitsu/KitsuGetCurrentAccount.graphql","source candidate",111
+"app/src/main/graphql/mihon/graphql/kitsu/KitsuGetMangaDetailsById.graphql","source candidate",111
+"app/src/main/graphql/mihon/graphql/kitsu/KitsuGetMangaDetailsBySlug.graphql","source candidate",125
+"app/src/main/graphql/mihon/graphql/kitsu/KitsuSearchMangaByTitle.graphql","source candidate",163
+"app/src/main/graphql/mihon/graphql/kitsu/KitsuUpdateLibManga.graphql","source candidate",556
+"app/src/main/graphql/mihon/graphql/kitsu/MangaFragment.graphql","source candidate",374
+"app/src/main/graphql/mihon/graphql/kitsu/kitsu.graphqls","other",133034
+"app/src/main/graphql/mihon/graphql/shikimori/MangaFragment.graphql","source candidate",217
+"app/src/main/graphql/mihon/graphql/shikimori/ShikimoriGetCurrentUser.graphql","source candidate",74
+"app/src/main/graphql/mihon/graphql/shikimori/ShikimoriGetLibManga.graphql","source candidate",219
+"app/src/main/graphql/mihon/graphql/shikimori/ShikimoriGetMangaDetails.graphql","source candidate",162
+"app/src/main/graphql/mihon/graphql/shikimori/ShikimoriSearchManga.graphql","source candidate",163
+"app/src/main/graphql/mihon/graphql/shikimori/shikimori.graphqls","other",24729
+"app/src/main/graphql/mihon/graphql/suwayomi/MangaFragment.graphql","source candidate",187
+"app/src/main/graphql/mihon/graphql/suwayomi/SuwayomiGetManga.graphql","source candidate",106
+"app/src/main/graphql/mihon/graphql/suwayomi/SuwayomiGetMangaUnreadChapters.graphql","source candidate",461
+"app/src/main/graphql/mihon/graphql/suwayomi/SuwayomiMarkChaptersRead.graphql","source candidate",194
+"app/src/main/graphql/mihon/graphql/suwayomi/SuwayomiMarkReadAndDeleteChapters.graphql","source candidate",295
+"app/src/main/graphql/mihon/graphql/suwayomi/SuwayomiUpdateMangaProgress.graphql","source candidate",149
+"app/src/main/graphql/mihon/graphql/suwayomi/suwayomi.graphqls","other",83589
+"app/src/main/java/eu/kanade/core/preference/CheckboxState.kt","source candidate",400
+"app/src/main/java/eu/kanade/core/preference/PreferenceMutableState.kt","source candidate",964
+"app/src/main/java/eu/kanade/core/util/CollectionUtils.kt","source candidate",2495
+"app/src/main/java/eu/kanade/domain/base/BasePreferences.kt","source candidate",1929
+"app/src/main/java/eu/kanade/domain/base/ExtensionInstallerPreference.kt","source candidate",2095
+"app/src/main/java/eu/kanade/domain/chapter/interactor/GetAvailableScanlators.kt","source candidate",778
+"app/src/main/java/eu/kanade/domain/chapter/interactor/SetReadStatus.kt","source candidate",2735
+"app/src/main/java/eu/kanade/domain/chapter/interactor/SyncChaptersWithSource.kt","source candidate",10474
+"app/src/main/java/eu/kanade/domain/chapter/model/Chapter.kt","source candidate",901
+"app/src/main/java/eu/kanade/domain/chapter/model/ChapterFilter.kt","source candidate",2362
+"app/src/main/java/eu/kanade/domain/download/interactor/DeleteDownload.kt","source candidate",629
+"app/src/main/java/eu/kanade/domain/extension/interactor/GetExtensionLanguages.kt","source candidate",1006
+"app/src/main/java/eu/kanade/domain/extension/interactor/GetExtensionSources.kt","source candidate",1255
+"app/src/main/java/eu/kanade/domain/extension/interactor/GetExtensionsByType.kt","source candidate",2630
+"app/src/main/java/eu/kanade/domain/extension/interactor/TrustExtension.kt","source candidate",2329
+"app/src/main/java/eu/kanade/domain/extension/model/Extensions.kt","source candidate",297
+"app/src/main/java/eu/kanade/domain/manga/interactor/GetExcludedScanlators.kt","source candidate",514
+"app/src/main/java/eu/kanade/domain/manga/interactor/SetExcludedScanlators.kt","source candidate",382
+"app/src/main/java/eu/kanade/domain/manga/interactor/SetMangaViewerFlags.kt","source candidate",1114
+"app/src/main/java/eu/kanade/domain/manga/interactor/UpdateManga.kt","source candidate",2377
+"app/src/main/java/eu/kanade/domain/manga/model/Manga.kt","source candidate",4189
+"app/src/main/java/eu/kanade/domain/source/interactor/GetEnabledSources.kt","source candidate",1771
+"app/src/main/java/eu/kanade/domain/source/interactor/GetIncognitoState.kt","source candidate",1409
+"app/src/main/java/eu/kanade/domain/source/interactor/GetLanguagesWithSources.kt","source candidate",1267
+"app/src/main/java/eu/kanade/domain/source/interactor/GetSourcesWithFavoriteCount.kt","source candidate",2176
+"app/src/main/java/eu/kanade/domain/source/interactor/SetMigrateSorting.kt","source candidate",531
+"app/src/main/java/eu/kanade/domain/source/interactor/ToggleIncognito.kt","source candidate",462
+"app/src/main/java/eu/kanade/domain/source/interactor/ToggleLanguage.kt","source candidate",523
+"app/src/main/java/eu/kanade/domain/source/interactor/ToggleSource.kt","source candidate",1090
+"app/src/main/java/eu/kanade/domain/source/interactor/ToggleSourcePin.kt","source candidate",587
+"app/src/main/java/eu/kanade/domain/source/service/SourcePreferences.kt","source candidate",4080
+"app/src/main/java/eu/kanade/domain/track/interactor/AddTracks.kt","source candidate",3945
+"app/src/main/java/eu/kanade/domain/track/interactor/RefreshTracks.kt","source candidate",1838
+"app/src/main/java/eu/kanade/domain/track/interactor/SyncChapterProgressWithTrack.kt","source candidate",1890
+"app/src/main/java/eu/kanade/domain/track/interactor/TrackChapter.kt","source candidate",2480
+"app/src/main/java/eu/kanade/domain/track/model/AutoTrackState.kt","source candidate",289
+"app/src/main/java/eu/kanade/domain/track/model/Track.kt","source candidate",1684
+"app/src/main/java/eu/kanade/domain/track/service/DelayedTrackingUpdateWorker.kt","source candidate",2846
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt","source candidate",2315
+"app/src/main/java/eu/kanade/domain/track/store/DelayedTrackingStore.kt","source candidate",1482
+"app/src/main/java/eu/kanade/domain/ui/UiPreferences.kt","source candidate",3769
+"app/src/main/java/eu/kanade/domain/ui/model/AppTheme.kt","source candidate",888
+"app/src/main/java/eu/kanade/domain/ui/model/TabletUiMode.kt","source candidate",323
+"app/src/main/java/eu/kanade/domain/ui/model/ThemeMode.kt","source candidate",491
+"app/src/main/java/eu/kanade/domain/ui/model/TimeFormat.kt","source candidate",340
+"app/src/main/java/eu/kanade/presentation/browse/BrowseSourceScreen.kt","source candidate",6334
+"app/src/main/java/eu/kanade/presentation/browse/ExtensionDetailsScreen.kt","source candidate",17583
+"app/src/main/java/eu/kanade/presentation/browse/ExtensionFilterScreen.kt","source candidate",2259
+"app/src/main/java/eu/kanade/presentation/browse/ExtensionsScreen.kt","source candidate",26903
+"app/src/main/java/eu/kanade/presentation/browse/GlobalSearchScreen.kt","source candidate",4170
+"app/src/main/java/eu/kanade/presentation/browse/MigrateSearchScreen.kt","source candidate",1977
+"app/src/main/java/eu/kanade/presentation/browse/MigrateSourceScreen.kt","source candidate",8392
+"app/src/main/java/eu/kanade/presentation/browse/SourcesFilterScreen.kt","source candidate",4059
+"app/src/main/java/eu/kanade/presentation/browse/SourcesScreen.kt","source candidate",7265
+"app/src/main/java/eu/kanade/presentation/browse/components/BaseBrowseItem.kt","source candidate",1166
+"app/src/main/java/eu/kanade/presentation/browse/components/BaseSourceItem.kt","source candidate",2516
+"app/src/main/java/eu/kanade/presentation/browse/components/BrowseBadges.kt","source candidate",443
+"app/src/main/java/eu/kanade/presentation/browse/components/BrowseIcons.kt","source candidate",3593
+"app/src/main/java/eu/kanade/presentation/browse/components/BrowseSourceComfortableGrid.kt","source candidate",2944
+"app/src/main/java/eu/kanade/presentation/browse/components/BrowseSourceCompactGrid.kt","source candidate",2924
+"app/src/main/java/eu/kanade/presentation/browse/components/BrowseSourceDialogs.kt","source candidate",1203
+"app/src/main/java/eu/kanade/presentation/browse/components/BrowseSourceList.kt","source candidate",2383
+"app/src/main/java/eu/kanade/presentation/browse/components/BrowseSourceLoadingItem.kt","source candidate",692
+"app/src/main/java/eu/kanade/presentation/browse/components/BrowseSourceToolbar.kt","source candidate",5368
+"app/src/main/java/eu/kanade/presentation/browse/components/ContentWarningLabel.kt","source candidate",1157
+"app/src/main/java/eu/kanade/presentation/browse/components/ExtensionPill.kt","source candidate",1112
+"app/src/main/java/eu/kanade/presentation/browse/components/GlobalSearchCardRow.kt","source candidate",2805
+"app/src/main/java/eu/kanade/presentation/browse/components/GlobalSearchResultItems.kt","source candidate",3396
+"app/src/main/java/eu/kanade/presentation/browse/components/GlobalSearchToolbar.kt","source candidate",5338
+"app/src/main/java/eu/kanade/presentation/category/CategoryExtensions.kt","source candidate",624
+"app/src/main/java/eu/kanade/presentation/category/CategoryScreen.kt","source candidate",4482
+"app/src/main/java/eu/kanade/presentation/category/components/CategoryDialogs.kt","source candidate",10703
+"app/src/main/java/eu/kanade/presentation/category/components/CategoryFloatingActionButton.kt","source candidate",1033
+"app/src/main/java/eu/kanade/presentation/category/components/CategoryListItem.kt","source candidate",2591
+"app/src/main/java/eu/kanade/presentation/components/AdaptiveSheet.kt","source candidate",1256
+"app/src/main/java/eu/kanade/presentation/components/AppBar.kt","source candidate",16256
+"app/src/main/java/eu/kanade/presentation/components/Banners.kt","source candidate",6903
+"app/src/main/java/eu/kanade/presentation/components/DateText.kt","source candidate",1339
+"app/src/main/java/eu/kanade/presentation/components/DownloadDropdownMenu.kt","source candidate",2468
+"app/src/main/java/eu/kanade/presentation/components/DropdownMenu.kt","source candidate",3594
+"app/src/main/java/eu/kanade/presentation/components/EmptyScreen.kt","source candidate",1510
+"app/src/main/java/eu/kanade/presentation/components/TabbedDialog.kt","source candidate",3737
+"app/src/main/java/eu/kanade/presentation/components/TabbedScreen.kt","source candidate",3916
+"app/src/main/java/eu/kanade/presentation/crash/CrashScreen.kt","source candidate",2580
+"app/src/main/java/eu/kanade/presentation/download/DownloadQueueList.kt","source candidate",20402
+"app/src/main/java/eu/kanade/presentation/history/HistoryScreen.kt","source candidate",6997
+"app/src/main/java/eu/kanade/presentation/history/HistoryviewModelStateProvider.kt","source candidate",3899
+"app/src/main/java/eu/kanade/presentation/history/components/HistoryDialogs.kt","source candidate",3146
+"app/src/main/java/eu/kanade/presentation/history/components/HistoryItem.kt","source candidate",4736
+"app/src/main/java/eu/kanade/presentation/history/components/HistoryWithRelationsProvider.kt","source candidate",2079
+"app/src/main/java/eu/kanade/presentation/library/DeleteLibraryMangaDialog.kt","source candidate",2749
+"app/src/main/java/eu/kanade/presentation/library/LibrarySettingsDialog.kt","source candidate",11864
+"app/src/main/java/eu/kanade/presentation/library/components/CommonMangaItem.kt","source candidate",12983
+"app/src/main/java/eu/kanade/presentation/library/components/GlobalSearchItem.kt","source candidate",705
+"app/src/main/java/eu/kanade/presentation/library/components/LazyLibraryGrid.kt","source candidate",1633
+"app/src/main/java/eu/kanade/presentation/library/components/LibraryBadges.kt","source candidate",1719
+"app/src/main/java/eu/kanade/presentation/library/components/LibraryComfortableGrid.kt","source candidate",2494
+"app/src/main/java/eu/kanade/presentation/library/components/LibraryCompactGrid.kt","source candidate",2527
+"app/src/main/java/eu/kanade/presentation/library/components/LibraryContent.kt","source candidate",4887
+"app/src/main/java/eu/kanade/presentation/library/components/LibraryList.kt","source candidate",2821
+"app/src/main/java/eu/kanade/presentation/library/components/LibraryPager.kt","source candidate",6106
+"app/src/main/java/eu/kanade/presentation/library/components/LibraryTabs.kt","source candidate",1376
+"app/src/main/java/eu/kanade/presentation/library/components/LibraryToolbar.kt","source candidate",5754
+"app/src/main/java/eu/kanade/presentation/manga/ChapterSettingsDialog.kt","source candidate",9324
+"app/src/main/java/eu/kanade/presentation/manga/DuplicateMangaDialog.kt","source candidate",15529
+"app/src/main/java/eu/kanade/presentation/manga/MangaNotesScreen.kt","source candidate",1518
+"app/src/main/java/eu/kanade/presentation/manga/MangaScreen.kt","source candidate",35771
+"app/src/main/java/eu/kanade/presentation/manga/MangaScreenConstants.kt","source candidate",394
+"app/src/main/java/eu/kanade/presentation/manga/components/BaseMangaListItem.kt","source candidate",2160
+"app/src/main/java/eu/kanade/presentation/manga/components/ChapterDownloadIndicator.kt","source candidate",10406
+"app/src/main/java/eu/kanade/presentation/manga/components/ChapterHeader.kt","source candidate",2179
+"app/src/main/java/eu/kanade/presentation/manga/components/DotSeparatorText.kt","source candidate",312
+"app/src/main/java/eu/kanade/presentation/manga/components/MangaBottomActionMenu.kt","source candidate",15491
+"app/src/main/java/eu/kanade/presentation/manga/components/MangaChapterListItem.kt","source candidate",9946
+"app/src/main/java/eu/kanade/presentation/manga/components/MangaCover.kt","source candidate",1795
+"app/src/main/java/eu/kanade/presentation/manga/components/MangaCoverDialog.kt","source candidate",12740
+"app/src/main/java/eu/kanade/presentation/manga/components/MangaDialogs.kt","source candidate",5596
+"app/src/main/java/eu/kanade/presentation/manga/components/MangaInfoHeader.kt","source candidate",28863
+"app/src/main/java/eu/kanade/presentation/manga/components/MangaNotesDisplay.kt","source candidate",2022
+"app/src/main/java/eu/kanade/presentation/manga/components/MangaNotesSection.kt","source candidate",3168
+"app/src/main/java/eu/kanade/presentation/manga/components/MangaNotesTextArea.kt","source candidate",8637
+"app/src/main/java/eu/kanade/presentation/manga/components/MangaToolbar.kt","source candidate",6294
+"app/src/main/java/eu/kanade/presentation/manga/components/MarkdownRender.kt","source candidate",12224
+"app/src/main/java/eu/kanade/presentation/manga/components/MissingChapterCountListItem.kt","source candidate",1763
+"app/src/main/java/eu/kanade/presentation/manga/components/ScanlatorFilterDialog.kt","source candidate",6440
+"app/src/main/java/eu/kanade/presentation/more/AppMigratingScreen.kt","source candidate",1870
+"app/src/main/java/eu/kanade/presentation/more/LogoHeader.kt","source candidate",1183
+"app/src/main/java/eu/kanade/presentation/more/MoreScreen.kt","source candidate",6599
+"app/src/main/java/eu/kanade/presentation/more/NewUpdateScreen.kt","source candidate",5310
+"app/src/main/java/eu/kanade/presentation/more/onboarding/GuidesStep.kt","source candidate",2388
+"app/src/main/java/eu/kanade/presentation/more/onboarding/OnboardingScreen.kt","source candidate",3065
+"app/src/main/java/eu/kanade/presentation/more/onboarding/OnboardingStep.kt","source candidate",194
+"app/src/main/java/eu/kanade/presentation/more/onboarding/PermissionStep.kt","source candidate",8220
+"app/src/main/java/eu/kanade/presentation/more/onboarding/StorageStep.kt","source candidate",3365
+"app/src/main/java/eu/kanade/presentation/more/onboarding/ThemeStep.kt","source candidate",1594
+"app/src/main/java/eu/kanade/presentation/more/settings/Preference.kt","source candidate",7933
+"app/src/main/java/eu/kanade/presentation/more/settings/PreferenceItem.kt","source candidate",9070
+"app/src/main/java/eu/kanade/presentation/more/settings/PreferenceScaffold.kt","source candidate",1009
+"app/src/main/java/eu/kanade/presentation/more/settings/PreferenceScreen.kt","source candidate",3679
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/Commons.kt","source candidate",1843
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/SearchableSettings.kt","source candidate",1491
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsAdvancedScreen.kt","source candidate",19528
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsAppearanceScreen.kt","source candidate",7441
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsBrowseScreen.kt","source candidate",5209
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsDataScreen.kt","source candidate",20018
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsDownloadScreen.kt","source candidate",9426
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsLibraryScreen.kt","source candidate",13623
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsMainScreen.kt","source candidate",10564
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsReaderScreen.kt","source candidate",22196
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsSearchScreen.kt","source candidate",12578
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsSecurityScreen.kt","source candidate",5592
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsTrackingScreen.kt","source candidate",17181
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/about/AboutScreen.kt","source candidate",11593
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/about/OpenSourceLicensesScreen.kt","source candidate",1379
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/advanced/ClearDatabaseScreen.kt","source candidate",12836
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/appearance/AppLanguageScreen.kt","source candidate",4314
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/ExtensionStoresScreen.kt","source candidate",3339
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/ExtensionStoresViewModel.kt","source candidate",5162
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/components/ExtensionStoresContent.kt","source candidate",4494
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/components/ExtensionStoresDialogs.kt","source candidate",6686
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/browse/components/ExtensionStoresScreen.kt","source candidate",3093
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/data/CreateBackupScreen.kt","source candidate",5367
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/data/RestoreBackupScreen.kt","source candidate",9276
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/data/StorageInfo.kt","source candidate",2894
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/debug/BackupSchemaScreen.kt","source candidate",2435
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/debug/DebugInfoScreen.kt","source candidate",7501
+"app/src/main/java/eu/kanade/presentation/more/settings/screen/debug/WorkerInfoScreen.kt","source candidate",7302
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/AppThemeModePreferenceWidget.kt","source candidate",1654
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/AppThemePreferenceWidget.kt","source candidate",9237
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/BasePreferenceWidget.kt","source candidate",4796
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/CheckboxPreferenceWidget.kt","source candidate",1016
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/EditTextPreferenceWidget.kt","source candidate",3708
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/InfoWidget.kt","source candidate",1675
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/ListPreferenceWidget.kt","source candidate",4590
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/MultiSelectListPreferenceWidget.kt","source candidate",3710
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/PreferenceGroupHeader.kt","source candidate",997
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/SwitchPreferenceWidget.kt","source candidate",2452
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/TextPreferenceWidget.kt","source candidate",2681
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/TrackingPreferenceWidget.kt","source candidate",4935
+"app/src/main/java/eu/kanade/presentation/more/settings/widget/TriStateListDialog.kt","source candidate",6188
+"app/src/main/java/eu/kanade/presentation/more/stats/StatsScreenContent.kt","source candidate",5353
+"app/src/main/java/eu/kanade/presentation/more/stats/StatsScreenState.kt","source candidate",467
+"app/src/main/java/eu/kanade/presentation/more/stats/components/StatsItem.kt","source candidate",2678
+"app/src/main/java/eu/kanade/presentation/more/stats/data/StatsData.kt","source candidate",675
+"app/src/main/java/eu/kanade/presentation/reader/ChapterTransition.kt","source candidate",12490
+"app/src/main/java/eu/kanade/presentation/reader/DisplayRefreshHost.kt","source candidate",2687
+"app/src/main/java/eu/kanade/presentation/reader/OrientationSelectDialog.kt","source candidate",3405
+"app/src/main/java/eu/kanade/presentation/reader/ReaderContentOverlay.kt","source candidate",1316
+"app/src/main/java/eu/kanade/presentation/reader/ReaderError.kt","source candidate",2613
+"app/src/main/java/eu/kanade/presentation/reader/ReaderNavigationOverlay.kt","source candidate",3489
+"app/src/main/java/eu/kanade/presentation/reader/ReaderPageActionsDialog.kt","source candidate",3715
+"app/src/main/java/eu/kanade/presentation/reader/ReaderPageIndicator.kt","source candidate",1667
+"app/src/main/java/eu/kanade/presentation/reader/ReadingModeSelectDialog.kt","source candidate",3292
+"app/src/main/java/eu/kanade/presentation/reader/appbars/ReaderAppBars.kt","source candidate",8094
+"app/src/main/java/eu/kanade/presentation/reader/appbars/ReaderBottomBar.kt","source candidate",2345
+"app/src/main/java/eu/kanade/presentation/reader/appbars/ReaderTopBar.kt","source candidate",2910
+"app/src/main/java/eu/kanade/presentation/reader/components/ChapterNavigator.kt","source candidate",12279
+"app/src/main/java/eu/kanade/presentation/reader/components/ModeSelectionDialog.kt","source candidate",3030
+"app/src/main/java/eu/kanade/presentation/reader/settings/ColorFilterPage.kt","source candidate",5425
+"app/src/main/java/eu/kanade/presentation/reader/settings/GeneralSettingsPage.kt","source candidate",6476
+"app/src/main/java/eu/kanade/presentation/reader/settings/ReaderSettingsDialog.kt","source candidate",2518
+"app/src/main/java/eu/kanade/presentation/reader/settings/ReadingModePage.kt","source candidate",8900
+"app/src/main/java/eu/kanade/presentation/theme/TachiyomiTheme.kt","source candidate",3919
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/BaseColorScheme.kt","source candidate",1557
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/CatppuccinColorScheme.kt","source candidate",4658
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/GreenAppleColorScheme.kt","source candidate",4200
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/LavenderColorScheme.kt","source candidate",4062
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/MidnightDuskColorScheme.kt","source candidate",3617
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/MonetColorScheme.kt","source candidate",2178
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/MonochromeColorScheme.kt","source candidate",3396
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/NordColorScheme.kt","source candidate",3868
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/StrawberryColorScheme.kt","source candidate",4187
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/TachiyomiColorScheme.kt","source candidate",3951
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/TakoColorScheme.kt","source candidate",3602
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/TealTurqoiseColorScheme.kt","source candidate",3389
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/TidalWaveColorScheme.kt","source candidate",3518
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/TokyoNightColorScheme.kt","source candidate",3492
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/YinYangColorScheme.kt","source candidate",3469
+"app/src/main/java/eu/kanade/presentation/theme/colorscheme/YotsubaColorScheme.kt","source candidate",3613
+"app/src/main/java/eu/kanade/presentation/track/TrackInfoDialogHome.kt","source candidate",15093
+"app/src/main/java/eu/kanade/presentation/track/TrackInfoDialogHomePreviewProvider.kt","source candidate",3415
+"app/src/main/java/eu/kanade/presentation/track/TrackInfoDialogSelector.kt","source candidate",9071
+"app/src/main/java/eu/kanade/presentation/track/TrackerSearch.kt","source candidate",17590
+"app/src/main/java/eu/kanade/presentation/track/TrackerSearchPreviewProvider.kt","source candidate",3998
+"app/src/main/java/eu/kanade/presentation/track/components/TrackLogoIcon.kt","source candidate",1493
+"app/src/main/java/eu/kanade/presentation/track/components/TrackLogoIconPreviewProvider.kt","source candidate",471
+"app/src/main/java/eu/kanade/presentation/updates/UpdatesDeleteConfirmationDialog.kt","source candidate",988
+"app/src/main/java/eu/kanade/presentation/updates/UpdatesFilterDialog.kt","source candidate",6437
+"app/src/main/java/eu/kanade/presentation/updates/UpdatesScreen.kt","source candidate",10569
+"app/src/main/java/eu/kanade/presentation/updates/UpdatesUiItem.kt","source candidate",9857
+"app/src/main/java/eu/kanade/presentation/util/AnimatedVectorPainter.kt","source candidate",1313
+"app/src/main/java/eu/kanade/presentation/util/ChapterNumberFormatter.kt","source candidate",325
+"app/src/main/java/eu/kanade/presentation/util/ExceptionFormatter.kt","source candidate",1307
+"app/src/main/java/eu/kanade/presentation/util/Permissions.kt","source candidate",1218
+"app/src/main/java/eu/kanade/presentation/util/Resources.kt","source candidate",1006
+"app/src/main/java/eu/kanade/presentation/util/TimeUtils.kt","source candidate",1635
+"app/src/main/java/eu/kanade/presentation/util/TwentyFourHourSystem.kt","source candidate",1177
+"app/src/main/java/eu/kanade/presentation/webview/WebViewScreenContent.kt","source candidate",16528
+"app/src/main/java/eu/kanade/tachiyomi/App.kt","source candidate",13014
+"app/src/main/java/eu/kanade/tachiyomi/AppInfo.kt","source candidate",996
+"app/src/main/java/eu/kanade/tachiyomi/crash/CrashActivity.kt","source candidate",923
+"app/src/main/java/eu/kanade/tachiyomi/crash/GlobalExceptionHandler.kt","source candidate",2874
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/BackupDecoder.kt","source candidate",3624
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/BackupFileValidator.kt","source candidate",2202
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/BackupNotifier.kt","source candidate",6287
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/BackupStream.kt","source candidate",5088
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupCreateWorker.kt","source candidate",5689
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupCreator.kt","source candidate",7253
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt","source candidate",4180
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/creators/CategoriesBackupCreator.kt","source candidate",609
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/creators/ExtensionStoresBackupCreator.kt","source candidate",554
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/creators/MangaBackupCreator.kt","source candidate",4689
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/creators/PreferenceBackupCreator.kt","source candidate",2931
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/creators/SourcesBackupCreator.kt","source candidate",611
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/Backup.kt","source candidate",758
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupCategory.kt","source candidate",665
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt","source candidate",2667
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupExtensionStore.kt","source candidate",1014
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupHistory.kt","source candidate",590
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupManga.kt","source candidate",4204
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupPreference.kt","source candidate",986
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupSource.kt","source candidate",265
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupTracking.kt","source candidate",2962
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/restore/BackupRestoreWorker.kt","source candidate",4051
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/restore/BackupRestorer.kt","source candidate",10523
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/restore/RestoreOptions.kt","source candidate",2274
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/restore/restorers/CategoriesRestorer.kt","source candidate",1290
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/restore/restorers/ExtensionStoreRestorer.kt","source candidate",1098
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/restore/restorers/MangaRestorer.kt","source candidate",2671
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/restore/restorers/PreferenceRestorer.kt","source candidate",5696
+"app/src/main/java/eu/kanade/tachiyomi/data/cache/CoverCache.kt","source candidate",4539
+"app/src/main/java/eu/kanade/tachiyomi/data/coil/BufferedSourceFetcher.kt","source candidate",977
+"app/src/main/java/eu/kanade/tachiyomi/data/coil/CoverRequestInterceptor.kt","source candidate",975
+"app/src/main/java/eu/kanade/tachiyomi/data/coil/DeDupeConcurrentRequests.kt","source candidate",1502
+"app/src/main/java/eu/kanade/tachiyomi/data/coil/ExtensionIconFetcher.kt","source candidate",3105
+"app/src/main/java/eu/kanade/tachiyomi/data/coil/ImageDecoder.kt","source candidate",8725
+"app/src/main/java/eu/kanade/tachiyomi/data/coil/MangaCoverFetcher.kt","source candidate",12765
+"app/src/main/java/eu/kanade/tachiyomi/data/coil/MangaCoverKeyer.kt","source candidate",1039
+"app/src/main/java/eu/kanade/tachiyomi/data/coil/Utils.kt","source candidate",1414
+"app/src/main/java/eu/kanade/tachiyomi/data/database/models/Track.kt","source candidate",1035
+"app/src/main/java/eu/kanade/tachiyomi/data/database/models/TrackImpl.kt","source candidate",695
+"app/src/main/java/eu/kanade/tachiyomi/data/download/DownloadCache.kt","source candidate",19929
+"app/src/main/java/eu/kanade/tachiyomi/data/download/DownloadManager.kt","source candidate",17391
+"app/src/main/java/eu/kanade/tachiyomi/data/download/DownloadNotifier.kt","source candidate",9705
+"app/src/main/java/eu/kanade/tachiyomi/data/download/DownloadPendingDeleter.kt","source candidate",5522
+"app/src/main/java/eu/kanade/tachiyomi/data/download/DownloadProvider.kt","source candidate",15547
+"app/src/main/java/eu/kanade/tachiyomi/data/download/DownloadStore.kt","source candidate",4271
+"app/src/main/java/eu/kanade/tachiyomi/data/download/DownloadWorker.kt","source candidate",4215
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt","source candidate",32898
+"app/src/main/java/eu/kanade/tachiyomi/data/download/model/Download.kt","source candidate",1982
+"app/src/main/java/eu/kanade/tachiyomi/data/export/LibraryExporter.kt","source candidate",2004
+"app/src/main/java/eu/kanade/tachiyomi/data/library/LibraryUpdateNotifier.kt","source candidate",15511
+"app/src/main/java/eu/kanade/tachiyomi/data/library/LibraryUpdateWorker.kt","source candidate",21938
+"app/src/main/java/eu/kanade/tachiyomi/data/library/MetadataUpdateWorker.kt","source candidate",6558
+"app/src/main/java/eu/kanade/tachiyomi/data/notification/NotificationHandler.kt","source candidate",1963
+"app/src/main/java/eu/kanade/tachiyomi/data/notification/NotificationReceiver.kt","source candidate",21726
+"app/src/main/java/eu/kanade/tachiyomi/data/notification/Notifications.kt","source candidate",7083
+"app/src/main/java/eu/kanade/tachiyomi/data/preference/SharedPreferencesDataStore.kt","source candidate",1802
+"app/src/main/java/eu/kanade/tachiyomi/data/saver/ImageSaver.kt","source candidate",7003
+"app/src/main/java/eu/kanade/tachiyomi/data/track/BaseTracker.kt","source candidate",6522
+"app/src/main/java/eu/kanade/tachiyomi/data/track/DeletableTracker.kt","source candidate",222
+"app/src/main/java/eu/kanade/tachiyomi/data/track/EnhancedTracker.kt","source candidate",1288
+"app/src/main/java/eu/kanade/tachiyomi/data/track/Tracker.kt","source candidate",2500
+"app/src/main/java/eu/kanade/tachiyomi/data/track/TrackerDependencies.kt","source candidate",541
+"app/src/main/java/eu/kanade/tachiyomi/data/track/TrackerManager.kt","source candidate",1865
+"app/src/main/java/eu/kanade/tachiyomi/data/track/anilist/Anilist.kt","source candidate",8870
+"app/src/main/java/eu/kanade/tachiyomi/data/track/anilist/AnilistApi.kt","source candidate",7431
+"app/src/main/java/eu/kanade/tachiyomi/data/track/anilist/AnilistInterceptor.kt","source candidate",1576
+"app/src/main/java/eu/kanade/tachiyomi/data/track/anilist/AnilistUtils.kt","source candidate",5982
+"app/src/main/java/eu/kanade/tachiyomi/data/track/anilist/dto/ALOAuth.kt","source candidate",582
+"app/src/main/java/eu/kanade/tachiyomi/data/track/anilist/dto/ALUser.kt","source candidate",198
+"app/src/main/java/eu/kanade/tachiyomi/data/track/bangumi/Bangumi.kt","source candidate",5617
+"app/src/main/java/eu/kanade/tachiyomi/data/track/bangumi/BangumiApi.kt","source candidate",8045
+"app/src/main/java/eu/kanade/tachiyomi/data/track/bangumi/BangumiInterceptor.kt","source candidate",1785
+"app/src/main/java/eu/kanade/tachiyomi/data/track/bangumi/BangumiUtils.kt","source candidate",353
+"app/src/main/java/eu/kanade/tachiyomi/data/track/bangumi/dto/BGMCollectionResponse.kt","source candidate",927
+"app/src/main/java/eu/kanade/tachiyomi/data/track/bangumi/dto/BGMOAuth.kt","source candidate",763
+"app/src/main/java/eu/kanade/tachiyomi/data/track/bangumi/dto/BGMSearch.kt","source candidate",1596
+"app/src/main/java/eu/kanade/tachiyomi/data/track/bangumi/dto/BGMUser.kt","source candidate",234
+"app/src/main/java/eu/kanade/tachiyomi/data/track/comick/Comick.kt","source candidate",4952
+"app/src/main/java/eu/kanade/tachiyomi/data/track/comick/ComickApi.kt","source candidate",12027
+"app/src/main/java/eu/kanade/tachiyomi/data/track/comick/ComickInterceptor.kt","source candidate",1555
+"app/src/main/java/eu/kanade/tachiyomi/data/track/comick/ComickUtil.kt","source candidate",1298
+"app/src/main/java/eu/kanade/tachiyomi/data/track/comick/dto/ComickLibraryEntry.kt","source candidate",985
+"app/src/main/java/eu/kanade/tachiyomi/data/track/comick/dto/ComickOAuth.kt","source candidate",534
+"app/src/main/java/eu/kanade/tachiyomi/data/track/comick/dto/ComickSearchResult.kt","source candidate",1722
+"app/src/main/java/eu/kanade/tachiyomi/data/track/comick/dto/ComickUser.kt","source candidate",180
+"app/src/main/java/eu/kanade/tachiyomi/data/track/hikka/Hikka.kt","source candidate",6463
+"app/src/main/java/eu/kanade/tachiyomi/data/track/hikka/HikkaApi.kt","source candidate",8623
+"app/src/main/java/eu/kanade/tachiyomi/data/track/hikka/HikkaInterceptor.kt","source candidate",2114
+"app/src/main/java/eu/kanade/tachiyomi/data/track/hikka/HikkaUtils.kt","source candidate",913
+"app/src/main/java/eu/kanade/tachiyomi/data/track/hikka/dto/HKAuthTokenInfo.kt","source candidate",288
+"app/src/main/java/eu/kanade/tachiyomi/data/track/hikka/dto/HKClient.kt","source candidate",303
+"app/src/main/java/eu/kanade/tachiyomi/data/track/hikka/dto/HKManga.kt","source candidate",2532
+"app/src/main/java/eu/kanade/tachiyomi/data/track/hikka/dto/HKMangaPagination.kt","source candidate",202
+"app/src/main/java/eu/kanade/tachiyomi/data/track/hikka/dto/HKOAuth.kt","source candidate",432
+"app/src/main/java/eu/kanade/tachiyomi/data/track/hikka/dto/HKPagination.kt","source candidate",193
+"app/src/main/java/eu/kanade/tachiyomi/data/track/hikka/dto/HKRead.kt","source candidate",1667
+"app/src/main/java/eu/kanade/tachiyomi/data/track/hikka/dto/HKUser.kt","source candidate",181
+"app/src/main/java/eu/kanade/tachiyomi/data/track/kavita/Kavita.kt","source candidate",5406
+"app/src/main/java/eu/kanade/tachiyomi/data/track/kavita/KavitaApi.kt","source candidate",6926
+"app/src/main/java/eu/kanade/tachiyomi/data/track/kavita/KavitaInterceptor.kt","source candidate",899
+"app/src/main/java/eu/kanade/tachiyomi/data/track/kavita/KavitaModels.kt","source candidate",1934
+"app/src/main/java/eu/kanade/tachiyomi/data/track/kitsu/Kitsu.kt","source candidate",8616
+"app/src/main/java/eu/kanade/tachiyomi/data/track/kitsu/KitsuApi.kt","source candidate",10079
+"app/src/main/java/eu/kanade/tachiyomi/data/track/kitsu/KitsuInterceptor.kt","source candidate",1994
+"app/src/main/java/eu/kanade/tachiyomi/data/track/kitsu/KitsuUtils.kt","source candidate",4268
+"app/src/main/java/eu/kanade/tachiyomi/data/track/kitsu/dto/KitsuOAuth.kt","source candidate",574
+"app/src/main/java/eu/kanade/tachiyomi/data/track/kitsu/dto/KitsuUser.kt","source candidate",146
+"app/src/main/java/eu/kanade/tachiyomi/data/track/komga/Komga.kt","source candidate",3977
+"app/src/main/java/eu/kanade/tachiyomi/data/track/komga/KomgaApi.kt","source candidate",4103
+"app/src/main/java/eu/kanade/tachiyomi/data/track/komga/KomgaModels.kt","source candidate",2456
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangabaka/MangaBaka.kt","source candidate",8054
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangabaka/MangaBakaApi.kt","source candidate",13164
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangabaka/MangaBakaInterceptor.kt","source candidate",1622
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangabaka/MangaBakaUtils.kt","source candidate",492
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangabaka/dto/MangaBakaItem.kt","source candidate",2014
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangabaka/dto/MangaBakaListEntry.kt","source candidate",1035
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangabaka/dto/MangaBakaOAuth.kt","source candidate",525
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangabaka/dto/MangaBakaUserProfile.kt","source candidate",517
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/MangaUpdates.kt","source candidate",4991
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/MangaUpdatesApi.kt","source candidate",7691
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/MangaUpdatesInterceptor.kt","source candidate",937
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/dto/MUAuthor.kt","source candidate",181
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/dto/MUContext.kt","source candidate",260
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/dto/MUCurrentUser.kt","source candidate",168
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/dto/MUImage.kt","source candidate",221
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/dto/MUListItem.kt","source candidate",700
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/dto/MULoginResponse.kt","source candidate",172
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/dto/MURating.kt","source candidate",349
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/dto/MURecord.kt","source candidate",1638
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/dto/MUSearch.kt","source candidate",260
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/dto/MUSeries.kt","source candidate",194
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/dto/MUStatus.kt","source candidate",196
+"app/src/main/java/eu/kanade/tachiyomi/data/track/mangaupdates/dto/MUUrl.kt","source candidate",199
+"app/src/main/java/eu/kanade/tachiyomi/data/track/model/TrackSearch.kt","source candidate",1742
+"app/src/main/java/eu/kanade/tachiyomi/data/track/myanimelist/MyAnimeList.kt","source candidate",5939
+"app/src/main/java/eu/kanade/tachiyomi/data/track/myanimelist/MyAnimeListApi.kt","source candidate",12463
+"app/src/main/java/eu/kanade/tachiyomi/data/track/myanimelist/MyAnimeListInterceptor.kt","source candidate",2750
+"app/src/main/java/eu/kanade/tachiyomi/data/track/myanimelist/MyAnimeListUtils.kt","source candidate",715
+"app/src/main/java/eu/kanade/tachiyomi/data/track/myanimelist/dto/MALList.kt","source candidate",655
+"app/src/main/java/eu/kanade/tachiyomi/data/track/myanimelist/dto/MALManga.kt","source candidate",1006
+"app/src/main/java/eu/kanade/tachiyomi/data/track/myanimelist/dto/MALOAuth.kt","source candidate",715
+"app/src/main/java/eu/kanade/tachiyomi/data/track/myanimelist/dto/MALSearch.kt","source candidate",358
+"app/src/main/java/eu/kanade/tachiyomi/data/track/myanimelist/dto/MALUser.kt","source candidate",157
+"app/src/main/java/eu/kanade/tachiyomi/data/track/shikimori/Shikimori.kt","source candidate",5459
+"app/src/main/java/eu/kanade/tachiyomi/data/track/shikimori/ShikimoriApi.kt","source candidate",8717
+"app/src/main/java/eu/kanade/tachiyomi/data/track/shikimori/ShikimoriInterceptor.kt","source candidate",1899
+"app/src/main/java/eu/kanade/tachiyomi/data/track/shikimori/ShikimoriUtils.kt","source candidate",4247
+"app/src/main/java/eu/kanade/tachiyomi/data/track/shikimori/dto/SMLibraryIdResponse.kt","source candidate",163
+"app/src/main/java/eu/kanade/tachiyomi/data/track/shikimori/dto/SMOAuth.kt","source candidate",575
+"app/src/main/java/eu/kanade/tachiyomi/data/track/shikimori/dto/SMUser.kt","source candidate",121
+"app/src/main/java/eu/kanade/tachiyomi/data/track/suwayomi/Suwayomi.kt","source candidate",4230
+"app/src/main/java/eu/kanade/tachiyomi/data/track/suwayomi/SuwayomiApi.kt","source candidate",4440
+"app/src/main/java/eu/kanade/tachiyomi/data/track/suwayomi/SuwayomiMangaFragmentExtensions.kt","source candidate",904
+"app/src/main/java/eu/kanade/tachiyomi/data/updater/AppUpdateChecker.kt","source candidate",1648
+"app/src/main/java/eu/kanade/tachiyomi/extension/ExtensionManager.kt","source candidate",18041
+"app/src/main/java/eu/kanade/tachiyomi/extension/api/ExtensionUpdateNotifier.kt","source candidate",1808
+"app/src/main/java/eu/kanade/tachiyomi/extension/installer/Installer.kt","source candidate",5644
+"app/src/main/java/eu/kanade/tachiyomi/extension/installer/PackageInstallerInstaller.kt","source candidate",7421
+"app/src/main/java/eu/kanade/tachiyomi/extension/installer/ShizukuInstaller.kt","source candidate",6061
+"app/src/main/java/eu/kanade/tachiyomi/extension/model/InstallStep.kt","source candidate",416
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionInstallActivity.kt","source candidate",3106
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionInstallReceiver.kt","source candidate",5709
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionInstallService.kt","source candidate",3164
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionInstaller.kt","source candidate",8229
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt","source candidate",22232
+"app/src/main/java/eu/kanade/tachiyomi/source/AndroidSourceManager.kt","source candidate",4313
+"app/src/main/java/eu/kanade/tachiyomi/source/SourceExtensions.kt","source candidate",893
+"app/src/main/java/eu/kanade/tachiyomi/ui/base/activity/BaseActivity.kt","source candidate",999
+"app/src/main/java/eu/kanade/tachiyomi/ui/base/delegate/SecureActivityDelegate.kt","source candidate",4564
+"app/src/main/java/eu/kanade/tachiyomi/ui/base/delegate/ThemingDelegate.kt","source candidate",1805
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/BrowseTab.kt","source candidate",2015
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/extension/ExtensionFilterScreen.kt","source candidate",1454
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/extension/ExtensionFilterViewModel.kt","source candidate",2737
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/extension/ExtensionsTab.kt","source candidate",4561
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/extension/ExtensionsViewModel.kt","source candidate",9435
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/extension/details/ExtensionDetailsScreen.kt","source candidate",2868
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/extension/details/ExtensionDetailsViewModel.kt","source candidate",5460
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/extension/details/SourcePreferencesScreen.kt","source candidate",14819
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/migration/manga/MigrateMangaScreen.kt","source candidate",5526
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/migration/manga/MigrateMangaViewModel.kt","source candidate",3703
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/migration/search/MigrateSearchScreen.kt","source candidate",2770
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/migration/search/MigrateSearchViewModel.kt","source candidate",2481
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/migration/search/MigrateSourceSearchScreen.kt","source candidate",6432
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/migration/sources/MigrateSourceTab.kt","source candidate",1892
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/migration/sources/MigrateSourceViewModel.kt","source candidate",3396
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/source/SourcesFilterScreen.kt","source candidate",1395
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/source/SourcesFilterViewModel.kt","source candidate",2693
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/source/SourcesTab.kt","source candidate",3276
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/source/SourcesViewModel.kt","source candidate",4193
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/source/browse/BrowseSourceScreen.kt","source candidate",12417
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/source/browse/BrowseSourceViewModel.kt","source candidate",13959
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/source/browse/SourceFilterDialog.kt","source candidate",6307
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/source/globalsearch/GlobalSearchScreen.kt","source candidate",2616
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/source/globalsearch/GlobalSearchViewModel.kt","source candidate",2210
+"app/src/main/java/eu/kanade/tachiyomi/ui/browse/source/globalsearch/SearchViewModel.kt","source candidate",8570
+"app/src/main/java/eu/kanade/tachiyomi/ui/category/CategoryScreen.kt","source candidate",2807
+"app/src/main/java/eu/kanade/tachiyomi/ui/category/CategoryViewModel.kt","source candidate",4591
+"app/src/main/java/eu/kanade/tachiyomi/ui/deeplink/DeepLinkActivity.kt","source candidate",561
+"app/src/main/java/eu/kanade/tachiyomi/ui/deeplink/DeepLinkScreen.kt","source candidate",2135
+"app/src/main/java/eu/kanade/tachiyomi/ui/deeplink/DeepLinkViewModel.kt","source candidate",3587
+"app/src/main/java/eu/kanade/tachiyomi/ui/download/DownloadQueueScreen.kt","source candidate",11149
+"app/src/main/java/eu/kanade/tachiyomi/ui/download/DownloadQueueViewModel.kt","source candidate",3800
+"app/src/main/java/eu/kanade/tachiyomi/ui/history/HistoryTab.kt","source candidate",5307
+"app/src/main/java/eu/kanade/tachiyomi/ui/history/HistoryViewModel.kt","source candidate",10314
+"app/src/main/java/eu/kanade/tachiyomi/ui/home/HomeScreen.kt","source candidate",12590
+"app/src/main/java/eu/kanade/tachiyomi/ui/library/LibraryItem.kt","source candidate",517
+"app/src/main/java/eu/kanade/tachiyomi/ui/library/LibrarySettingsViewModel.kt","source candidate",2236
+"app/src/main/java/eu/kanade/tachiyomi/ui/library/LibraryTab.kt","source candidate",11888
+"app/src/main/java/eu/kanade/tachiyomi/ui/library/LibraryViewModel.kt","source candidate",35062
+"app/src/main/java/eu/kanade/tachiyomi/ui/main/MainActivity.kt","source candidate",32519
+"app/src/main/java/eu/kanade/tachiyomi/ui/manga/MangaCoverViewModel.kt","source candidate",6745
+"app/src/main/java/eu/kanade/tachiyomi/ui/manga/MangaScreen.kt","source candidate",15886
+"app/src/main/java/eu/kanade/tachiyomi/ui/manga/MangaViewModel.kt","source candidate",47420
+"app/src/main/java/eu/kanade/tachiyomi/ui/manga/notes/MangaNotesScreen.kt","source candidate",3542
+"app/src/main/java/eu/kanade/tachiyomi/ui/manga/track/TrackInfoDialog.kt","source candidate",35644
+"app/src/main/java/eu/kanade/tachiyomi/ui/manga/track/TrackItem.kt","source candidate",195
+"app/src/main/java/eu/kanade/tachiyomi/ui/more/MoreTab.kt","source candidate",4274
+"app/src/main/java/eu/kanade/tachiyomi/ui/more/NewUpdateScreen.kt","source candidate",1619
+"app/src/main/java/eu/kanade/tachiyomi/ui/more/NewUpdateScreenModel.kt","source candidate",4598
+"app/src/main/java/eu/kanade/tachiyomi/ui/more/OnboardingScreen.kt","source candidate",1672
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/ReaderActivity.kt","source candidate",34702
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/ReaderViewModel.kt","source candidate",42436
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/SaveImageNotifier.kt","source candidate",3438
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/loader/ArchivePageLoader.kt","source candidate",1221
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/loader/ChapterLoader.kt","source candidate",4321
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/loader/DirectoryPageLoader.kt","source candidate",1071
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/loader/DownloadPageLoader.kt","source candidate",2302
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/loader/EpubPageLoader.kt","source candidate",826
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/loader/HttpPageLoader.kt","source candidate",10682
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/loader/PageLoader.kt","source candidate",1260
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/model/ChapterTransition.kt","source candidate",994
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/model/DownloadStream.kt","source candidate",4367
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/model/InsertPage.kt","source candidate",282
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/model/ReaderChapter.kt","source candidate",1674
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/model/ReaderPage.kt","source candidate",493
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/model/ViewerChapters.kt","source candidate",402
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/GeneralSettings.kt","source candidate",726
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderOrientation.kt","source candidate",2184
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt","source candidate",15836
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderSettingsViewModel.kt","source candidate",13062
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReadingMode.kt","source candidate",4375
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/DualPageSettings.kt","source candidate",263
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/GestureDetectorWithLongTap.kt","source candidate",2621
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/LongStripSettings.kt","source candidate",192
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/MissingChapters.kt","source candidate",418
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/PageImageProcessing.kt","source candidate",2704
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/PagedSettings.kt","source candidate",569
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/ReaderPageError.kt","source candidate",2629
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/ReaderPageImageView.kt","source candidate",16867
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/ReaderProgressIndicator.kt","source candidate",1809
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/ReaderThemedContent.kt","source candidate",1021
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/ReaderTransitionPage.kt","source candidate",3540
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/ReaderTransitionView.kt","source candidate",2140
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/TransitionDownloadState.kt","source candidate",1977
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/Viewer.kt","source candidate",2054
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/ViewerItems.kt","source candidate",1850
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/ViewerNavigation.kt","source candidate",2990
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/ViewerSettings.kt","source candidate",2562
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/navigation/DisabledNavigation.kt","source candidate",608
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/navigation/EdgeNavigation.kt","source candidate",981
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/navigation/KindlishNavigation.kt","source candidate",883
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/navigation/LNavigation.kt","source candidate",1103
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/navigation/RightAndLeftNavigation.kt","source candidate",890
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/pager/Pager.kt","source candidate",3538
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/pager/PagerItems.kt","source candidate",4807
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/pager/PagerPageHolder.kt","source candidate",7504
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/pager/PagerPageTracker.kt","source candidate",6001
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/pager/PagerTransitionHolder.kt","source candidate",1659
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/pager/PagerViewer.kt","source candidate",11205
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/pager/PagerViewerAdapter.kt","source candidate",3119
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/pager/PagerViewers.kt","source candidate",980
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/pager/SimplePagedSettings.kt","source candidate",448
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webgpu/ReaderChromePages.kt","source candidate",8547
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webgpu/WebGpuLongStripSettings.kt","source candidate",383
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webgpu/WebGpuPagedSettings.kt","source candidate",727
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webgpu/WebGpuSettings.kt","source candidate",717
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webgpu/WebGpuShaders.kt","source candidate",7584
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webgpu/WebGpuViewer.kt","source candidate",84142
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webgpu/WebGpuViewerContinuous.kt","source candidate",4313
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webgpu/WebGpuViewerSettings.kt","source candidate",23754
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/SimpleLongStripSettings.kt","source candidate",718
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonAdapter.kt","source candidate",4821
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonBaseHolder.kt","source candidate",790
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonFrame.kt","source candidate",3494
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonItems.kt","source candidate",1003
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonLayoutManager.kt","source candidate",1706
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonPageHolder.kt","source candidate",8379
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonPageTracker.kt","source candidate",4505
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonRecyclerView.kt","source candidate",12850
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonStripImageView.kt","source candidate",3561
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonTransitionHolder.kt","source candidate",1791
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/viewer/webtoon/WebtoonViewer.kt","source candidate",10059
+"app/src/main/java/eu/kanade/tachiyomi/ui/security/UnlockActivity.kt","source candidate",1796
+"app/src/main/java/eu/kanade/tachiyomi/ui/setting/track/BaseOAuthLoginActivity.kt","source candidate",1305
+"app/src/main/java/eu/kanade/tachiyomi/ui/setting/track/TrackLoginActivity.kt","source candidate",4111
+"app/src/main/java/eu/kanade/tachiyomi/ui/stats/StatsScreen.kt","source candidate",1353
+"app/src/main/java/eu/kanade/tachiyomi/ui/stats/StatsViewModel.kt","source candidate",6528
+"app/src/main/java/eu/kanade/tachiyomi/ui/updates/UpdatesSettingsViewModel.kt","source candidate",1519
+"app/src/main/java/eu/kanade/tachiyomi/ui/updates/UpdatesTab.kt","source candidate",4474
+"app/src/main/java/eu/kanade/tachiyomi/ui/updates/UpdatesViewModel.kt","source candidate",21495
+"app/src/main/java/eu/kanade/tachiyomi/ui/webview/WebViewActivity.kt","source candidate",2653
+"app/src/main/java/eu/kanade/tachiyomi/ui/webview/WebViewScreen.kt","source candidate",1857
+"app/src/main/java/eu/kanade/tachiyomi/ui/webview/WebViewViewModel.kt","source candidate",2799
+"app/src/main/java/eu/kanade/tachiyomi/util/CrashLogUtil.kt","source candidate",5130
+"app/src/main/java/eu/kanade/tachiyomi/util/MangaExtensions.kt","source candidate",882
+"app/src/main/java/eu/kanade/tachiyomi/util/PkceUtil.kt","source candidate",848
+"app/src/main/java/eu/kanade/tachiyomi/util/chapter/ChapterFilterDownloaded.kt","source candidate",550
+"app/src/main/java/eu/kanade/tachiyomi/util/chapter/ChapterGetNextUnread.kt","source candidate",1132
+"app/src/main/java/eu/kanade/tachiyomi/util/chapter/ChapterRemoveDuplicates.kt","source candidate",491
+"app/src/main/java/eu/kanade/tachiyomi/util/lang/CloseableExtensions.kt","source candidate",897
+"app/src/main/java/eu/kanade/tachiyomi/util/lang/DateExtensions.kt","source candidate",2457
+"app/src/main/java/eu/kanade/tachiyomi/util/storage/FileExtensions.kt","source candidate",1859
+"app/src/main/java/eu/kanade/tachiyomi/util/storage/OkioExtensions.kt","source candidate",909
+"app/src/main/java/eu/kanade/tachiyomi/util/system/AnimationExtensions.kt","source candidate",376
+"app/src/main/java/eu/kanade/tachiyomi/util/system/AuthenticatorUtil.kt","source candidate",5011
+"app/src/main/java/eu/kanade/tachiyomi/util/system/BuildConfig.kt","source candidate",783
+"app/src/main/java/eu/kanade/tachiyomi/util/system/ContextExtensions.kt","source candidate",6957
+"app/src/main/java/eu/kanade/tachiyomi/util/system/DeviceUtilExtensions.kt","source candidate",292
+"app/src/main/java/eu/kanade/tachiyomi/util/system/DisplayExtensions.kt","source candidate",2854
+"app/src/main/java/eu/kanade/tachiyomi/util/system/DrawableExtensions.kt","source candidate",391
+"app/src/main/java/eu/kanade/tachiyomi/util/system/IntentExtensions.kt","source candidate",1552
+"app/src/main/java/eu/kanade/tachiyomi/util/system/InternalResourceHelper.kt","source candidate",867
+"app/src/main/java/eu/kanade/tachiyomi/util/system/LocaleHelper.kt","source candidate",2707
+"app/src/main/java/eu/kanade/tachiyomi/util/system/NetworkExtensions.kt","source candidate",1602
+"app/src/main/java/eu/kanade/tachiyomi/util/system/NetworkStateTracker.kt","source candidate",963
+"app/src/main/java/eu/kanade/tachiyomi/util/system/NotificationExtensions.kt","source candidate",3456
+"app/src/main/java/eu/kanade/tachiyomi/util/system/WorkManagerExtensions.kt","source candidate",1211
+"app/src/main/java/eu/kanade/tachiyomi/util/view/PreferenceExtensions.kt","source candidate",986
+"app/src/main/java/eu/kanade/tachiyomi/util/view/ViewExtensions.kt","source candidate",3089
+"app/src/main/java/eu/kanade/tachiyomi/util/view/WindowExtensions.kt","source candidate",344
+"app/src/main/java/eu/kanade/tachiyomi/widget/ViewPagerAdapter.kt","source candidate",915
+"app/src/main/java/eu/kanade/test/DummyTracker.kt","test candidate",4672
+"app/src/main/java/mihon/app/di/AppBindings.kt","source candidate",2195
+"app/src/main/java/mihon/app/di/AppGraph.kt","source candidate",5511
+"app/src/main/java/mihon/app/di/AppGraphUtils.kt","source candidate",141
+"app/src/main/java/mihon/app/di/MihonViewModelFactory.kt","source candidate",886
+"app/src/main/java/mihon/app/di/injekt/MetroInjektRegistrar.kt","source candidate",4202
+"app/src/main/java/mihon/app/shizuku/ShellInterface.kt","source candidate",6260
+"app/src/main/java/mihon/core/designsystem/utils/WindowSize.kt","source candidate",684
+"app/src/main/java/mihon/core/migration/Migration.kt","source candidate",609
+"app/src/main/java/mihon/core/migration/MigrationCompletedListener.kt","source candidate",80
+"app/src/main/java/mihon/core/migration/MigrationContext.kt","source candidate",111
+"app/src/main/java/mihon/core/migration/MigrationJobFactory.kt","source candidate",1926
+"app/src/main/java/mihon/core/migration/MigrationStrategy.kt","source candidate",1674
+"app/src/main/java/mihon/core/migration/MigrationStrategyFactory.kt","source candidate",752
+"app/src/main/java/mihon/core/migration/Migrator.kt","source candidate",1224
+"app/src/main/java/mihon/core/migration/migrations/CategoryPreferencesCleanupMigration.kt","source candidate",1832
+"app/src/main/java/mihon/core/migration/migrations/ChapterNameSuffixMigration.kt","source candidate",712
+"app/src/main/java/mihon/core/migration/migrations/ContentWarningMigration.kt","source candidate",1044
+"app/src/main/java/mihon/core/migration/migrations/InstallationIdMigration.kt","source candidate",853
+"app/src/main/java/mihon/core/migration/migrations/SetupBackupCreateMigration.kt","source candidate",671
+"app/src/main/java/mihon/core/migration/migrations/SetupLibraryUpdateMigration.kt","source candidate",668
+"app/src/main/java/mihon/core/migration/migrations/TrustExtensionRepositoryMigration.kt","source candidate",1460
+"app/src/main/java/mihon/core/migration/migrations/VerticalNavigatorMigration.kt","source candidate",1624
+"app/src/main/java/mihon/core/navigation/AppNavGraph.kt","source candidate",7614
+"app/src/main/java/mihon/data/cache/ChapterCache.kt","source candidate",4306
+"app/src/main/java/mihon/data/dalvik/DelegateLastClassLoaderCompat.kt","source candidate",2390
+"app/src/main/java/mihon/domain/migration/models/MigrationFlag.kt","source candidate",697
+"app/src/main/java/mihon/domain/migration/usecases/MigrateMangaUseCase.kt","source candidate",5986
+"app/src/main/java/mihon/domain/source/interactor/UpdateMangaFromRemote.kt","source candidate",5579
+"app/src/main/java/mihon/domain/source/models/RemoteMangaUpdate.kt","source candidate",215
+"app/src/main/java/mihon/feature/common/utils/MigrationFlag.kt","source candidate",538
+"app/src/main/java/mihon/feature/library/QueryNodeExtensions.kt","source candidate",5544
+"app/src/main/java/mihon/feature/migration/config/MigrationConfigScreen.kt","source candidate",17157
+"app/src/main/java/mihon/feature/migration/config/MigrationConfigScreenSheet.kt","source candidate",10463
+"app/src/main/java/mihon/feature/migration/dialog/MigrateMangaDialog.kt","source candidate",7200
+"app/src/main/java/mihon/feature/migration/list/MigrationListScreen.kt","source candidate",3554
+"app/src/main/java/mihon/feature/migration/list/MigrationListScreenContent.kt","source candidate",15311
+"app/src/main/java/mihon/feature/migration/list/MigrationListViewModel.kt","source candidate",14158
+"app/src/main/java/mihon/feature/migration/list/components/MigrationExitDialog.kt","source candidate",997
+"app/src/main/java/mihon/feature/migration/list/components/MigrationMangaDialog.kt","source candidate",2102
+"app/src/main/java/mihon/feature/migration/list/components/MigrationProgressDialog.kt","source candidate",1511
+"app/src/main/java/mihon/feature/migration/list/models/MigratingManga.kt","source candidate",963
+"app/src/main/java/mihon/feature/migration/list/search/BaseSmartSearchEngine.kt","source candidate",5495
+"app/src/main/java/mihon/feature/migration/list/search/SmartSourceSearchEngine.kt","source candidate",1135
+"app/src/main/java/mihon/feature/support/SupportUsScreen.kt","source candidate",5357
+"app/src/main/java/mihon/feature/upcoming/UpcomingScreen.kt","source candidate",4404
+"app/src/main/java/mihon/feature/upcoming/UpcomingScreenContent.kt","source candidate",8913
+"app/src/main/java/mihon/feature/upcoming/UpcomingUIModel.kt","source candidate",284
+"app/src/main/java/mihon/feature/upcoming/UpcomingViewModel.kt","source candidate",6964
+"app/src/main/java/mihon/feature/upcoming/components/UpcomingItem.kt","source candidate",1880
+"app/src/main/java/mihon/feature/upcoming/components/calendar/Calendar.kt","source candidate",3993
+"app/src/main/java/mihon/feature/upcoming/components/calendar/CalendarDay.kt","source candidate",3195
+"app/src/main/java/mihon/feature/upcoming/components/calendar/CalendarHeader.kt","source candidate",4087
+"app/src/main/java/mihon/feature/upcoming/components/calendar/CalendarIndicator.kt","source candidate",1008
+"app/src/main/java/mihon/graphql/kitsu/adapter/KitsuMapAdapter.kt","source candidate",826
+"app/src/main/res/anim-v33/shared_axis_x_pop_enter.xml","config/resource",469
+"app/src/main/res/anim-v33/shared_axis_x_pop_exit.xml","config/resource",469
+"app/src/main/res/anim-v33/shared_axis_x_push_enter.xml","config/resource",468
+"app/src/main/res/anim-v33/shared_axis_x_push_exit.xml","config/resource",470
+"app/src/main/res/anim/shared_axis_x_pop_enter.xml","config/resource",468
+"app/src/main/res/anim/shared_axis_x_pop_exit.xml","config/resource",468
+"app/src/main/res/anim/shared_axis_x_push_enter.xml","config/resource",467
+"app/src/main/res/anim/shared_axis_x_push_exit.xml","config/resource",469
+"app/src/main/res/drawable-nodpi/brand_comick.webp","other",15352
+"app/src/main/res/drawable-nodpi/brand_mangabaka.webp","other",17572
+"app/src/main/res/drawable/animated_browse_enter.xml","config/resource",10012
+"app/src/main/res/drawable/animated_browse_exit.xml","config/resource",10047
+"app/src/main/res/drawable/animated_caret_flip.xml","config/resource",3470
+"app/src/main/res/drawable/animated_history.xml","config/resource",2529
+"app/src/main/res/drawable/animated_library.xml","config/resource",8829
+"app/src/main/res/drawable/animated_more_enter.xml","config/resource",13952
+"app/src/main/res/drawable/animated_more_exit.xml","config/resource",11807
+"app/src/main/res/drawable/animated_updates.xml","config/resource",10072
+"app/src/main/res/drawable/brand_anilist.xml","config/resource",868
+"app/src/main/res/drawable/brand_bangumi.xml","config/resource",3294
+"app/src/main/res/drawable/brand_hikka.xml","config/resource",1459
+"app/src/main/res/drawable/brand_kavita.xml","config/resource",2934
+"app/src/main/res/drawable/brand_kitsu.xml","config/resource",2720
+"app/src/main/res/drawable/brand_komga.xml","config/resource",3743
+"app/src/main/res/drawable/brand_mangaupdates.xml","config/resource",1858
+"app/src/main/res/drawable/brand_myanimelist.xml","config/resource",782
+"app/src/main/res/drawable/brand_shikimori.xml","config/resource",6461
+"app/src/main/res/drawable/brand_suwayomi.xml","config/resource",1668
+"app/src/main/res/drawable/cover_error.xml","config/resource",1044
+"app/src/main/res/drawable/ic_launcher_background.xml","config/resource",1046
+"app/src/main/res/drawable/ic_launcher_foreground.xml","config/resource",1619
+"app/src/main/res/drawable/ic_launcher_monochrome.xml","config/resource",1618
+"app/src/main/res/drawable/ic_mihon.xml","config/resource",1462
+"app/src/main/res/drawable/ic_mihon_splash.xml","config/resource",276
+"app/src/main/res/drawable/line_divider.xml","config/resource",270
+"app/src/main/res/drawable/material_popup_background.xml","config/resource",518
+"app/src/main/res/drawable/sc_collections_bookmark_48dp.xml","config/resource",1217
+"app/src/main/res/drawable/sc_explore_48dp.xml","config/resource",1280
+"app/src/main/res/drawable/sc_history_48dp.xml","config/resource",1410
+"app/src/main/res/drawable/sc_new_releases_48dp.xml","config/resource",1446
+"app/src/main/res/mipmap-hdpi/ic_default_source.webp","other",882
+"app/src/main/res/mipmap-hdpi/ic_local_source.webp","other",1050
+"app/src/main/res/mipmap-mdpi/ic_default_source.webp","other",674
+"app/src/main/res/mipmap-mdpi/ic_local_source.webp","other",610
+"app/src/main/res/mipmap-xhdpi/ic_default_source.webp","other",1046
+"app/src/main/res/mipmap-xhdpi/ic_local_source.webp","other",1180
+"app/src/main/res/mipmap-xxhdpi/ic_default_source.webp","other",1476
+"app/src/main/res/mipmap-xxhdpi/ic_local_source.webp","other",2098
+"app/src/main/res/mipmap-xxxhdpi/ic_default_source.webp","other",1774
+"app/src/main/res/mipmap-xxxhdpi/ic_local_source.webp","other",2546
+"app/src/main/res/mipmap/ic_launcher.xml","config/resource",341
+"app/src/main/res/values-night-v31/themes.xml","config/resource",3699
+"app/src/main/res/values-night/bools.xml","config/resource",211
+"app/src/main/res/values-night/colors.xml","config/resource",105
+"app/src/main/res/values-night/themes.xml","config/resource",750
+"app/src/main/res/values-v27/bools.xml","config/resource",156
+"app/src/main/res/values-v27/themes.xml","config/resource",371
+"app/src/main/res/values-v31/themes.xml","config/resource",3717
+"app/src/main/res/values/bools.xml","config/resource",211
+"app/src/main/res/values/colors.xml","config/resource",213
+"app/src/main/res/values/ids.xml","config/resource",106
+"app/src/main/res/values/styles.xml","config/resource",1787
+"app/src/main/res/values/themes.xml","config/resource",40440
+"app/src/main/res/xml/network_security_config.xml","config/resource",630
+"app/src/main/res/xml/provider_paths.xml","config/resource",439
+"app/src/main/res/xml/s_pen_actions.xml","config/resource",1636
+"app/src/main/res/xml/searchable.xml","config/resource",203
+"app/src/main/shortcuts.xml","config/resource",2336
+"app/src/test/java/eu/kanade/tachiyomi/data/backup/BackupStreamTest.kt","test candidate",8990
+"app/src/test/java/eu/kanade/tachiyomi/data/download/DownloadProviderTest.kt","test candidate",3100
+"app/src/test/java/mihon/core/migration/MigratorTest.kt","test candidate",5580
+"baseline-profile/build.gradle.kts","build/deploy",1569
+"baseline-profile/src/main/AndroidManifest.xml","config/resource",13
+"baseline-profile/src/main/kotlin/mihon/baselineprofile/BaselineProfileGenerator.kt","source candidate",1230
+"baseline-profile/src/main/kotlin/mihon/baselineprofile/StartupBenchmarks.kt","source candidate",4116
+"baseline-profile/src/main/kotlin/mihon/baselineprofile/StartupProfileGenerator.kt","source candidate",845
+"baseline-profile/src/main/kotlin/mihon/baselineprofile/constants.kt","source candidate",297
+"build.gradle.kts","build/deploy",1057
+"core-metadata/build.gradle.kts","build/deploy",295
+"core-metadata/src/main/AndroidManifest.xml","config/resource",52
+"core-metadata/src/main/java/tachiyomi/core/metadata/comicinfo/ComicInfo.kt","source candidate",6391
+"core-metadata/src/main/java/tachiyomi/core/metadata/tachiyomi/MangaDetails.kt","source candidate",320
+"core/archive/build.gradle.kts","build/deploy",300
+"core/archive/src/main/AndroidManifest.xml","config/resource",52
+"core/archive/src/main/kotlin/mihon/core/archive/ArchiveEntry.kt","source candidate",97
+"core/archive/src/main/kotlin/mihon/core/archive/ArchiveInputStream.kt","source candidate",2026
+"core/archive/src/main/kotlin/mihon/core/archive/ArchiveReader.kt","source candidate",1159
+"core/archive/src/main/kotlin/mihon/core/archive/EpubReader.kt","source candidate",4457
+"core/archive/src/main/kotlin/mihon/core/archive/UniFileExtensions.kt","source candidate",534
+"core/archive/src/main/kotlin/mihon/core/archive/ZipWriter.kt","source candidate",2272
+"core/common/build.gradle.kts","build/deploy",1390
+"core/common/src/main/AndroidManifest.xml","config/resource",52
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/core/security/PrivacyPreferences.kt","source candidate",541
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/core/security/SecurityPreferences.kt","source candidate",1411
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/AndroidCookieJar.kt","source candidate",1506
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/ApolloExtensions.kt","source candidate",2626
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/DohProviders.kt","source candidate",6051
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/HttpException.kt","source candidate",404
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/JavaScriptEngine.kt","source candidate",895
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/NetworkHelper.kt","source candidate",3196
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/NetworkPreferences.kt","source candidate",1020
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/OkHttpExtensions.kt","source candidate",5320
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/ProgressListener.kt","source candidate",136
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/ProgressResponseBody.kt","source candidate",1761
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/Requests.kt","source candidate",1912
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/interceptor/CloudflareInterceptor.kt","source candidate",11560
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/interceptor/RateLimitInterceptor.kt","source candidate",4569
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/interceptor/SpecificHostRateLimitInterceptor.kt","source candidate",3260
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/interceptor/UncaughtExceptionInterceptor.kt","source candidate",766
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/interceptor/UserAgentInterceptor.kt","source candidate",720
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/network/interceptor/WebViewInterceptor.kt","source candidate",3081
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/util/lang/Hash.kt","source candidate",1081
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/util/lang/StringExtensions.kt","source candidate",1962
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/util/storage/DiskUtil.kt","source candidate",7199
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/util/system/DensityExtensions.kt","source candidate",200
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/util/system/DeviceUtil.kt","source candidate",3601
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/util/system/ToastExtensions.kt","source candidate",938
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/util/system/WebViewUtil.kt","source candidate",7466
+"core/common/src/main/kotlin/mihon/core/common/FeatureFlags.kt","source candidate",246
+"core/common/src/main/kotlin/mihon/core/common/cache/TtlDiskCache.kt","source candidate",10521
+"core/common/src/main/kotlin/mihon/core/common/extensions/Instant.kt","source candidate",472
+"core/common/src/main/kotlin/mihon/core/common/extensions/JsonObject.kt","source candidate",469
+"core/common/src/main/kotlin/mihon/core/common/utils/Set.kt","source candidate",140
+"core/common/src/main/kotlin/tachiyomi/core/common/Constants.kt","source candidate",1054
+"core/common/src/main/kotlin/tachiyomi/core/common/i18n/Localize.kt","source candidate",1209
+"core/common/src/main/kotlin/tachiyomi/core/common/preference/AndroidPreference.kt","source candidate",7605
+"core/common/src/main/kotlin/tachiyomi/core/common/preference/AndroidPreferenceStore.kt","source candidate",4261
+"core/common/src/main/kotlin/tachiyomi/core/common/preference/CheckboxState.kt","source candidate",1541
+"core/common/src/main/kotlin/tachiyomi/core/common/preference/InMemoryPreferenceStore.kt","source candidate",4627
+"core/common/src/main/kotlin/tachiyomi/core/common/preference/Preference.kt","source candidate",1714
+"core/common/src/main/kotlin/tachiyomi/core/common/preference/PreferenceStore.kt","source candidate",2314
+"core/common/src/main/kotlin/tachiyomi/core/common/preference/TriState.kt","source candidate",376
+"core/common/src/main/kotlin/tachiyomi/core/common/storage/AndroidStorageFolderProvider.kt","source candidate",852
+"core/common/src/main/kotlin/tachiyomi/core/common/storage/FolderProvider.kt","source candidate",140
+"core/common/src/main/kotlin/tachiyomi/core/common/storage/UniFileExtensions.kt","source candidate",308
+"core/common/src/main/kotlin/tachiyomi/core/common/util/lang/BooleanExtensions.kt","source candidate",85
+"core/common/src/main/kotlin/tachiyomi/core/common/util/lang/RxCoroutineBridge.kt","source candidate",2038
+"core/common/src/main/kotlin/tachiyomi/core/common/util/lang/SortUtil.kt","source candidate",344
+"core/common/src/main/kotlin/tachiyomi/core/common/util/lang/SubscriberGate.kt","source candidate",2151
+"core/common/src/main/kotlin/tachiyomi/core/common/util/system/ImageUtil.kt","source candidate",16840
+"core/common/src/main/kotlin/tachiyomi/core/common/util/system/LogcatExtensions.kt","source candidate",429
+"core/common/src/test/kotlin/mihon/core/common/cache/TtlDiskCacheTest.kt","test candidate",10057
+"core/metro/build.gradle.kts","build/deploy",225
+"core/metro/src/main/AndroidManifest.xml","config/resource",52
+"core/metro/src/main/kotlin/mihon/core/metro/AppCoroutineScope.kt","source candidate",985
+"core/metro/src/main/kotlin/mihon/core/metro/GraphProvider.kt","source candidate",74
+"core/metro/src/main/kotlin/mihon/core/metro/IsDebugBuild.kt","source candidate",248
+"core/metro/src/main/kotlin/mihon/core/metro/Utils.kt","source candidate",167
+"core/navigation/build.gradle.kts","build/deploy",411
+"core/navigation/src/main/AndroidManifest.xml","config/resource",52
+"core/navigation/src/main/kotlin/mihon/core/navigation/AppRoutes.kt","source candidate",2931
+"core/navigation/src/main/kotlin/mihon/core/navigation/AssistContentManager.kt","source candidate",1125
+"core/navigation/src/main/kotlin/mihon/core/navigation/LeavingEntryInputNavEntryDecorator.kt","source candidate",1380
+"core/navigation/src/main/kotlin/mihon/core/navigation/Navigator.kt","source candidate",4920
+"core/navigation/src/main/kotlin/mihon/core/navigation/OverlaySheetScene.kt","source candidate",1642
+"core/navigation/src/main/kotlin/mihon/core/navigation/TwoPaneSettingsScene.kt","source candidate",5364
+"data/build.gradle.kts","build/deploy",1203
+"data/src/main/AndroidManifest.xml","config/resource",52
+"data/src/main/java/mihon/data/database/DatabaseRepositoryImpl.kt","source candidate",925
+"data/src/main/java/mihon/data/extension/model/BaseNetworkExtensionStore.kt","source candidate",187
+"data/src/main/java/mihon/data/extension/model/NetworkExtensionStore.kt","source candidate",4416
+"data/src/main/java/mihon/data/extension/model/NetworkLegacyExtension.kt","source candidate",1962
+"data/src/main/java/mihon/data/extension/model/NetworkLegacyExtensionRepo.kt","source candidate",1071
+"data/src/main/java/mihon/data/extension/repository/ExtensionStoreRepositoryImpl.kt","source candidate",6068
+"data/src/main/java/mihon/data/extension/service/ExtensionStoreService.kt","source candidate",5854
+"data/src/main/java/tachiyomi/data/DatabaseAdapter.kt","source candidate",1854
+"data/src/main/java/tachiyomi/data/DatabaseBindings.kt","source candidate",4186
+"data/src/main/java/tachiyomi/data/QueryExtension.kt","source candidate",942
+"data/src/main/java/tachiyomi/data/QueryPagingSource.kt","source candidate",2418
+"data/src/main/java/tachiyomi/data/backup/RestoreRepositoryImpl.kt","source candidate",12193
+"data/src/main/java/tachiyomi/data/category/CategoryRepositoryImpl.kt","source candidate",3827
+"data/src/main/java/tachiyomi/data/chapter/ChapterRepositoryImpl.kt","source candidate",7537
+"data/src/main/java/tachiyomi/data/chapter/ChapterSanitizer.kt","source candidate",837
+"data/src/main/java/tachiyomi/data/history/HistoryMapper.kt","source candidate",1323
+"data/src/main/java/tachiyomi/data/history/HistoryRepositoryImpl.kt","source candidate",3436
+"data/src/main/java/tachiyomi/data/manga/MangaMapper.kt","source candidate",5922
+"data/src/main/java/tachiyomi/data/manga/MangaRepositoryImpl.kt","source candidate",10444
+"data/src/main/java/tachiyomi/data/release/GithubRelease.kt","source candidate",640
+"data/src/main/java/tachiyomi/data/release/ReleaseServiceImpl.kt","source candidate",2884
+"data/src/main/java/tachiyomi/data/source/SourcePagingSource.kt","source candidate",3142
+"data/src/main/java/tachiyomi/data/source/SourceRepositoryImpl.kt","source candidate",3952
+"data/src/main/java/tachiyomi/data/source/StubSourceRepositoryImpl.kt","source candidate",1311
+"data/src/main/java/tachiyomi/data/track/TrackMapper.kt","source candidate",937
+"data/src/main/java/tachiyomi/data/track/TrackRepositoryImpl.kt","source candidate",3238
+"data/src/main/java/tachiyomi/data/updates/UpdatesRepositoryImpl.kt","source candidate",3987
+"data/src/main/sqldelight/tachiyomi/data/category.sq","other",1634
+"data/src/main/sqldelight/tachiyomi/data/chapter.sq","other",4533
+"data/src/main/sqldelight/tachiyomi/data/excluded_scanlator.sq","other",676
+"data/src/main/sqldelight/tachiyomi/data/extension_store.sq","other",1279
+"data/src/main/sqldelight/tachiyomi/data/history.sq","other",1357
+"data/src/main/sqldelight/tachiyomi/data/manga.sq","other",13080
+"data/src/main/sqldelight/tachiyomi/data/manga_category.sq","other",580
+"data/src/main/sqldelight/tachiyomi/data/manga_track.sq","other",3236
+"data/src/main/sqldelight/tachiyomi/data/source.sq","other",394
+"data/src/main/sqldelight/tachiyomi/migrations/1.sqm","other",95
+"data/src/main/sqldelight/tachiyomi/migrations/10.sqm","other",597
+"data/src/main/sqldelight/tachiyomi/migrations/11.sqm","other",564
+"data/src/main/sqldelight/tachiyomi/migrations/12.sqm","other",128
+"data/src/main/sqldelight/tachiyomi/migrations/13.sqm","other",64
+"data/src/main/sqldelight/tachiyomi/migrations/14.sqm","other",210
+"data/src/main/sqldelight/tachiyomi/migrations/15.sqm","other",572
+"data/src/main/sqldelight/tachiyomi/migrations/16.sqm","other",3642
+"data/src/main/sqldelight/tachiyomi/migrations/17.sqm","other",25063
+"data/src/main/sqldelight/tachiyomi/migrations/18.sqm","other",2206
+"data/src/main/sqldelight/tachiyomi/migrations/19.sqm","other",10653
+"data/src/main/sqldelight/tachiyomi/migrations/2.sqm","other",1570
+"data/src/main/sqldelight/tachiyomi/migrations/3.sqm","other",228
+"data/src/main/sqldelight/tachiyomi/migrations/4.sqm","other",139
+"data/src/main/sqldelight/tachiyomi/migrations/5.sqm","other",75
+"data/src/main/sqldelight/tachiyomi/migrations/6.sqm","other",1263
+"data/src/main/sqldelight/tachiyomi/migrations/7.sqm","other",699
+"data/src/main/sqldelight/tachiyomi/migrations/8.sqm","other",549
+"data/src/main/sqldelight/tachiyomi/migrations/9.sqm","other",892
+"data/src/main/sqldelight/tachiyomi/view/historyView.sq","other",1686
+"data/src/main/sqldelight/tachiyomi/view/libraryView.sq","other",2472
+"data/src/main/sqldelight/tachiyomi/view/updatesView.sq","other",3261
+"domain/build.gradle.kts","build/deploy",988
+"domain/src/main/AndroidManifest.xml","config/resource",52
+"domain/src/main/java/eu/kanade/tachiyomi/extension/model/Extension.kt","source candidate",4916
+"domain/src/main/java/mihon/domain/chapter/interactor/FilterChaptersForDownload.kt","source candidate",3140
+"domain/src/main/java/mihon/domain/common/PartialUpdate.kt","source candidate",390
+"domain/src/main/java/mihon/domain/database/repository/DatabaseRepository.kt","source candidate",441
+"domain/src/main/java/mihon/domain/extension/interactor/AddExtensionStore.kt","source candidate",352
+"domain/src/main/java/mihon/domain/extension/interactor/GetExtensionStoreCountAsFlow.kt","source candidate",304
+"domain/src/main/java/mihon/domain/extension/interactor/GetExtensionStores.kt","source candidate",468
+"domain/src/main/java/mihon/domain/extension/interactor/RemoveExtensionStore.kt","source candidate",334
+"domain/src/main/java/mihon/domain/extension/interactor/UpdateExtensionStores.kt","source candidate",315
+"domain/src/main/java/mihon/domain/extension/model/ContentWarning.kt","source candidate",99
+"domain/src/main/java/mihon/domain/extension/model/ExtensionStore.kt","source candidate",352
+"domain/src/main/java/mihon/domain/extension/repository/ExtensionStoreRepository.kt","source candidate",667
+"domain/src/main/java/mihon/domain/library/model/search/LibrarySearchAst.kt","source candidate",2447
+"domain/src/main/java/mihon/domain/library/model/search/LibrarySearchLexer.kt","source candidate",3323
+"domain/src/main/java/mihon/domain/library/model/search/LibrarySearchParser.kt","source candidate",2716
+"domain/src/main/java/mihon/domain/manga/model/SManga.kt","source candidate",567
+"domain/src/main/java/mihon/domain/upcoming/interactor/GetUpcomingManga.kt","source candidate",810
+"domain/src/main/java/tachiyomi/domain/backup/model/RestoredManga.kt","source candidate",537
+"domain/src/main/java/tachiyomi/domain/backup/repository/RestoreRepository.kt","source candidate",563
+"domain/src/main/java/tachiyomi/domain/backup/service/BackupPreferences.kt","source candidate",606
+"domain/src/main/java/tachiyomi/domain/category/interactor/CreateCategoryWithName.kt","source candidate",1094
+"domain/src/main/java/tachiyomi/domain/category/interactor/DeleteCategory.kt","source candidate",2155
+"domain/src/main/java/tachiyomi/domain/category/interactor/GetCategories.kt","source candidate",775
+"domain/src/main/java/tachiyomi/domain/category/interactor/RenameCategory.kt","source candidate",899
+"domain/src/main/java/tachiyomi/domain/category/interactor/ReorderCategory.kt","source candidate",1348
+"domain/src/main/java/tachiyomi/domain/category/interactor/ResetCategoryFlags.kt","source candidate",543
+"domain/src/main/java/tachiyomi/domain/category/interactor/SetDisplayMode.kt","source candidate",379
+"domain/src/main/java/tachiyomi/domain/category/interactor/SetMangaCategories.kt","source candidate",540
+"domain/src/main/java/tachiyomi/domain/category/interactor/SetSortModeForCategory.kt","source candidate",1379
+"domain/src/main/java/tachiyomi/domain/category/model/Category.kt","source candidate",324
+"domain/src/main/java/tachiyomi/domain/category/model/NewCategory.kt","source candidate",110
+"domain/src/main/java/tachiyomi/domain/category/repository/CategoryRepository.kt","source candidate",950
+"domain/src/main/java/tachiyomi/domain/chapter/interactor/GetBookmarkedChaptersByMangaId.kt","source candidate",627
+"domain/src/main/java/tachiyomi/domain/chapter/interactor/GetChapter.kt","source candidate",830
+"domain/src/main/java/tachiyomi/domain/chapter/interactor/GetChapterByUrlAndMangaId.kt","source candidate",510
+"domain/src/main/java/tachiyomi/domain/chapter/interactor/GetChapterSummaryByMangaId.kt","source candidate",427
+"domain/src/main/java/tachiyomi/domain/chapter/interactor/GetChaptersByMangaId.kt","source candidate",667
+"domain/src/main/java/tachiyomi/domain/chapter/interactor/SetMangaDefaultChapterFlags.kt","source candidate",1309
+"domain/src/main/java/tachiyomi/domain/chapter/interactor/ShouldUpdateDbChapter.kt","source candidate",608
+"domain/src/main/java/tachiyomi/domain/chapter/interactor/UpdateChapter.kt","source candidate",792
+"domain/src/main/java/tachiyomi/domain/chapter/model/Chapter.kt","source candidate",1346
+"domain/src/main/java/tachiyomi/domain/chapter/model/ChapterRemoteUpdate.kt","source candidate",329
+"domain/src/main/java/tachiyomi/domain/chapter/model/ChapterSummary.kt","source candidate",135
+"domain/src/main/java/tachiyomi/domain/chapter/model/ChapterUpdate.kt","source candidate",397
+"domain/src/main/java/tachiyomi/domain/chapter/model/NoChaptersException.kt","source candidate",80
+"domain/src/main/java/tachiyomi/domain/chapter/repository/ChapterRepository.kt","source candidate",1342
+"domain/src/main/java/tachiyomi/domain/chapter/service/ChapterRecognition.kt","source candidate",15793
+"domain/src/main/java/tachiyomi/domain/chapter/service/ChapterSort.kt","source candidate",1379
+"domain/src/main/java/tachiyomi/domain/chapter/service/MissingChapters.kt","source candidate",1706
+"domain/src/main/java/tachiyomi/domain/download/service/DownloadPreferences.kt","source candidate",2581
+"domain/src/main/java/tachiyomi/domain/history/interactor/GetHistory.kt","source candidate",597
+"domain/src/main/java/tachiyomi/domain/history/interactor/GetNextChapters.kt","source candidate",2056
+"domain/src/main/java/tachiyomi/domain/history/interactor/GetTotalReadDuration.kt","source candidate",318
+"domain/src/main/java/tachiyomi/domain/history/interactor/RemoveHistory.kt","source candidate",574
+"domain/src/main/java/tachiyomi/domain/history/interactor/UpsertHistory.kt","source candidate",398
+"domain/src/main/java/tachiyomi/domain/history/model/History.kt","source candidate",372
+"domain/src/main/java/tachiyomi/domain/history/model/HistoryUpdate.kt","source candidate",181
+"domain/src/main/java/tachiyomi/domain/history/model/HistoryWithRelations.kt","source candidate",355
+"domain/src/main/java/tachiyomi/domain/history/repository/HistoryRepository.kt","source candidate",841
+"domain/src/main/java/tachiyomi/domain/library/model/Flag.kt","source candidate",718
+"domain/src/main/java/tachiyomi/domain/library/model/LibraryDisplayMode.kt","source candidate",1290
+"domain/src/main/java/tachiyomi/domain/library/model/LibraryManga.kt","source candidate",557
+"domain/src/main/java/tachiyomi/domain/library/model/LibrarySortMode.kt","source candidate",4626
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt","source candidate",9142
+"domain/src/main/java/tachiyomi/domain/manga/interactor/FetchInterval.kt","source candidate",2952
+"domain/src/main/java/tachiyomi/domain/manga/interactor/GetDuplicateLibraryManga.kt","source candidate",506
+"domain/src/main/java/tachiyomi/domain/manga/interactor/GetFavorites.kt","source candidate",515
+"domain/src/main/java/tachiyomi/domain/manga/interactor/GetLibraryManga.kt","source candidate",1054
+"domain/src/main/java/tachiyomi/domain/manga/interactor/GetManga.kt","source candidate",834
+"domain/src/main/java/tachiyomi/domain/manga/interactor/GetMangaByUrlAndSourceId.kt","source candidate",411
+"domain/src/main/java/tachiyomi/domain/manga/interactor/GetMangaWithChapters.kt","source candidate",958
+"domain/src/main/java/tachiyomi/domain/manga/interactor/NetworkToLocalManga.kt","source candidate",507
+"domain/src/main/java/tachiyomi/domain/manga/interactor/ReleasePattern.kt","source candidate",10379
+"domain/src/main/java/tachiyomi/domain/manga/interactor/ReleaseSchedule.kt","source candidate",7789
+"domain/src/main/java/tachiyomi/domain/manga/interactor/ResetViewerFlags.kt","source candidate",315
+"domain/src/main/java/tachiyomi/domain/manga/interactor/SetMangaChapterFlags.kt","source candidate",3191
+"domain/src/main/java/tachiyomi/domain/manga/interactor/UpdateMangaNotes.kt","source candidate",485
+"domain/src/main/java/tachiyomi/domain/manga/model/Manga.kt","source candidate",4937
+"domain/src/main/java/tachiyomi/domain/manga/model/MangaCover.kt","source candidate",512
+"domain/src/main/java/tachiyomi/domain/manga/model/MangaRemoteUpdate.kt","source candidate",536
+"domain/src/main/java/tachiyomi/domain/manga/model/MangaUpdate.kt","source candidate",575
+"domain/src/main/java/tachiyomi/domain/manga/model/MangaWithChapterCount.kt","source candidate",124
+"domain/src/main/java/tachiyomi/domain/manga/model/TriState.kt","source candidate",294
+"domain/src/main/java/tachiyomi/domain/manga/repository/MangaRepository.kt","source candidate",1957
+"domain/src/main/java/tachiyomi/domain/release/interactor/GetApplicationRelease.kt","source candidate",2209
+"domain/src/main/java/tachiyomi/domain/release/model/Release.kt","source candidate",226
+"domain/src/main/java/tachiyomi/domain/release/service/ReleaseService.kt","source candidate",261
+"domain/src/main/java/tachiyomi/domain/source/interactor/GetRemoteManga.kt","source candidate",853
+"domain/src/main/java/tachiyomi/domain/source/interactor/GetSourcesWithNonLibraryManga.kt","source candidate",440
+"domain/src/main/java/tachiyomi/domain/source/model/Pin.kt","source candidate",1078
+"domain/src/main/java/tachiyomi/domain/source/model/Source.kt","source candidate",531
+"domain/src/main/java/tachiyomi/domain/source/model/SourceWithCount.kt","source candidate",212
+"domain/src/main/java/tachiyomi/domain/source/model/StubSource.kt","source candidate",1647
+"domain/src/main/java/tachiyomi/domain/source/repository/SourceRepository.kt","source candidate",829
+"domain/src/main/java/tachiyomi/domain/source/repository/StubSourceRepository.kt","source candidate",337
+"domain/src/main/java/tachiyomi/domain/source/service/SourceManager.kt","source candidate",529
+"domain/src/main/java/tachiyomi/domain/storage/service/StorageManager.kt","source candidate",3282
+"domain/src/main/java/tachiyomi/domain/storage/service/StoragePreferences.kt","source candidate",612
+"domain/src/main/java/tachiyomi/domain/track/interactor/DeleteTrack.kt","source candidate",508
+"domain/src/main/java/tachiyomi/domain/track/interactor/GetTracks.kt","source candidate",957
+"domain/src/main/java/tachiyomi/domain/track/interactor/GetTracksPerManga.kt","source candidate",616
+"domain/src/main/java/tachiyomi/domain/track/interactor/UpsertTrack.kt","source candidate",718
+"domain/src/main/java/tachiyomi/domain/track/model/Track.kt","source candidate",500
+"domain/src/main/java/tachiyomi/domain/track/repository/TrackRepository.kt","source candidate",645
+"domain/src/main/java/tachiyomi/domain/upcoming/service/UpcomingPreferences.kt","source candidate",754
+"domain/src/main/java/tachiyomi/domain/updates/interactor/GetUpdates.kt","source candidate",1318
+"domain/src/main/java/tachiyomi/domain/updates/model/UpdatesWithRelations.kt","source candidate",471
+"domain/src/main/java/tachiyomi/domain/updates/repository/UpdatesRepository.kt","source candidate",720
+"domain/src/main/java/tachiyomi/domain/updates/service/UpdatesPreferences.kt","source candidate",1595
+"domain/src/test/java/tachiyomi/domain/chapter/service/ChapterRecognitionTest.kt","test candidate",16459
+"domain/src/test/java/tachiyomi/domain/chapter/service/MissingChaptersTest.kt","test candidate",1973
+"domain/src/test/java/tachiyomi/domain/library/model/LibraryFlagsTest.kt","test candidate",1656
+"domain/src/test/java/tachiyomi/domain/manga/interactor/FetchIntervalTest.kt","test candidate",15492
+"domain/src/test/java/tachiyomi/domain/release/interactor/GetApplicationReleaseTest.kt","test candidate",2908
+"fastlane/metadata/android/en-US/changelogs/25.txt","other",63
+"fastlane/metadata/android/en-US/full_description.txt","other",782
+"fastlane/metadata/android/en-US/images/featureGraphic.png","other",278033
+"fastlane/metadata/android/en-US/images/icon.png","other",7639
+"fastlane/metadata/android/en-US/images/phoneScreenshots/1.png","other",1709521
+"fastlane/metadata/android/en-US/images/phoneScreenshots/2.png","other",1207683
+"fastlane/metadata/android/en-US/images/phoneScreenshots/3.png","other",310842
+"fastlane/metadata/android/en-US/images/phoneScreenshots/4.png","other",369611
+"fastlane/metadata/android/en-US/short_description.txt","other",67
+"fastlane/metadata/android/en-US/title.txt","other",6
+"fastlane/metadata/android/es/full_description.txt","other",947
+"fastlane/metadata/android/es/short_description.txt","other",66
+"fastlane/metadata/android/vi/full_description.txt","other",1242
+"fastlane/metadata/android/vi/short_description.txt","other",92
+"gradle.properties","config/resource",270
+"gradle/build-logic/build.gradle.kts","build/deploy",3105
+"gradle/build-logic/gradle.properties","config/resource",326
+"gradle/build-logic/settings.gradle.kts","build/deploy",396
+"gradle/build-logic/src/main/kotlin/PluginAndroidApplication.kt","source candidate",479
+"gradle/build-logic/src/main/kotlin/PluginAndroidBase.kt","source candidate",1675
+"gradle/build-logic/src/main/kotlin/PluginAndroidLibrary.kt","source candidate",471
+"gradle/build-logic/src/main/kotlin/PluginAndroidTest.kt","test candidate",465
+"gradle/build-logic/src/main/kotlin/PluginComposeAndroid.kt","source candidate",1154
+"gradle/build-logic/src/main/kotlin/PluginKotlinMultiplatform.kt","source candidate",1868
+"gradle/build-logic/src/main/kotlin/PluginSpotless.kt","source candidate",2408
+"gradle/build-logic/src/main/kotlin/mihon/gradle/BuildConfig.kt","source candidate",1424
+"gradle/build-logic/src/main/kotlin/mihon/gradle/BuildInfo.kt","source candidate",3203
+"gradle/build-logic/src/main/kotlin/mihon/gradle/configurations/Kotlin.kt","source candidate",825
+"gradle/build-logic/src/main/kotlin/mihon/gradle/extensions/CompileSdkSpec.kt","source candidate",434
+"gradle/build-logic/src/main/kotlin/mihon/gradle/extensions/DependencyHandlerScope.kt","source candidate",1196
+"gradle/build-logic/src/main/kotlin/mihon/gradle/extensions/PluginManager.kt","source candidate",265
+"gradle/build-logic/src/main/kotlin/mihon/gradle/extensions/Project.kt","source candidate",990
+"gradle/build-logic/src/main/kotlin/mihon/gradle/tasks/GenerateLocalesConfigTask.kt","source candidate",1603
+"gradle/build-logic/src/main/kotlin/mihon/gradle/tasks/GenerateVectorDrawablesTask.kt","source candidate",1734
+"gradle/build-logic/src/main/kotlin/mihon/gradle/tasks/ReplaceShortcutsPlaceholderTask.kt","source candidate",944
+"gradle/libs.versions.toml","config/resource",16738
+"gradle/mihon.versions.toml","config/resource",617
+"gradle/wrapper/gradle-wrapper.jar","other",48749
+"gradle/wrapper/gradle-wrapper.properties","config/resource",281
+"gradlew","other",8656
+"gradlew.bat","other",4776
+"i18n/README.md","documentation",275
+"i18n/build.gradle.kts","build/deploy",1371
+"i18n/src/androidMain/AndroidManifest.xml","config/resource",52
+"i18n/src/commonMain/moko-resources/am/plurals.xml","config/resource",678
+"i18n/src/commonMain/moko-resources/am/strings.xml","config/resource",21447
+"i18n/src/commonMain/moko-resources/ar/plurals.xml","config/resource",10257
+"i18n/src/commonMain/moko-resources/ar/strings.xml","config/resource",81689
+"i18n/src/commonMain/moko-resources/as/plurals.xml","config/resource",5455
+"i18n/src/commonMain/moko-resources/as/strings.xml","config/resource",98813
+"i18n/src/commonMain/moko-resources/az/strings.xml","config/resource",68
+"i18n/src/commonMain/moko-resources/base/plurals.xml","config/resource",4178
+"i18n/src/commonMain/moko-resources/base/strings.xml","config/resource",72464
+"i18n/src/commonMain/moko-resources/be/plurals.xml","config/resource",8293
+"i18n/src/commonMain/moko-resources/be/strings.xml","config/resource",88972
+"i18n/src/commonMain/moko-resources/bg/plurals.xml","config/resource",3736
+"i18n/src/commonMain/moko-resources/bg/strings.xml","config/resource",74817
+"i18n/src/commonMain/moko-resources/bn/plurals.xml","config/resource",5311
+"i18n/src/commonMain/moko-resources/bn/strings.xml","config/resource",88585
+"i18n/src/commonMain/moko-resources/ca/plurals.xml","config/resource",5767
+"i18n/src/commonMain/moko-resources/ca/strings.xml","config/resource",79685
+"i18n/src/commonMain/moko-resources/ceb/plurals.xml","config/resource",1105
+"i18n/src/commonMain/moko-resources/ceb/strings.xml","config/resource",31316
+"i18n/src/commonMain/moko-resources/cs/plurals.xml","config/resource",6953
+"i18n/src/commonMain/moko-resources/cs/strings.xml","config/resource",77375
+"i18n/src/commonMain/moko-resources/cv/plurals.xml","config/resource",3164
+"i18n/src/commonMain/moko-resources/cv/strings.xml","config/resource",52057
+"i18n/src/commonMain/moko-resources/da/plurals.xml","config/resource",706
+"i18n/src/commonMain/moko-resources/da/strings.xml","config/resource",19283
+"i18n/src/commonMain/moko-resources/de/plurals.xml","config/resource",4274
+"i18n/src/commonMain/moko-resources/de/strings.xml","config/resource",77925
+"i18n/src/commonMain/moko-resources/el/plurals.xml","config/resource",4921
+"i18n/src/commonMain/moko-resources/el/strings.xml","config/resource",94572
+"i18n/src/commonMain/moko-resources/eo/plurals.xml","config/resource",4180
+"i18n/src/commonMain/moko-resources/eo/strings.xml","config/resource",74220
+"i18n/src/commonMain/moko-resources/es/plurals.xml","config/resource",5731
+"i18n/src/commonMain/moko-resources/es/strings.xml","config/resource",72539
+"i18n/src/commonMain/moko-resources/eu/plurals.xml","config/resource",3447
+"i18n/src/commonMain/moko-resources/eu/strings.xml","config/resource",43603
+"i18n/src/commonMain/moko-resources/fa/plurals.xml","config/resource",4477
+"i18n/src/commonMain/moko-resources/fa/strings.xml","config/resource",88106
+"i18n/src/commonMain/moko-resources/fi/plurals.xml","config/resource",2776
+"i18n/src/commonMain/moko-resources/fi/strings.xml","config/resource",45851
+"i18n/src/commonMain/moko-resources/fil/plurals.xml","config/resource",4418
+"i18n/src/commonMain/moko-resources/fil/strings.xml","config/resource",77455
+"i18n/src/commonMain/moko-resources/fr/plurals.xml","config/resource",5652
+"i18n/src/commonMain/moko-resources/fr/strings.xml","config/resource",72343
+"i18n/src/commonMain/moko-resources/gl/plurals.xml","config/resource",3374
+"i18n/src/commonMain/moko-resources/gl/strings.xml","config/resource",62778
+"i18n/src/commonMain/moko-resources/he/plurals.xml","config/resource",6148
+"i18n/src/commonMain/moko-resources/he/strings.xml","config/resource",59831
+"i18n/src/commonMain/moko-resources/hi/plurals.xml","config/resource",5056
+"i18n/src/commonMain/moko-resources/hi/strings.xml","config/resource",105295
+"i18n/src/commonMain/moko-resources/hr/plurals.xml","config/resource",5556
+"i18n/src/commonMain/moko-resources/hr/strings.xml","config/resource",68397
+"i18n/src/commonMain/moko-resources/hu/plurals.xml","config/resource",3344
+"i18n/src/commonMain/moko-resources/hu/strings.xml","config/resource",62653
+"i18n/src/commonMain/moko-resources/in/plurals.xml","config/resource",2794
+"i18n/src/commonMain/moko-resources/in/strings.xml","config/resource",74492
+"i18n/src/commonMain/moko-resources/it/plurals.xml","config/resource",5227
+"i18n/src/commonMain/moko-resources/it/strings.xml","config/resource",68767
+"i18n/src/commonMain/moko-resources/ja/plurals.xml","config/resource",3034
+"i18n/src/commonMain/moko-resources/ja/strings.xml","config/resource",81582
+"i18n/src/commonMain/moko-resources/jv/plurals.xml","config/resource",2657
+"i18n/src/commonMain/moko-resources/jv/strings.xml","config/resource",21313
+"i18n/src/commonMain/moko-resources/ka-rGE/plurals.xml","config/resource",4243
+"i18n/src/commonMain/moko-resources/ka-rGE/strings.xml","config/resource",42212
+"i18n/src/commonMain/moko-resources/kk/plurals.xml","config/resource",3251
+"i18n/src/commonMain/moko-resources/kk/strings.xml","config/resource",59843
+"i18n/src/commonMain/moko-resources/km/plurals.xml","config/resource",347
+"i18n/src/commonMain/moko-resources/km/strings.xml","config/resource",17577
+"i18n/src/commonMain/moko-resources/kmr/strings.xml","config/resource",18579
+"i18n/src/commonMain/moko-resources/kn/plurals.xml","config/resource",2562
+"i18n/src/commonMain/moko-resources/kn/strings.xml","config/resource",51866
+"i18n/src/commonMain/moko-resources/ko/plurals.xml","config/resource",2937
+"i18n/src/commonMain/moko-resources/ko/strings.xml","config/resource",77789
+"i18n/src/commonMain/moko-resources/lt/plurals.xml","config/resource",4091
+"i18n/src/commonMain/moko-resources/lt/strings.xml","config/resource",48920
+"i18n/src/commonMain/moko-resources/lv/plurals.xml","config/resource",3915
+"i18n/src/commonMain/moko-resources/lv/strings.xml","config/resource",53523
+"i18n/src/commonMain/moko-resources/ml/plurals.xml","config/resource",4718
+"i18n/src/commonMain/moko-resources/ml/strings.xml","config/resource",25270
+"i18n/src/commonMain/moko-resources/mr/plurals.xml","config/resource",437
+"i18n/src/commonMain/moko-resources/mr/strings.xml","config/resource",17821
+"i18n/src/commonMain/moko-resources/ms/plurals.xml","config/resource",2832
+"i18n/src/commonMain/moko-resources/ms/strings.xml","config/resource",68871
+"i18n/src/commonMain/moko-resources/my/strings.xml","config/resource",30892
+"i18n/src/commonMain/moko-resources/nb-rNO/plurals.xml","config/resource",3078
+"i18n/src/commonMain/moko-resources/nb-rNO/strings.xml","config/resource",54322
+"i18n/src/commonMain/moko-resources/ne/plurals.xml","config/resource",5105
+"i18n/src/commonMain/moko-resources/ne/strings.xml","config/resource",97908
+"i18n/src/commonMain/moko-resources/nl/plurals.xml","config/resource",4154
+"i18n/src/commonMain/moko-resources/nl/strings.xml","config/resource",68802
+"i18n/src/commonMain/moko-resources/nn/plurals.xml","config/resource",721
+"i18n/src/commonMain/moko-resources/nn/strings.xml","config/resource",16086
+"i18n/src/commonMain/moko-resources/pl/plurals.xml","config/resource",5865
+"i18n/src/commonMain/moko-resources/pl/strings.xml","config/resource",61284
+"i18n/src/commonMain/moko-resources/pt-rBR/plurals.xml","config/resource",5587
+"i18n/src/commonMain/moko-resources/pt-rBR/strings.xml","config/resource",77294
+"i18n/src/commonMain/moko-resources/pt/plurals.xml","config/resource",5311
+"i18n/src/commonMain/moko-resources/pt/strings.xml","config/resource",69127
+"i18n/src/commonMain/moko-resources/ro/plurals.xml","config/resource",5597
+"i18n/src/commonMain/moko-resources/ro/strings.xml","config/resource",69854
+"i18n/src/commonMain/moko-resources/ru/plurals.xml","config/resource",8342
+"i18n/src/commonMain/moko-resources/ru/strings.xml","config/resource",98247
+"i18n/src/commonMain/moko-resources/sa/plurals.xml","config/resource",4331
+"i18n/src/commonMain/moko-resources/sa/strings.xml","config/resource",57855
+"i18n/src/commonMain/moko-resources/sah/plurals.xml","config/resource",908
+"i18n/src/commonMain/moko-resources/sah/strings.xml","config/resource",33168
+"i18n/src/commonMain/moko-resources/sc/plurals.xml","config/resource",3474
+"i18n/src/commonMain/moko-resources/sc/strings.xml","config/resource",65497
+"i18n/src/commonMain/moko-resources/sdh/plurals.xml","config/resource",398
+"i18n/src/commonMain/moko-resources/sdh/strings.xml","config/resource",17913
+"i18n/src/commonMain/moko-resources/sk/plurals.xml","config/resource",4796
+"i18n/src/commonMain/moko-resources/sk/strings.xml","config/resource",54341
+"i18n/src/commonMain/moko-resources/sq/plurals.xml","config/resource",2613
+"i18n/src/commonMain/moko-resources/sq/strings.xml","config/resource",50307
+"i18n/src/commonMain/moko-resources/sr/plurals.xml","config/resource",5109
+"i18n/src/commonMain/moko-resources/sr/strings.xml","config/resource",69335
+"i18n/src/commonMain/moko-resources/sv/plurals.xml","config/resource",4151
+"i18n/src/commonMain/moko-resources/sv/strings.xml","config/resource",68120
+"i18n/src/commonMain/moko-resources/ta/strings.xml","config/resource",110702
+"i18n/src/commonMain/moko-resources/te/plurals.xml","config/resource",287
+"i18n/src/commonMain/moko-resources/te/strings.xml","config/resource",17405
+"i18n/src/commonMain/moko-resources/th/plurals.xml","config/resource",2549
+"i18n/src/commonMain/moko-resources/th/strings.xml","config/resource",87657
+"i18n/src/commonMain/moko-resources/tr/plurals.xml","config/resource",4086
+"i18n/src/commonMain/moko-resources/tr/strings.xml","config/resource",75886
+"i18n/src/commonMain/moko-resources/tt/strings.xml","config/resource",68
+"i18n/src/commonMain/moko-resources/uk/plurals.xml","config/resource",6785
+"i18n/src/commonMain/moko-resources/uk/strings.xml","config/resource",76874
+"i18n/src/commonMain/moko-resources/uz/plurals.xml","config/resource",522
+"i18n/src/commonMain/moko-resources/uz/strings.xml","config/resource",23267
+"i18n/src/commonMain/moko-resources/vi/plurals.xml","config/resource",2915
+"i18n/src/commonMain/moko-resources/vi/strings.xml","config/resource",75640
+"i18n/src/commonMain/moko-resources/zh-rCN/plurals.xml","config/resource",2809
+"i18n/src/commonMain/moko-resources/zh-rCN/strings.xml","config/resource",68829
+"i18n/src/commonMain/moko-resources/zh-rTW/plurals.xml","config/resource",2826
+"i18n/src/commonMain/moko-resources/zh-rTW/strings.xml","config/resource",70310
+"icons/custom-material-symbols/build.gradle.kts","build/deploy",787
+"icons/custom-material-symbols/src/main/valkyrieResources/rounded/crop_off.svg","other",1344
+"icons/custom-material-symbols/src/main/valkyrieResources/rounded/done_previous.svg","other",1343
+"icons/custom-material-symbols/src/main/valkyrieResources/rounded/download_arrow.svg","other",618
+"icons/custom-material-symbols/src/main/valkyrieResources/rounded/download_circle.svg","other",1119
+"icons/custom-material-symbols/src/main/valkyrieResources/rounded/reader_left_to_right.svg","other",1244
+"icons/custom-material-symbols/src/main/valkyrieResources/rounded/reader_long_strip.svg","other",1325
+"icons/custom-material-symbols/src/main/valkyrieResources/rounded/reader_long_strip_gaps.svg","other",1461
+"icons/custom-material-symbols/src/main/valkyrieResources/rounded/reader_right_to_left.svg","other",1309
+"icons/custom-material-symbols/src/main/valkyrieResources/rounded/reader_vertical.svg","other",1276
+"icons/material-symbols/build.gradle.kts","build/deploy",2373
+"icons/material-symbols/src/main/valkyrieResources/autoMirroredRounded/arrow_back.svg","other",450
+"icons/material-symbols/src/main/valkyrieResources/autoMirroredRounded/arrow_forward.svg","other",455
+"icons/material-symbols/src/main/valkyrieResources/autoMirroredRounded/arrow_right.svg","other",356
+"icons/material-symbols/src/main/valkyrieResources/autoMirroredRounded/chrome_reader_mode.svg","other",733
+"icons/material-symbols/src/main/valkyrieResources/autoMirroredRounded/format_list_bulleted.svg","other",885
+"icons/material-symbols/src/main/valkyrieResources/autoMirroredRounded/help.svg","other",890
+"icons/material-symbols/src/main/valkyrieResources/autoMirroredRounded/label.svg","other",412
+"icons/material-symbols/src/main/valkyrieResources/autoMirroredRounded/open_in_new.svg","other",632
+"icons/material-symbols/src/main/valkyrieResources/autoMirroredRounded/sort.svg","other",548
+"icons/material-symbols/src/main/valkyrieResources/autoMirroredRoundedFilled/view_list.svg","other",928
+"icons/material-symbols/src/main/valkyrieResources/rounded/add.svg","other",450
+"icons/material-symbols/src/main/valkyrieResources/rounded/arrow_downward.svg","other",457
+"icons/material-symbols/src/main/valkyrieResources/rounded/arrow_upward.svg","other",454
+"icons/material-symbols/src/main/valkyrieResources/rounded/attach_money.svg","other",686
+"icons/material-symbols/src/main/valkyrieResources/rounded/autorenew.svg","other",756
+"icons/material-symbols/src/main/valkyrieResources/rounded/block.svg","other",608
+"icons/material-symbols/src/main/valkyrieResources/rounded/book.svg","other",623
+"icons/material-symbols/src/main/valkyrieResources/rounded/bookmark.svg","other",404
+"icons/material-symbols/src/main/valkyrieResources/rounded/bookmark_add.svg","other",692
+"icons/material-symbols/src/main/valkyrieResources/rounded/bookmark_remove.svg","other",584
+"icons/material-symbols/src/main/valkyrieResources/rounded/bug_report.svg","other",1165
+"icons/material-symbols/src/main/valkyrieResources/rounded/calendar_month.svg","other",1164
+"icons/material-symbols/src/main/valkyrieResources/rounded/check.svg","other",371
+"icons/material-symbols/src/main/valkyrieResources/rounded/check_box_outline_blank.svg","other",383
+"icons/material-symbols/src/main/valkyrieResources/rounded/close.svg","other",448
+"icons/material-symbols/src/main/valkyrieResources/rounded/cloud_off.svg","other",710
+"icons/material-symbols/src/main/valkyrieResources/rounded/code.svg","other",542
+"icons/material-symbols/src/main/valkyrieResources/rounded/collections_bookmark.svg","other",769
+"icons/material-symbols/src/main/valkyrieResources/rounded/content_copy.svg","other",530
+"icons/material-symbols/src/main/valkyrieResources/rounded/copy_all.svg","other",1279
+"icons/material-symbols/src/main/valkyrieResources/rounded/crop.svg","other",533
+"icons/material-symbols/src/main/valkyrieResources/rounded/delete.svg","other",727
+"icons/material-symbols/src/main/valkyrieResources/rounded/delete_sweep.svg","other",805
+"icons/material-symbols/src/main/valkyrieResources/rounded/deselect.svg","other",2063
+"icons/material-symbols/src/main/valkyrieResources/rounded/done_all.svg","other",614
+"icons/material-symbols/src/main/valkyrieResources/rounded/download.svg","other",629
+"icons/material-symbols/src/main/valkyrieResources/rounded/drag_handle.svg","other",447
+"icons/material-symbols/src/main/valkyrieResources/rounded/edit.svg","other",492
+"icons/material-symbols/src/main/valkyrieResources/rounded/edit_note.svg","other",819
+"icons/material-symbols/src/main/valkyrieResources/rounded/error.svg","other",744
+"icons/material-symbols/src/main/valkyrieResources/rounded/explore.svg","other",760
+"icons/material-symbols/src/main/valkyrieResources/rounded/eyeglasses_2.svg","other",772
+"icons/material-symbols/src/main/valkyrieResources/rounded/favorite.svg","other",668
+"icons/material-symbols/src/main/valkyrieResources/rounded/file_download_off.svg","other",737
+"icons/material-symbols/src/main/valkyrieResources/rounded/filter_list.svg","other",558
+"icons/material-symbols/src/main/valkyrieResources/rounded/flip_to_back.svg","other",1742
+"icons/material-symbols/src/main/valkyrieResources/rounded/folder.svg","other",420
+"icons/material-symbols/src/main/valkyrieResources/rounded/format_bold.svg","other",501
+"icons/material-symbols/src/main/valkyrieResources/rounded/format_italic.svg","other",465
+"icons/material-symbols/src/main/valkyrieResources/rounded/format_list_numbered.svg","other",1204
+"icons/material-symbols/src/main/valkyrieResources/rounded/format_underlined.svg","other",530
+"icons/material-symbols/src/main/valkyrieResources/rounded/group.svg","other",983
+"icons/material-symbols/src/main/valkyrieResources/rounded/hourglass_empty.svg","other",692
+"icons/material-symbols/src/main/valkyrieResources/rounded/image.svg","other",487
+"icons/material-symbols/src/main/valkyrieResources/rounded/info.svg","other",743
+"icons/material-symbols/src/main/valkyrieResources/rounded/keep.svg","other",548
+"icons/material-symbols/src/main/valkyrieResources/rounded/keyboard_arrow_down.svg","other",400
+"icons/material-symbols/src/main/valkyrieResources/rounded/keyboard_arrow_left.svg","other",392
+"icons/material-symbols/src/main/valkyrieResources/rounded/keyboard_arrow_right.svg","other",392
+"icons/material-symbols/src/main/valkyrieResources/rounded/keyboard_arrow_up.svg","other",372
+"icons/material-symbols/src/main/valkyrieResources/rounded/local_library.svg","other",811
+"icons/material-symbols/src/main/valkyrieResources/rounded/mobile.svg","other",539
+"icons/material-symbols/src/main/valkyrieResources/rounded/mobile_gear.svg","other",951
+"icons/material-symbols/src/main/valkyrieResources/rounded/mobile_landscape.svg","other",554
+"icons/material-symbols/src/main/valkyrieResources/rounded/mobile_lock_landscape.svg","other",674
+"icons/material-symbols/src/main/valkyrieResources/rounded/mobile_lock_portrait.svg","other",652
+"icons/material-symbols/src/main/valkyrieResources/rounded/mobile_rotate.svg","other",1044
+"icons/material-symbols/src/main/valkyrieResources/rounded/more_vert.svg","other",529
+"icons/material-symbols/src/main/valkyrieResources/rounded/newspaper.svg","other",564
+"icons/material-symbols/src/main/valkyrieResources/rounded/numbers.svg","other",666
+"icons/material-symbols/src/main/valkyrieResources/rounded/palette.svg","other",970
+"icons/material-symbols/src/main/valkyrieResources/rounded/person.svg","other",716
+"icons/material-symbols/src/main/valkyrieResources/rounded/photo.svg","other",487
+"icons/material-symbols/src/main/valkyrieResources/rounded/preview.svg","other",721
+"icons/material-symbols/src/main/valkyrieResources/rounded/public.svg","other",702
+"icons/material-symbols/src/main/valkyrieResources/rounded/query_stats.svg","other",749
+"icons/material-symbols/src/main/valkyrieResources/rounded/radio_button_checked.svg","other",639
+"icons/material-symbols/src/main/valkyrieResources/rounded/radio_button_unchecked.svg","other",518
+"icons/material-symbols/src/main/valkyrieResources/rounded/refresh.svg","other",582
+"icons/material-symbols/src/main/valkyrieResources/rounded/remove_done.svg","other",678
+"icons/material-symbols/src/main/valkyrieResources/rounded/rocket_launch.svg","other",967
+"icons/material-symbols/src/main/valkyrieResources/rounded/save.svg","other",623
+"icons/material-symbols/src/main/valkyrieResources/rounded/schedule.svg","other",666
+"icons/material-symbols/src/main/valkyrieResources/rounded/search.svg","other",505
+"icons/material-symbols/src/main/valkyrieResources/rounded/security.svg","other",468
+"icons/material-symbols/src/main/valkyrieResources/rounded/select_all.svg","other",2196
+"icons/material-symbols/src/main/valkyrieResources/rounded/settings.svg","other",1083
+"icons/material-symbols/src/main/valkyrieResources/rounded/share.svg","other",909
+"icons/material-symbols/src/main/valkyrieResources/rounded/skip_next.svg","other",510
+"icons/material-symbols/src/main/valkyrieResources/rounded/skip_previous.svg","other",514
+"icons/material-symbols/src/main/valkyrieResources/rounded/sort_by_alpha.svg","other",786
+"icons/material-symbols/src/main/valkyrieResources/rounded/storage.svg","other",895
+"icons/material-symbols/src/main/valkyrieResources/rounded/swap_calls.svg","other",758
+"icons/material-symbols/src/main/valkyrieResources/rounded/sync.svg","other",789
+"icons/material-symbols/src/main/valkyrieResources/rounded/tab_close.svg","other",736
+"icons/material-symbols/src/main/valkyrieResources/rounded/travel_explore.svg","other",843
+"icons/material-symbols/src/main/valkyrieResources/rounded/update_disabled.svg","other",1049
+"icons/material-symbols/src/main/valkyrieResources/rounded/verified.svg","other",865
+"icons/material-symbols/src/main/valkyrieResources/rounded/verified_user.svg","other",626
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/bookmark.svg","other",360
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/brush.svg","other",416
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/cancel.svg","other",645
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/check_box.svg","other",489
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/check_circle.svg","other",562
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/circle.svg","other",421
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/dangerous.svg","other",673
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/delete.svg","other",692
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/disabled_by_default.svg","other",589
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/error.svg","other",656
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/extension.svg","other",519
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/favorite.svg","other",441
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/folder.svg","other",380
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/keep.svg","other",509
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/pause.svg","other",452
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/photo.svg","other",459
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/play_arrow.svg","other",391
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/view_compact.svg","other",550
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/view_module.svg","other",937
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/visibility.svg","other",675
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/visibility_off.svg","other",889
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/volunteer_activism.svg","other",799
+"icons/material-symbols/src/main/valkyrieResources/roundedFilled/warning.svg","other",622
+"icons/simple-icons/build.gradle.kts","build/deploy",632
+"icons/simple-icons/src/main/valkyrieResources/discord.svg","other",1497
+"icons/simple-icons/src/main/valkyrieResources/facebook.svg","other",666
+"icons/simple-icons/src/main/valkyrieResources/github.svg","other",944
+"icons/simple-icons/src/main/valkyrieResources/open_collective.svg","other",545
+"icons/simple-icons/src/main/valkyrieResources/patreon.svg","other",492
+"icons/simple-icons/src/main/valkyrieResources/reddit.svg","other",1355
+"icons/simple-icons/src/main/valkyrieResources/x.svg","other",416
+"presentation-core/build.gradle.kts","build/deploy",1506
+"presentation-core/src/main/AndroidManifest.xml","config/resource",52
+"presentation-core/src/main/java/mihon/presentation/core/util/PagingDataUtil.kt","source candidate",568
+"presentation-core/src/main/java/mihon/presentation/core/util/WindowSize.kt","source candidate",518
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/ActionButton.kt","source candidate",1240
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/AdaptiveSheet.kt","source candidate",9903
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/Badges.kt","source candidate",3172
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/CircularProgressIndicator.kt","source candidate",4053
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/CollapsibleBox.kt","source candidate",1954
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/LabeledCheckbox.kt","source candidate",1591
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/LazyColumnWithAction.kt","source candidate",1578
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/LazyGrid.kt","source candidate",2140
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/LazyList.kt","source candidate",3675
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/LinkIcon.kt","source candidate",893
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/ListGroupHeader.kt","source candidate",840
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/Pill.kt","source candidate",1796
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/SectionCard.kt","source candidate",1473
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/SettingsItems.kt","source candidate",14700
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/TwoPanelBox.kt","source candidate",1803
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/VerticalFastScroller.kt","source candidate",18856
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/WheelPicker.kt","source candidate",10299
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/material/AlertDialog.kt","source candidate",5224
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/material/Button.kt","source candidate",15186
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/material/Constants.kt","source candidate",541
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/material/IconButtonTokens.kt","source candidate",258
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/material/IconToggleButton.kt","source candidate",1668
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/material/PullRefresh.kt","source candidate",1954
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/material/Scaffold.kt","source candidate",3462
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/material/Slider.kt","source candidate",2005
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/material/Surface.kt","source candidate",4017
+"presentation-core/src/main/java/tachiyomi/presentation/core/components/material/Tabs.kt","source candidate",1746
+"presentation-core/src/main/java/tachiyomi/presentation/core/i18n/Localize.kt","source candidate",1090
+"presentation-core/src/main/java/tachiyomi/presentation/core/screens/EmptyScreen.kt","source candidate",3727
+"presentation-core/src/main/java/tachiyomi/presentation/core/screens/InfoScreen.kt","source candidate",5471
+"presentation-core/src/main/java/tachiyomi/presentation/core/screens/LoadingScreen.kt","source candidate",534
+"presentation-core/src/main/java/tachiyomi/presentation/core/theme/Color.kt","source candidate",380
+"presentation-core/src/main/java/tachiyomi/presentation/core/theme/Typography.kt","source candidate",456
+"presentation-core/src/main/java/tachiyomi/presentation/core/util/Elevation.kt","source candidate",5032
+"presentation-core/src/main/java/tachiyomi/presentation/core/util/LazyListState.kt","source candidate",208
+"presentation-core/src/main/java/tachiyomi/presentation/core/util/Modifier.kt","source candidate",4022
+"presentation-core/src/main/java/tachiyomi/presentation/core/util/PaddingValues.kt","source candidate",935
+"presentation-core/src/main/java/tachiyomi/presentation/core/util/Preference.kt","source candidate",420
+"presentation-core/src/main/res/values-night/colors.xml","config/resource",157
+"presentation-core/src/main/res/values-night/colors_catppuccin.xml","config/resource",2461
+"presentation-core/src/main/res/values-night/colors_greenapple.xml","config/resource",2443
+"presentation-core/src/main/res/values-night/colors_lavender.xml","config/resource",2240
+"presentation-core/src/main/res/values-night/colors_midnightdusk.xml","config/resource",2085
+"presentation-core/src/main/res/values-night/colors_monochrome.xml","config/resource",2088
+"presentation-core/src/main/res/values-night/colors_nord.xml","config/resource",1845
+"presentation-core/src/main/res/values-night/colors_strawberry.xml","config/resource",2424
+"presentation-core/src/main/res/values-night/colors_tachiyomi.xml","config/resource",2233
+"presentation-core/src/main/res/values-night/colors_tako.xml","config/resource",1798
+"presentation-core/src/main/res/values-night/colors_tealturqoise.xml","config/resource",1828
+"presentation-core/src/main/res/values-night/colors_tidalwave.xml","config/resource",1904
+"presentation-core/src/main/res/values-night/colors_tokyonight.xml","config/resource",2263
+"presentation-core/src/main/res/values-night/colors_yinyang.xml","config/resource",1796
+"presentation-core/src/main/res/values-night/colors_yotsuba.xml","config/resource",1934
+"presentation-core/src/main/res/values/colors.xml","config/resource",773
+"presentation-core/src/main/res/values/colors_catppuccin.xml","config/resource",2461
+"presentation-core/src/main/res/values/colors_greenapple.xml","config/resource",2443
+"presentation-core/src/main/res/values/colors_lavender.xml","config/resource",2248
+"presentation-core/src/main/res/values/colors_midnightdusk.xml","config/resource",2085
+"presentation-core/src/main/res/values/colors_monochrome.xml","config/resource",2088
+"presentation-core/src/main/res/values/colors_nord.xml","config/resource",1954
+"presentation-core/src/main/res/values/colors_strawberry.xml","config/resource",2424
+"presentation-core/src/main/res/values/colors_tachiyomi.xml","config/resource",2233
+"presentation-core/src/main/res/values/colors_tako.xml","config/resource",1792
+"presentation-core/src/main/res/values/colors_tealturqoise.xml","config/resource",1828
+"presentation-core/src/main/res/values/colors_tidalwave.xml","config/resource",1905
+"presentation-core/src/main/res/values/colors_tokyonight.xml","config/resource",2261
+"presentation-core/src/main/res/values/colors_yinyang.xml","config/resource",1796
+"presentation-core/src/main/res/values/colors_yotsuba.xml","config/resource",1934
+"presentation-widget/build.gradle.kts","build/deploy",635
+"presentation-widget/src/main/AndroidManifest.xml","config/resource",1671
+"presentation-widget/src/main/java/mihon/presentation/widget/di/PresentationWidgetGraph.kt","source candidate",303
+"presentation-widget/src/main/java/tachiyomi/presentation/widget/BaseUpdatesGridGlanceWidget.kt","source candidate",6509
+"presentation-widget/src/main/java/tachiyomi/presentation/widget/UpdatesGridCoverScreenGlanceReceiver.kt","source candidate",642
+"presentation-widget/src/main/java/tachiyomi/presentation/widget/UpdatesGridCoverScreenGlanceWidget.kt","source candidate",493
+"presentation-widget/src/main/java/tachiyomi/presentation/widget/UpdatesGridGlanceReceiver.kt","source candidate",621
+"presentation-widget/src/main/java/tachiyomi/presentation/widget/UpdatesGridGlanceWidget.kt","source candidate",530
+"presentation-widget/src/main/java/tachiyomi/presentation/widget/WidgetManager.kt","source candidate",3335
+"presentation-widget/src/main/java/tachiyomi/presentation/widget/components/LockedWidget.kt","source candidate",1478
+"presentation-widget/src/main/java/tachiyomi/presentation/widget/components/UpdatesMangaCover.kt","source candidate",1469
+"presentation-widget/src/main/java/tachiyomi/presentation/widget/components/UpdatesWidget.kt","source candidate",4170
+"presentation-widget/src/main/java/tachiyomi/presentation/widget/util/GlanceUtils.kt","source candidate",1336
+"presentation-widget/src/main/res/drawable-nodpi/updates_grid_coverscreen_widget_preview.webp","other",5200
+"presentation-widget/src/main/res/drawable-nodpi/updates_grid_widget_preview.webp","other",420318
+"presentation-widget/src/main/res/drawable/appwidget_background.xml","config/resource",280
+"presentation-widget/src/main/res/drawable/appwidget_cover_error.xml","config/resource",1104
+"presentation-widget/src/main/res/drawable/appwidget_coverscreen_background.xml","config/resource",215
+"presentation-widget/src/main/res/layout/appwidget_coverscreen_loading.xml","config/resource",512
+"presentation-widget/src/main/res/layout/appwidget_loading.xml","config/resource",510
+"presentation-widget/src/main/res/values-night-v31/colors_appwidget.xml","config/resource",376
+"presentation-widget/src/main/res/values-v31/colors_appwidget.xml","config/resource",379
+"presentation-widget/src/main/res/values-v31/dimens.xml","config/resource",130
+"presentation-widget/src/main/res/values/colors_appwidget.xml","config/resource",394
+"presentation-widget/src/main/res/values/dimens.xml","config/resource",138
+"presentation-widget/src/main/res/xml/updates_grid_homescreen_widget_info.xml","config/resource",654
+"presentation-widget/src/main/res/xml/updates_grid_lockscreen_widget_info.xml","config/resource",411
+"presentation-widget/src/main/res/xml/updates_grid_samsung_cover_widget_info.xml","config/resource",120
+"settings.gradle.kts","build/deploy",1145
+"source-api/build.gradle.kts","build/deploy",635
+"source-api/consumer-proguard.pro","other",2639
+"source-api/src/main/AndroidManifest.xml","config/resource",52
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/CatalogueSource.kt","source candidate",2926
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/ConfigurableSource.kt","source candidate",1011
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/Source.kt","source candidate",3401
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/SourceFactory.kt","source candidate",247
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/UnmeteredSource.kt","source candidate",192
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/model/Filter.kt","source candidate",1615
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/model/FilterList.kt","source candidate",415
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/model/MangasPage.kt","source candidate",588
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/model/Page.kt","source candidate",1562
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/model/SChapter.kt","source candidate",1118
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/model/SChapterImpl.kt","source candidate",459
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/model/SManga.kt","source candidate",1799
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/model/SMangaImpl.kt","source candidate",704
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/model/SMangaUpdate.kt","source candidate",130
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/model/UpdateStrategy.kt","source candidate",682
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/online/HttpSource.kt","source candidate",18927
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/online/ParsedHttpSource.kt","source candidate",8161
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/source/online/ResolvableSource.kt","source candidate",1111
+"source-api/src/main/kotlin/eu/kanade/tachiyomi/util/JsoupExtensions.kt","source candidate",794
+"source-local/build.gradle.kts","build/deploy",735
+"source-local/src/main/AndroidManifest.xml","config/resource",52
+"source-local/src/main/kotlin/tachiyomi/source/local/LocalSource.kt","source candidate",17027
+"source-local/src/main/kotlin/tachiyomi/source/local/filter/OrderBy.kt","source candidate",597
+"source-local/src/main/kotlin/tachiyomi/source/local/image/LocalCoverManager.kt","source candidate",1731
+"source-local/src/main/kotlin/tachiyomi/source/local/io/Archive.kt","source candidate",363
+"source-local/src/main/kotlin/tachiyomi/source/local/io/Format.kt","source candidate",719
+"source-local/src/main/kotlin/tachiyomi/source/local/io/LocalSourceFileSystem.kt","source candidate",878
+"source-local/src/main/kotlin/tachiyomi/source/local/metadata/EpubReaderExtensions.kt","source candidate",1560
+"telemetry/build.gradle.kts","build/deploy",740
+"telemetry/src/firebase/kotlin/mihon/telemetry/PackageInfo.kt","source candidate",1311
+"telemetry/src/firebase/kotlin/mihon/telemetry/TelemetryConfig.kt","source candidate",2541
+"telemetry/src/main/AndroidManifest.xml","config/resource",1749
+"telemetry/src/noop/AndroidManifest.xml","config/resource",52
+"telemetry/src/noop/kotlin/mihon/telemetry/TelemetryConfig.kt","source candidate",316

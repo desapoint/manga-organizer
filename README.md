@@ -2,14 +2,16 @@
 
 A documentation-first project for a unified, self-hosted manga library, acquisition manager and reader on Windows and Unraid/Docker.
 
-**Status:** discovery and feature selection; no runnable app yet.
+**Status:** source audit and feature selection; no runnable app yet.
 
 ## Start here
 
 - [Reference repositories (all seven)](REFERENCES.md)
-- [Per-project feature audit and comparison](docs/UPSTREAM-AUDIT.md)
+- [Per-project documentation audit and comparison](docs/UPSTREAM-AUDIT.md)
+- [Pinned source-code audit and observations](docs/source-audit/README.md)
+- [Granular candidate features](docs/source-audit/ATOMIC-FEATURES.csv)
 - [Feature selection matrix](docs/FEATURE-MATRIX.md)
-- [Editable selection CSV](docs/FEATURE-SELECTION.csv)
+- [Editable parent selection CSV](docs/FEATURE-SELECTION.csv)
 - [Mihon/Suwayomi extension integration](docs/EXTENSIONS.md)
 - [Proposed architecture and deployment](docs/ARCHITECTURE.md)
 - [Roadmap and acceptance gates](docs/ROADMAP.md)
