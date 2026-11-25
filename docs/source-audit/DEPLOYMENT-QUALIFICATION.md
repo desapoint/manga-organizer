@@ -1,6 +1,6 @@
 # Windows and Unraid deployment qualification (proposed)
 
-Required outcomes from owner: standalone Windows app and Unraid Docker WebUI; remote Windows client optional mode in existing requirements; no stack selection yet.
+The primary deployment can be Windows or qualified Linux, including Unraid Docker. Android, Windows and Linux clients use authenticated remote reading and main-library progress sync. A dedicated desktop package is a separate choice. [Approved baseline](../IMPLEMENTATION-DECISIONS.md)
 
 | Reference | Windows | Docker |
 |---|---|---|
@@ -39,3 +39,5 @@ Required outcomes from owner: standalone Windows app and Unraid Docker WebUI; re
 | R02 | Native arch | Actual amd64 and optional arm64 runner | Test results bound to commit/image digest |
 
 Pass 21 covers the portable Suwayomi ZIP and basic NTFS checks on hosted Windows, plus numeric ownership and separate volumes in Docker. Pass 22 adds the published upstream MSI install, runtime and uninstall checks on Windows Server 2025. It also provides a probe for disposable roots on the actual storage host. The full matrix requires the target operating systems, storage configurations and deployable Manga Organizer artifacts for sign-off. [Pass 21 qualification](PASS21.md) · [Pass 22 prerequisites](PASS22.md)
+
+The remote-reading matrix adds device handoff against both primary deployments. It also defines tests for subscription isolation and the staged device upload path when those options are enabled. [Remote reading acceptance cases](../REMOTE-READING.md#acceptance-cases)

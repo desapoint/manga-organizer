@@ -1,18 +1,19 @@
 # Proposed architecture
 
-The approved baseline uses .NET 10 / ASP.NET Core, React/TypeScript and SQLite in local appdata after the audit gates are met. The proposed design runs the same backend and WebUI on Windows 10/11 x64 and Unraid Docker. One server owns scheduling and writes. A desktop shell and remote Windows client remain proposed. [Approved baseline](IMPLEMENTATION-DECISIONS.md)
+The approved baseline uses .NET 10 / ASP.NET Core, React/TypeScript and SQLite in local appdata after the audit gates are met. One primary on Windows or Linux, including Unraid Docker, owns the main library, scheduling and progress validation. Android, Windows and Linux connect as clients. The shared WebUI is the initial client candidate. [Approved baseline](IMPLEMENTATION-DECISIONS.md) · [Server and client responsibilities](REMOTE-READING.md)
 
 ```mermaid
 flowchart TD
- W[Windows local or remote] --> A[Authenticated shared API]
- B[Browser / PWA] --> A
+ B[Android / Windows / Linux clients] --> A[Primary server API]
+ B -. Optional subscriptions .-> E[Other server libraries]
+ A --> M[Staged validation and import]
  A --> L[Library and catalog]
  A --> R[Reader and progress]
  A --> Q[Persistent scheduler and queue]
  Q --> S[Authorized source adapters]
  S --> X[Suwayomi extension engine]
  Q --> I[Indexer / download client adapters]
- Q --> M[Staged validation and import]
+ Q --> M
  M --> L
  L --> F[Portable media files]
  R --> F
