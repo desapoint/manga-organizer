@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: audit-qualification-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   suwayomi:
     name: Suwayomi and storage (${{ matrix.os }})

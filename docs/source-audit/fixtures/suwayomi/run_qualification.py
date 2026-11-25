@@ -112,7 +112,8 @@ def linux(gradle_lib, root):
                "-v", f"{config}:/home/suwayomi/.local/share/Tachidesk", "-v", f"{media}:/media",
                "-e", "AUTH_MODE=basic_auth", "-e", "AUTH_USERNAME=audit-fixture", "-e", "AUTH_PASSWORD=synthetic-local-password",
                "-e", "KCEF_ENABLED=false", "-e", "WEB_UI_ENABLED=false", "-e", "DOWNLOAD_AS_CBZ=false",
-               "-e", "DOWNLOADS_PATH=/media/downloads", "-e", f"JDK_JAVA_OPTIONS=-Dmanga.audit.fixtureUrl=http://{provider}:{FIXTURE_PORT}",
+               "-e", f"JDK_JAVA_OPTIONS=-Dmanga.audit.fixtureUrl=http://{provider}:{FIXTURE_PORT} "
+                     "-Dsuwayomi.tachidesk.config.server.downloadsPath=/media/downloads",
                ENGINE_IMAGE)
         jar = root / "Suwayomi-Server.jar"
         docker("cp", f"{engine}:/home/suwayomi/startup/tachidesk_latest.jar", str(jar))
