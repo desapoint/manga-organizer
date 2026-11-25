@@ -38,4 +38,4 @@ Required outcomes from owner: standalone Windows app and Unraid Docker WebUI; re
 | R01 | Release CI | Locked dependencies, SBOM, notices, hashes, signing, scanner | Artifact-specific evidence and approved exceptions |
 | R02 | Native arch | Actual amd64 and optional arm64 runner | Test results bound to commit/image digest |
 
-Pass 20 records Linux and rootless Docker test results for selected upstream behavior, local and container Suwayomi, and synthetic filesystem semantics. The matrix requires the target operating systems, storage configurations and deployable Manga Organizer artifacts for sign-off. [Pass 20 results](PASS20.md)
+Pass 20 records Linux and rootless Docker test results for selected upstream behavior. Pass 21 adds the portable Suwayomi ZIP and basic NTFS checks on hosted Windows, and explicit numeric ownership and separate volumes in Docker. The full matrix requires the target operating systems, storage configurations and deployable Manga Organizer artifacts for sign-off. [Pass 20 results](PASS20.md) · [Pass 21 qualification](PASS21.md)

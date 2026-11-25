@@ -1,6 +1,6 @@
 # Audit completion ledger — mandatory before implementation
 
-Updated 2026-11-25 Toronto. Status **OPEN**. Pass 19 verified the historical records and Pass 20 ran targeted upstream tests, a published Suwayomi engine workflow and synthetic Linux filesystem probes. Target-platform qualification and feature selection remain open. [Pass 19](PASS19.md) · [Pass 20](PASS20.md)
+Updated 2026-11-25 Toronto. Status **OPEN**. Pass 19 verified the historical records. Pass 20 ran targeted upstream tests, a published Suwayomi engine workflow and synthetic Linux filesystem probes. Pass 21 adds hosted Windows and Docker qualification. Target-specific tests and feature selection remain open. [Pass 19](PASS19.md) · [Pass 20](PASS20.md) · [Pass 21](PASS21.md)
 
 Evidence: I = indexed paths; C = selected source declarations/logic inspected; S = selected test source inspected; R = release note checked; U = outstanding full behavior review. No "complete" status for modules with uninspected consumers, authorization, migrations or runtime tests.
 
@@ -21,10 +21,10 @@ Evidence: I = indexed paths; C = selected source declarations/logic inspected; S
 | G1 All seven pinned tracked trees indexed | Done | Pass 19 matched each of 13,716 indexed paths and its byte count to Git. |
 | G2 Prior filename-only candidates resolved | Done | All 23 historical candidates were resolved in Pass 3. Pass 19 verified the 356 retained atomic paths. |
 | G3 Complete feature and setting audit | Open | Finish route/schema/settings/UI, defaults, consumers, authorization and migration review, or record a module exclusion with its reasoning. Prioritize the five required outcomes. The Pass 20 coverage command reports the remaining path inventory. |
-| G4 Organization and duplicate handling | Partial | Linux tests substantiate selected safety and recovery behavior. Run the required mutation, content/edition identity and recovery fixtures on actual NTFS/UNC and Unraid pool/share storage. [Acceptance fixtures](../FILE-ORGANIZATION.md) |
-| G5 Extension compatibility | Partial | Linux `v2.4.2373` has a measured GraphQL contract and a synthetic JAR workflow. Empty-queue start timed out on both Linux forms. Qualify a release or adapter behavior that handles that state, then test repository install, APK/version combinations, scoped roles, Mihon legacy/current backup compatibility, and download-to-import on both targets. |
+| G4 Organization and duplicate handling | Partial | Linux tests substantiate selected safety and recovery behavior, and hosted Windows passed basic NTFS fixtures. Complete mutation, content/edition identity and recovery coverage on target NTFS/UNC and Unraid pool/share storage. [Acceptance fixtures](../FILE-ORGANIZATION.md) |
+| G5 Extension compatibility | Partial | Published `v2.4.2373` passed the synthetic JAR download in Linux and hosted Windows. Start acknowledgement timed out in the documented Linux cases. Qualify the handling of that state, repository install, APK/version combinations, scoped roles, Mihon legacy/current backup compatibility and verified import admission. |
 | G6 Release and licensing | Partial | All tags and root licenses checked against Git. Verify changed behavior for each selected capability, exact distribution manifests and transitive SBOMs, redistribution rights for chosen assets/dependencies, and external service entitlements. |
-| G7 Runtime verification | Partial | Run the selected upstream and interoperability fixtures on Windows x64, actual Unraid amd64 and Android. Record install, mount, permissions, restart and recovery behavior. Manga Organizer release qualification follows implementation on the roadmap. [Qualification matrix](DEPLOYMENT-QUALIFICATION.md) |
+| G7 Runtime verification | Partial | Hosted Windows and Linux Docker cover the portable engine and selected storage behavior. Finish Windows client installation, actual Unraid pool/share tests and Android interoperability. Manga Organizer release qualification follows implementation on the roadmap. [Qualification matrix](DEPLOYMENT-QUALIFICATION.md) |
 | G8 Owner selection and implementation | Pending owner | Owner must resolve the optional choices, stack, license and redistribution intent, and mutation policy after reviewing the remaining evidence. Five parent outcomes are Required and 65 are Pending. [Selection register](../FEATURE-SELECTION.csv) |
 
 No destructive automation is approved. Do not mark gates G3–G8 complete based on file counts or test names. An exhaustive source audit requires further module-level inspection; report what was actually examined rather than claiming parity. 
@@ -100,3 +100,7 @@ Verified all seven trees, all seven release tags, 732 structured pinned citation
 ## Pass 20 results
 
 Ran the available Linux checks for organization, duplicate handling, authorization, the Suwayomi download and backup contract, and artifact verification. The targeted suites had 861 passing tests across five upstreams. Confirmed the `v2.4.2373` empty-queue behavior in two published artifacts and recorded a separate Manga-arr test setup failure. [Source evidence](PASS20-EVIDENCE.csv) · [Runtime and artifact results](PASS20.md)
+
+## Pass 21 results
+
+Both hosted jobs passed. Windows Server 2025 exercised the portable Suwayomi ZIP, chapter download and NTFS checks. Ubuntu Docker exercised separate configuration and media volumes, UID:GID `99:100` and restart persistence. The local Linux Docker replay also passed. Both hosted jobs observed a GraphQL timeout after successful file creation. Windows installer, actual Unraid pool/share and Android/Mihon fixture outcomes are still pending. [Qualification record](PASS21.md) · [GitHub Actions run](https://github.com/desapoint/manga-organizer/actions/runs/45664698558)
