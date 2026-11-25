@@ -1,0 +1,454 @@
+Path,Line,Kind,Identifier,Verification
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",68,"field/config candidate","mutableConfigValueScope",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",72,"field/config candidate","serverConfig",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",74,"field/config candidate","userSettingDeprecated",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",78,"field/config candidate","application",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",86,"field/config candidate","actualFlow",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",102,"field/config candidate","ip",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",111,"field/config candidate","port",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",121,"field/config candidate","socksProxyEnabled",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",128,"field/config candidate","socksProxyVersion",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",137,"field/config candidate","socksProxyHost",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",144,"field/config candidate","socksProxyPort",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",151,"field/config candidate","socksProxyUsername",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",159,"field/config candidate","socksProxyPassword",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",167,"field/config candidate","webUIFlavor",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",176,"field/config candidate","initialOpenInBrowserEnabled",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",184,"field/config candidate","webUIInterface",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",193,"field/config candidate","electronPath",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",202,"field/config candidate","webUIChannel",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",211,"field/config candidate","webUIUpdateCheckInterval",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",221,"field/config candidate","downloadAsCbz",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",228,"field/config candidate","downloadsPath",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",238,"field/config candidate","autoDownloadNewChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",247,"field/config candidate","excludeEntryWithUnreadChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",256,"field/config candidate","autoDownloadAheadLimit",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",272,"field/config candidate","autoDownloadNewChaptersLimit",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",281,"field/config candidate","autoDownloadIgnoreReUploads",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",290,"field/config candidate","extensionRepos",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",324,"field/config candidate","maxSourcesInParallel",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",337,"field/config candidate","excludeUnreadChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",346,"field/config candidate","excludeNotStarted",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",355,"field/config candidate","excludeCompleted",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",363,"field/config candidate","globalUpdateInterval",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",373,"field/config candidate","updateMangas",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",382,"field/config candidate","basicAuthEnabled",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",409,"field/config candidate","authUsername",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",417,"field/config candidate","authPassword",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",425,"field/config candidate","debugLogsEnabled",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",433,"field/config candidate","gqlDebugLogsEnabled",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",444,"field/config candidate","systemTrayEnabled",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",451,"field/config candidate","maxLogFiles",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",460,"field/config candidate","logbackSizePattern",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",461,"field/config candidate","maxLogFileSize",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",470,"field/config candidate","maxLogFolderSize",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",479,"field/config candidate","backupPath",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",488,"field/config candidate","backupTime",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",497,"field/config candidate","backupInterval",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",506,"field/config candidate","backupTTL",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",515,"field/config candidate","localSourcePath",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",524,"field/config candidate","flareSolverrEnabled",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",532,"field/config candidate","flareSolverrUrl",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",539,"field/config candidate","flareSolverrTimeout",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",548,"field/config candidate","flareSolverrSessionName",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",555,"field/config candidate","flareSolverrSessionTtl",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",564,"field/config candidate","flareSolverrAsResponseFallback",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",572,"field/config candidate","opdsUseBinaryFileSizes",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",581,"field/config candidate","opdsItemsPerPage",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",590,"field/config candidate","opdsEnablePageReadProgress",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",599,"field/config candidate","opdsMarkAsReadOnDownload",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",608,"field/config candidate","opdsShowOnlyUnreadChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",617,"field/config candidate","opdsShowOnlyDownloadedChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",626,"field/config candidate","opdsChapterSortOrder",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",635,"field/config candidate","authMode",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",646,"function","createDownloadConversionsMap",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",664,"field/config candidate","downloadConversions",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",669,"field/config candidate","jwtAudience",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",677,"field/config candidate","koreaderSyncServerUrl",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",686,"field/config candidate","koreaderPreferences",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",695,"field/config candidate","koreaderSyncUsername",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",704,"field/config candidate","koreaderPreferences",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",713,"field/config candidate","koreaderSyncUserkey",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",722,"field/config candidate","koreaderPreferences",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",731,"field/config candidate","koreaderSyncDeviceId",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",740,"field/config candidate","koreaderPreferences",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",749,"field/config candidate","koreaderSyncChecksumMethod",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",760,"field/config candidate","koreaderSyncStrategy",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",774,"field/config candidate","oldStrategy",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",833,"field/config candidate","koreaderSyncPercentageTolerance",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",841,"field/config candidate","jwtTokenExpiry",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",849,"field/config candidate","jwtRefreshExpiry",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",857,"field/config candidate","webUIEnabled",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",865,"field/config candidate","databaseType",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",875,"field/config candidate","databaseUrl",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",883,"field/config candidate","databaseUsername",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",891,"field/config candidate","databasePassword",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",900,"field/config candidate","koreaderSyncStrategyForward",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",910,"field/config candidate","koreaderSyncStrategyBackward",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",919,"field/config candidate","webUISubpath",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",930,"field/config candidate","autoBackupIncludeManga",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",937,"field/config candidate","autoBackupIncludeCategories",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",944,"field/config candidate","autoBackupIncludeChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",951,"field/config candidate","autoBackupIncludeTracking",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",958,"field/config candidate","autoBackupIncludeHistory",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",965,"field/config candidate","autoBackupIncludeClientData",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",972,"field/config candidate","autoBackupIncludeServerSettings",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",980,"field/config candidate","opdsCbzMimetype",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",990,"field/config candidate","serveConversions",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",999,"field/config candidate","useHikariConnectionPool",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1008,"field/config candidate","kcefEnabled",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1025,"field/config candidate","syncYomiEnabled",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1034,"field/config candidate","syncYomiHost",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1043,"field/config candidate","syncYomiApiKey",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1052,"field/config candidate","syncDataManga",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1061,"field/config candidate","syncDataChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1070,"field/config candidate","syncDataTracking",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1079,"field/config candidate","syncDataHistory",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1088,"field/config candidate","syncDataCategories",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1097,"field/config candidate","syncInterval",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1106,"field/config candidate","opdsSkipChapterMetadataFeed",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1114,"field/config candidate","extensionStores",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1137,"field/config candidate","autoBackupIncludeUserSettings",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1144,"field/config candidate","hikariMaxPoolSize",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1153,"field/config candidate","databaseSchema",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1168,"field/config candidate","basicAuthUsername",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1184,"field/config candidate","basicAuthPassword",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/ServerConfig.kt",1231,"function","register",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",31,"field/config candidate","key",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",32,"field/config candidate","protoNumber",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",33,"field/config candidate","group",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",34,"field/config candidate","type",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",35,"field/config candidate","defaultValue",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",36,"field/config candidate","validator",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",37,"field/config candidate","typeInfo",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",38,"field/config candidate","internalType",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",39,"field/config candidate","typeArguments",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",46,"field/config candidate","settings",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",48,"function","register",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",55,"function","get",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",57,"function","getAll",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",73,"field/config candidate","kType",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",74,"field/config candidate","setting",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",98,"field/config candidate","excludeUnreadChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",105,"field/config candidate","excludeNotStarted",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",112,"field/config candidate","excludeCompleted",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",119,"field/config candidate","updateMangas",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",126,"field/config candidate","autoDownloadNewChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",133,"field/config candidate","excludeEntryWithUnreadChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",140,"field/config candidate","autoDownloadNewChaptersLimit",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",150,"field/config candidate","autoDownloadIgnoreReUploads",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",157,"field/config candidate","opdsItemsPerPage",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",171,"field/config candidate","opdsShowOnlyUnreadChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",178,"field/config candidate","opdsShowOnlyDownloadedChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",185,"field/config candidate","opdsChapterSortOrder",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",193,"field/config candidate","opdsMarkAsReadOnDownload",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",200,"field/config candidate","opdsEnablePageReadProgress",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",207,"field/config candidate","opdsUseBinaryFileSizes",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",214,"field/config candidate","opdsCbzMimetype",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",222,"field/config candidate","opdsSkipChapterMetadataFeed",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",229,"field/config candidate","koreaderSyncChecksumMethod",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",237,"field/config candidate","koreaderSyncStrategyForward",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",245,"field/config candidate","koreaderSyncStrategyBackward",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",253,"field/config candidate","koreaderSyncPercentageTolerance",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",267,"field/config candidate","serveConversions",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",276,"field/config candidate","syncYomiEnabled",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",283,"field/config candidate","syncInterval",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",291,"field/config candidate","syncYomiHost",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",298,"field/config candidate","syncYomiApiKey",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",305,"field/config candidate","syncDataManga",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",312,"field/config candidate","syncDataChapters",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",319,"field/config candidate","syncDataTracking",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",326,"field/config candidate","syncDataHistory",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",333,"field/config candidate","syncDataCategories",declaration only
+"server/server-config/src/main/kotlin/suwayomi/tachidesk/server/settings/UserConfig.kt",341,"field/config candidate","userConfig",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",38,"field/config candidate","chapterId",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",39,"field/config candidate","to",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",43,"field/config candidate","state",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",44,"field/config candidate","queue",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",56,"field/config candidate","state",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",57,"field/config candidate","updates",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",59,"field/config candidate","initial",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",65,"field/config candidate","omittedUpdates",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",79,"field/config candidate","chapterId",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",81,"field/config candidate","mangaId",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",82,"field/config candidate","state",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",83,"field/config candidate","progress",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",84,"field/config candidate","tries",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",85,"field/config candidate","position",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",87,"field/config candidate","errorMessage",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",104,"function","manga",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",105,"field/config candidate","clearCache",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",113,"function","chapter",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",114,"field/config candidate","clearCache",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",123,"field/config candidate","isStale",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",131,"field/config candidate","userId",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",134,"field/config candidate","resultRow",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",149,"field/config candidate","type",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",150,"field/config candidate","download",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",171,"field/config candidate","nodes",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",172,"field/config candidate","edges",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",173,"field/config candidate","pageInfo",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",174,"field/config candidate","totalCount",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",177,"field/config candidate","cursor",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/DownloadType.kt",178,"field/config candidate","node",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",45,"field/config candidate","id",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",46,"field/config candidate","name",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",47,"field/config candidate","lang",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",48,"field/config candidate","contentWarning",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",49,"field/config candidate","iconUrl",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",50,"field/config candidate","supportsLatest",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",51,"field/config candidate","isConfigurable",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",53,"field/config candidate","isNsfw",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",54,"field/config candidate","displayName",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",55,"field/config candidate","homeUrl",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",57,"field/config candidate","baseUrl",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",73,"function","manga",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",78,"function","extension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",81,"function","preferences",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",83,"function","filters",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",85,"function","meta",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",90,"function","SourceType",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",91,"field/config candidate","catalogueSource",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",95,"field/config candidate","sourceExtension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",109,"field/config candidate","nodes",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",110,"field/config candidate","edges",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",111,"field/config candidate","pageInfo",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",112,"field/config candidate","totalCount",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",115,"field/config candidate","cursor",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",116,"field/config candidate","node",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",153,"field/config candidate","name",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",157,"field/config candidate","name",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",161,"field/config candidate","name",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",162,"field/config candidate","values",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",163,"field/config candidate","default",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",167,"field/config candidate","name",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",168,"field/config candidate","default",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",172,"field/config candidate","name",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",173,"field/config candidate","default",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",183,"field/config candidate","name",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",184,"field/config candidate","default",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",188,"field/config candidate","name",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",189,"field/config candidate","values",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",190,"field/config candidate","default",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",193,"field/config candidate","index",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",194,"field/config candidate","ascending",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",202,"field/config candidate","name",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",203,"field/config candidate","filters",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",206,"function","filterOf",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",256,"field/config candidate","position",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",260,"field/config candidate","position",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",261,"field/config candidate","filter",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",265,"field/config candidate","position",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",266,"field/config candidate","state",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",270,"field/config candidate","position",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",271,"field/config candidate","state",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",275,"field/config candidate","position",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",276,"field/config candidate","state",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",280,"field/config candidate","position",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",281,"field/config candidate","state",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",285,"field/config candidate","position",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",286,"field/config candidate","state",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",294,"field/config candidate","position",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",295,"field/config candidate","selectState",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",296,"field/config candidate","textState",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",297,"field/config candidate","checkBoxState",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",298,"field/config candidate","triState",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",299,"field/config candidate","sortState",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",300,"field/config candidate","groupChange",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",303,"function","updateFilterList",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",307,"field/config candidate","filterList",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",312,"function","applyFilterChanges",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",366,"field/config candidate","key",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",367,"field/config candidate","title",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",368,"field/config candidate","summary",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",369,"field/config candidate","visible",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",370,"field/config candidate","enabled",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",371,"field/config candidate","currentValue",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",372,"field/config candidate","default",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",376,"field/config candidate","key",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",377,"field/config candidate","title",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",378,"field/config candidate","summary",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",379,"field/config candidate","visible",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",380,"field/config candidate","enabled",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",381,"field/config candidate","currentValue",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",382,"field/config candidate","default",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",386,"field/config candidate","key",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",387,"field/config candidate","title",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",388,"field/config candidate","summary",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",389,"field/config candidate","visible",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",390,"field/config candidate","enabled",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",391,"field/config candidate","currentValue",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",392,"field/config candidate","default",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",393,"field/config candidate","dialogTitle",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",394,"field/config candidate","dialogMessage",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",395,"field/config candidate","text",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",399,"field/config candidate","key",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",400,"field/config candidate","title",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",401,"field/config candidate","summary",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",402,"field/config candidate","visible",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",403,"field/config candidate","enabled",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",404,"field/config candidate","currentValue",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",405,"field/config candidate","default",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",406,"field/config candidate","entries",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",407,"field/config candidate","entryValues",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",411,"field/config candidate","key",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",412,"field/config candidate","title",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",413,"field/config candidate","summary",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",414,"field/config candidate","visible",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",415,"field/config candidate","enabled",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",416,"field/config candidate","currentValue",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",417,"field/config candidate","default",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",418,"field/config candidate","dialogTitle",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",419,"field/config candidate","dialogMessage",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",420,"field/config candidate","entries",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",421,"field/config candidate","entryValues",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/SourceType.kt",424,"function","preferenceOf",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",24,"field/config candidate","deviceName",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",25,"field/config candidate","remotePage",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",29,"field/config candidate","id",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",30,"field/config candidate","url",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",31,"field/config candidate","name",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",32,"field/config candidate","uploadDate",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",33,"field/config candidate","chapterNumber",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",34,"field/config candidate","scanlator",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",35,"field/config candidate","mangaId",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",36,"field/config candidate","sourceOrder",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",37,"field/config candidate","realUrl",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",38,"field/config candidate","fetchedAt",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",39,"field/config candidate","pageCount",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",41,"field/config candidate","isRead",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",43,"field/config candidate","isBookmarked",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",45,"field/config candidate","lastPageRead",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",47,"field/config candidate","lastReadAt",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",49,"field/config candidate","isDownloaded",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",52,"function","clearCacheFor",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",84,"function","manga",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",87,"function","meta",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",90,"function","user",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",102,"field/config candidate","nodes",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",103,"field/config candidate","edges",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",104,"field/config candidate","pageInfo",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",105,"field/config candidate","totalCount",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",108,"field/config candidate","cursor",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/graphql/types/ChapterType.kt",109,"field/config candidate","node",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",90,"field/config candidate","logger",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",91,"field/config candidate","applicationDirs",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",93,"function","fetchExtensionFile",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",94,"field/config candidate","name",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",95,"field/config candidate","savePath",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",102,"function","installExtension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",107,"field/config candidate","extension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",114,"field/config candidate","jarUrl",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",115,"field/config candidate","apkUrl",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",120,"field/config candidate","jar",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",121,"field/config candidate","manifest",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",128,"field/config candidate","apk",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",129,"field/config candidate","packageInfo",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",140,"function","copyToExtensionsRoot",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",144,"field/config candidate","rootPath",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",145,"field/config candidate","downloadedFile",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",160,"function","installExternalExtension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",167,"field/config candidate","jar",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",168,"field/config candidate","manifest",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",175,"field/config candidate","apk",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",176,"field/config candidate","packageInfo",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",193,"function","getApkName",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",194,"field/config candidate","apkNameWithVersion",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",204,"field/config candidate","file",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",205,"field/config candidate","packageInfo",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",207,"field/config candidate","metadata",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",217,"function","prepareJarAndIcons",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",218,"field/config candidate","jarFile",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",229,"field/config candidate","file",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",230,"field/config candidate","manifest",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",232,"field/config candidate","metadata",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",242,"function","prepareJarAndIcons",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",243,"field/config candidate","jarFile",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",273,"field/config candidate","packageName",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",274,"field/config candidate","versionName",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",275,"field/config candidate","versionCode",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",276,"field/config candidate","reqFeatures",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",277,"field/config candidate","metaData",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",278,"field/config candidate","label",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",282,"function","getString",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",284,"function","getInt",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",287,"field/config candidate","bundle",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",289,"function","getString",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",291,"function","getInt",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",295,"field/config candidate","list",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",297,"function","getString",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",299,"function","getInt",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",303,"function","getJarPath",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",304,"field/config candidate","fileNameWithoutType",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",309,"function","getJarPath",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",310,"field/config candidate","apkName",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",316,"function","getJarPathForPkgName",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",317,"field/config candidate","extension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",322,"function","unload",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",326,"field/config candidate","jarPath",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",335,"function","unload",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",339,"field/config candidate","pkgName",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",340,"field/config candidate","apkName",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",345,"function","unload",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",351,"field/config candidate","extension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",352,"field/config candidate","sources",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",369,"function","installExtension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",374,"field/config candidate","extPackage",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",375,"field/config candidate","metadata",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",376,"field/config candidate","pkgName",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",378,"field/config candidate","extension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",388,"field/config candidate","isInstalled",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",389,"field/config candidate","isExternalUpdate",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",401,"field/config candidate","libVersion",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",410,"field/config candidate","contentWarning",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",427,"field/config candidate","sourceClass",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",432,"field/config candidate","className",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",441,"field/config candidate","extensionsRoot",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",442,"field/config candidate","jarFile",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",444,"field/config candidate","oldJarFile",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",451,"field/config candidate","isSameFile",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",455,"field/config candidate","apkName",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",459,"field/config candidate","extensionName",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",464,"field/config candidate","extensionLibVersion",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",470,"field/config candidate","unloadOldJar",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",487,"field/config candidate","removeOldJarFile",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",506,"function","setupJar",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",518,"field/config candidate","httpSources",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",525,"field/config candidate","langs",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",526,"field/config candidate","extensionLang",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",548,"field/config candidate","extensionId",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",556,"field/config candidate","dbSourceIds",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",562,"field/config candidate","httpSourceIds",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",565,"field/config candidate","sourcesToInsert",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",583,"field/config candidate","httpSource",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",596,"function","extractAndCacheApkIcon",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",601,"field/config candidate","iconData",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",619,"function","cacheIcon",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",623,"field/config candidate","iconCacheDir",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",630,"function","extractAssetsFromApk",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",634,"field/config candidate","assetsFolder",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",637,"field/config candidate","zipEntry",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",640,"field/config candidate","assetFile",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",650,"field/config candidate","tempJarFile",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",653,"field/config candidate","zipEntry",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",680,"function","extractAndParseAndroidManifest",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",687,"field/config candidate","network",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",689,"function","downloadExtension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",693,"field/config candidate","response",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",707,"field/config candidate","filesToDeleteOnStartup",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",708,"field/config candidate","preferences",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",711,"function","cleanupExtensionFiles",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",713,"field/config candidate","failedFileDeletions",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",722,"function","tryToDeleteFile",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",732,"function","removeDeletionOnStartupRequest",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",737,"function","uninstallExtension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",741,"field/config candidate","extensionRecord",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",742,"field/config candidate","extensionId",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",744,"field/config candidate","sources",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",764,"function","updateExtension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",765,"field/config candidate","targetExtension",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",772,"field/config candidate","result",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",779,"function","getExtensionIcon",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",780,"field/config candidate","cacheSaveDir",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",790,"field/config candidate","iconUrl",declaration only
+"server/src/main/kotlin/suwayomi/tachidesk/manga/impl/extension/Extension.kt",801,"function","proxyExtensionIconUrl",declaration only
