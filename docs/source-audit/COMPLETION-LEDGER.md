@@ -80,3 +80,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 16 progress
 
 [Acquisition and configuration lifecycle](PASS16.md) reconciles now-accessible Pass 14 with Pass 15. Historical Pass 14 coverage (403 distinct cited paths, 7,398 implementation candidates without citations) retained; no later total asserted. [Evidence](PASS16-EVIDENCE.csv) cites 17 selected pinned files across all seven references, 5 test-source files (not executed); [qualification](PASS16-QUALIFICATION.csv) adds 10 proposed scenarios. NZBGet submission established in prior passes, completion/import still open; uncertainty and requester/owner isolation explicit. G3/G4/G5 open, G6 partial, G7 not executed, G8 pending. Original 356 atomic candidates, 126 groups and 70 parent decisions unchanged. No code implementation or destructive approval.
+
+## Pass 17 progress
+
+[Integration and settings consumer review](PASS17.md) adds 12 selected pinned files across KK/KR/KV, one test-source body not run, [15 settings trace rows](PASS17-SETTINGS-TRACE.csv) and [9 new qualification scenarios](PASS17-QUALIFICATION.csv). [Evidence](PASS17-EVIDENCE.csv). NZBGet completion/status not supported by inspected dispatcher/cache; no full adapter claim. Client retirement and Kobo cursor isolation require qualification. G3/G4/G5 open; G6 partial; G7 not executed; G8 pending. Existing selection and candidate counts unchanged. No application implementation or destructive approval.
