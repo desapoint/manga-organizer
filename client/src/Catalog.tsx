@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getCsrfToken } from './api';
+import { LibrarySettings, ROOTS_URL } from './LibrarySettings';
+import type { ConfiguredFolder, FolderKind } from './LibrarySettings';
 
-const ROOTS_URL = '/api/library/roots';
 const PAGE_SIZE = 50;
 const SCAN_LABELS = {
   idle: 'Ready to scan.',
@@ -14,9 +15,7 @@ const SCAN_LABELS = {
   interrupted: 'Scan interrupted. Any previous inventory is still shown.',
 };
 
-type Root = {
-  id: string;
-  path: string;
+type Root = ConfiguredFolder & {
   state: keyof typeof SCAN_LABELS;
   fileCount: number;
   lastScannedAt: string | null;
@@ -52,8 +51,10 @@ export function Catalog({ onSignedOut }: { onSignedOut: () => void }) {
   const [rootsError, setRootsError] = useState('');
   const [filesError, setFilesError] = useState('');
   const [scanError, setScanError] = useState('');
+  const [view, setView] = useState<FolderKind | 'settings'>('library');
 
-  const selected = roots?.find(root => root.id === selectedId) ?? roots?.[0];
+  const visibleRoots = roots?.filter(root => root.kind === view);
+  const selected = visibleRoots?.find(root => root.id === selectedId) ?? visibleRoots?.[0];
   const rootId = selected?.id;
   const lastScannedAt = selected?.lastScannedAt;
   const page = inventory?.rootId === rootId && inventory?.offset === offset ? inventory : null;
@@ -128,23 +129,42 @@ export function Catalog({ onSignedOut }: { onSignedOut: () => void }) {
     }
   }
 
+  function selectView(nextView: FolderKind | 'settings') {
+    setView(nextView);
+    setSelectedId('');
+    setOffset(0);
+    setScanError('');
+  }
+
   return (
     <section className="panel" aria-labelledby="catalog-heading">
-      <h1 id="catalog-heading">Library catalog</h1>
+      <h1 id="catalog-heading">{view === 'settings' ? 'Library settings' : view === 'import' ? 'Import intake' : 'Library catalog'}</h1>
+      <nav className="catalog-navigation" aria-label="Library views">
+        <button type="button" className="secondary" aria-pressed={view === 'library'} onClick={() => selectView('library')}>Library catalog</button>
+        <button type="button" className="secondary" aria-pressed={view === 'import'} onClick={() => selectView('import')}>Import intake</button>
+        <button type="button" className="secondary" aria-pressed={view === 'settings'} onClick={() => selectView('settings')}>Library settings</button>
+      </nav>
       {rootsError && <p role="alert" className="error">{rootsError}</p>}
       {!roots && !rootsError && <p role="status">Loading library folders…</p>}
-      {roots?.length === 0 && <p>Set <code>MANGA_ORGANIZER_LIBRARY_ROOTS__0</code> to a library folder on the server and restart Manga Organizer.</p>}
+      {view === 'settings' && roots && <LibrarySettings folders={roots} onSignedOut={onSignedOut}
+        onChange={() => setRefresh(value => value + 1)} />}
+      {visibleRoots?.length === 0 && view !== 'settings' && (
+        <>
+          <p>{view === 'import' ? 'Add an intake folder to see files awaiting association.' : 'Add a folder on the server to start building your catalog.'}</p>
+          <button type="button" onClick={() => selectView('settings')}>Manage folders</button>
+        </>
+      )}
       {selected && (
         <>
           <div className="catalog-controls">
             <label>
-              Library folder
+              {view === 'import' ? 'Import folder' : 'Library folder'}
               <select value={selected.id} onChange={event => {
                 setSelectedId(event.target.value);
                 setOffset(0);
                 setScanError('');
               }}>
-                {roots?.map(root => <option key={root.id} value={root.id}>{root.path}</option>)}
+                {visibleRoots?.map(root => <option key={root.id} value={root.id}>{root.name || root.path}</option>)}
               </select>
             </label>
             <button type="button" onClick={startScan} disabled={scanPending || scanIsActive(selected)}>Scan folder</button>

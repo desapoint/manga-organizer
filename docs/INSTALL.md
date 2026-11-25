@@ -13,19 +13,11 @@ Android, Windows and Linux clients use the server's WebUI. For these development
 
 ## Windows x64
 
-Run the setup program to install for your Windows user and add a Start menu shortcut. Alternatively extract the portable ZIP into its own folder. Choose an owner password of 12–256 characters. Set it only for the first launch from PowerShell.
+Run the setup program to install for your Windows user. Open **Manga Organizer** from the Start menu, or run `MangaOrganizer.Server.exe` from the extracted portable ZIP. On first launch the app opens a one-time link to the WebUI setup page. If the browser stays closed, open the link printed in the server window.
 
-```powershell
-$secret = Read-Host 'Choose the owner password' -AsSecureString
-$env:MANGA_ORGANIZER_BOOTSTRAP_PASSWORD = [System.Net.NetworkCredential]::new('', $secret).Password
-try {
-    & "$env:LOCALAPPDATA\Programs\Manga Organizer\MangaOrganizer.Server.exe"
-} finally {
-    Remove-Item Env:MANGA_ORGANIZER_BOOTSTRAP_PASSWORD -ErrorAction SilentlyContinue
-}
-```
+Choose and confirm an owner password of 12–256 characters. Use **Browse server** to choose an optional library folder, then finish setup and sign in. The server shows setup until an owner has been configured. On later launches it opens directly in server mode. The default data folder is `%LOCALAPPDATA%\MangaOrganizer`.
 
-For the portable package, run `./MangaOrganizer.Server.exe` from the extracted folder in the `try` block. Open `http://127.0.0.1:8787` and sign in. On subsequent runs, open **Manga Organizer** from the Start menu or run the executable. The default data folder is `%LOCALAPPDATA%\MangaOrganizer`. To add a catalog folder, set `MANGA_ORGANIZER_LIBRARY_ROOTS__0` in the launching environment to its absolute Windows path.
+The WebUI defaults to `http://127.0.0.1:8787`. To choose a different local port, start the executable with `--urls http://127.0.0.1:8788` or set `ASPNETCORE_URLS` in its launching environment.
 
 ## Linux x64 or ARM64
 
@@ -35,13 +27,10 @@ Extract the archive for your architecture (`uname -m` reports `x86_64` or `aarch
 mkdir -p "$HOME/manga-organizer"
 tar -xzf MangaOrganizer-linux-x64.tar.gz -C "$HOME/manga-organizer"
 cd "$HOME/manga-organizer"
-read -rsp 'Choose the owner password: ' owner_password
-printf '\n'
-MANGA_ORGANIZER_BOOTSTRAP_PASSWORD="$owner_password" ./MangaOrganizer.Server
-unset owner_password
+./MangaOrganizer.Server
 ```
 
-Use the ARM64 archive filename in `tar` on ARM64. Open `http://127.0.0.1:8787` and sign in. Subsequent launches use `./MangaOrganizer.Server`. Set `MANGA_ORGANIZER_LIBRARY_ROOTS__0` to an absolute local catalog folder in the launching environment. The default data folder is `MangaOrganizer` under your user's local application data directory.
+Use the ARM64 archive filename in `tar` on ARM64. Open the one-time setup link printed in the terminal, then choose your owner password and optional library folder. The default data folder is `MangaOrganizer` under your user's local application data directory. For unattended or non-loopback first startup, set `MANGA_ORGANIZER_BOOTSTRAP_PASSWORD` in the launching environment, then clear it after the owner has been configured.
 
 ## Docker Compose
 
@@ -61,6 +50,6 @@ For an offline Unraid install, load `MangaOrganizer-docker-amd64.tar.gz` on the 
 
 ## Upgrades and catalog setup
 
-Stop the running server before replacing binaries or changing the image. Back up its data directory or config volume and retain it across reinstalls. Additional server folders can be configured with `MANGA_ORGANIZER_LIBRARY_ROOTS__1`, `MANGA_ORGANIZER_LIBRARY_ROOTS__2` and so on. Restart and select **Scan folder** in the WebUI.
+Stop the running server before replacing binaries or changing the image. Back up its data directory or config volume and retain it across reinstalls. Open **Library settings** to add, edit or remove library and import folders. The server saves changes in SQLite. Existing first-launch paths and `MANGA_ORGANIZER_LIBRARY_ROOTS__0`, `MANGA_ORGANIZER_LIBRARY_ROOTS__1` and later values are used when seeding the database configuration. For Docker, bind-mount each folder before selecting it in the WebUI.
 
 For automation, merges to `main` publish development prereleases with versioned images and SHA-256 checksums. Pull requests and manual runs validate the same build without publishing. Physical Unraid, release signing and full platform qualification continue in the audit ledger. [Qualification matrix](https://github.com/desapoint/manga-organizer/blob/main/docs/source-audit/DEPLOYMENT-QUALIFICATION.md)

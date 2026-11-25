@@ -6,9 +6,17 @@ The approved scope adds basic catalog corrections, exact duplicate review and re
 
 ## Read-only catalog
 
-The server operator configures one or more absolute library folders at startup. The signed-in owner can select a folder, start an inventory scan and browse the results in the WebUI. The scan records relative paths, filename extensions, sizes and modification times for CBZ, CBR, CB7, ZIP, RAR, 7z, PDF and EPUB files. These are filename and filesystem facts. Format validation, loose image folders, chapter matching and duplicate classification have separate acceptance checks.
+The signed-in owner can manage multiple library and import folders in **Library settings**. The server folder browser shows useful suggestions, disks, mounts and child folders. Settings are stored in SQLite and apply without a restart. A starting folder from first launch or the existing environment configuration is migrated into SQLite when folder settings are initialized. Removing a configured folder removes it from the active catalog while preserving the files.
+
+The owner can start an inventory scan and browse the results in the WebUI. The scan records relative paths, filename extensions, sizes and modification times for CBZ, CBR, CB7, ZIP, RAR, 7z, PDF and EPUB files. Format validation, loose image folders, chapter matching and duplicate classification have separate acceptance checks.
 
 Scans run one at a time. The server skips symbolic links and Windows reparse points, and publishes a successful full inventory as one database transaction. An unavailable root, failed scan or interrupted scan preserves the prior inventory. If an inventory with files suddenly scans empty, the WebUI reports it for review and keeps the prior entries. The next successful scan with files replaces those entries. Mounted media can remain read-only in Docker. See the [configuration instructions](../README.md#configure-the-read-only-library).
+
+## Import intake and association
+
+An import intake folder is inventoried in its own WebUI view. The owner approved automatic movement from intake to a managed library once the file has an unambiguous metadata and volume or chapter association, or an owner supplies the association manually. Resolve the work, edition, intended library and applicable volume or chapter before moving a file. Ambiguous matches, changed sources, unavailable storage and destination conflicts keep the intake file in place.
+
+The reader must allow eligible files to open from intake or a library when their format is supported, including files with no metadata association. File movement uses the existing verified backup and restore, storage qualification, no-overwrite, revalidation and journal requirements. The current intake inventory provides discovery and configuration. The association and managed movement workflow is scheduled with the organizer's metadata and import operations. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [Reader formats](REMOTE-READING.md#reader-formats)
 
 ## 1. Organization workflow
 

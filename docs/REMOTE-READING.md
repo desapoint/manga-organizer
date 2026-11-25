@@ -19,6 +19,8 @@ The owner requires one primary server for the main library and its reading progr
 
 Reflowable EPUB and text annotations are deferred. The format stages are implementation targets. [Current catalog support](FILE-ORGANIZATION.md#read-only-catalog)
 
+Files in the library and import intake are eligible for reading when their format is supported. An unmatched file can open by its catalog identity while its metadata association is pending. [Import intake and association](FILE-ORGANIZATION.md#import-intake-and-association)
+
 ## Progress validation
 
 The server validates the authenticated account, chapter or edition, content version and page or position before accepting an update. Store progress against a stable logical chapter and a page anchor so a rename, move or verified equivalent repack preserves the resume point. If the content changes and the position cannot be mapped safely, retain the previous anchor for review.

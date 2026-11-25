@@ -8,26 +8,39 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 
 const string sessionScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-var builder = WebApplication.CreateBuilder(new WebApplicationOptions
-{
-    Args = args,
-    WebRootPath = Path.Combine(AppContext.BaseDirectory, "wwwroot"),
-});
-builder.Configuration["AllowedHosts"] ??= "localhost;127.0.0.1;[::1]";
-
-if (string.IsNullOrWhiteSpace(builder.Configuration["urls"]) &&
-    !builder.Configuration.GetSection("Kestrel:Endpoints").Exists())
-{
-    builder.WebHost.UseUrls("http://127.0.0.1:8787");
-}
+const string bootstrapPasswordSetting = "MANGA_ORGANIZER_BOOTSTRAP_PASSWORD";
+var builder = WebUi.CreateBuilder(args);
 
 var dataDirectory = Path.GetFullPath(builder.Configuration["MANGA_ORGANIZER_DATA_DIR"] ?? Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify),
     "MangaOrganizer"));
-var libraryRoots = LibraryScanner.ReadRoots(builder.Configuration, dataDirectory);
 Directory.CreateDirectory(dataDirectory);
-var identity = ServerStore.Open(dataDirectory, builder.Configuration["MANGA_ORGANIZER_BOOTSTRAP_PASSWORD"]);
-builder.Services.AddSingleton(new LibraryStore(dataDirectory, libraryRoots));
+var bootstrapPassword = builder.Configuration[bootstrapPasswordSetting];
+var (identity, _) = ServerStore.Open(dataDirectory, bootstrapPassword);
+if (identity is null)
+{
+    if (!string.IsNullOrEmpty(bootstrapPassword) || !WebSetup.HasLoopbackUrls(builder.Configuration))
+    {
+        Console.Error.WriteLine($"For this server configuration, set {bootstrapPasswordSetting} to a password of 12–256 characters before first startup.");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    identity = await WebSetup.RunAsync(builder, dataDirectory, LibraryScanner.ReadRoots(builder.Configuration, dataDirectory));
+    if (identity is null)
+    {
+        return;
+    }
+    builder = WebUi.CreateBuilder(args);
+}
+
+builder.Services.AddSingleton(new LibraryStore(dataDirectory, () =>
+{
+    var configuredPaths = LibraryScanner.ReadRoots(builder.Configuration, dataDirectory);
+    return configuredPaths.Count == 0 && identity.LibraryPath is { } libraryPath
+        ? [LibraryScanner.NormalizeRoot(libraryPath, dataDirectory, configuredPaths)]
+        : configuredPaths;
+}));
 builder.Services.AddSingleton<LibraryScanQueue>();
 builder.Services.AddHostedService(services => services.GetRequiredService<LibraryScanQueue>());
 
@@ -64,18 +77,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
-app.Use(async (context, next) =>
-{
-    context.Response.Headers.XContentTypeOptions = "nosniff";
-    context.Response.Headers.ContentSecurityPolicy = "default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
-    if (context.Request.Path.StartsWithSegments("/api") && context.Request.Path != "/api/csrf")
-    {
-        context.Response.Headers.CacheControl = "no-store";
-    }
-    await next(context);
-});
-app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseWebUi();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -92,7 +94,7 @@ api.MapPost("/session", async (SignIn request, HttpContext context, IAntiforgery
         return Results.BadRequest();
     }
     var ownerId = identity.OwnerId.ToString("D");
-    if (request.Password is not { Length: >= 12 and <= 256 } || new PasswordHasher<string>()
+    if (!ServerStore.IsValidPassword(request.Password) || new PasswordHasher<string>()
         .VerifyHashedPassword(ownerId, identity.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
     {
         return Results.Unauthorized();
@@ -104,7 +106,7 @@ api.MapPost("/session", async (SignIn request, HttpContext context, IAntiforgery
 }).RequireRateLimiting("sign-in").WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(4096));
 
 api.MapGet("/server", () => Results.Ok(new { id = identity.InstanceId })).RequireAuthorization();
-api.MapLibrary();
+api.MapLibrary(dataDirectory);
 
 api.MapDelete("/session", async (HttpContext context, IAntiforgery antiforgery) =>
 {
@@ -116,6 +118,6 @@ api.MapDelete("/session", async (HttpContext context, IAntiforgery antiforgery) 
     return Results.NoContent();
 }).RequireAuthorization();
 
-app.Run();
+await app.RunAsync();
 
 internal sealed record SignIn(string? Password);

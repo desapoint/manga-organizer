@@ -17,7 +17,7 @@ dotnet restore src/MangaOrganizer.Server --locked-mode
 dotnet publish src/MangaOrganizer.Server --no-restore -c Release -o ./publish
 ```
 
-Set `MANGA_ORGANIZER_BOOTSTRAP_PASSWORD` in the launching process on first startup. Choose 12–256 characters. Run `./publish/MangaOrganizer.Server.exe` on Windows or `./publish/MangaOrganizer.Server` on Linux, then open [the local WebUI](http://127.0.0.1:8787). The server saves a password hash and its ID in the current user's local appdata. Set `MANGA_ORGANIZER_DATA_DIR` to use a different local directory. Remove the bootstrap variable after the first start.
+Run `./publish/MangaOrganizer.Server.exe` on Windows or `./publish/MangaOrganizer.Server` on Linux. On first launch, open the one-time WebUI setup link to choose an owner password and an optional read-only library folder. The server saves its configuration in the current user's local appdata. Set `MANGA_ORGANIZER_DATA_DIR` to use a different local directory. The default WebUI port is `8787`. [Installation guide](docs/INSTALL.md)
 
 The same build runs in Docker with a named volume for the database and session keys. Set the bootstrap variable in your shell before the first run.
 
@@ -32,9 +32,9 @@ On subsequent starts, omit the bootstrap `--env` option and reuse the volume. Ke
 
 ### Configure the read-only library
 
-Set `MANGA_ORGANIZER_LIBRARY_ROOTS__0` to an absolute path on the server. Use `MANGA_ORGANIZER_LIBRARY_ROOTS__1`, `MANGA_ORGANIZER_LIBRARY_ROOTS__2` and so on for additional folders. Keep these folders separate from each other and from the server data directory. Restart, sign in and select **Scan folder** to populate the catalog.
+Sign in and open **Library settings** to add, edit or remove multiple folders. **Browse server** shows suggested locations, disks and subfolders on the server. Choose **Read-only library** for a catalog folder or **Import intake** for incoming files awaiting association. Settings are saved in SQLite and take effect immediately. Select **Scan folder** in the appropriate view to discover files.
 
-In Docker, use a read-only bind mount and set the environment variable to its container path. Add these options before the image name in `docker run`.
+In Docker, bind-mount folders you want to browse and select their container paths in the WebUI. `MANGA_ORGANIZER_LIBRARY_ROOTS__0` and higher numbered variables can seed library settings when the database is initialized. For example, add these options before the image name in `docker run`.
 
 ```sh
 --mount type=bind,source=/path/to/manga,target=/media/manga,readonly \
