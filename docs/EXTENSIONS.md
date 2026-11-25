@@ -32,3 +32,7 @@ Pinned SW source declares JVM target 21 while bundler uses Zulu JRE 25.0.5; do n
 ## Pass 20 verified Linux contract
 
 Published Suwayomi `v2.4.2373` used the same server JAR in the tested Linux bundle and amd64 Docker image. The synthetic JAR installed, searched and downloaded a fractional chapter. The start mutation returned a GraphQL timeout on an empty queue in both artifacts, and on a populated queue in the standalone case even though the expected file was written. The adapter contract should evaluate GraphQL errors alongside queue and content state before recording success or retrying. APK/source-store flows, Mihon cross-version backup compatibility, and Windows and actual Unraid qualification are open. [Runtime evidence and fixture](source-audit/PASS20.md)
+
+## Pass 22 companion and backup checks
+
+The same Suwayomi release installed an external synthetic APK and downloaded its chapter on Docker. Hosted Windows passed the upstream MSI install and uninstall fixture. Published and pinned Mihon codecs decoded the generated backup in JVM tests. Store installation, additional package versions, Android device restore and actual Unraid qualification retain their own acceptance checks. [Pass 22 results](source-audit/PASS22.md)

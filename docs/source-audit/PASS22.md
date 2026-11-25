@@ -8,8 +8,12 @@
 |---|---|---|
 | Published Suwayomi `v2.4.2373` x64 MSI | Windows Server 2025 verified SHA-256 `e35925a933f5993c23d6dc7fa941f1accd3a8d3b3f2d4942fce531c5a5712dce`. Silent install succeeded. The installed JRE/server ran the basic NTFS checks, installed the synthetic JAR and downloaded the matching PNG and ComicInfo. Silent uninstall removed the installed JAR. Authenticode reported `NotSigned`. | Upstream fresh install and removal on a hosted runner. Windows 10/11 client install, upgrade, non-administrator behavior and retained user data across reinstalls remain separate. |
 | Suwayomi backup export | The pinned amd64 Docker image wrote a gzip backup containing the same synthetic library item and its downloaded chapter. The export ran on the local Docker fixture and on both hosted Mihon jobs. | Export succeeds independently of the Android app's decode, database restore and UI. |
+| Suwayomi APK intake | A signed synthetic `1.4.1` APK was built with Google's checksum-verified Android Build Tools 36.0.0. The published Suwayomi Docker image installed it, resolved source ID `7200000000000000123`, downloaded chapter `12.5`, and retained the matching PNG and ComicInfo across restart. | One externally supplied APK, separate from the JAR fixtures. Repository installation, additional APK versions and signer checks remain separate. |
+| Published and pinned Mihon backup codec | The application's `testDebugUnitTest` decoded the actual Suwayomi export and preserved the 64-bit source ID and fractional chapter number on both `v0.21.3` (`feadad5`) and audited source (`f8e30a8`). | The JVM exercised both app codecs. Android device restore and legacy-format fixtures remain separate. |
 
-[Hosted installer and first codec attempt](https://github.com/desapoint/manga-organizer/actions/runs/45666101665) · [Publisher checksums](https://github.com/Suwayomi/Suwayomi-Server/releases/download/v2.4.2373/Checksums.sha256)
+[Final passing installer and codec run](https://github.com/desapoint/manga-organizer/actions/runs/45668061469) · [Passing portable Windows and Docker regression](https://github.com/desapoint/manga-organizer/actions/runs/45668061532) · [Publisher checksums](https://github.com/Suwayomi/Suwayomi-Server/releases/download/v2.4.2373/Checksums.sha256)
+
+The first Android jobs stopped because `sdkmanager` was missing. The next setup attempt called a retired SDK package. Installing the declared SDK packages reached the test task, where Maven Central rate-limited one job. The Windows rerun also exposed a locked Chromium DLL during temporary-directory cleanup. The workflow now retries HTTP 429 responses, and the unneeded Chromium runtime is disabled in the Windows fixture. [Intermediate run and logs](https://github.com/desapoint/manga-organizer/actions/runs/45667051913)
 
 ## Required behavior reviewed
 
@@ -22,3 +26,11 @@
 ## Distribution scope
 
 The verified Linux Suwayomi release contains server JAR SHA-256 `dd05d523cc785b7acf90c9feac0bc84c53d5fb3af5ab2a33653646e2076e5217`. The JAR contains 104 distinct `META-INF/maven/*/pom.properties` paths and repeated generic license and notice entries. The separate bundled runtime reports Java `25.0.5.1`, and the Electron directory contains its license and Chromium notices. This establishes some shipped components. A complete component list and the relationship between each binary and its notice remain release work. Under the approved baseline, the upstream engine and third-party extensions are separately installed and the organizer's actual dependency lockfiles and release artifacts will determine its SBOM. [Companion artifact evidence](PASS20.md) · [Asset register](LICENSE-ASSET-REGISTER.csv)
+
+## Actual-host storage check
+
+The storage probe creates uniquely named temporary directories under the supplied test roots. It checks that the original bytes survive, records file identities for exact copies and hardlinks, and reports whether a link between roots succeeded or returned a platform error. On the local Linux smoke test, a same-root link shared identity and a byte-identical copy had a different identity. An occupied destination retained its bytes. The link between the two roots returned `EXDEV` even though both reported the same device number. Actual Unraid share/pool and mount transitions require their own tests. [Probe](host_storage_probe.py) · [Target matrix](DEPLOYMENT-QUALIFICATION.md)
+
+```sh
+python3 docs/source-audit/host_storage_probe.py /path/to/disposable-storage-root /path/to/second-root
+```
