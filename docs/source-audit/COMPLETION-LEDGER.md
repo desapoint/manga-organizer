@@ -88,3 +88,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ### Pass 17 coverage reconciliation
 
 [Coverage reconciliation](PASS17-COVERAGE.md) and [delta](PASS17-COVERAGE-DELTA.csv) check all 42 Pass 15–17 evidence paths against previous citations and pinned indexes: 24 new and 18 previously mapped. Historical 403 distinct paths increased to 427; 333 of 7,716 implementation candidates have citations, 7,383 remain without mapped evidence. Original historical snapshot unchanged. Versioned calculator provided, Python execution pending. Coverage is not complete file inspection or passing tests.
+
+## Pass 18 progress
+
+[Deployment and restore review](PASS18.md) cites 18 pinned files across all seven references, two test-source files (not executed), [eight artifact dispositions](PASS18-ARTIFACTS.csv) and [ten proposed qualification scenarios](PASS18-QUALIFICATION.csv). [Evidence](PASS18-EVIDENCE.csv). Windows install guards, Docker user mapping and embedded DB startup, partial restore/rollback boundaries, dependency hash and mutable launcher evidence recorded. G3/G4/G5 open; G6 partial; G7 not run; G8 pending. Pass 17 coverage historical, no new cumulative total; original 356 candidates, 126 groups and 70 decisions unchanged. No implementation, redistribution or destructive approval.
