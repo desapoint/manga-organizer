@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Container version="2">
+  <Name>Manga-Organizer</Name>
+  <Repository>__REGISTRY_IMAGE__</Repository>
+  <Registry>__PACKAGE_URL__</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>__PROJECT_URL__/issues</Support>
+  <Project>__PROJECT_URL__</Project>
+  <Overview>Self-hosted manga library catalog. The development build exposes its WebUI on host loopback.</Overview>
+  <Category>MediaApp:Books</Category>
+  <WebUI>http://127.0.0.1:8787/</WebUI>
+  <ExtraParams>--publish 127.0.0.1:8787:8787</ExtraParams>
+  <Config Name="Appdata" Target="/config" Default="/mnt/user/appdata/manga-organizer" Mode="rw" Description="A dedicated local appdata directory writable by UID and GID 1654." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/manga-organizer</Config>
+  <Config Name="Manga library" Target="/media/manga" Default="" Mode="ro" Description="Select an existing manga library folder." Type="Path" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="Library root" Target="MANGA_ORGANIZER_LIBRARY_ROOTS__0" Default="/media/manga" Mode="" Description="Container path of the read-only manga library." Type="Variable" Display="advanced" Required="true" Mask="false">/media/manga</Config>
+  <Config Name="First-run password" Target="MANGA_ORGANIZER_BOOTSTRAP_PASSWORD" Default="" Mode="" Description="Choose 12 to 256 characters. Clear this after the first successful sign-in." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+</Container>

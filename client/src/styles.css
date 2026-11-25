@@ -32,7 +32,7 @@ h1 { margin: 0 0 1.5rem; font-size: clamp(1.45rem, 6vw, 2rem); line-height: 1.2;
 form { display: grid; gap: .75rem; }
 label, dt { color: #d3ccdf; }
 
-input, button {
+input, button, select {
   min-height: 2.75rem;
   padding: .6rem .85rem;
   border: 1px solid #62597a;
@@ -40,7 +40,7 @@ input, button {
   font: inherit;
 }
 
-input { min-width: 0; background: #11131c; color: inherit; }
+input, select { min-width: 0; background: #11131c; color: inherit; }
 button { background: #c5b1ff; color: #20143c; border-color: transparent; font-weight: 700; cursor: pointer; }
 button:disabled { opacity: .65; cursor: wait; }
 button.secondary { background: transparent; color: #e4d8ff; border-color: #62597a; }
@@ -48,3 +48,39 @@ button.secondary { background: transparent; color: #e4d8ff; border-color: #62597
 dl { margin: 0 0 1.5rem; }
 dd { margin: .25rem 0 0; overflow-wrap: anywhere; }
 .error { margin: 1rem 0 0; color: #ffb6c4; }
+
+main.catalog-layout { max-width: 72rem; gap: 1.5rem; }
+.catalog-header, .catalog-controls, .catalog-summary, .pagination {
+  display: flex;
+  align-items: center;
+  gap: .75rem 1rem;
+}
+.catalog-header, .pagination { justify-content: space-between; }
+.catalog-controls { align-items: end; flex-wrap: wrap; }
+.catalog-controls label { display: grid; gap: .35rem; flex: 1 1 13rem; min-width: 0; }
+.catalog-controls select { width: 100%; }
+.scan-state { margin: .875rem 0 .25rem; }
+.catalog-summary { flex-wrap: wrap; color: #b9b3c8; font-size: .875rem; }
+.catalog-files { list-style: none; padding: 0; margin: 1.25rem 0 0; border-top: 1px solid #34394b; }
+.catalog-files li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3rem 5.5rem 6.5rem;
+  align-items: baseline;
+  gap: .375rem .75rem;
+  padding: .75rem 0;
+  border-bottom: 1px solid #34394b;
+  color: #c7c1d3;
+  font-size: .875rem;
+}
+.catalog-files .file-path { color: #f0edf7; overflow-wrap: anywhere; }
+.file-format { color: #c5b1ff; font-weight: 600; }
+.pagination { margin-top: 1rem; font-size: .875rem; }
+.server-details { display: flex; flex-wrap: wrap; gap: .25rem .6rem; font-size: .875rem; }
+.server-details dd { margin: 0; }
+.catalog-layout code { overflow-wrap: anywhere; }
+
+@media (max-width: 36rem) {
+  .catalog-files li { grid-template-columns: 3rem max-content 1fr; }
+  .catalog-files .file-path { grid-column: 1 / -1; }
+  .catalog-files time { text-align: end; }
+}

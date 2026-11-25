@@ -12,7 +12,8 @@ RUN dotnet restore src/MangaOrganizer.Server --locked-mode
 COPY src/MangaOrganizer.Server/ src/MangaOrganizer.Server/
 COPY LICENSE THIRD-PARTY-NOTICES.txt ./
 COPY --from=web /build/client/dist client/dist
-RUN dotnet publish src/MangaOrganizer.Server --no-restore -c Release -o /publish
+ARG VERSION=1.0.0
+RUN dotnet publish src/MangaOrganizer.Server --no-restore -c Release -p:Version="$VERSION" -o /publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app

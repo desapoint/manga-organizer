@@ -2,7 +2,9 @@
 
 A documentation-first project for a unified, self-hosted manga library, acquisition manager and reader on Windows and Unraid/Docker.
 
-**Status** — primary-server foundation in development. The audit ledger tracks remaining source, license and device qualification. [Audit ledger](docs/source-audit/COMPLETION-LEDGER.md)
+**Status** — primary-server foundation and read-only catalog in development. The audit ledger tracks remaining source, license and device qualification. [Audit ledger](docs/source-audit/COMPLETION-LEDGER.md)
+
+Install the Windows, Linux, Docker or Unraid build from a GitHub development prerelease. A merged pull request to `main` builds and publishes the installers and container image after the package tests pass. [Releases](https://github.com/desapoint/manga-organizer/releases) · [Installation guide](docs/INSTALL.md)
 
 ## Run the primary-server foundation
 
@@ -26,7 +28,20 @@ docker run --rm --name manga-organizer -p 127.0.0.1:8787:8787 \
   --env MANGA_ORGANIZER_BOOTSTRAP_PASSWORD manga-organizer:dev
 ```
 
-On subsequent starts, omit the `--env` option and reuse the volume. The development build exposes owner sign-in and the persistent server ID. Keep the listener on loopback while remote deployment is being qualified. Keep the local appdata directory private because it includes the session keys.
+On subsequent starts, omit the bootstrap `--env` option and reuse the volume. Keep the listener on loopback while remote deployment is being qualified. Keep the local appdata directory private because it includes the session keys.
+
+### Configure the read-only library
+
+Set `MANGA_ORGANIZER_LIBRARY_ROOTS__0` to an absolute path on the server. Use `MANGA_ORGANIZER_LIBRARY_ROOTS__1`, `MANGA_ORGANIZER_LIBRARY_ROOTS__2` and so on for additional folders. Keep these folders separate from each other and from the server data directory. Restart, sign in and select **Scan folder** to populate the catalog.
+
+In Docker, use a read-only bind mount and set the environment variable to its container path. Add these options before the image name in `docker run`.
+
+```sh
+--mount type=bind,source=/path/to/manga,target=/media/manga,readonly \
+--env MANGA_ORGANIZER_LIBRARY_ROOTS__0=/media/manga
+```
+
+The catalog records paths, sizes and timestamps in SQLite and keeps the last successful inventory when a root goes offline. See the [read-only catalog scope](docs/FILE-ORGANIZATION.md#read-only-catalog).
 
 ## Start here
 
