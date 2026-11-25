@@ -76,3 +76,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 15 progress
 
 [Destructive-operation and extension authorization review](PASS15.md) cites 13 pinned files across seven references, 8 test-source files, and [13 proposed qualification fixtures](PASS15-QUALIFICATION.csv) (not run). User reported Pass 14 complete, but no Pass 14 record was accessible on the visible repository branches when reviewed; numbering preserved, no Pass 14 contents assumed. [Evidence](PASS15-EVIDENCE.csv). G3/G4/G5 open; G6 partial; G7 not executed; G8 not approved. Existing 356 atomic candidates and 126 proposed groups unchanged; no application implementation or automatic destructive approval.
+
+## Pass 16 progress
+
+[Acquisition and configuration lifecycle](PASS16.md) reconciles now-accessible Pass 14 with Pass 15. Historical Pass 14 coverage (403 distinct cited paths, 7,398 implementation candidates without citations) retained; no later total asserted. [Evidence](PASS16-EVIDENCE.csv) cites 17 selected pinned files across all seven references, 5 test-source files (not executed); [qualification](PASS16-QUALIFICATION.csv) adds 10 proposed scenarios. NZBGet submission established in prior passes, completion/import still open; uncertainty and requester/owner isolation explicit. G3/G4/G5 open, G6 partial, G7 not executed, G8 pending. Original 356 atomic candidates, 126 groups and 70 parent decisions unchanged. No code implementation or destructive approval.
