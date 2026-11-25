@@ -102,7 +102,7 @@ def wait_for_server(url):
         try:
             Browser(url).request("/healthz", 200)
             return
-        except URLError:
+        except (URLError, ConnectionError):
             time.sleep(0.25)
     raise RuntimeError("Server did not start")
 
