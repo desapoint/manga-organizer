@@ -107,6 +107,8 @@ jobs:
           python -c "from hashlib import sha256; from pathlib import Path; assert sha256(Path('gradle.zip').read_bytes()).hexdigest() == '971fcd7150ca4ba04852c0b2ca0d2d0ab9468e14b03473eab19528809914c76b'"
           python -m zipfile -e gradle.zip .audit-tools
           python docs/source-audit/fixtures/suwayomi/run_qualification.py .audit-tools/gradle-9.9.2/lib --backup-output "$RUNNER_TEMP/manga-audit-backup.tachibk"
+      - name: Set up Android SDK tooling
+        uses: android-actions/setup-android@651bceb6f9ca583f16b8d75b62c36ded2ae6fc9c # v4.0.0
       - name: Install the compile SDK and test the Mihon wire codec
         working-directory: upstream-mihon
         run: |
