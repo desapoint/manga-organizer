@@ -1,0 +1,49 @@
+name: Audit qualification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/audit-qualification]
+    paths:
+      - '.github/workflows/audit-qualification.yml'
+      - 'docs/source-audit/fixtures/suwayomi/**'
+
+permissions:
+  contents: read
+
+jobs:
+  suwayomi:
+    name: Suwayomi and storage (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Verify and extract Gradle compiler distribution
+        shell: bash
+        run: |
+          curl -fLsS --retry 3 -o gradle.zip https://downloads.gradle.org/distributions/gradle-9.9.2-bin.zip
+          python -c "from hashlib import sha256; from pathlib import Path; assert sha256(Path('gradle.zip').read_bytes()).hexdigest() == '971fcd7150ca4ba04852c0b2ca0d2d0ab9468e14b03473eab19528809914c76b'"
+          python -m zipfile -e gradle.zip .audit-tools
+      - name: Native Windows portable engine and NTFS fixture
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          curl -fLsS --retry 3 -o suwayomi-windows.zip https://github.com/Suwayomi/Suwayomi-Server/releases/download/v2.4.2373/Suwayomi-Server-v2.4.2373-windows-x64.zip
+          python -c "from hashlib import sha256; from pathlib import Path; assert sha256(Path('suwayomi-windows.zip').read_bytes()).hexdigest() == 'a8f1c7cf45ca3666afc2e8a06c7f4a968e07cee7d668e8be7cf194273a672a15'"
+          python docs/source-audit/fixtures/suwayomi/run_qualification.py .audit-tools/gradle-9.9.2/lib --windows-archive suwayomi-windows.zip
+      - name: Linux Docker configuration and media volumes
+        if: runner.os == 'Linux'
+        run: python docs/source-audit/fixtures/suwayomi/run_qualification.py .audit-tools/gradle-9.9.2/lib

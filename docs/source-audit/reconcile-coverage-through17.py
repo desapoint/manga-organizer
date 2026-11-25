@@ -1,4 +1,4 @@
-"""Reconcile retained pinned evidence through a selected audit pass (14–17)."""
+"""Reconcile retained pinned evidence through a selected audit pass."""
 
 import argparse
 import csv
@@ -111,7 +111,8 @@ def main(output, missing_repo, through_pass):
         historical_files.append(path)
     citations_by_path = defaultdict(set)
     excluded = defaultdict(set)
-    evidence_files = [AUDIT / f"PASS{n}-EVIDENCE.csv" for n in range(14, through_pass + 1)]
+    evidence_files = [AUDIT / f"PASS{n}-EVIDENCE.csv" for n in range(14, through_pass + 1)
+                      if n != 19]  # Pass 19 validates prior citations without adding new ones.
     for source in [*historical_files, *evidence_files]:
         for slug, sha, raw_path in citations(source):
             if slug.casefold() not in repo_ids:
@@ -184,7 +185,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, help="Write CSV here instead of standard output")
     parser.add_argument("--missing-implementation", metavar="REPO",
                         help="List exact implementation paths without citations for one upstream")
-    parser.add_argument("--through-pass", type=int, default=17, choices=range(14, 18))
+    parser.add_argument("--through-pass", type=int, default=17, choices=range(14, 21))
     args = parser.parse_args()
     if args.output is None:
         main(sys.stdout, args.missing_implementation, args.through_pass)

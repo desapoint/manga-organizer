@@ -1,6 +1,6 @@
 # Audit completion ledger — mandatory before implementation
 
-Updated 2026-11-25. User explicitly requested completion of the audit after adding physical organization and duplicates. Do not treat this ledger as sign-off. No runtime/platform tests executed. Status: **OPEN**.
+Updated 2026-11-25 Toronto. Status **OPEN**. Pass 19 verified the historical records and Pass 20 ran targeted upstream tests, a published Suwayomi engine workflow and synthetic Linux filesystem probes. Target-platform qualification and feature selection remain open. [Pass 19](PASS19.md) · [Pass 20](PASS20.md)
 
 Evidence: I = indexed paths; C = selected source declarations/logic inspected; S = selected test source inspected; R = release note checked; U = outstanding full behavior review. No "complete" status for modules with uninspected consumers, authorization, migrations or runtime tests.
 
@@ -18,14 +18,14 @@ Evidence: I = indexed paths; C = selected source declarations/logic inspected; S
 
 | Gate | State | Required evidence to close |
 |---|---|---|
-| G1 All seven pinned tracked trees indexed | Done | Existing indexes, no truncation |
-| G2 Filename-only candidates resolved | Done for prior 23 | Pass 3 exact path/source references; narrow compound claims |
-| G3 Complete feature and setting audit | Open | For each module enumerate route/schema/settings/UI, actual logic + defaults and tests, or documented exclusion; deduplicate canonical requirements |
-| G4 Organization/dedup correctness | Open | Read mutation and recovery call paths, prove content/coverage/mount rules; all [acceptance fixtures](../FILE-ORGANIZATION.md) |
-| G5 Extension compatibility | Open | Versioned GraphQL contracts and authorized fixture, older/newer APK/JAR formats, legacy/current backup import, trust/security |
-| G6 Release/licensing | Partial | Published tags and commit comparisons recorded in pass 4; seven tag source checks; remaining full release diff, licenses, external datasets/models, premium and extension rights |
-| G7 Runtime verification | Blocked in this session | Build upstreams in appropriate environment, run tests and Windows/Unraid storage fixtures; Android/Suwayomi compatibility fixtures. No actual target hosts or build results available in this audit. |
-| G8 Owner selection and implementation | Not approved | Complete remaining evidence; select features, technology/license and safety settings; no implementation before gates addressed |
+| G1 All seven pinned tracked trees indexed | Done | Pass 19 matched each of 13,716 indexed paths and its byte count to Git. |
+| G2 Prior filename-only candidates resolved | Done | All 23 historical candidates were resolved in Pass 3. Pass 19 verified the 356 retained atomic paths. |
+| G3 Complete feature and setting audit | Open | Finish route/schema/settings/UI, defaults, consumers, authorization and migration review, or record a module exclusion with its reasoning. Prioritize the five required outcomes. The Pass 20 coverage command reports the remaining path inventory. |
+| G4 Organization and duplicate handling | Partial | Linux tests substantiate selected safety and recovery behavior. Run the required mutation, content/edition identity and recovery fixtures on actual NTFS/UNC and Unraid pool/share storage. [Acceptance fixtures](../FILE-ORGANIZATION.md) |
+| G5 Extension compatibility | Partial | Linux `v2.4.2373` has a measured GraphQL contract and a synthetic JAR workflow. Empty-queue start timed out on both Linux forms. Qualify a release or adapter behavior that handles that state, then test repository install, APK/version combinations, scoped roles, Mihon legacy/current backup compatibility, and download-to-import on both targets. |
+| G6 Release and licensing | Partial | All tags and root licenses checked against Git. Verify changed behavior for each selected capability, exact distribution manifests and transitive SBOMs, redistribution rights for chosen assets/dependencies, and external service entitlements. |
+| G7 Runtime verification | Partial | Run the selected upstream and interoperability fixtures on Windows x64, actual Unraid amd64 and Android. Record install, mount, permissions, restart and recovery behavior. Manga Organizer release qualification follows implementation on the roadmap. [Qualification matrix](DEPLOYMENT-QUALIFICATION.md) |
+| G8 Owner selection and implementation | Pending owner | Owner must resolve the optional choices, stack, license and redistribution intent, and mutation policy after reviewing the remaining evidence. Five parent outcomes are Required and 65 are Pending. [Selection register](../FEATURE-SELECTION.csv) |
 
 No destructive automation is approved. Do not mark gates G3–G8 complete based on file counts or test names. An exhaustive source audit requires further module-level inspection; report what was actually examined rather than claiming parity. 
 
@@ -92,3 +92,11 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 18 progress
 
 [Deployment and restore review](PASS18.md) cites 18 pinned files across all seven references, two test-source files (not executed), [eight artifact dispositions](PASS18-ARTIFACTS.csv) and [ten proposed qualification scenarios](PASS18-QUALIFICATION.csv). [Evidence](PASS18-EVIDENCE.csv). Windows install guards, Docker user mapping and embedded DB startup, partial restore/rollback boundaries, dependency hash and mutable launcher evidence recorded. G3/G4/G5 open; G6 partial; G7 not run; G8 pending. Pass 17 coverage historical, no new cumulative total; original 356 candidates, 126 groups and 70 decisions unchanged. No implementation, redistribution or destructive approval.
+
+## Pass 19 verification
+
+Verified all seven trees, all seven release tags, 732 structured pinned citations and the 70/356/126 selection reconciliation. Reproduced the Pass 14 and 17 coverage snapshots and calculated 434 distinct cited paths through Pass 18. Recorded the historical one-line count and range corrections and exact release diff counts. [Verification record](PASS19.md)
+
+## Pass 20 results
+
+Ran the available Linux checks for organization, duplicate handling, authorization, the Suwayomi download and backup contract, and artifact verification. The targeted suites had 861 passing tests across five upstreams. Confirmed the `v2.4.2373` empty-queue behavior in two published artifacts and recorded a separate Manga-arr test setup failure. [Source evidence](PASS20-EVIDENCE.csv) · [Runtime and artifact results](PASS20.md)

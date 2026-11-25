@@ -28,3 +28,7 @@ See [pass 4](source-audit/PASS4.md) and [release comparison](source-audit/RELEAS
 ## Pass 7 runtime distribution
 
 Pinned SW source declares JVM target 21 while bundler uses Zulu JRE 25.0.5; do not equate compiler target with bundled runtime or assume stable parity. Its release dispatches a separate suwayomi-server-docker workflow: independently pin and audit that image repository and exact image digest. External separately installed companion preferred pending redistribution review; extension package and content rights separate. See [pass 7](source-audit/PASS7.md).
+
+## Pass 20 verified Linux contract
+
+Published Suwayomi `v2.4.2373` used the same server JAR in the tested Linux bundle and amd64 Docker image. The synthetic JAR installed, searched and downloaded a fractional chapter. The start mutation returned a GraphQL timeout on an empty queue in both artifacts, and on a populated queue in the standalone case even though the expected file was written. The adapter contract should evaluate GraphQL errors alongside queue and content state before recording success or retrying. APK/source-store flows, Mihon cross-version backup compatibility, and Windows and actual Unraid qualification are open. [Runtime evidence and fixture](source-audit/PASS20.md)

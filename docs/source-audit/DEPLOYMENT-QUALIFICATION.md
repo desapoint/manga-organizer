@@ -20,7 +20,7 @@ Required outcomes from owner: standalone Windows app and Unraid Docker WebUI; re
 - Suwayomi companion: external server or managed distinct process/container with pinned version, image digest and verified runtime, scoped credentials and isolated storage; never mount entire host or expose engine publicly by default. Runtime schemas and extension compatibility test; companion health does not equal organizer readiness. Separate permissions, extension repositories opt-in, no untrusted packages bundled.
 - Release: locked dependencies (no fallback to unlocked install), digest-pinned bases, reproducible version/commit, per-architecture SBOM + licenses + vulnerability scan, signed artifacts/checksums, staged update with backup and rollback or forward recovery. No auto-update during active file mutation. Use authenticated API readiness and non-sensitive liveness; logs redact secrets.
 
-## Qualification matrix — all not run
+## Target qualification matrix — all target-host runs pending
 
 | ID | Target | Test | Pass condition |
 |---|---|---|---|
@@ -38,4 +38,4 @@ Required outcomes from owner: standalone Windows app and Unraid Docker WebUI; re
 | R01 | Release CI | Locked dependencies, SBOM, notices, hashes, signing, scanner | Artifact-specific evidence and approved exceptions |
 | R02 | Native arch | Actual amd64 and optional arm64 runner | Test results bound to commit/image digest |
 
-No target host access, actual build or runtime fixture used this pass. The above are proposed acceptance criteria, not a certification.
+Pass 20 records Linux and rootless Docker test results for selected upstream behavior, local and container Suwayomi, and synthetic filesystem semantics. The matrix requires the target operating systems, storage configurations and deployable Manga Organizer artifacts for sign-off. [Pass 20 results](PASS20.md)
