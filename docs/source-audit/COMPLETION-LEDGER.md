@@ -48,3 +48,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 8 progress
 
 [Coverage reconciliation and test-source review](PASS8.md) maps durable evidence to pinned trees; 14 additional test sources, parent correction log and candidate overlap groups. G3/G4/G5 remain open: explicit module dispositions, complete settings/consumer/test traces, mutation/recovery, actual schema/runtime; G6 partial, G7 blocked for host tests, G8 not approved. No test or deployment certification from source assertions. Use [coverage baseline](COVERAGE-BASELINE.md) for outstanding gaps rather than candidate growth.
+
+## Pass 9 progress
+
+[Physical operations and recovery](PASS9.md) reviews selected logic in eight pinned files across seven references; [evidence and fixture crosswalk](PASS9-EVIDENCE.csv) records limits and proposed ORG/DUP/SAFE tests. G4 improved but open: complete caller/authorization/identity/mount and recovery traces, actual host fixtures. G3/G5 open; G6 partial; G7 not executed; G8 not approved. No atomic count change, no automatic deletion approval. Pass 8 baseline retained as historical snapshot.
