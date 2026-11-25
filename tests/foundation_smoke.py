@@ -177,7 +177,7 @@ def verify_web_setup(executable, fixture, media):
         browser.sign_in(password)
         identity = browser.server_id()
         (root,) = browser.roots()
-        assert Path(root["path"]) == media / "primary"
+        assert Path(root["path"]).samefile(media / "primary"), root["path"]
 
     with start_app(executable, appdata, None, None) as url:
         wait_for_server(url)
