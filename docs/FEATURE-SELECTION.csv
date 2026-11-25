@@ -23,7 +23,7 @@ F21,Translation group preference wait upgrade,UC,Pending,Core,
 F22,Source fallback replacement rate limits,UC,Pending,Core,
 F23,Live queue history retry blocklist,KK/MK,Pending,Core,
 F24,Durable backfill partial download repair,UC,Pending,Core,
-F25,Auto manual import conflict review,KK,Pending,Foundation,
+F25,Auto manual import conflict review,KK,Pending,Foundation,Optional client upload uses the primary server import path. See REMOTE-READING.md.
 F26,Copy move hardlink seeding,KK/KR,Pending,Core,
 F27,Rename preview no overwrite,KR/KK,Pending,Core,
 F28,CBZ ComicInfo cover provenance,KR/MK,Pending,Foundation,
@@ -39,7 +39,7 @@ F37,Reader profiles thumbnails auto-scroll,MK,Pending,Core,
 F38,Local enhancement upscaling,MK,Pending,Core,
 F39,OCR translation credit collapse,UC,Pending,Later,
 F40,Offline PWA prefetch progress,UC/MK,Pending,Later,
-F41,Progress resume tracker scrobbling,MK/MH,Pending,Later,
+F41,Progress resume tracker scrobbling,MK/MH,Pending,Later,Android Windows and Linux resume through the primary is required. Tracker scrobbling awaits selection. See REMOTE-READING.md.
 F42,Incognito moments bookmarks notes,UC,Pending,Later,
 F43,Stats goals streaks annual recap,UC/MK,Pending,Later,
 F44,Dashboard themes localization,KV/UC,Pending,Later,
@@ -66,6 +66,6 @@ F64,Extension engine version and compatibility diagnostics,SW,Pending,Foundation
 F65,Mihon connector and progress interoperability,SW/UC,Pending,Later,
 F66,Additional trackers Shikimori Bangumi Hikka,MH,Pending,Later,
 F67,Mihon mobile reading categories and migration,MH,Pending,Later,
-F68,Single unified download queue and authoritative library,MK/UC,Pending,Later,
+F68,Single unified download queue and authoritative library,MK/UC,Pending,Later,One primary owns the main library and validates its progress. Optional subscriptions keep separate libraries. See REMOTE-READING.md.
 F69,Physical file organization and bulk rename/move,KR/KK/MK,Required,Foundation,User requested file organization; detailed choices in FILE-ORGANIZATION.md
 F70,Duplicate detection review and safe resolution,MK/UC/KK,Required,Foundation,User requested duplicate finding and handling; destructive automation not approved

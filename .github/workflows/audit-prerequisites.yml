@@ -1,0 +1,129 @@
+name: Audit prerequisites
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/audit-qualification]
+    paths:
+      - '.github/workflows/audit-prerequisites.yml'
+      - 'docs/source-audit/fixtures/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-prerequisites-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-installer:
+    name: Published Suwayomi MSI (Windows Server 2025)
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Verify and extract fixture compiler
+        shell: bash
+        run: |
+          curl -fLsS --retry 3 -o gradle.zip https://downloads.gradle.org/distributions/gradle-9.9.2-bin.zip
+          python -c "from hashlib import sha256; from pathlib import Path; assert sha256(Path('gradle.zip').read_bytes()).hexdigest() == '971fcd7150ca4ba04852c0b2ca0d2d0ab9468e14b03473eab19528809914c76b'"
+          python -m zipfile -e gradle.zip .audit-tools
+      - name: Install, run the download fixture and uninstall
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $msi = Join-Path $env:RUNNER_TEMP 'suwayomi-audit.msi'
+          $installDir = Join-Path $env:RUNNER_TEMP 'Suwayomi-Audit'
+          $installLog = Join-Path $env:RUNNER_TEMP 'suwayomi-install.log'
+          $uninstallLog = Join-Path $env:RUNNER_TEMP 'suwayomi-uninstall.log'
+          curl.exe -fLsS --retry 3 -o $msi https://github.com/Suwayomi/Suwayomi-Server/releases/download/v2.4.2373/Suwayomi-Server-v2.4.2373-windows-x64.msi
+          if ($LASTEXITCODE) { throw 'MSI download failed' }
+          if ((Get-FileHash $msi -Algorithm SHA256).Hash -ne 'e35925a933f5993c23d6dc7fa941f1accd3a8d3b3f2d4942fce531c5a5712dce') {
+            throw 'MSI does not match the published checksum'
+          }
+          $signature = Get-AuthenticodeSignature $msi
+          Write-Host "MSI Authenticode status: $($signature.Status)"
+          $install = Start-Process msiexec.exe -Wait -PassThru -ArgumentList @('/i', "`"$msi`"", '/qn', '/norestart', "INSTALLDIR=`"$installDir`"", '/L*V', "`"$installLog`"")
+          if ($install.ExitCode -ne 0) {
+            Get-Content $installLog -Tail 70
+            throw "MSI install exit code $($install.ExitCode)"
+          }
+          try {
+            python docs/source-audit/fixtures/suwayomi/run_qualification.py .audit-tools/gradle-9.9.2/lib --windows-install-dir $installDir
+            if ($LASTEXITCODE) { throw 'Installed Suwayomi download fixture failed' }
+          } finally {
+            $uninstall = Start-Process msiexec.exe -Wait -PassThru -ArgumentList @('/x', "`"$msi`"", '/qn', '/norestart', '/L*V', "`"$uninstallLog`"")
+            if ($uninstall.ExitCode -ne 0) {
+              Get-Content $uninstallLog -Tail 70
+              throw "MSI uninstall exit code $($uninstall.ExitCode)"
+            }
+            if (Get-ChildItem $installDir -Filter 'Suwayomi-Server.jar' -Recurse -ErrorAction SilentlyContinue) {
+              throw 'Installed server JAR remained after uninstall'
+            }
+            Write-Host 'Published MSI installed, ran the fixture, and uninstalled its server JAR'
+          }
+
+  mihon-backup:
+    name: Mihon backup (${{ matrix.label }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: published v0.21.3
+            ref: feadad5e1e2bf638be6e2ca317d11657b09d4596
+          - label: pinned source
+            ref: f8e30a86086020aaee1e89a9d015373b1a4ff026
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: mihonapp/mihon
+          ref: ${{ matrix.ref }}
+          path: upstream-mihon
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Export a real backup from the synthetic Suwayomi library
+        run: |
+          curl -fLsS --retry 3 -o gradle.zip https://downloads.gradle.org/distributions/gradle-9.9.2-bin.zip
+          python -c "from hashlib import sha256; from pathlib import Path; assert sha256(Path('gradle.zip').read_bytes()).hexdigest() == '971fcd7150ca4ba04852c0b2ca0d2d0ab9468e14b03473eab19528809914c76b'"
+          python -m zipfile -e gradle.zip .audit-tools
+          python docs/source-audit/fixtures/suwayomi/run_qualification.py .audit-tools/gradle-9.9.2/lib --backup-output "$RUNNER_TEMP/manga-audit-backup.tachibk"
+      - name: Set up Android SDK tooling
+        uses: android-actions/setup-android@651bceb6f9ca583f16b8d75b62c36ded2ae6fc9c # v4.0.0
+        with:
+          packages: 'platforms;android-37.2 ndk;29.0.14206865'
+          log-accepted-android-sdk-licenses: false
+      - name: Test the Mihon wire codec
+        working-directory: upstream-mihon
+        shell: bash
+        run: |
+          cp ../docs/source-audit/fixtures/mihon/SuwayomiBackupAuditTest.kt app/src/test/java/eu/kanade/tachiyomi/data/backup/
+          export MANGA_AUDIT_BACKUP="$RUNNER_TEMP/manga-audit-backup.tachibk"
+          for attempt in 1 2 3; do
+            if ./gradlew --no-daemon :app:testDebugUnitTest --tests '*SuwayomiBackupAuditTest' 2>&1 | tee "$RUNNER_TEMP/mihon-gradle.log"; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ] || ! grep -q 'status code 429' "$RUNNER_TEMP/mihon-gradle.log"; then
+              exit 1
+            fi
+            sleep "$((15 * attempt))"
+          done

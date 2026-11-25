@@ -1,6 +1,6 @@
 # Audit completion ledger — mandatory before implementation
 
-Updated 2026-11-25. User explicitly requested completion of the audit after adding physical organization and duplicates. Do not treat this ledger as sign-off. No runtime/platform tests executed. Status: **OPEN**.
+Updated 2026-11-25 Toronto. Status **OPEN**. Pass 22 qualified fresh installation of the published Suwayomi MSI on a hosted runner and recorded the owner-approved baseline. Target-specific tests, scoped source and licensing review and optional feature decisions remain open. [Pass 21](PASS21.md) · [Pass 22](PASS22.md) · [Approved baseline](../IMPLEMENTATION-DECISIONS.md)
 
 Evidence: I = indexed paths; C = selected source declarations/logic inspected; S = selected test source inspected; R = release note checked; U = outstanding full behavior review. No "complete" status for modules with uninspected consumers, authorization, migrations or runtime tests.
 
@@ -18,14 +18,14 @@ Evidence: I = indexed paths; C = selected source declarations/logic inspected; S
 
 | Gate | State | Required evidence to close |
 |---|---|---|
-| G1 All seven pinned tracked trees indexed | Done | Existing indexes, no truncation |
-| G2 Filename-only candidates resolved | Done for prior 23 | Pass 3 exact path/source references; narrow compound claims |
-| G3 Complete feature and setting audit | Open | For each module enumerate route/schema/settings/UI, actual logic + defaults and tests, or documented exclusion; deduplicate canonical requirements |
-| G4 Organization/dedup correctness | Open | Read mutation and recovery call paths, prove content/coverage/mount rules; all [acceptance fixtures](../FILE-ORGANIZATION.md) |
-| G5 Extension compatibility | Open | Versioned GraphQL contracts and authorized fixture, older/newer APK/JAR formats, legacy/current backup import, trust/security |
-| G6 Release/licensing | Partial | Published tags and commit comparisons recorded in pass 4; seven tag source checks; remaining full release diff, licenses, external datasets/models, premium and extension rights |
-| G7 Runtime verification | Blocked in this session | Build upstreams in appropriate environment, run tests and Windows/Unraid storage fixtures; Android/Suwayomi compatibility fixtures. No actual target hosts or build results available in this audit. |
-| G8 Owner selection and implementation | Not approved | Complete remaining evidence; select features, technology/license and safety settings; no implementation before gates addressed |
+| G1 All seven pinned tracked trees indexed | Done | Pass 19 matched each of 13,716 indexed paths and its byte count to Git. |
+| G2 Prior filename-only candidates resolved | Done | All 23 historical candidates were resolved in Pass 3. Pass 19 verified the 356 retained atomic paths. |
+| G3 Complete feature and setting audit | Open | Finish route/schema/settings/UI, defaults, consumers, authorization and migration review, or record a module exclusion with its reasoning. Include the progress authority and client import path in the required-outcome review. The Pass 20 coverage command reports the remaining path inventory. [Remote reading requirements](../REMOTE-READING.md) |
+| G4 Organization and duplicate handling | Partial | Linux tests substantiate selected safety and recovery behavior, and hosted Windows passed basic NTFS fixtures. Complete mutation, content/edition identity and recovery coverage on target NTFS/UNC and Unraid pool/share storage. [Acceptance fixtures](../FILE-ORGANIZATION.md) |
+| G5 Extension compatibility | Partial | Published `v2.4.2373` downloaded via synthetic JAR and APK fixtures. Both audited Mihon revisions decoded the synthetic backup on the JVM. Qualify ambiguous acknowledgement handling, store approval, additional format/version cases, scoped roles, Android restore and verified organizer import. [Pass 22](PASS22.md) |
+| G6 Release and licensing | Partial | All tags and root licenses checked against Git. Verify changed behavior for each selected capability, exact distribution manifests and transitive SBOMs, redistribution rights for chosen assets/dependencies, and external service entitlements. |
+| G7 Runtime verification | Partial | Hosted Windows covers the upstream portable and checksum-verified MSI fixtures, and Docker covers selected storage behavior. Finish Windows client behavior, actual Unraid pool/share and mount tests, and Android device interoperability. Live reading handoff and optional upload and subscription cases are product acceptance tests. [Qualification matrix](DEPLOYMENT-QUALIFICATION.md) · [Remote reading acceptance cases](../REMOTE-READING.md#acceptance-cases) |
+| G8 Owner selection and implementation | Baseline approved, contingent on audit | The approved stack, original-code license, external companion and initial mutation policy apply after the audit gates are met. The owner added a single primary for the main library and its reading progress, with optional device uploads and additional server subscriptions. [Approved baseline](../IMPLEMENTATION-DECISIONS.md) · [Selection register](../FEATURE-SELECTION.csv) |
 
 No destructive automation is approved. Do not mark gates G3–G8 complete based on file counts or test names. An exhaustive source audit requires further module-level inspection; report what was actually examined rather than claiming parity. 
 
@@ -92,3 +92,19 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 18 progress
 
 [Deployment and restore review](PASS18.md) cites 18 pinned files across all seven references, two test-source files (not executed), [eight artifact dispositions](PASS18-ARTIFACTS.csv) and [ten proposed qualification scenarios](PASS18-QUALIFICATION.csv). [Evidence](PASS18-EVIDENCE.csv). Windows install guards, Docker user mapping and embedded DB startup, partial restore/rollback boundaries, dependency hash and mutable launcher evidence recorded. G3/G4/G5 open; G6 partial; G7 not run; G8 pending. Pass 17 coverage historical, no new cumulative total; original 356 candidates, 126 groups and 70 decisions unchanged. No implementation, redistribution or destructive approval.
+
+## Pass 19 verification
+
+Verified all seven trees, all seven release tags, 732 structured pinned citations and the 70/356/126 selection reconciliation. Reproduced the Pass 14 and 17 coverage snapshots and calculated 434 distinct cited paths through Pass 18. Recorded the historical one-line count and range corrections and exact release diff counts. [Verification record](PASS19.md)
+
+## Pass 20 results
+
+Ran the available Linux checks for organization, duplicate handling, authorization, the Suwayomi download and backup contract, and artifact verification. The targeted suites had 861 passing tests across five upstreams. Confirmed the `v2.4.2373` empty-queue behavior in two published artifacts and recorded a separate Manga-arr test setup failure. [Source evidence](PASS20-EVIDENCE.csv) · [Runtime and artifact results](PASS20.md)
+
+## Pass 21 results
+
+Both hosted jobs passed. Windows Server 2025 exercised the portable Suwayomi ZIP, chapter download and NTFS checks. Ubuntu Docker exercised separate configuration and media volumes, UID:GID `99:100` and restart persistence. The local Linux Docker replay also passed. Both hosted jobs observed a GraphQL timeout after successful file creation. Windows installer, actual Unraid pool/share and Android/Mihon fixture outcomes are still pending. [Qualification record](PASS21.md) · [GitHub Actions run](https://github.com/desapoint/manga-organizer/actions/runs/45664698558)
+
+## Pass 22 results
+
+The latest hosted run passed the checksum-verified upstream Windows MSI install, download and uninstall and both Mihon wire-codec tests. The external synthetic APK passed the local Docker download and restart checks. The owner approved the initial baseline contingent on the audit gates. Local Windows client and Unraid storage behavior, Android device restore, scoped module review and applicable distribution obligations remain open. [Pass 22](PASS22.md) · [Hosted run](https://github.com/desapoint/manga-organizer/actions/runs/45668061469)

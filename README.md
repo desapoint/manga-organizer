@@ -2,7 +2,7 @@
 
 A documentation-first project for a unified, self-hosted manga library, acquisition manager and reader on Windows and Unraid/Docker.
 
-**Status:** source audit and feature selection; no runnable app yet.
+**Status** — the owner has approved the initial implementation baseline, and the audit remains open.
 
 ## Start here
 
@@ -14,8 +14,10 @@ A documentation-first project for a unified, self-hosted manga library, acquisit
 - [Editable parent selection CSV](docs/FEATURE-SELECTION.csv)
 - [Mihon/Suwayomi extension integration](docs/EXTENSIONS.md)
 - [File organization and duplicate management (required)](docs/FILE-ORGANIZATION.md)
+- [Remote reading and device sync](docs/REMOTE-READING.md)
 - [Proposed architecture and deployment](docs/ARCHITECTURE.md)
+- [Approved implementation baseline](docs/IMPLEMENTATION-DECISIONS.md)
 - [Roadmap and acceptance gates](docs/ROADMAP.md)
 - [Contributing and audit protocol](CONTRIBUTING.md)
 
-Goal: combine the best workflows into one application with one library, one queue and a shared WebUI. Windows and Unraid deployment Mihon-compatible extension downloading, file organization and duplicate detection/handling are requested requirements. Other feature choices are pending owner selection. No upstream code imported; licensing and stack decisions remain provisional.
+The project targets a main library, one queue and a shared WebUI. One Windows or Linux server hosts the main library and validates reading progress for Android, Windows and Linux clients. The project also requires Mihon-compatible extension downloads, physical file organization and duplicate handling. Clients may optionally upload local files or subscribe to additional server libraries. [Audit completion ledger](docs/source-audit/COMPLETION-LEDGER.md)

@@ -80,6 +80,8 @@ F69 and F70 are required user outcomes; see [file organization specification](FI
 
 ## Selection rules
 
+The owner requires server-hosted reading and progress synchronization for Android, Windows and Linux clients. Optional device uploads go to the primary, and optional subscriptions expose other server libraries under separate identities. These requirements specify the relevant portions of F25, F41 and F68. The full parent clusters include additional behaviors awaiting selection. [Remote reading requirements](REMOTE-READING.md)
+
 Choose Include / Optional / Defer / Exclude for Pending features. Required rows F12, F57, F58, F69 and F70 record explicit requirements; exact implementation remains open. Split clusters when individual choices differ. Preserve evidence for exclusions. Priorities are proposals, not approvals. Add prerequisites, acceptance criteria and references to every accepted issue/PR/test. One scheduler, source-independent chapter identity, preserve original files, distinguish managed from read-only, one authoritative remote server, and explicit progress rather than prefetch-counting are proposed defaults.
 
 ## Pass 5 integration clarifications
@@ -88,4 +90,4 @@ See [integration inventory](source-audit/INTEGRATION-INVENTORY.csv) and [pass 5]
 
 ## Pass 6 reader/data clarifications
 
-See [pass 6](source-audit/PASS6.md) and [reader/data contracts](source-audit/READER-DATA-CONTRACTS.md). F29 image EPUB/PDF not equivalent to F45 text EPUB; F42 chapter bookmarks, page bookmarks, annotation anchors and incognito are separate; F35/F36 presentation transforms must not change logical anchors; F41 position, explicit/inferred completion, real sessions, rereads and external tracker synchronization have distinct provenance. F49/F50 per-user library grants, private copies, offline cache and tracker privacy must not rely on shared file identity. F54 migration backup, legacy owner mapping and restore verification required. F69/F70 preserve user state during rename/relink/replacement. All optional reader choices pending.
+See [pass 6](source-audit/PASS6.md) and [reader/data contracts](source-audit/READER-DATA-CONTRACTS.md). F29 image EPUB/PDF not equivalent to F45 text EPUB; F42 chapter bookmarks, page bookmarks, annotation anchors and incognito are separate; F35/F36 presentation transforms must not change logical anchors; F41 position, explicit/inferred completion, real sessions, rereads and external tracker synchronization have distinct provenance. F49/F50 per-user library grants, private copies, offline cache and tracker privacy must not rely on shared file identity. F54 migration backup, legacy owner mapping and restore verification required. F69/F70 preserve user state during rename/relink/replacement.
