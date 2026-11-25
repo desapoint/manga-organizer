@@ -1,6 +1,6 @@
 # Proposed architecture
 
-The approved baseline uses .NET 10 / ASP.NET Core, React/TypeScript and SQLite in local appdata after the audit gates are met. One primary on Windows or Linux, including Unraid Docker, owns the main library, scheduling and progress validation. Android, Windows and Linux connect as clients. The shared WebUI is the initial client candidate. [Approved baseline](IMPLEMENTATION-DECISIONS.md) · [Server and client responsibilities](REMOTE-READING.md)
+The approved baseline uses .NET 10 / ASP.NET Core, React/TypeScript and SQLite in local appdata. One primary on Windows or Linux, including Unraid Docker, owns the main library, scheduling and progress validation. Android, Windows and Linux connect as clients. The shared WebUI is the initial client candidate. [Approved baseline](IMPLEMENTATION-DECISIONS.md) · [Server and client responsibilities](REMOTE-READING.md)
 
 ```mermaid
 flowchart TD
@@ -30,7 +30,7 @@ Canonical data: work -> edition (language/publication/version) -> volume/chapter
 
 See [FILE-ORGANIZATION.md](FILE-ORGANIZATION.md). One physical-file inventory and fingerprint index shared by scanning, importing, renaming and deduplication. Separate file identity (path and filesystem object), content identity (hashes and ordered page manifests), and bibliographic identity (work/edition/chapter/coverage). A read-only scan produces proposals; a permission-checked executor revalidates identity, coverage, mount and target state before any mutation. Journal operations, stage cross-filesystem copies, preserve references, quarantine where permitted and support recovery. Neither Windows remote client nor another worker may mutate server files independently.
 
-## Unraid layout (proposed, no image yet)
+## Proposed Unraid library layout
 
 | Host example | Container | Purpose |
 | --- | --- | --- |

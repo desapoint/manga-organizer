@@ -1,4 +1,4 @@
-# Audit completion ledger — mandatory before implementation
+# Audit completion ledger
 
 Updated 2026-11-25 Toronto. Status **OPEN**. Pass 22 qualified fresh installation of the published Suwayomi MSI on a hosted runner and recorded the owner-approved baseline. Target-specific tests, scoped source and licensing review and optional feature decisions remain open. [Pass 21](PASS21.md) · [Pass 22](PASS22.md) · [Approved baseline](../IMPLEMENTATION-DECISIONS.md)
 
@@ -25,7 +25,7 @@ Evidence: I = indexed paths; C = selected source declarations/logic inspected; S
 | G5 Extension compatibility | Partial | Published `v2.4.2373` downloaded via synthetic JAR and APK fixtures. Both audited Mihon revisions decoded the synthetic backup on the JVM. Qualify ambiguous acknowledgement handling, store approval, additional format/version cases, scoped roles, Android restore and verified organizer import. [Pass 22](PASS22.md) |
 | G6 Release and licensing | Partial | All tags and root licenses checked against Git. Verify changed behavior for each selected capability, exact distribution manifests and transitive SBOMs, redistribution rights for chosen assets/dependencies, and external service entitlements. |
 | G7 Runtime verification | Partial | Hosted Windows covers the upstream portable and checksum-verified MSI fixtures, and Docker covers selected storage behavior. Finish Windows client behavior, actual Unraid pool/share and mount tests, and Android device interoperability. Live reading handoff and optional upload and subscription cases are product acceptance tests. [Qualification matrix](DEPLOYMENT-QUALIFICATION.md) · [Remote reading acceptance cases](../REMOTE-READING.md#acceptance-cases) |
-| G8 Owner selection and implementation | Baseline approved, contingent on audit | The approved stack, original-code license, external companion and initial mutation policy apply after the audit gates are met. The owner added a single primary for the main library and its reading progress, with optional device uploads and additional server subscriptions. [Approved baseline](../IMPLEMENTATION-DECISIONS.md) · [Selection register](../FEATURE-SELECTION.csv) |
+| G8 Owner selection and implementation | Baseline approved and foundation started | The owner asked to merge the audit and start implementation. The foundation uses the approved stack and original-code license. The original evidence and platform gates still apply to dependent capabilities and releases. The primary serves the main library and its reading progress, with optional device uploads and additional server subscriptions. [Approved baseline](../IMPLEMENTATION-DECISIONS.md) · [Selection register](../FEATURE-SELECTION.csv) |
 
 No destructive automation is approved. Do not mark gates G3–G8 complete based on file counts or test names. An exhaustive source audit requires further module-level inspection; report what was actually examined rather than claiming parity. 
 

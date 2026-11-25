@@ -1,0 +1,62 @@
+name: Primary server foundation
+
+on:
+  pull_request:
+    paths: ['src/**', 'client/**', 'tests/foundation_smoke.py', 'Dockerfile', '.dockerignore', '.github/workflows/foundation.yml']
+  push:
+    branches: [main]
+    paths: ['src/**', 'client/**', 'tests/foundation_smoke.py', 'Dockerfile', '.dockerignore', '.github/workflows/foundation.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Published server (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            executable: MangaOrganizer.Server.exe
+          - os: ubuntu-24.04
+            executable: MangaOrganizer.Server
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - working-directory: client
+        run: |
+          npm ci
+          npm run build
+      - run: dotnet restore src/MangaOrganizer.Server --locked-mode
+      - run: dotnet publish src/MangaOrganizer.Server --no-restore -c Release -o publish
+      - run: python tests/foundation_smoke.py --app publish/${{ matrix.executable }}
+
+  docker:
+    name: Non-root Docker server (amd64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: docker build --platform linux/amd64 -t manga-organizer:smoke .
+      - run: python tests/foundation_smoke.py --image manga-organizer:smoke

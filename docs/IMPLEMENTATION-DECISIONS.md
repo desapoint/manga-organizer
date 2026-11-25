@@ -2,6 +2,8 @@
 
 **Owner-approved baseline, contingent on the audit gates.** On 2026-11-25 Toronto, the owner approved starting with Mihon-compatible extension downloads, standalone Windows, a Docker/Unraid WebUI, physical file organization and duplicate management. The baseline uses .NET 10, React/TypeScript and SQLite, Apache-2.0 for original code, a separately installed Suwayomi companion and read-only library roots by default. The owner added remote reading and progress sync across Android, Windows and Linux through one primary server, with optional client uploads and subscriptions to additional servers. [Remote reading requirements](REMOTE-READING.md) · [Audit completion ledger](source-audit/COMPLETION-LEDGER.md)
 
+The owner then asked to merge the audit work and start implementation. The first slice covers the shared WebUI, owner authentication and a persistent primary-server identity. The applicable evidence and platform gates remain in the ledger for subsequent features and release qualification.
+
 | Decision | Proposed choice | First acceptance evidence |
 |---|---|---|
 | Initial scope | Start with the shared UI/API, read-only multi-root inventory, exact file identity and duplicate review. Implement server-hosted reading and progress handoff using that shared catalog. Follow with reviewed organization and the extension download and import workflow. | The same synthetic library scans on Windows and Docker. File bytes and paths survive the scan. Exact copies, hardlink aliases and unknown identities appear separately. An authenticated reader resumes a chapter opened on another platform. |
