@@ -40,3 +40,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 6 progress
 
 [Reader and database audit](PASS6.md) and [proposed reader/data contracts](READER-DATA-CONTRACTS.md) extend G3/G4/G5 with reader prefs/UI, progress conflicts, private state, schema/entity and selected migrations across all seven. Still open: complete settings-to-consumer/renderer/ACL traces, relationship cascade and migration histories, provider-specific contracts and full runtime fixture results. G6 license/dependency/packaging audit next; G7 target qualification still not executed; G8 no approval. Do not infer full data safety from schema or declarations.
+
+## Pass 7 progress
+
+[License and deployment audit](PASS7.md) verifies all seven root license texts and selected build/manifests, separate asset rights and target test plan. G6 remains partial: exact transitive SBOM, license scope, source headers, model/dataset/extension terms, companion image repository and release-specific verification pending. G7 no actual target tests; [qualification matrix](DEPLOYMENT-QUALIFICATION.md) all not run. G3/G4/G5 still open; G8 no owner approval. Do not treat this as release certification.

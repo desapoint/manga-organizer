@@ -24,3 +24,7 @@ Reviewed 2026-11-24 (Toronto). Default-branch heads observed during review; docu
 ## Reuse policy
 
 Compare behavior first. Review license compatibility, attribution, redistribution, model/data/plugin terms before copying anything. GPL/AGPL/MPL/Apache obligations differ; Maki reports MangaBaka-original data under CC BY-NC-SA 4.0 and some enhancement models noncommercial. Kavita+ is paid; independently designed alternatives must not bypass subscriptions. Only authorized source access, respecting rate limits, terms and access controls. Third-party extensions are separately licensed and trusted by the operator; do not bundle them by default. Project license remains undecided.
+
+## Pass 7 license and deployment evidence
+
+All seven pinned root license texts rechecked; see [pass 7](docs/source-audit/PASS7.md), [asset rights register](docs/source-audit/LICENSE-ASSET-REGISTER.csv) and [deployment qualification](docs/source-audit/DEPLOYMENT-QUALIFICATION.md). No project license chosen, no upstream code reused; separate data, weights, native dependency and service rights still open.

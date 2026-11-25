@@ -99,3 +99,7 @@ The owner explicitly required file organization and duplicate handling. [File or
 ## Pass 6 — reader and database architecture
 
 [Pass 6](PASS6.md), [evidence CSV](PASS6-EVIDENCE.csv), [reader and data contracts](READER-DATA-CONTRACTS.md). 49 distinct pinned files reviewed including repeat retrievals; 49 added candidates, total 330. Separates logical media identity, physical bytes, presentation, user progress and privacy. No executed migrations/runtime tests, no approved stack or new optional features. Gates remain open.
+
+## Pass 7 — licensing and packaging
+
+[Pass 7](PASS7.md), [evidence CSV](PASS7-EVIDENCE.csv), [license and asset register](LICENSE-ASSET-REGISTER.csv), [deployment qualification](DEPLOYMENT-QUALIFICATION.md). 54 pinned files inspected, 17 rights groups, 26 new candidates, 356 total. All seven root license texts confirmed, MuPDF and noncommercial data/model risks documented. No executed builds or target tests; full SBOM, legal choices and runtime gates open.

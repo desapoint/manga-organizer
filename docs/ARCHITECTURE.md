@@ -46,3 +46,7 @@ Windows: installer/portable proposal, AppData config, chosen roots, loopback def
 ## Safety
 
 Dry-run adoption/rename, managed roots opt-in, stage/verify before atomic publish; never overwrite ambiguous files; protect seeding hardlinks and page provenance, durable jobs. Reject archive traversal/bombs, symlink escapes, oversized resources. Missing or unexpectedly empty mount fences mutations, never mass delete. Quarantine/restore, consistent DB+secrets+version backup, restore/rollback tests. Nonroot, scoped auth, CSRF/host validation, encrypted integration secrets, masked logs, outbound URL validation, per-source limits. Authorized content only. License review before external datasets/models or upstream code.
+
+## Pass 7 packaging constraints
+
+[Deployment qualification](source-audit/DEPLOYMENT-QUALIFICATION.md) compares Windows native tray and Electron wrappers, Docker runtime permissions and target fixture gates. Proposed port and framework remain unapproved. DB local appdata; explicit nonroot runtime and no recursive media chown; one data mount for eligible hardlinks, verify actual filesystem; signed installer/update and artifact-specific SBOM before release. All tests not run.
