@@ -73,6 +73,11 @@
 | F67 | Mihon mobile reading categories and migration | ? | P | P | ? | ? | P | D | MH |
 | F68 | Single unified download queue and authoritative library | P | D | P | D | P | P | ? | MK/UC |
 
+| F69 | Physical file organization and bulk rename/move | D | D | P | D | P | ? | ? | KR/KK/MK |
+| F70 | Duplicate detection, review and safe resolution | P | D | D | P | ? | ? | ? | MK/UC/KK |
+
+F69 and F70 are required user outcomes; see [file organization specification](FILE-ORGANIZATION.md). The new rows summarize existing documented/inspected workflows, not complete parity. F01/F25/F27/F28/F32/F33/F34 are related prerequisites or overlapping clusters, whose additional scope remains pending. Similarity detection and automatic cleanup policies are proposed, not approved.
+
 ## Selection rules
 
-Choose Include / Optional / Defer / Exclude for Pending features. Required rows F12, F57 and F58 record explicit requirements; exact implementation remains open. Split clusters when individual choices differ. Preserve evidence for exclusions. Priorities are proposals, not approvals. Add prerequisites, acceptance criteria and references to every accepted issue/PR/test. One scheduler, source-independent chapter identity, preserve original files, distinguish managed from read-only, one authoritative remote server, and explicit progress rather than prefetch-counting are proposed defaults.
+Choose Include / Optional / Defer / Exclude for Pending features. Required rows F12, F57, F58, F69 and F70 record explicit requirements; exact implementation remains open. Split clusters when individual choices differ. Preserve evidence for exclusions. Priorities are proposals, not approvals. Add prerequisites, acceptance criteria and references to every accepted issue/PR/test. One scheduler, source-independent chapter identity, preserve original files, distinguish managed from read-only, one authoritative remote server, and explicit progress rather than prefetch-counting are proposed defaults.

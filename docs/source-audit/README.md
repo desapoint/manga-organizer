@@ -80,3 +80,7 @@ Combined with 539 first-pass signals: **2,573 extracted identifiers/candidate de
 ### Mandatory gate
 
 Source audit remains open. Full path enumeration and source retrieval are not exhaustive logic review. Remaining work: inspect all route implementations and settings consumers, provider and client adapters, permissions and migrations, actual releases and tests; verify runtime on target platforms; resolve duplicate candidates and obtain owner approval. No implementation has started.
+
+## Focused follow-up: physical files and duplicates
+
+The owner explicitly required file organization and duplicate handling. [File organization and duplicate management](../FILE-ORGANIZATION.md) records five additional pinned implementation-file inspections (KR rename, MK duplicate groups and record repair, UC fingerprint, KK rename planner), their limitations, and proposed unified requirements. This supplements the historical pass 1/2 metrics above; it is not a claim of runtime testing or exhaustive upstream parity.

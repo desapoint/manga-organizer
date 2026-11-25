@@ -13,8 +13,9 @@ A documentation-first project for a unified, self-hosted manga library, acquisit
 - [Feature selection matrix](docs/FEATURE-MATRIX.md)
 - [Editable parent selection CSV](docs/FEATURE-SELECTION.csv)
 - [Mihon/Suwayomi extension integration](docs/EXTENSIONS.md)
+- [File organization and duplicate management (required)](docs/FILE-ORGANIZATION.md)
 - [Proposed architecture and deployment](docs/ARCHITECTURE.md)
 - [Roadmap and acceptance gates](docs/ROADMAP.md)
 - [Contributing and audit protocol](CONTRIBUTING.md)
 
-Goal: combine the best workflows into one application with one library, one queue and a shared WebUI. Windows and Unraid deployment and Mihon-compatible extension downloading are requested requirements. Other feature choices are pending owner selection. No upstream code imported; licensing and stack decisions remain provisional.
+Goal: combine the best workflows into one application with one library, one queue and a shared WebUI. Windows and Unraid deployment Mihon-compatible extension downloading, file organization and duplicate detection/handling are requested requirements. Other feature choices are pending owner selection. No upstream code imported; licensing and stack decisions remain provisional.

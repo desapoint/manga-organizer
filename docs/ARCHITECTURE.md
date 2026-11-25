@@ -21,9 +21,13 @@ flowchart TD
  A --> T[Trackers and notifications]
 ```
 
-Modules: catalog, scanner, import planner, policy/scoring, queue, reader, auth, progress, integrations, diagnostics, backups. Start modular monolith; Suwayomi is the proposed isolated extension service, optional external clients. Versioned adapter contracts: metadata lookup; source search/list/fetch; extension install/configure; indexer search; download submit/status/cancel; import plan/commit; progress and notifications.
+Modules: catalog, scanner, file organizer, duplicate index and resolution planner, import planner, policy/scoring, queue, reader, auth, progress, integrations, diagnostics, backups. Start modular monolith; Suwayomi is the proposed isolated extension service, optional external clients. Versioned adapter contracts: metadata lookup; source search/list/fetch; extension install/configure; indexer search; download submit/status/cancel; import plan/commit; progress and notifications.
 
 Canonical data: work -> edition (language/publication/version) -> volume/chapter identity -> release (group/source/quality/coverage) -> file (root-relative path, format, hashes, ownership/provenance) -> page manifest. A file can cover many chapters and a chapter many releases. Use exact decimal/part identities, never float or title-only merges. Users hold independent progress, bookmarks, permissions. Jobs have retries and idempotency keys.
+
+## File organization and duplicate management (required)
+
+See [FILE-ORGANIZATION.md](FILE-ORGANIZATION.md). One physical-file inventory and fingerprint index shared by scanning, importing, renaming and deduplication. Separate file identity (path and filesystem object), content identity (hashes and ordered page manifests), and bibliographic identity (work/edition/chapter/coverage). A read-only scan produces proposals; a permission-checked executor revalidates identity, coverage, mount and target state before any mutation. Journal operations, stage cross-filesystem copies, preserve references, quarantine where permitted and support recovery. Neither Windows remote client nor another worker may mutate server files independently.
 
 ## Unraid layout (proposed, no image yet)
 

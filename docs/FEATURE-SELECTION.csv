@@ -67,3 +67,5 @@ F65,Mihon connector and progress interoperability,SW/UC,Pending,Later,
 F66,Additional trackers Shikimori Bangumi Hikka,MH,Pending,Later,
 F67,Mihon mobile reading categories and migration,MH,Pending,Later,
 F68,Single unified download queue and authoritative library,MK/UC,Pending,Later,
+F69,Physical file organization and bulk rename/move,KR/KK/MK,Required,Foundation,User requested file organization; detailed choices in FILE-ORGANIZATION.md
+F70,Duplicate detection review and safe resolution,MK/UC/KK,Required,Foundation,User requested duplicate finding and handling; destructive automation not approved

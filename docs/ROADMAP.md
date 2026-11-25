@@ -6,7 +6,8 @@ Proposed sequencing; not release dates or approval.
 | --- | --- | --- |
 | 0 | Complete source/runtime audit, owner feature selection, stack/license | Evidence and acceptance criteria for each selected feature |
 | 1 | Shared API/UI, auth, config, DB, Windows/Docker smoke builds | Same fixture on both, restart persists |
-| 2 | Read-only library scan, identity, metadata, safe import | Original bytes untouched, fractional/omnibus/edition fixtures, mount loss safe |
+| 2A | Read-only library scan, identity, metadata, duplicate discovery | Exact duplicates, repacks, aliases, translations and overlaps correctly classified; original bytes untouched |
+| 2B | Required physical file organization and duplicate resolution | Preview and reviewed execution; rename/move/relink/quarantine/restore; no overwrite or lost coverage; mount loss, hardlink and crash recovery fixtures pass on Windows and Unraid |
 | 3 | Required Suwayomi adapter, authorized source download, persistent queue | End-to-end extension fixture Windows and Unraid, retry/idempotency |
 | 4 | Selected torrent/Usenet, policy, scheduler, import | Pack coverage, client/path mapping, conflict/failure tests |
 | 5 | Reader, progress, dashboard, offline | Resume across devices, user isolation, prefetch not read |
@@ -18,4 +19,4 @@ Tests: corrupt archive, traversal, oversized images, decimals/splits, language e
 
 ## Decisions
 
-Owner requested Windows, Docker/Unraid WebUI and Mihon-compatible extension downloading; all other features await selection. Decide standalone/remote details, formats, acquisition policies, trackers, privacy/household, optional AI and license/distribution intent. Use [selection CSV](FEATURE-SELECTION.csv).
+Owner requested Windows, Docker/Unraid WebUI, Mihon-compatible extension downloading, physical file organization and duplicate finding/handling. F69/F70 are foundation requirements; see [specification](FILE-ORGANIZATION.md). All other feature scope awaits selection. Decide standalone/remote details, formats, acquisition policies, trackers, privacy/household, optional AI and license/distribution intent. Use [selection CSV](FEATURE-SELECTION.csv).
