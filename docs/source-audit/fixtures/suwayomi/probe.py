@@ -2,6 +2,7 @@
 
 import argparse
 import base64
+import gzip
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -28,6 +29,19 @@ class Engine:
 
     def graphql(self, query):
         return self.request(json.dumps({"query": query}).encode(), "application/json")
+
+    def export_backup(self, manga_id, output):
+        favorite = self.graphql(f"mutation {{updateManga(input:{{id:{manga_id},patch:{{inLibrary:true}}}}){{manga{{id inLibrary}}}}}}")
+        assert favorite["data"]["updateManga"]["manga"]["inLibrary"], favorite
+        result = self.graphql("mutation {createBackup(input:{includeChapters:true}){url}}")
+        path = result["data"]["createBackup"]["url"]
+        assert path.startswith("/api/graphql/files/backup/"), result
+        request = Request(self.endpoint.removesuffix("/api/graphql") + path, headers={"Authorization": AUTH})
+        with self.opener.open(request, timeout=40) as response:
+            backup = response.read()
+        assert b"Synthetic Audit Work" in gzip.decompress(backup)
+        output.write_bytes(backup)
+        print("Exported a Suwayomi gzip backup containing the synthetic title")
 
     def upload_extension(self, jar):
         query = """mutation($file: Upload!) {
@@ -99,6 +113,7 @@ def verify_download(engine, fixture_dir):
             assert all("Timed out waiting" in item["message"] for item in result["errors"]), result
             print("startDownloader reported a GraphQL timeout after the chapter was downloaded")
     print(f"Synthetic chapter {chapter_id} downloaded through source {SOURCE_ID}")
+    return work["id"]
 
 
 if __name__ == "__main__":

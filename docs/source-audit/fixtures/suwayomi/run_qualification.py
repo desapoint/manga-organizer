@@ -59,8 +59,12 @@ def verify_restart(engine):
 def windows(archive, gradle_lib, root):
     with ZipFile(archive) as package:
         package.extractall(root / "engine")
-    jar = next((root / "engine").rglob("Suwayomi-Server.jar"))
-    java = next((root / "engine").rglob("java.exe"))
+    windows_engine(root / "engine", gradle_lib, root)
+
+
+def windows_engine(engine_dir, gradle_lib, root):
+    jar = next(engine_dir.rglob("Suwayomi-Server.jar"))
+    java = next(engine_dir.rglob("java.exe"))
     fixture = root / "fixture"
     data = root / "data"
     data.mkdir()
@@ -99,7 +103,7 @@ def docker(*arguments, check=True):
     return subprocess.run(["docker", *arguments], check=check, text=True, stdout=subprocess.PIPE).stdout.strip()
 
 
-def linux(gradle_lib, root):
+def linux(gradle_lib, root, backup_output=None):
     run = "manga-audit-" + uuid.uuid4().hex[:10]
     engine, provider, config, media = (f"{run}-{name}" for name in ("engine", "provider", "config", "media"))
     docker("network", "create", run)
@@ -128,7 +132,7 @@ def linux(gradle_lib, root):
         assert docker("exec", engine, "id", "-g") == "100"
         api = Engine(ENGINE_PORT)
         assert wait_for_engine(api) == "v2.4.2373"
-        verify_download(api, fixture)
+        manga_id = verify_download(api, fixture)
         downloaded = root / "docker-downloads"
         docker("cp", f"{engine}:/media/downloads", str(downloaded))
         verify_page(downloaded, fixture)
@@ -138,6 +142,8 @@ def linux(gradle_lib, root):
         docker("cp", f"{engine}:/media/downloads", str(persisted))
         verify_page(persisted, fixture)
         print("Docker engine ran at UID:GID 99:100 and kept the fixture across restart")
+        if backup_output is not None:
+            Engine(ENGINE_PORT).export_backup(manga_id, backup_output)
     except Exception:
         print(docker("logs", "--tail", "50", engine, check=False), file=sys.stderr)
         raise
@@ -150,10 +156,15 @@ def linux(gradle_lib, root):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("gradle_lib", type=Path)
-    parser.add_argument("--windows-archive", type=Path)
+    windows_source = parser.add_mutually_exclusive_group()
+    windows_source.add_argument("--windows-archive", type=Path)
+    windows_source.add_argument("--windows-install-dir", type=Path)
+    parser.add_argument("--backup-output", type=Path, help="Write a synthetic backup from the Linux fixture")
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="manga-audit-") as temporary:
         if args.windows_archive:
             windows(args.windows_archive.resolve(), args.gradle_lib.resolve(), Path(temporary))
+        elif args.windows_install_dir:
+            windows_engine(args.windows_install_dir.resolve(), args.gradle_lib.resolve(), Path(temporary))
         else:
-            linux(args.gradle_lib.resolve(), Path(temporary))
+            linux(args.gradle_lib.resolve(), Path(temporary), args.backup_output)
