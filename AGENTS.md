@@ -6,6 +6,8 @@ For feature research, use docs/source-audit/README.md, the pinned per-project re
 
 Server-hosted reading and cross-device progress are required. One Windows or Linux primary holds the main library and validates its reading progress. Android, Windows and Linux devices act as clients. Optional device uploads go through the primary's verified import path. Optional subscriptions to other servers keep separate identities and credentials. See docs/REMOTE-READING.md.
 
+Use docs/IMPLEMENTATION-DECISIONS.md and docs/FEATURE-SELECTION.csv for the approved scope. Check the owner notes when a row groups several capabilities. Deferred features require a later owner decision.
+
 File organization and deduplication are core features (F69/F70), not optional reader extras. Read-only discovery first; never remove a file based on title, size, weak fingerprint or similar-looking pages. Protect hardlinks, alternate editions, progress and unique chapter/page coverage. No automatic permanent deletion without explicit owner policy; preview/revalidate/journal/restore all approved mutations. See docs/FILE-ORGANIZATION.md for requirements and acceptance gates.
 
 Audit completion is explicitly requested. Consult docs/source-audit/COMPLETION-LEDGER.md and PASS3.md. Close module behavior, release/license and runtime gates with recorded evidence. Foundation smoke tests verify the development build and retain the target qualification gates.

@@ -5,9 +5,19 @@ The owner requires one primary server for the main library and its reading progr
 ## Server and client responsibilities
 
 - The primary serves the main library from its configured storage. It owns the canonical catalog and validates reading-progress updates for that library. Reading on the server machine uses the same client and server contract as remote reading.
-- An authenticated reader can open the same chapter on Android, Windows and Linux and resume at the position saved by another device. The shared WebUI is the initial client candidate. A native client and third-party reader integrations are separate choices.
-- Each server subscription has its own endpoint, credentials and library namespace. Switching servers selects a different library. The client keeps cached item IDs and any progress for that context separate, even when servers use the same title, account name or chapter ID. The selected primary remains the authority for the main library. Progress synchronization for subscribed libraries needs a separate policy.
+- The first reader uses one owner account in the shared WebUI. The owner can open the same chapter on Android, Windows and Linux and resume at the position saved by another device. The reader offers right-to-left paging and continuous vertical scrolling for webtoons. Native clients, household accounts, offline reading and third-party reader integrations are deferred.
+- Each server subscription has its own endpoint, credentials and library namespace. Switching servers selects a different library. The client keeps cached item IDs and any progress for that context separate, even when servers use the same title, account name or chapter ID. The selected primary remains the authority for the main library. Progress synchronization for subscribed libraries is deferred pending a separate policy.
 - Use authenticated API access for remote reading. Library access and progress updates are scoped to the account, and each connection uses credentials issued by its server. A server subscription grants access only to what that server exposes to the account.
+
+## Reader formats
+
+| Stage | Included formats | Acceptance |
+|---|---|---|
+| First reader | CBZ and image ZIP with JPEG, PNG and WebP pages | Open a chapter through the WebUI, read in page order and resume from a second client. |
+| Next formats | CBR/RAR and loose image folders | Verify supported RAR variants and folder page order. Use the same reading and progress contract as CBZ and ZIP. |
+| Later formats | CB7/7z, PDF and fixed-layout EPUB | Qualify each decoder on Windows and Docker and verify that its page anchors survive ordinary client handoffs. |
+
+Reflowable EPUB and text annotations are deferred. The format stages are implementation targets. [Current catalog support](FILE-ORGANIZATION.md#read-only-catalog)
 
 ## Progress validation
 

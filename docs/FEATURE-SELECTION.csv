@@ -1,71 +1,71 @@
 ID,Capability,Reference lead,Decision,Proposed priority,Owner notes
-F01,Multi-root scan and adoption,UC/KR,Pending,Foundation,
-F02,Metadata identity aliases overrides,MK/KK,Pending,Foundation,
-F03,Chapter volume decimal special omnibus pack model,KK,Pending,Foundation,
-F04,Language editions and progress,UC,Pending,Foundation,
-F05,Grid list search filters bulk editor,UC/KV,Pending,Foundation,
-F06,Collections saved filters shared lists CBL,KV/UC,Pending,Foundation,
-F07,Local catalog cross-provider IDs,MK,Pending,Foundation,
-F08,Related works recommendations discovery,MK,Pending,Core,
-F09,Tracker list import and review exclusions,UC/KK,Pending,Core,
-F10,Mihon backup categories and progress import,MK/UC/SW,Pending,Core,
-F11,Direct source adapters priority matching,MK/KR,Pending,Core,
-F12,Mihon-compatible extension downloading via Suwayomi,SW/UC,Required,Foundation,
-F13,Torrent indexers Prowlarr Jackett Torznab,KK,Pending,Core,
-F14,Nyaa exact pack file coverage,KR,Pending,Core,
-F15,Newznab Usenet SABnzbd,KK,Pending,Core,
-F16,qBittorrent Transmission Deluge,MK,Pending,Core,
-F17,Remote path mapping client health,KK,Pending,Core,
-F18,Monitoring wanted manual search exclusions,KK,Pending,Foundation,
-F19,Adaptive checks estimated release calendar,MK/UC,Pending,Core,
-F20,Quality profiles custom formats delay language,KK,Pending,Core,
-F21,Translation group preference wait upgrade,UC,Pending,Core,
-F22,Source fallback replacement rate limits,UC,Pending,Core,
-F23,Live queue history retry blocklist,KK/MK,Pending,Core,
-F24,Durable backfill partial download repair,UC,Pending,Core,
-F25,Auto manual import conflict review,KK,Pending,Foundation,Optional client upload uses the primary server import path. See REMOTE-READING.md.
-F26,Copy move hardlink seeding,KK/KR,Pending,Core,
-F27,Rename preview no overwrite,KR/KK,Pending,Core,
-F28,CBZ ComicInfo cover provenance,KR/MK,Pending,Foundation,
-F29,Archive PDF loose image reading,KV,Pending,Core,
-F30,Split RAR volume coverage assembly,KK,Pending,Core,
-F31,Image conversion preview batch,MK/KR,Pending,Core,
-F32,Integrity duplicates gaps repair,UC,Pending,Core,
-F33,NAS mount recovery storage guards,KK,Pending,Core,
-F34,Quarantine restore retention deletion,UC/KK,Pending,Core,
-F35,Paged RTL spread continuous webtoon,UC,Pending,Foundation,
-F36,Split join crop rotate filters controller,UC,Pending,Core,
-F37,Reader profiles thumbnails auto-scroll,MK,Pending,Core,
-F38,Local enhancement upscaling,MK,Pending,Core,
-F39,OCR translation credit collapse,UC,Pending,Later,
-F40,Offline PWA prefetch progress,UC/MK,Pending,Later,
-F41,Progress resume tracker scrobbling,MK/MH,Pending,Later,Android Windows and Linux resume through the primary is required. Tracker scrobbling awaits selection. See REMOTE-READING.md.
-F42,Incognito moments bookmarks notes,UC,Pending,Later,
-F43,Stats goals streaks annual recap,UC/MK,Pending,Later,
-F44,Dashboard themes localization,KV/UC,Pending,Later,
-F45,Text EPUB annotations,KV,Pending,Later,
-F46,Kobo annotation sync,KV,Pending,Later,
-F47,OPDS-PSE KOReader Komga API,MK/UC/SW,Pending,Later,
-F48,Kavita scan progress integration,KR/MK,Pending,Later,
-F49,Multiple users per-root grants progress,UC/KV,Pending,Later,
-F50,Age ratings private copies adult isolation,UC,Pending,Later,
-F51,Household comments requests leaderboard,UC,Pending,Later,
-F52,Login 2FA OIDC scoped tokens audit,UC,Pending,Later,
-F53,Notifications webhook push,MK/KK,Pending,Later,
-F54,Backup restore migrations rollback,KK/SW,Pending,Later,
-F55,REST and Sonarr v1/v3 compatibility,KK,Pending,Later,
-F56,Health logs scheduled tasks,KK,Pending,Later,
+F01,Multi-root scan and adoption,UC/KR,Include,Foundation,Read-only multi-root inventory. Broader automated adoption is deferred.
+F02,Metadata identity aliases overrides,MK/KK,Include,Foundation,Basic item-level catalog metadata corrections. Provider matching and advanced alias tools are deferred.
+F03,Chapter volume decimal special omnibus pack model,KK,Include,Foundation,"Chapter and volume identity needed for the reader and reviewed imports, including fractional chapters. Advanced volume and pack models are deferred."
+F04,Language editions and progress,UC,Defer,Foundation,Advanced language and edition management is deferred. Preserve evidence of alternate editions in duplicate review.
+F05,Grid list search filters bulk editor,UC/KV,Include,Foundation,"Catalog list and item-level corrections. Grid, saved filters and bulk editing are deferred."
+F06,Collections saved filters shared lists CBL,KV/UC,Defer,Foundation,
+F07,Local catalog cross-provider IDs,MK,Defer,Foundation,
+F08,Related works recommendations discovery,MK,Defer,Core,
+F09,Tracker list import and review exclusions,UC/KK,Defer,Core,
+F10,Mihon backup categories and progress import,MK/UC/SW,Defer,Core,
+F11,Direct source adapters priority matching,MK/KR,Defer,Core,
+F12,Mihon-compatible extension downloading via Suwayomi,SW/UC,Required,Foundation,Manual authorized downloads through a separately installed Suwayomi companion and one persistent queue. See EXTENSIONS.md.
+F13,Torrent indexers Prowlarr Jackett Torznab,KK,Defer,Core,
+F14,Nyaa exact pack file coverage,KR,Defer,Core,
+F15,Newznab Usenet SABnzbd,KK,Defer,Core,
+F16,qBittorrent Transmission Deluge,MK,Defer,Core,
+F17,Remote path mapping client health,KK,Defer,Core,
+F18,Monitoring wanted manual search exclusions,KK,Include,Foundation,"Manual search through the configured Suwayomi sources. Monitoring, wanted-list schedules and exclusions are deferred."
+F19,Adaptive checks estimated release calendar,MK/UC,Defer,Core,
+F20,Quality profiles custom formats delay language,KK,Defer,Core,
+F21,Translation group preference wait upgrade,UC,Defer,Core,
+F22,Source fallback replacement rate limits,UC,Defer,Core,
+F23,Live queue history retry blocklist,KK/MK,Include,Core,Persistent manual download queue with status and reconciled retries. Blocklists and broader queue controls are deferred.
+F24,Durable backfill partial download repair,UC,Defer,Core,
+F25,Auto manual import conflict review,KK,Include,Foundation,"Verified, reviewed imports are included. Explicit device uploads to the primary are optional. Automatic import is deferred. See REMOTE-READING.md."
+F26,Copy move hardlink seeding,KK/KR,Include,Core,Reviewed moves and verified copies when needed for cross-filesystem moves. Hardlink creation and seeding integration are deferred.
+F27,Rename preview no overwrite,KR/KK,Include,Core,Preview and revalidate managed rename and move operations. Protect destination files from overwrite.
+F28,CBZ ComicInfo cover provenance,KR/MK,Defer,Foundation,Generated ComicInfo and cover processing are deferred. Reviewed imports retain source and chapter provenance under F25.
+F29,Archive PDF loose image reading,KV,Include,Core,"Start with CBZ and image ZIP. Next CBR/RAR and loose image folders. Then CB7/7z, PDF and fixed-layout EPUB. See REMOTE-READING.md."
+F30,Split RAR volume coverage assembly,KK,Defer,Core,Split-volume RAR workflows are deferred. The staged basic CBR/RAR selection is under F29.
+F31,Image conversion preview batch,MK/KR,Defer,Core,
+F32,Integrity duplicates gaps repair,UC,Include,Core,"Exact duplicate review. Advanced integrity checks, gap detection and automated repair are deferred."
+F33,NAS mount recovery storage guards,KK,Include,Core,Fence managed changes on unavailable storage and verify target filesystem behavior. Broader NAS recovery automation is deferred.
+F34,Quarantine restore retention deletion,UC/KK,Include,Core,"Reviewed quarantine and restore on qualified managed roots. Retention, automatic purge and permanent deletion are deferred."
+F35,Paged RTL spread continuous webtoon,UC,Include,Foundation,Right-to-left paging and continuous vertical scrolling for webtoons. Spread layout is deferred.
+F36,Split join crop rotate filters controller,UC,Defer,Core,
+F37,Reader profiles thumbnails auto-scroll,MK,Defer,Core,
+F38,Local enhancement upscaling,MK,Defer,Core,
+F39,OCR translation credit collapse,UC,Defer,Later,
+F40,Offline PWA prefetch progress,UC/MK,Defer,Later,
+F41,Progress resume tracker scrobbling,MK/MH,Include,Later,"Primary-server progress and resume across Android, Windows and Linux are included. External tracker sync is deferred. See REMOTE-READING.md."
+F42,Incognito moments bookmarks notes,UC,Defer,Later,
+F43,Stats goals streaks annual recap,UC/MK,Defer,Later,
+F44,Dashboard themes localization,KV/UC,Defer,Later,
+F45,Text EPUB annotations,KV,Defer,Later,Reflowable EPUB and text annotations are deferred. The staged fixed-layout EPUB selection is under F29.
+F46,Kobo annotation sync,KV,Defer,Later,
+F47,OPDS-PSE KOReader Komga API,MK/UC/SW,Defer,Later,
+F48,Kavita scan progress integration,KR/MK,Defer,Later,
+F49,Multiple users per-root grants progress,UC/KV,Defer,Later,
+F50,Age ratings private copies adult isolation,UC,Defer,Later,
+F51,Household comments requests leaderboard,UC,Defer,Later,
+F52,Login 2FA OIDC scoped tokens audit,UC,Include,Later,"One authenticated owner account for the initial WebUI reader. 2FA, OIDC, scoped tokens and broader account auditing are deferred."
+F53,Notifications webhook push,MK/KK,Defer,Later,
+F54,Backup restore migrations rollback,KK/SW,Include,Later,Verify backup and restore before enabling managed changes. Broader migration and rollback functionality is deferred.
+F55,REST and Sonarr v1/v3 compatibility,KK,Defer,Later,
+F56,Health logs scheduled tasks,KK,Include,Later,Basic scan and manual download status and safe error reporting. Scheduled tasks and expanded health tooling are deferred.
 F57,Windows standalone and remote modes,UC/MK/SW,Required,Foundation,
 F58,Docker Unraid WebUI,KK/MK/SW,Required,Foundation,
-F59,Opt-in telemetry privacy,UC,Pending,Later,
-F60,Title artwork banners anime tie-in,UC/MK,Pending,Later,
-F61,Extension repository management install update remove,SW/UC,Pending,Foundation,
-F62,Extension search browse latest chapters,SW,Pending,Foundation,
-F63,Extension settings trust and source identity,SW/UC/MH,Pending,Foundation,
-F64,Extension engine version and compatibility diagnostics,SW,Pending,Foundation,
-F65,Mihon connector and progress interoperability,SW/UC,Pending,Later,
-F66,Additional trackers Shikimori Bangumi Hikka,MH,Pending,Later,
-F67,Mihon mobile reading categories and migration,MH,Pending,Later,
-F68,Single unified download queue and authoritative library,MK/UC,Pending,Later,One primary owns the main library and validates its progress. Optional subscriptions keep separate libraries. See REMOTE-READING.md.
+F59,Opt-in telemetry privacy,UC,Defer,Later,
+F60,Title artwork banners anime tie-in,UC/MK,Defer,Later,
+F61,Extension repository management install update remove,SW/UC,Defer,Foundation,Organizer-managed extension lifecycle is deferred. The operator uses Suwayomi to configure trust and install or update extensions.
+F62,Extension search browse latest chapters,SW,Include,Foundation,Manual search and browsing of operator-configured Suwayomi sources. Scheduled latest-chapter checks are deferred.
+F63,Extension settings trust and source identity,SW/UC/MH,Include,Foundation,Retain source identity. Extension trust and source settings are managed in Suwayomi initially.
+F64,Extension engine version and compatibility diagnostics,SW,Include,Foundation,Check the separately installed companion version and capabilities for the approved download path. Broader diagnostics are deferred.
+F65,Mihon connector and progress interoperability,SW/UC,Defer,Later,
+F66,Additional trackers Shikimori Bangumi Hikka,MH,Defer,Later,
+F67,Mihon mobile reading categories and migration,MH,Defer,Later,
+F68,Single unified download queue and authoritative library,MK/UC,Include,Later,"One primary owns the main library, its progress and one persistent queue. Additional server subscriptions are optional and have separate identities. See REMOTE-READING.md."
 F69,Physical file organization and bulk rename/move,KR/KK/MK,Required,Foundation,User requested file organization; detailed choices in FILE-ORGANIZATION.md
 F70,Duplicate detection review and safe resolution,MK/UC/KK,Required,Foundation,User requested duplicate finding and handling; destructive automation not approved
