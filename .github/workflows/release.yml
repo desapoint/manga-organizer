@@ -79,7 +79,7 @@ jobs:
           dotnet restore src/MangaOrganizer.Server --locked-mode -p:SelfContained=true
           dotnet publish src/MangaOrganizer.Server --no-restore --self-contained -r "$RID" -c Release \
             -p:Version="${TAG#v}" -p:SourceRevisionId="$GITHUB_SHA" -o release-payload
-          python packaging/runtime-notices.py "$RID" release-payload
+          python packaging/runtime-notices.py release-payload
           cp docs/INSTALL.md release-payload/INSTALL.md
           mkdir -p release-out release-check
       - name: Package and smoke-test Windows ZIP and installer

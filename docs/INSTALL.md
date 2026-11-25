@@ -47,7 +47,7 @@ Use the ARM64 archive filename in `tar` on ARM64. Open `http://127.0.0.1:8787` a
 
 1. Extract `MangaOrganizer-docker-install.zip` and copy `.env.example` to `.env` in that directory. Set the absolute `MANGA_ORGANIZER_MEDIA_PATH` to an existing host folder and enter the first-run password. Keep `.env` private.
 2. Run `docker compose up -d` and open `http://127.0.0.1:8787`. The default image reference is pinned to the release digest. If registry access is restricted, use the offline option below.
-3. After the first successful sign-in, clear the password value in `.env` and run `docker compose up -d --force-recreate`. Keep the Compose `config` volume for subsequent updates. The media folder is mounted read-only.
+3. After the first successful sign-in, clear the password value in `.env` and run `docker compose up -d --force-recreate`. Keep the `manga-organizer-config` volume for subsequent updates. The media folder is mounted read-only.
 
 To install offline, run `docker load -i MangaOrganizer-docker-amd64.tar.gz` or use the ARM64 archive. Replace the image line in `.env` with the commented offline image reference from `.env.example` and use `docker compose up -d --pull never`. Include `--pull never` whenever recreating the offline container. If the GHCR package is private, authenticate to `ghcr.io` with a package-reading account or use the offline archive. The package owner can enable anonymous pulls by making the package public.
 

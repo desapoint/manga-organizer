@@ -20,3 +20,4 @@ services:
 
 volumes:
   config:
+    name: ${MANGA_ORGANIZER_CONFIG_VOLUME:-manga-organizer-config}

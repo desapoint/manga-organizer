@@ -31,9 +31,11 @@ with TemporaryDirectory() as temporary:
     media.mkdir(mode=0o755)
     (media / "Chapter 01.cbz").write_bytes(b"Synthetic catalog entry")
     password = uuid4().hex
+    project_name = f"manga-release-smoke-{uuid4().hex}"
     env = dict(os.environ, MANGA_ORGANIZER_IMAGE=image, MANGA_ORGANIZER_MEDIA_PATH=str(media),
+               MANGA_ORGANIZER_CONFIG_VOLUME=f"{project_name}-config",
                MANGA_ORGANIZER_BOOTSTRAP_PASSWORD=password, MANGA_ORGANIZER_PORT="0")
-    compose = ["docker", "compose", "--project-name", f"manga-release-smoke-{uuid4().hex}"]
+    compose = ["docker", "compose", "--project-name", project_name]
     subprocess.run([*compose, "config", "--quiet"], cwd=path, env=env, check=True)
     try:
         subprocess.run([*compose, "up", "--detach", "--pull", "never"], cwd=path, env=env, check=True)
