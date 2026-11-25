@@ -26,6 +26,8 @@ On 2026-11-25 Toronto, the owner approved the staged formats, first WebUI reader
 
 The owner also selected WebUI editing of persistent library and intake folders, with a server folder browser. Files in intake may move automatically once the metadata and volume or chapter association is unambiguous or the owner has made the association manually. Reading eligibility is based on format support, including files without an association. Managed moves follow the existing storage qualification, backup, revalidation and recovery requirements. [Import intake and association](FILE-ORGANIZATION.md#import-intake-and-association)
 
+The owner selected series grouping from folder names and comparable titles, batch series assignment with chapter coverage resolved separately, chapter-based links for volumes and same-chapter release variants, hash-based relinking after file moves, and cover previews from `cover.png` or the first readable page. The owner prioritized an expandable WebUI with side navigation on desktop, responsive mobile navigation and a quicker server folder picker. Future Android screens follow the WebUI's navigation and interaction patterns. [Catalog identity and association](CATALOG-ASSOCIATION.md)
+
 ### Optional features
 
 - **Device uploads** (F25) let a client submit selected files to the primary for validation and review before import. [Upload requirements](REMOTE-READING.md#optional-upload-from-a-device)

@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 
 type Folder = { name: string; path: string };
-type Locations = { path: string | null; parent: string | null; selectable: boolean; folders: Folder[]; suggestions: Folder[] };
+type Locations = {
+  path: string | null;
+  parent: string | null;
+  selectable: boolean;
+  folders: Folder[];
+  suggestions: Folder[];
+  breadcrumbs: Folder[];
+};
 
 type Props = {
   id: string;
@@ -15,16 +22,25 @@ type Props = {
 export function FolderField({ id, label, value, onChange, required, setupToken }: Props) {
   const [browsing, setBrowsing] = useState(false);
   const [path, setPath] = useState<string | null>(null);
-  const [locations, setLocations] = useState<Locations | null>(null);
+  const [visits, setVisits] = useState(() => new Map<string, Locations>());
+  const [filter, setFilter] = useState('');
   const [error, setError] = useState('');
+  const cacheKey = JSON.stringify([setupToken, path]);
+  const locations = visits.get(cacheKey);
+  const search = filter.trim().toLocaleLowerCase();
+  const folders = locations?.folders.filter(folder => folder.name.toLocaleLowerCase().includes(search)) ?? [];
+
+  function openLocation(next: string | null) {
+    setError('');
+    setFilter('');
+    setPath(next);
+  }
 
   useEffect(() => {
     if (!browsing) return;
     const request = new AbortController();
     const endpoint = setupToken ? '/api/setup/folders' : '/api/library/folders';
     const query = path ? `?${new URLSearchParams({ path })}` : '';
-    setLocations(null);
-    setError('');
 
     async function load() {
       const response = await fetch(endpoint + query, {
@@ -36,21 +52,34 @@ export function FolderField({ id, label, value, onChange, required, setupToken }
         throw new Error(details?.message ?? 'Could not browse folders on the server.');
       }
       const listing = await response.json() as Locations;
-      if (!request.signal.aborted) setLocations(listing);
+      if (request.signal.aborted) return;
+      setVisits(previous => {
+        const next = new Map(previous);
+        next.delete(cacheKey);
+        next.set(cacheKey, listing);
+        if (next.size > 24) next.delete(next.keys().next().value!);
+        return next;
+      });
     }
 
     void load().catch(error => {
-      if (!request.signal.aborted) setError(error instanceof Error ? error.message : 'Could not browse folders.');
+      if (request.signal.aborted) return;
+      setVisits(previous => {
+        const next = new Map(previous);
+        next.delete(cacheKey);
+        return next;
+      });
+      setError(error instanceof Error ? error.message : 'Could not browse folders.');
     });
     return () => request.abort();
-  }, [browsing, path, setupToken]);
+  }, [browsing, cacheKey, path, setupToken]);
 
   function folderLinks(items: Folder[]) {
     return (
       <ul className="folder-links">
         {items.map(folder => (
           <li key={folder.path}>
-            <button type="button" className="secondary" title={folder.path} onClick={() => setPath(folder.path)}>{folder.name}</button>
+            <button type="button" className="secondary" title={folder.path} onClick={() => openLocation(folder.path)}>{folder.name}</button>
           </li>
         ))}
       </ul>
@@ -64,7 +93,7 @@ export function FolderField({ id, label, value, onChange, required, setupToken }
         <input id={id} name="libraryPath" value={value} onChange={event => onChange(event.target.value)}
           autoComplete="off" spellCheck={false} required={required} aria-describedby={`${id}-help`} />
         <button type="button" className="secondary" aria-expanded={browsing} onClick={() => {
-          if (!browsing) setPath(null);
+          if (!browsing) openLocation(value.trim() || null);
           setBrowsing(!browsing);
         }}>{browsing ? 'Close browser' : 'Browse server'}</button>
       </div>
@@ -72,11 +101,30 @@ export function FolderField({ id, label, value, onChange, required, setupToken }
       {browsing && (
         <section className="folder-browser" aria-label="Server folders">
           <div className="folder-browser-controls">
-            <button type="button" className="secondary" disabled={path === null} onClick={() => setPath(null)}>Disks</button>
-            {path && <button type="button" className="secondary" onClick={() => setPath(locations?.parent ?? null)}>Up</button>}
-            {!path && value && <button type="button" className="secondary" onClick={() => setPath(value)}>Open entered path</button>}
+            <button type="button" className="secondary" disabled={path === null} onClick={() => openLocation(null)}>Disks</button>
+            {locations?.path && <button type="button" className="secondary" onClick={() => openLocation(locations.parent)}>Up</button>}
+            {value.trim() && value.trim() !== path && (
+              <button type="button" className="secondary" onClick={() => openLocation(value.trim())}>Open entered path</button>
+            )}
+            {locations?.path && <button type="button" className="folder-select" disabled={!locations.selectable} onClick={() => {
+              if (locations.path) onChange(locations.path);
+              setBrowsing(false);
+            }}>Use this folder</button>}
           </div>
-          {locations?.path && <code className="folder-location">{locations.path}</code>}
+          {locations?.path && (
+            <nav className="folder-breadcrumbs" aria-label="Folder path">
+              <ol>
+                {locations.breadcrumbs.map((folder, index) => (
+                  <li key={folder.path}>
+                    {index === locations.breadcrumbs.length - 1
+                      ? <span aria-current="location" title={folder.path}>{folder.name}</span>
+                      : <button type="button" title={folder.path} onClick={() => openLocation(folder.path)}>{folder.name}</button>}
+                  </li>
+                ))}
+              </ol>
+              <code className="folder-location">{locations.path}</code>
+            </nav>
+          )}
           {error && <p role="alert" className="error">{error}</p>}
           {!locations && !error && <p role="status">Loading server folders…</p>}
           {!path && !!locations?.suggestions.length && (
@@ -88,13 +136,13 @@ export function FolderField({ id, label, value, onChange, required, setupToken }
           {locations && (
             <>
               <h3>{path ? 'Subfolders' : 'Disks and mounts'}</h3>
-              {locations.folders.length ? folderLinks(locations.folders) : <p>No folders found here.</p>}
+              {locations.folders.length > 1 && (
+                <input className="folder-filter" type="search" aria-label="Filter folders" placeholder="Filter folders"
+                  value={filter} onChange={event => setFilter(event.target.value)} />
+              )}
+              {folders.length ? folderLinks(folders) : <p>{search ? 'No folders match this filter.' : 'No folders found here.'}</p>}
             </>
           )}
-          {locations?.path && <button type="button" disabled={!locations.selectable} onClick={() => {
-            if (locations.path) onChange(locations.path);
-            setBrowsing(false);
-          }}>Use this folder</button>}
         </section>
       )}
     </>

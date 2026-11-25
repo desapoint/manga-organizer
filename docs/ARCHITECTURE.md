@@ -24,7 +24,9 @@ flowchart TD
 
 Modules: catalog, scanner, file organizer, duplicate index and resolution planner, import planner, policy/scoring, queue, reader, auth, progress, integrations, diagnostics, backups. Start modular monolith; Suwayomi is the proposed isolated extension service, optional external clients. Versioned adapter contracts: metadata lookup; source search/list/fetch; extension install/configure; indexer search; download submit/status/cancel; import plan/commit; progress and notifications.
 
-Canonical data: work -> edition (language/publication/version) -> volume/chapter identity -> release (group/source/quality/coverage) -> file (root-relative path, format, hashes, ownership/provenance) -> page manifest. A file can cover many chapters and a chapter many releases. Use exact decimal/part identities, never float or title-only merges. Users hold independent progress, bookmarks, permissions. Jobs have retries and idempotency keys.
+Use stable work, edition, volume and chapter identities with exact decimal and part numbering. Store physical file locations separately from verified content hashes. Link content to each verified chapter and its page coverage. Different hashes can be variants of the same chapter. Preserve logical IDs and user progress across file moves, and record release provenance with associations. Users have independent progress, bookmarks and permissions. Jobs support retries and use idempotency keys. [Catalog identity and association](CATALOG-ASSOCIATION.md)
+
+The WebUI uses desktop side navigation and a compact navigation bar on phones. A future Android app shares the same destinations, labels, matching review and reader interaction patterns. Both clients use the primary server's library identities and progress state. [Client responsibilities](REMOTE-READING.md#server-and-client-responsibilities)
 
 ## File organization and duplicate management (required)
 

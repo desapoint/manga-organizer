@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { getCsrfToken } from './api';
-import { Catalog } from './Catalog';
+import { Workspace } from './Workspace';
 import { FirstRunSetup } from './FirstRunSetup';
 import type { SetupStatus } from './FirstRunSetup';
 import './styles.css';
@@ -90,7 +90,7 @@ function App() {
 
   if (typeof connection === 'object' && 'libraryConfigured' in connection) {
     return (
-      <main>
+      <main className="auth-layout">
         <header className="brand">Manga Organizer</header>
         <FirstRunSetup libraryConfigured={connection.libraryConfigured} />
       </main>
@@ -98,26 +98,12 @@ function App() {
   }
 
   if (typeof connection === 'object') {
-    return (
-      <main className="catalog-layout">
-        <header className="catalog-header">
-          <div className="brand">Manga Organizer</div>
-          <button type="button" className="secondary" onClick={signOut} disabled={busy}>
-            {busy ? 'Signing out…' : 'Sign out'}
-          </button>
-        </header>
-        {error && <p role="alert" className="error">{error}</p>}
-        <Catalog onSignedOut={returnToSignIn} />
-        <dl className="server-details">
-          <dt>Server ID</dt>
-          <dd><code>{connection.id}</code></dd>
-        </dl>
-      </main>
-    );
+    return <Workspace serverId={connection.id} signingOut={busy} error={error}
+      onSignOut={signOut} onSignedOut={returnToSignIn} />;
   }
 
   return (
-    <main>
+    <main className="auth-layout">
       <header className="brand">Manga Organizer</header>
       <section className="panel" aria-labelledby="server-heading">
         <h1 id="server-heading">Primary server</h1>

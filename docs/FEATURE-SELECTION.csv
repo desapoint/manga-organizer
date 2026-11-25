@@ -1,9 +1,9 @@
 ID,Capability,Reference lead,Decision,Proposed priority,Owner notes
 F01,Multi-root scan and adoption,UC/KR,Include,Foundation,Read-only multi-root inventory. Broader automated adoption is deferred.
-F02,Metadata identity aliases overrides,MK/KK,Include,Foundation,Basic item-level catalog metadata corrections. Provider matching and advanced alias tools are deferred.
-F03,Chapter volume decimal special omnibus pack model,KK,Include,Foundation,"Chapter and volume identity needed for the reader and reviewed imports, including fractional chapters. Advanced volume and pack models are deferred."
+F02,Metadata identity aliases overrides,MK/KK,Include,Foundation,"Basic catalog corrections, folder and title grouping, and batch series association independent of chapter coverage. Provider matching and advanced alias tools are deferred."
+F03,Chapter volume decimal special omnibus pack model,KK,Include,Foundation,"Link volume files to their verified individual chapters, including fractional chapters and parts. Keep unresolved chapter coverage for review. Advanced pack models are deferred."
 F04,Language editions and progress,UC,Defer,Foundation,Advanced language and edition management is deferred. Preserve evidence of alternate editions in duplicate review.
-F05,Grid list search filters bulk editor,UC/KV,Include,Foundation,"Catalog list and item-level corrections. Grid, saved filters and bulk editing are deferred."
+F05,Grid list search filters bulk editor,UC/KV,Include,Foundation,"Catalog list, item-level corrections and batch series association. Grid, saved filters and general bulk editing are deferred."
 F06,Collections saved filters shared lists CBL,KV/UC,Defer,Foundation,
 F07,Local catalog cross-provider IDs,MK,Defer,Foundation,
 F08,Related works recommendations discovery,MK,Defer,Core,
@@ -26,7 +26,7 @@ F24,Durable backfill partial download repair,UC,Defer,Core,
 F25,Auto manual import conflict review,KK,Include,Foundation,"Verified, reviewed imports are included. Intake moves follow an unambiguous or manual association and the managed-storage requirements. Device uploads are optional. See FILE-ORGANIZATION.md."
 F26,Copy move hardlink seeding,KK/KR,Include,Core,Reviewed moves and verified copies when needed for cross-filesystem moves. Hardlink creation and seeding integration are deferred.
 F27,Rename preview no overwrite,KR/KK,Include,Core,Preview and revalidate managed rename and move operations. Protect destination files from overwrite.
-F28,CBZ ComicInfo cover provenance,KR/MK,Defer,Foundation,Generated ComicInfo and cover processing are deferred. Reviewed imports retain source and chapter provenance under F25.
+F28,CBZ ComicInfo cover provenance,KR/MK,Include,Foundation,"Scan for cover.png or the first readable page and show matching previews with provenance. Generated ComicInfo and other cover processing are deferred."
 F29,Archive PDF loose image reading,KV,Include,Core,"Start with CBZ and image ZIP. Next CBR/RAR and loose image folders. Then CB7/7z, PDF and fixed-layout EPUB. See REMOTE-READING.md."
 F30,Split RAR volume coverage assembly,KK,Defer,Core,Split-volume RAR workflows are deferred. The staged basic CBR/RAR selection is under F29.
 F31,Image conversion preview batch,MK/KR,Defer,Core,
@@ -68,4 +68,4 @@ F66,Additional trackers Shikimori Bangumi Hikka,MH,Defer,Later,
 F67,Mihon mobile reading categories and migration,MH,Defer,Later,
 F68,Single unified download queue and authoritative library,MK/UC,Include,Later,"One primary owns the main library, its progress and one persistent queue. Additional server subscriptions are optional and have separate identities. See REMOTE-READING.md."
 F69,Physical file organization and bulk rename/move,KR/KK/MK,Required,Foundation,User requested file organization; detailed choices in FILE-ORGANIZATION.md
-F70,Duplicate detection review and safe resolution,MK/UC/KK,Required,Foundation,User requested duplicate finding and handling; destructive automation not approved
+F70,Duplicate detection review and safe resolution,MK/UC/KK,Required,Foundation,"Reuse verified content hashes across paths. Show different hashes linked to the same chapter as variants for manual review. Exclude automatic permanent deletion. See CATALOG-ASSOCIATION.md."

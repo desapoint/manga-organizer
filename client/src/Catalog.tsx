@@ -3,6 +3,8 @@ import { getCsrfToken } from './api';
 import { LibrarySettings, ROOTS_URL } from './LibrarySettings';
 import type { ConfiguredFolder, FolderKind } from './LibrarySettings';
 
+export type CatalogView = FolderKind | 'settings';
+
 const PAGE_SIZE = 50;
 const SCAN_LABELS = {
   idle: 'Ready to scan.',
@@ -41,7 +43,7 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
 }
 
-export function Catalog({ onSignedOut }: { onSignedOut: () => void }) {
+export function Catalog({ view, onSignedOut }: { view: CatalogView; onSignedOut: () => void }) {
   const [roots, setRoots] = useState<Root[] | null>(null);
   const [selectedId, setSelectedId] = useState('');
   const [offset, setOffset] = useState(0);
@@ -51,13 +53,18 @@ export function Catalog({ onSignedOut }: { onSignedOut: () => void }) {
   const [rootsError, setRootsError] = useState('');
   const [filesError, setFilesError] = useState('');
   const [scanError, setScanError] = useState('');
-  const [view, setView] = useState<FolderKind | 'settings'>('library');
 
   const visibleRoots = roots?.filter(root => root.kind === view);
   const selected = visibleRoots?.find(root => root.id === selectedId) ?? visibleRoots?.[0];
   const rootId = selected?.id;
   const lastScannedAt = selected?.lastScannedAt;
   const page = inventory?.rootId === rootId && inventory?.offset === offset ? inventory : null;
+
+  useEffect(() => {
+    setSelectedId('');
+    setOffset(0);
+    setScanError('');
+  }, [view]);
 
   useEffect(() => {
     const request = new AbortController();
@@ -129,51 +136,41 @@ export function Catalog({ onSignedOut }: { onSignedOut: () => void }) {
     }
   }
 
-  function selectView(nextView: FolderKind | 'settings') {
-    setView(nextView);
-    setSelectedId('');
-    setOffset(0);
-    setScanError('');
-  }
-
   return (
-    <section className="panel" aria-labelledby="catalog-heading">
+    <section className="workspace-page" aria-labelledby="catalog-heading">
       <h1 id="catalog-heading">{view === 'settings' ? 'Library settings' : view === 'import' ? 'Import intake' : 'Library catalog'}</h1>
-      <nav className="catalog-navigation" aria-label="Library views">
-        <button type="button" className="secondary" aria-pressed={view === 'library'} onClick={() => selectView('library')}>Library catalog</button>
-        <button type="button" className="secondary" aria-pressed={view === 'import'} onClick={() => selectView('import')}>Import intake</button>
-        <button type="button" className="secondary" aria-pressed={view === 'settings'} onClick={() => selectView('settings')}>Library settings</button>
-      </nav>
       {rootsError && <p role="alert" className="error">{rootsError}</p>}
       {!roots && !rootsError && <p role="status">Loading library folders…</p>}
       {view === 'settings' && roots && <LibrarySettings folders={roots} onSignedOut={onSignedOut}
         onChange={() => setRefresh(value => value + 1)} />}
       {visibleRoots?.length === 0 && view !== 'settings' && (
-        <>
+        <div className="catalog-surface">
           <p>{view === 'import' ? 'Add an intake folder to see files awaiting association.' : 'Add a folder on the server to start building your catalog.'}</p>
-          <button type="button" onClick={() => selectView('settings')}>Manage folders</button>
-        </>
+          <a className="action-link" href="#settings">Manage folders</a>
+        </div>
       )}
       {selected && (
         <>
-          <div className="catalog-controls">
-            <label>
-              {view === 'import' ? 'Import folder' : 'Library folder'}
-              <select value={selected.id} onChange={event => {
-                setSelectedId(event.target.value);
-                setOffset(0);
-                setScanError('');
-              }}>
-                {visibleRoots?.map(root => <option key={root.id} value={root.id}>{root.name || root.path}</option>)}
-              </select>
-            </label>
-            <button type="button" onClick={startScan} disabled={scanPending || scanIsActive(selected)}>Scan folder</button>
-          </div>
-          <p className="scan-state" role="status">{SCAN_LABELS[selected.state]}</p>
-          <div className="catalog-summary">
-            <span>{selected.fileCount.toLocaleString()} {selected.fileCount === 1 ? 'file' : 'files'}</span>
-            {selected.lastScannedAt && <span>Last indexed {new Date(selected.lastScannedAt).toLocaleString()}</span>}
-            {selected.skippedLinks > 0 && <span>{selected.skippedLinks.toLocaleString()} linked {selected.skippedLinks === 1 ? 'path' : 'paths'} skipped</span>}
+          <div className="catalog-surface">
+            <div className="catalog-controls">
+              <label>
+                {view === 'import' ? 'Import folder' : 'Library folder'}
+                <select value={selected.id} onChange={event => {
+                  setSelectedId(event.target.value);
+                  setOffset(0);
+                  setScanError('');
+                }}>
+                  {visibleRoots?.map(root => <option key={root.id} value={root.id}>{root.name || root.path}</option>)}
+                </select>
+              </label>
+              <button type="button" onClick={startScan} disabled={scanPending || scanIsActive(selected)}>Scan folder</button>
+            </div>
+            <p className="scan-state" role="status">{SCAN_LABELS[selected.state]}</p>
+            <div className="catalog-summary">
+              <span>{selected.fileCount.toLocaleString()} {selected.fileCount === 1 ? 'file' : 'files'}</span>
+              {selected.lastScannedAt && <span>Last indexed {new Date(selected.lastScannedAt).toLocaleString()}</span>}
+              {selected.skippedLinks > 0 && <span>{selected.skippedLinks.toLocaleString()} linked {selected.skippedLinks === 1 ? 'path' : 'paths'} skipped</span>}
+            </div>
           </div>
           {scanError && <p role="alert" className="error">{scanError}</p>}
           {filesError && (
@@ -184,16 +181,19 @@ export function Catalog({ onSignedOut }: { onSignedOut: () => void }) {
           {!page && !filesError && <p role="status">Loading inventory…</p>}
           {page && page.total > 0 && (
             <>
-              <ul className="catalog-files" aria-label="Catalog files">
-                {page.items.map(file => (
-                  <li key={file.id}>
-                    <span className="file-path">{file.relativePath}</span>
-                    <span className="file-format">{file.extension.toUpperCase()}</span>
-                    <span>{formatSize(file.size)}</span>
-                    <time dateTime={file.modifiedAt}>{new Date(file.modifiedAt).toLocaleDateString()}</time>
-                  </li>
-                ))}
-              </ul>
+              <div className="catalog-inventory">
+                <div className="catalog-columns" aria-hidden="true"><span>File</span><span>Type</span><span>Size</span><span>Modified</span></div>
+                <ul className="catalog-files" aria-label="Catalog files">
+                  {page.items.map(file => (
+                    <li key={file.id}>
+                      <span className="file-path">{file.relativePath}</span>
+                      <span className="file-format">{file.extension.toUpperCase()}</span>
+                      <span>{formatSize(file.size)}</span>
+                      <time dateTime={file.modifiedAt}>{new Date(file.modifiedAt).toLocaleDateString()}</time>
+                    </li>
+                  ))}
+                </ul>
+              </div>
               {page.total > PAGE_SIZE && (
                 <nav className="pagination" aria-label="Inventory pages">
                   <button type="button" className="secondary" disabled={offset === 0} onClick={() => setOffset(offset - PAGE_SIZE)}>Previous</button>

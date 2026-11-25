@@ -18,6 +18,8 @@ An import intake folder is inventoried in its own WebUI view. The owner approved
 
 The reader must allow eligible files to open from intake or a library when their format is supported, including files with no metadata association. File movement uses the existing verified backup and restore, storage qualification, no-overwrite, revalidation and journal requirements. The current intake inventory provides discovery and configuration. The association and managed movement workflow is scheduled with the organizer's metadata and import operations. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [Reader formats](REMOTE-READING.md#reader-formats)
 
+Group files by folder and normalized title, then allow series assignment before chapter coverage is complete. Store paths separately from verified content hashes and link content to every chapter it covers. Different hashes associated with the same chapter appear together for owner review. Intake scan cover previews use `cover.png` or a supported first page. [Catalog identity and association](CATALOG-ASSOCIATION.md)
+
 ## 1. Organization workflow
 
 - Add multiple roots (local paths, UNC/SMB on Windows, mounted Docker paths); designate read-only, managed or staging roots. Scan recursively with excludes, symlink/reparse-point rules, progress, cancel/pause/resume, incremental/full scans; report unavailable roots rather than treating them as empty.
