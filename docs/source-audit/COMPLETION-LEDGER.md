@@ -32,3 +32,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 4 progress
 
 [Behavior and release contracts](PASS4.md) records partial source-to-UI/consumer traces for each repository, safety execution paths, GraphQL permission/version differences and all seven release comparisons. G3/G4/G5 remain open; remaining full settings inventory, provider/client/tracker contracts, migrations/auth/UI/test coverage, actual schema snapshots, mutation recovery and target runtime tests. G6 improved but license and release-specific behavior not yet closed. No new owner approvals.
+
+## Pass 5 progress
+
+[Provider and integration audit](PASS5.md) adds pinned provider/source/indexer/client/tracker evidence and [integration inventory](INTEGRATION-INVENTORY.csv). G3/G5 improved but remain open: trace each concrete provider and per-user/role UI, defaults and validation; verify authentication, token refresh, rate limits, status mapping, list completeness, licensing and versioned contract tests. G4 storage protections retained. G6/G7 still open/blocked for release-specific behavior, license and runtime. G8 not approved.

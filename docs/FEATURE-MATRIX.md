@@ -81,3 +81,7 @@ F69 and F70 are required user outcomes; see [file organization specification](FI
 ## Selection rules
 
 Choose Include / Optional / Defer / Exclude for Pending features. Required rows F12, F57, F58, F69 and F70 record explicit requirements; exact implementation remains open. Split clusters when individual choices differ. Preserve evidence for exclusions. Priorities are proposals, not approvals. Add prerequisites, acceptance criteria and references to every accepted issue/PR/test. One scheduler, source-independent chapter identity, preserve original files, distinguish managed from read-only, one authoritative remote server, and explicit progress rather than prefetch-counting are proposed defaults.
+
+## Pass 5 integration clarifications
+
+See [integration inventory](source-audit/INTEGRATION-INVENTORY.csv) and [pass 5](source-audit/PASS5.md). F07 metadata lookup, F09 list imports, F11/F12 content sources, F13/F15 indexers, F16 clients, F41 progress synchronization and F65/F66 external reader/tracker connections remain separate. SW pinned source registers seven trackers; MH pinned source registers twelve including Comick and self-hosted Komga/Kavita/Suwayomi. F66 is not limited to original examples; no optional tracker selected. KV F41 local reading progress is distinct from paid external scrobbling. MK F20 upgrade profiles are present in source; full scoring verification remains pending. These clarifications do not silently approve parent rows or establish stable-release parity.
