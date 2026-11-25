@@ -55,7 +55,7 @@ The catalog records paths, sizes and timestamps in SQLite and keeps the last suc
 - [File organization and duplicate management (required)](docs/FILE-ORGANIZATION.md)
 - [Remote reading and device sync](docs/REMOTE-READING.md)
 - [Proposed architecture and deployment](docs/ARCHITECTURE.md)
-- [Approved implementation baseline](docs/IMPLEMENTATION-DECISIONS.md)
+- [Approved implementation baseline and feature scope](docs/IMPLEMENTATION-DECISIONS.md)
 - [Roadmap and acceptance gates](docs/ROADMAP.md)
 - [Contributing and audit protocol](CONTRIBUTING.md)
 

@@ -1,6 +1,6 @@
 # Feature selection matrix
 
-[D] documented, [P] partial/different workflow, [$] paid service, [N] explicitly absent/not applicable, [?] not established by inspected evidence (not absence). Columns follow [reference IDs](../REFERENCES.md). Each row is a candidate cluster; lead is a proposed design benchmark, not runtime ranking. Required = user-requested outcome, not implementation approved. Others pending. Edit [CSV](FEATURE-SELECTION.csv) for decisions.
+[D] documented, [P] partial or different workflow, [$] paid service, [N] explicitly absent or inapplicable, [?] unresolved in inspected evidence. Columns follow [reference IDs](../REFERENCES.md). Each row groups related capabilities. The lead identifies a design reference. Owner decisions are recorded in the [feature register](FEATURE-SELECTION.csv).
 
 | ID | Feature | KR | MK | UC | KK | KV | SW | MH | Lead |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -76,13 +76,13 @@
 | F69 | Physical file organization and bulk rename/move | D | D | P | D | P | ? | ? | KR/KK/MK |
 | F70 | Duplicate detection, review and safe resolution | P | D | D | P | ? | ? | ? | MK/UC/KK |
 
-F69 and F70 are required user outcomes; see [file organization specification](FILE-ORGANIZATION.md). The new rows summarize existing documented/inspected workflows, not complete parity. F01/F25/F27/F28/F32/F33/F34 are related prerequisites or overlapping clusters, whose additional scope remains pending. Similarity detection and automatic cleanup policies are proposed, not approved.
+F69 and F70 are required outcomes. Exact duplicate review and opt-in, reviewed file operations are in scope. Similarity detection, automatic cleanup and the broader behaviors in related clusters are deferred. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [File organization specification](FILE-ORGANIZATION.md)
 
 ## Selection rules
 
-The owner requires server-hosted reading and progress synchronization for Android, Windows and Linux clients. Optional device uploads go to the primary, and optional subscriptions expose other server libraries under separate identities. These requirements specify the relevant portions of F25, F41 and F68. The full parent clusters include additional behaviors awaiting selection. [Remote reading requirements](REMOTE-READING.md)
+The owner approved the first WebUI reader, staged reader formats, core library and manual acquisition workflows, and deferral of the remaining candidates. The required outcomes remain F12, F57, F58, F69 and F70. Cross-device progress through the primary is included under F41. Device uploads under F25 and server subscriptions under F68 have their own optional decisions. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection)
 
-Choose Include / Optional / Defer / Exclude for Pending features. Required rows F12, F57, F58, F69 and F70 record explicit requirements; exact implementation remains open. Split clusters when individual choices differ. Preserve evidence for exclusions. Priorities are proposals, not approvals. Add prerequisites, acceptance criteria and references to every accepted issue/PR/test. One scheduler, source-independent chapter identity, preserve original files, distinguish managed from read-only, one authoritative remote server, and explicit progress rather than prefetch-counting are proposed defaults.
+Read the decision and owner notes together. `Required` records an explicit outcome. `Include` approves the bounded behavior named in the notes. `Optional` records an approved opt-in capability. `Defer` retains a candidate for a later owner decision. `Exclude` removes it from the selected roadmap while retaining its evidence. Keep the parent IDs stable and record differing subfeature decisions in the owner notes and scope. Add prerequisites, acceptance criteria and references to each accepted issue, PR or test.
 
 ## Pass 5 integration clarifications
 

@@ -2,6 +2,8 @@
 
 Physical organization and duplicate handling are required outcomes F69/F70 for standalone Windows and the Unraid WebUI. The first implementation builds the read-only inventory described below.
 
+The approved scope adds basic catalog corrections, exact duplicate review and reviewed managed changes after backup/restore and storage qualification. Repack and similarity detection, automated repair, seeding integration and automatic cleanup are deferred. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection)
+
 ## Read-only catalog
 
 The server operator configures one or more absolute library folders at startup. The signed-in owner can select a folder, start an inventory scan and browse the results in the WebUI. The scan records relative paths, filename extensions, sizes and modification times for CBZ, CBR, CB7, ZIP, RAR, 7z, PDF and EPUB files. These are filename and filesystem facts. Format validation, loose image folders, chapter matching and duplicate classification have separate acceptance checks.
