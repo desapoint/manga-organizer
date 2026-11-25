@@ -137,12 +137,15 @@ jobs:
             --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" --label "org.opencontainers.image.version=${TAG#v}" .
           python tests/foundation_smoke.py --image "$IMAGE:$TAG"
-          python packaging/docker/bundle.py "$RUNNER_TEMP/bundle" "$IMAGE:$TAG" "$IMAGE:$TAG" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
-          python packaging/docker/smoke.py "$RUNNER_TEMP/bundle" "$IMAGE:$TAG"
-      - name: Archive the exact tested image for offline installation
+      - name: Verify offline Docker installation from the image archive
         run: |
           mkdir -p release-out
-          docker save "$IMAGE:$TAG" | gzip -1 > "release-out/MangaOrganizer-docker-$ARCH.tar.gz"
+          archive="release-out/MangaOrganizer-docker-$ARCH.tar.gz"
+          docker save "$IMAGE:$TAG" | gzip -1 > "$archive"
+          docker image rm "$IMAGE:$TAG"
+          docker load --input "$archive"
+          python packaging/docker/bundle.py "$RUNNER_TEMP/bundle" "$IMAGE:$TAG" "$IMAGE:$TAG" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          python packaging/docker/smoke.py "$RUNNER_TEMP/bundle" "$IMAGE:$TAG"
       - uses: actions/upload-artifact@v6
         with:
           name: docker-${{ matrix.arch }}

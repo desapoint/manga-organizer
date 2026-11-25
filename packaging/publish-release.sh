@@ -22,7 +22,7 @@ done
 docker buildx imagetools create --tag "$IMAGE:$TAG" "${refs[@]}"
 manifest=$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{json .Manifest}}')
 digest=$(jq -er '
-  select(([.manifests[].platform.architecture] | sort) == ["amd64", "arm64"])
+  select(([.manifests[].platform | select(.os == "linux") | .architecture] | sort) == ["amd64", "arm64"])
   | .digest | select(test("^sha256:[a-f0-9]{64}$"))' <<<"$manifest")
 
 python packaging/docker/bundle.py "$artifacts" "$IMAGE:$TAG@$digest" "$IMAGE:$TAG" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
