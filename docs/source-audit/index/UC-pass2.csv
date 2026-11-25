@@ -1,0 +1,296 @@
+Path,Line,Kind,Identifier,Verification
+"bff/src/routes/admin.ts",228,"function","enforceImportReview",declaration only
+"bff/src/routes/admin.ts",255,"function","linkImportedSeries",declaration only
+"bff/src/routes/admin.ts",294,"function","markImportedRead",declaration only
+"bff/src/routes/admin.ts",313,"function","seriesLinkedTo",declaration only
+"bff/src/routes/admin.ts",362,"function","readTrackerList",declaration only
+"bff/src/routes/admin.ts",432,"function","resolveBatch",declaration only
+"bff/src/routes/admin.ts",501,"function","closeBatchIfSettled",declaration only
+"bff/src/routes/admin.ts",537,"function","huntArt",declaration only
+"bff/src/routes/admin.ts",588,"function","sweepImportBatches",declaration only
+"bff/src/routes/admin.ts",612,"function","listable",declaration only
+"bff/src/routes/admin.ts",623,"function","nameable",declaration only
+"bff/src/routes/admin.ts",674,"HTTP POST","/api/admin/library/scan",declaration only
+"bff/src/routes/admin.ts",682,"HTTP POST","/api/admin/update/:id",declaration only
+"bff/src/routes/admin.ts",696,"HTTP POST","/api/admin/update",declaration only
+"bff/src/routes/admin.ts",704,"HTTP GET","/api/admin/users",declaration only
+"bff/src/routes/admin.ts",797,"HTTP GET","/api/admin/settings",declaration only
+"bff/src/routes/admin.ts",807,"HTTP GET","/api/admin/install-ping/preview",declaration only
+"bff/src/routes/admin.ts",816,"HTTP GET","/api/admin/limits",declaration only
+"bff/src/routes/admin.ts",817,"HTTP PATCH","/api/admin/settings",declaration only
+"bff/src/routes/admin.ts",1136,"HTTP GET","/api/admin/tasks",declaration only
+"bff/src/routes/admin.ts",1335,"HTTP GET","/api/admin/tasks/repair/status",declaration only
+"bff/src/routes/admin.ts",1383,"HTTP GET","/api/admin/tasks/repair/runs",declaration only
+"bff/src/routes/admin.ts",1411,"HTTP POST","/api/admin/tasks/:id/run",declaration only
+"bff/src/routes/admin.ts",1542,"HTTP GET","/api/admin/audit",declaration only
+"bff/src/routes/admin.ts",1545,"HTTP POST","/api/admin/sources/reload",declaration only
+"bff/src/routes/admin.ts",1572,"HTTP GET","/api/admin/sources/custom",declaration only
+"bff/src/routes/admin.ts",1573,"HTTP POST","/api/admin/sources/custom",declaration only
+"bff/src/routes/admin.ts",1624,"HTTP PATCH","/api/admin/sources/custom/:id",declaration only
+"bff/src/routes/admin.ts",1663,"HTTP DELETE","/api/admin/sources/custom/:id",declaration only
+"bff/src/routes/admin.ts",1688,"HTTP PATCH","/api/admin/series/:id",declaration only
+"bff/src/routes/admin.ts",1834,"HTTP GET","/api/admin/scanlators",declaration only
+"bff/src/routes/admin.ts",1887,"HTTP GET","/api/admin/series/:id/scanlators",declaration only
+"bff/src/routes/admin.ts",1949,"HTTP POST","/api/admin/series/:id/sources",declaration only
+"bff/src/routes/admin.ts",2060,"HTTP POST","/api/admin/series/:id/main-source",declaration only
+"bff/src/routes/admin.ts",2100,"HTTP POST","/api/admin/series/:id/attach-source",declaration only
+"bff/src/routes/admin.ts",2184,"HTTP GET","/api/admin/series/:id/sources/:sourceId/leftovers",declaration only
+"bff/src/routes/admin.ts",2185,"HTTP POST","/api/admin/series/:id/sources/:sourceId/cleanup",declaration only
+"bff/src/routes/admin.ts",2191,"HTTP GET","/api/admin/blocked-chapters",declaration only
+"bff/src/routes/admin.ts",2203,"HTTP POST","/api/admin/blocked-chapters/purge",declaration only
+"bff/src/routes/admin.ts",2217,"HTTP DELETE","/api/admin/series/:id/sources/:sourceId",declaration only
+"bff/src/routes/admin.ts",2265,"HTTP POST","/api/admin/series/:id/check",declaration only
+"bff/src/routes/admin.ts",2301,"HTTP GET","/api/admin/series/:id/check",declaration only
+"bff/src/routes/admin.ts",2309,"HTTP DELETE","/api/admin/series/:id",declaration only
+"bff/src/routes/admin.ts",2333,"HTTP POST","/api/admin/series/bulk/hide",declaration only
+"bff/src/routes/admin.ts",2364,"HTTP POST","/api/admin/series/bulk/auto-update",declaration only
+"bff/src/routes/admin.ts",2406,"HTTP POST","/api/admin/series/bulk/chapters/delete",declaration only
+"bff/src/routes/admin.ts",2420,"HTTP GET","/api/admin/series/bulk/chapters/delete",declaration only
+"bff/src/routes/admin.ts",2428,"HTTP POST","/api/admin/series/bulk/chapters/delete/cancel",declaration only
+"bff/src/routes/admin.ts",2436,"HTTP POST","/api/admin/series/:id/restore",declaration only
+"bff/src/routes/admin.ts",2458,"HTTP GET","/api/admin/series/deleted",declaration only
+"bff/src/routes/admin.ts",2472,"HTTP POST","/api/admin/series/:id/merge",declaration only
+"bff/src/routes/admin.ts",2526,"HTTP POST","/api/admin/series/:id/editions",declaration only
+"bff/src/routes/admin.ts",2552,"HTTP DELETE","/api/admin/series/:id/edition",declaration only
+"bff/src/routes/admin.ts",2562,"HTTP PUT","/api/admin/series/:id/meta",declaration only
+"bff/src/routes/admin.ts",2680,"HTTP PUT","/api/admin/books/:id/meta",declaration only
+"bff/src/routes/admin.ts",2728,"HTTP POST","/api/admin/books/:id/confirm-short",declaration only
+"bff/src/routes/admin.ts",2761,"HTTP GET","/api/admin/library/writable",declaration only
+"bff/src/routes/admin.ts",2781,"HTTP POST","/api/admin/series/:id/delete-files",declaration only
+"bff/src/routes/admin.ts",2821,"HTTP POST","/api/admin/series/:id/forget",declaration only
+"bff/src/routes/admin.ts",2867,"HTTP POST","/api/admin/series/:id/chapters/delete",declaration only
+"bff/src/routes/admin.ts",2888,"HTTP POST","/api/admin/series/:id/chapters/unlisted",declaration only
+"bff/src/routes/admin.ts",2903,"HTTP POST","/api/admin/series/:id/chapters/keep-once",declaration only
+"bff/src/routes/admin.ts",2924,"HTTP POST","/api/admin/series/:id/chapters/hide",declaration only
+"bff/src/routes/admin.ts",2934,"HTTP POST","/api/admin/series/:id/chapters/unhide",declaration only
+"bff/src/routes/admin.ts",2945,"HTTP GET","/api/admin/series/:id/chapters/hidden",declaration only
+"bff/src/routes/admin.ts",2953,"HTTP GET","/api/admin/series/:id/copy-pages",declaration only
+"bff/src/routes/admin.ts",2983,"HTTP POST","/api/admin/series/:id/chapters/refetch",declaration only
+"bff/src/routes/admin.ts",3218,"HTTP POST","/api/admin/series/:id/library",declaration only
+"bff/src/routes/admin.ts",3223,"HTTP POST","/api/admin/series/library",declaration only
+"bff/src/routes/admin.ts",3229,"HTTP POST","/api/admin/series/:id/rename-folder",declaration only
+"bff/src/routes/admin.ts",3264,"HTTP GET","/api/admin/libraries",declaration only
+"bff/src/routes/admin.ts",3333,"HTTP GET","/api/admin/libraries/folders",declaration only
+"bff/src/routes/admin.ts",3391,"HTTP GET","/api/admin/libraries/preview",declaration only
+"bff/src/routes/admin.ts",3402,"HTTP POST","/api/admin/libraries",declaration only
+"bff/src/routes/admin.ts",3449,"HTTP PATCH","/api/admin/libraries/:id",declaration only
+"bff/src/routes/admin.ts",3551,"HTTP DELETE","/api/admin/libraries/:id",declaration only
+"bff/src/routes/admin.ts",3584,"HTTP PUT","/api/admin/series/:id/art",declaration only
+"bff/src/routes/admin.ts",3665,"HTTP POST","/api/admin/series/:id/logo/refresh",declaration only
+"bff/src/routes/admin.ts",3668,"HTTP GET","/api/admin/title-logos/status",declaration only
+"bff/src/routes/admin.ts",3669,"HTTP POST","/api/admin/title-logos/scan",declaration only
+"bff/src/routes/admin.ts",3686,"HTTP GET","/api/admin/series/:id/cover-candidates",declaration only
+"bff/src/routes/admin.ts",3705,"HTTP GET","/api/admin/art/overview",declaration only
+"bff/src/routes/admin.ts",3708,"HTTP GET","/api/admin/art/candidates/:id",declaration only
+"bff/src/routes/admin.ts",3745,"HTTP POST","/api/admin/art/backfill",declaration only
+"bff/src/routes/admin.ts",3764,"HTTP GET","/api/admin/art/backfill/status",declaration only
+"bff/src/routes/admin.ts",3775,"HTTP GET","/api/admin/extensions/status",declaration only
+"bff/src/routes/admin.ts",3783,"HTTP GET","/api/admin/extensions/sources",declaration only
+"bff/src/routes/admin.ts",3839,"HTTP POST","/api/admin/extensions/sources/bulk",declaration only
+"bff/src/routes/admin.ts",3860,"HTTP POST","/api/admin/extensions/sources/:id",declaration only
+"bff/src/routes/admin.ts",3901,"HTTP POST","/api/admin/extensions/sources/:id/site",declaration only
+"bff/src/routes/admin.ts",3935,"HTTP GET","/api/admin/extensions/site/:session/stream",declaration only
+"bff/src/routes/admin.ts",3988,"HTTP POST","/api/admin/extensions/site/:session/input",declaration only
+"bff/src/routes/admin.ts",4002,"HTTP POST","/api/admin/extensions/site/:session/open",declaration only
+"bff/src/routes/admin.ts",4013,"HTTP DELETE","/api/admin/extensions/site/:session",declaration only
+"bff/src/routes/admin.ts",4031,"HTTP GET","/api/admin/extensions/catalog",declaration only
+"bff/src/routes/admin.ts",4100,"HTTP POST","/api/admin/extensions/update-all",declaration only
+"bff/src/routes/admin.ts",4118,"HTTP POST","/api/admin/extensions/refresh",declaration only
+"bff/src/routes/admin.ts",4135,"HTTP POST","/api/admin/extensions/solver",declaration only
+"bff/src/routes/admin.ts",4143,"HTTP POST","/api/admin/extensions/catalog/:pkgName",declaration only
+"bff/src/routes/admin.ts",4234,"HTTP GET","/api/admin/extensions/repos",declaration only
+"bff/src/routes/admin.ts",4280,"HTTP POST","/api/admin/extensions/repos",declaration only
+"bff/src/routes/admin.ts",4389,"HTTP DELETE","/api/admin/extensions/repos",declaration only
+"bff/src/routes/admin.ts",4421,"HTTP GET","/api/admin/health",declaration only
+"bff/src/routes/admin.ts",4430,"HTTP GET","/api/admin/health/summary",declaration only
+"bff/src/routes/admin.ts",4445,"HTTP POST","/api/admin/health/ignore",declaration only
+"bff/src/routes/admin.ts",4468,"HTTP POST","/api/admin/health/autofix",declaration only
+"bff/src/routes/admin.ts",4477,"HTTP GET","/api/admin/health/autofix",declaration only
+"bff/src/routes/admin.ts",4483,"HTTP GET","/api/admin/health/autofix/:runId",declaration only
+"bff/src/routes/admin.ts",4494,"HTTP POST","/api/admin/health/autofix/stop",declaration only
+"bff/src/routes/admin.ts",4504,"HTTP POST","/api/admin/trackers/relink",declaration only
+"bff/src/routes/admin.ts",4536,"HTTP GET","/api/admin/trackers/relink/status",declaration only
+"bff/src/routes/admin.ts",4541,"HTTP POST","/api/admin/import/parse",declaration only
+"bff/src/routes/admin.ts",4583,"HTTP POST","/api/admin/import",declaration only
+"bff/src/routes/admin.ts",4618,"HTTP GET","/api/admin/import/status",declaration only
+"bff/src/routes/admin.ts",4659,"HTTP GET","/api/admin/import/batches",declaration only
+"bff/src/routes/admin.ts",4670,"HTTP POST","/api/admin/import/batches",declaration only
+"bff/src/routes/admin.ts",4975,"HTTP GET","/api/admin/import/batches/:id",declaration only
+"bff/src/routes/admin.ts",5026,"HTTP POST","/api/admin/import/batches/:id/resume",declaration only
+"bff/src/routes/admin.ts",5099,"HTTP PATCH","/api/admin/import/candidates/:cid",declaration only
+"bff/src/routes/admin.ts",5113,"HTTP POST","/api/admin/import/batches/:id/confirm",declaration only
+"bff/src/routes/admin.ts",5123,"HTTP POST","/api/admin/import/batches/:id/skip",declaration only
+"bff/src/routes/admin.ts",5141,"HTTP POST","/api/admin/import/batches/:id/run",declaration only
+"bff/src/routes/admin.ts",5334,"HTTP DELETE","/api/admin/import/batches/:id",declaration only
+"bff/src/routes/admin.ts",5358,"HTTP GET","/api/admin/sources",declaration only
+"bff/src/routes/admin.ts",5405,"HTTP POST","/api/admin/sources/check",declaration only
+"bff/src/routes/admin.ts",5419,"HTTP GET","/api/admin/sources/check",declaration only
+"bff/src/routes/admin.ts",5426,"HTTP GET","/api/admin/sources/overview",declaration only
+"bff/src/routes/admin.ts",5428,"HTTP POST","/api/admin/sources/:id/test",declaration only
+"bff/src/routes/admin.ts",5450,"HTTP POST","/api/admin/sources/:id/retire",declaration only
+"bff/src/routes/admin.ts",5468,"HTTP PUT","/api/admin/sources/:id/age-rating",declaration only
+"bff/src/routes/admin.ts",5484,"HTTP POST","/api/admin/sources/:id/:action",declaration only
+"bff/src/routes/admin.ts",5503,"HTTP GET","/api/admin/sessions",declaration only
+"bff/src/routes/admin.ts",5508,"HTTP DELETE","/api/admin/sessions/:id",declaration only
+"bff/src/routes/admin.ts",5514,"HTTP GET","/api/admin/stats",declaration only
+"bff/src/routes/admin.ts",5631,"HTTP GET","/api/admin/network",declaration only
+"bff/src/routes/admin.ts",5640,"HTTP PATCH","/api/admin/network",declaration only
+"bff/src/routes/admin.ts",5675,"HTTP POST","/api/admin/users",declaration only
+"bff/src/routes/admin.ts",5721,"HTTP PATCH","/api/admin/users/:id",declaration only
+"bff/src/routes/admin.ts",5832,"HTTP DELETE","/api/admin/users/:id",declaration only
+"bff/src/routes/sources.ts",64,"function","sweepFillScans",declaration only
+"bff/src/routes/sources.ts",71,"function","fillScanView",declaration only
+"bff/src/routes/sources.ts",82,"function","_clearFillScans",declaration only
+"bff/src/routes/sources.ts",253,"function","reserveDownloadJob",declaration only
+"bff/src/routes/sources.ts",262,"function","claimDownloadJob",declaration only
+"bff/src/routes/sources.ts",267,"function","releaseDownloadJobClaim",declaration only
+"bff/src/routes/sources.ts",283,"function","leftOf",declaration only
+"bff/src/routes/sources.ts",294,"function","sweepJobs",declaration only
+"bff/src/routes/sources.ts",308,"function","jobBusy",declaration only
+"bff/src/routes/sources.ts",323,"function","renumberRefusal",declaration only
+"bff/src/routes/sources.ts",370,"function","tell",declaration only
+"bff/src/routes/sources.ts",424,"function","downloadsAudience",declaration only
+"bff/src/routes/sources.ts",460,"function","downloadViewer",declaration only
+"bff/src/routes/sources.ts",479,"function","speakingRows",declaration only
+"bff/src/routes/sources.ts",497,"function","activityFor",declaration only
+"bff/src/routes/sources.ts",514,"function","receives",declaration only
+"bff/src/routes/sources.ts",526,"function","cardFor",declaration only
+"bff/src/routes/sources.ts",540,"function","startDownloadJob",declaration only
+"bff/src/routes/sources.ts",541,"function","startDownloadJob",declaration only
+"bff/src/routes/sources.ts",542,"function","startDownloadJob",declaration only
+"bff/src/routes/sources.ts",887,"function","findOrder",declaration only
+"bff/src/routes/sources.ts",906,"function","heldOf",declaration only
+"bff/src/routes/sources.ts",938,"function","owned",declaration only
+"bff/src/routes/sources.ts",1015,"function","seriesAndChapters",declaration only
+"bff/src/routes/sources.ts",1075,"function","clearDetailCache",declaration only
+"bff/src/routes/sources.ts",1086,"function","clearDetailCacheFor",declaration only
+"bff/src/routes/sources.ts",1117,"function","previewChapters",declaration only
+"bff/src/routes/sources.ts",1136,"function","previewPageList",declaration only
+"bff/src/routes/sources.ts",1165,"function","copyPageList",declaration only
+"bff/src/routes/sources.ts",1218,"function","latestPage",declaration only
+"bff/src/routes/sources.ts",1297,"function","clearLatestCache",declaration only
+"bff/src/routes/sources.ts",1362,"function","judgeAlsoFollow",declaration only
+"bff/src/routes/sources.ts",1393,"function","archiveRest",declaration only
+"bff/src/routes/sources.ts",1418,"function","artByTitle",declaration only
+"bff/src/routes/sources.ts",1459,"function","addSeriesFromSource",declaration only
+"bff/src/routes/sources.ts",2321,"function","majorityLang",declaration only
+"bff/src/routes/sources.ts",2342,"function","mihonSourceToAdapter",declaration only
+"bff/src/routes/sources.ts",2405,"function","resolveCandidate",declaration only
+"bff/src/routes/sources.ts",2518,"function","findBestMatch",declaration only
+"bff/src/routes/sources.ts",2604,"HTTP GET","/api/sources",declaration only
+"bff/src/routes/sources.ts",2739,"HTTP GET","/api/sources/search",declaration only
+"bff/src/routes/sources.ts",2788,"HTTP POST","/api/sources/fill/scan",declaration only
+"bff/src/routes/sources.ts",2860,"HTTP GET","/api/sources/fill/scan/:id",declaration only
+"bff/src/routes/sources.ts",2871,"function","startFillScan",declaration only
+"bff/src/routes/sources.ts",2904,"function","runFillScan",declaration only
+"bff/src/routes/sources.ts",3075,"HTTP POST","/api/sources/fill",declaration only
+"bff/src/routes/sources.ts",3271,"HTTP POST","/api/books/:id/refetch",declaration only
+"bff/src/routes/sources.ts",3454,"HTTP POST","/api/sources/fetch",declaration only
+"bff/src/routes/sources.ts",3656,"HTTP GET","/api/sources/search-all",declaration only
+"bff/src/routes/sources.ts",3742,"HTTP GET","/api/sources/latest",declaration only
+"bff/src/routes/sources.ts",3778,"HTTP GET","/api/sources/popular",declaration only
+"bff/src/routes/sources.ts",3814,"HTTP GET","/api/sources/jobs",declaration only
+"bff/src/routes/sources.ts",3868,"HTTP POST","/api/sources/jobs/:folder/cancel",declaration only
+"bff/src/routes/sources.ts",3880,"HTTP POST","/api/sources/runs/:kind/cancel",declaration only
+"bff/src/routes/sources.ts",3891,"HTTP DELETE","/api/sources/runs/:kind",declaration only
+"bff/src/routes/sources.ts",3908,"HTTP DELETE","/api/sources/jobs/:folder",declaration only
+"bff/src/routes/sources.ts",3954,"HTTP GET","/api/discover/trending",declaration only
+"bff/src/routes/sources.ts",3992,"HTTP GET","/api/discover/because",declaration only
+"bff/src/routes/sources.ts",4008,"HTTP GET","/api/discover/works",declaration only
+"bff/src/routes/sources.ts",4019,"HTTP GET","/api/sources/find",declaration only
+"bff/src/routes/sources.ts",4071,"HTTP GET","/api/sources/edition-candidates",declaration only
+"bff/src/routes/sources.ts",4121,"HTTP GET","/api/sources/preview",declaration only
+"bff/src/routes/sources.ts",4132,"HTTP GET","/api/sources/preview/pages",declaration only
+"bff/src/routes/sources.ts",4140,"HTTP GET","/api/sources/detail",declaration only
+"bff/src/routes/sources.ts",4203,"HTTP POST","/api/sources/add",declaration only
+"bff/src/routes/downloads.ts",31,"HTTP GET","/api/books/:id/download-manifest",declaration only
+"bff/src/routes/downloads.ts",99,"HTTP GET","/api/downloads",declaration only
+"bff/src/routes/downloads.ts",108,"HTTP POST","/api/downloads",declaration only
+"bff/src/routes/downloads.ts",133,"HTTP DELETE","/api/downloads/:bookId",declaration only
+"bff/src/routes/personal.ts",52,"function","listDates",declaration only
+"bff/src/routes/personal.ts",72,"function","listOut",declaration only
+"bff/src/routes/personal.ts",95,"HTTP POST","/api/opds/token",declaration only
+"bff/src/routes/personal.ts",102,"HTTP GET","/api/opds/token",declaration only
+"bff/src/routes/personal.ts",104,"HTTP DELETE","/api/opds/token",declaration only
+"bff/src/routes/personal.ts",112,"HTTP PATCH","/api/opds/token",declaration only
+"bff/src/routes/personal.ts",121,"HTTP GET","/api/tokens",declaration only
+"bff/src/routes/personal.ts",123,"HTTP POST","/api/tokens",declaration only
+"bff/src/routes/personal.ts",153,"HTTP DELETE","/api/tokens/:id",declaration only
+"bff/src/routes/personal.ts",177,"HTTP GET","/api/profiles",declaration only
+"bff/src/routes/personal.ts",181,"HTTP POST","/api/profiles",declaration only
+"bff/src/routes/personal.ts",222,"HTTP PATCH","/api/profiles/:id",declaration only
+"bff/src/routes/personal.ts",253,"HTTP DELETE","/api/profiles/:id",declaration only
+"bff/src/routes/personal.ts",273,"HTTP GET","/api/push/key",declaration only
+"bff/src/routes/personal.ts",274,"HTTP POST","/api/push/subscribe",declaration only
+"bff/src/routes/personal.ts",286,"HTTP POST","/api/push/unsubscribe",declaration only
+"bff/src/routes/personal.ts",294,"HTTP GET","/api/favorites",declaration only
+"bff/src/routes/personal.ts",311,"HTTP POST","/api/favorites",declaration only
+"bff/src/routes/personal.ts",328,"HTTP PUT","/api/favorites/order",declaration only
+"bff/src/routes/personal.ts",334,"HTTP DELETE","/api/favorites/:seriesId",declaration only
+"bff/src/routes/personal.ts",366,"HTTP GET","/api/collections",declaration only
+"bff/src/routes/personal.ts",383,"HTTP POST","/api/collections",declaration only
+"bff/src/routes/personal.ts",401,"HTTP PATCH","/api/collections/:id",declaration only
+"bff/src/routes/personal.ts",430,"HTTP DELETE","/api/collections/:id",declaration only
+"bff/src/routes/personal.ts",441,"HTTP GET","/api/collections/:id",declaration only
+"bff/src/routes/personal.ts",464,"HTTP POST","/api/collections/:id/items",declaration only
+"bff/src/routes/personal.ts",479,"HTTP DELETE","/api/collections/:id/items/:seriesId",declaration only
+"bff/src/routes/personal.ts",488,"HTTP PUT","/api/collections/:id/items",declaration only
+"bff/src/routes/personal.ts",498,"HTTP PUT","/api/ratings/:seriesId",declaration only
+"bff/src/routes/personal.ts",510,"HTTP DELETE","/api/ratings/:seriesId",declaration only
+"bff/src/routes/personal.ts",522,"HTTP GET","/api/bookmarks",declaration only
+"bff/src/routes/personal.ts",546,"HTTP PUT","/api/bookmarks/:bookId/:page",declaration only
+"bff/src/routes/personal.ts",574,"HTTP DELETE","/api/bookmarks/:bookId/:page",declaration only
+"bff/src/routes/personal.ts",591,"HTTP GET","/api/notes",declaration only
+"bff/src/routes/personal.ts",617,"HTTP GET","/api/notes/:seriesId",declaration only
+"bff/src/routes/personal.ts",636,"HTTP POST","/api/notes",declaration only
+"bff/src/routes/personal.ts",653,"HTTP PATCH","/api/notes/:id",declaration only
+"bff/src/routes/personal.ts",662,"HTTP DELETE","/api/notes/:id",declaration only
+"bff/src/routes/personal.ts",670,"HTTP GET","/api/history",declaration only
+"bff/src/routes/personal.ts",699,"HTTP GET","/api/stats",declaration only
+"bff/src/routes/personal.ts",788,"HTTP GET","/api/stats/time",declaration only
+"bff/src/routes/personal.ts",821,"HTTP GET","/api/stats/insights",declaration only
+"bff/src/routes/personal.ts",830,"HTTP GET","/api/series/:id/reading-pace",declaration only
+"bff/src/routes/personal.ts",845,"HTTP GET","/api/wrapped",declaration only
+"bff/src/routes/personal.ts",970,"HTTP POST","/api/library/bulk/read",declaration only
+"bff/src/routes/personal.ts",1011,"HTTP POST","/api/favorites/bulk",declaration only
+"bff/src/routes/personal.ts",1028,"HTTP POST","/api/collections/:id/items/bulk",declaration only
+"bff/src/routes/personal.ts",1066,"HTTP POST","/api/library/bulk/newest",declaration only
+"bff/src/routes/personal.ts",1088,"HTTP GET","/api/library/bulk/newest",declaration only
+"bff/src/routes/personal.ts",1091,"HTTP GET","/api/trackers",declaration only
+"bff/src/routes/personal.ts",1138,"HTTP POST","/api/trackers/anilist",declaration only
+"bff/src/routes/personal.ts",1140,"HTTP POST","/api/trackers/:provider/connect",declaration only
+"bff/src/routes/personal.ts",1152,"HTTP POST","/api/trackers/:provider/test",declaration only
+"bff/src/routes/personal.ts",1167,"HTTP DELETE","/api/trackers/:provider",declaration only
+"bff/src/routes/personal.ts",1176,"HTTP POST","/api/trackers/anilist/backfill",declaration only
+"bff/src/routes/personal.ts",1200,"HTTP POST","/api/trackers/:provider/resync/:seriesId",declaration only
+"bff/src/routes/personal.ts",1212,"HTTP GET","/api/settings",declaration only
+"bff/src/routes/personal.ts",1218,"HTTP PUT","/api/settings",declaration only
+"bff/src/routes/externalReaders.ts",9,"HTTP GET","/api/external-readers",declaration only
+"bff/src/routes/externalReaders.ts",14,"HTTP PUT","/api/external-readers",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",32,"operation candidate","login",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",33,"operation candidate","refreshToken",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",75,"operation candidate","aboutServer",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",82,"operation candidate","sources",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",84,"operation candidate","sourceCreatorFilters",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",85,"operation candidate","fetchSourceManga",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",89,"operation candidate","mangaIdentity",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",98,"operation candidate","fetchManga",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",100,"operation candidate","fetchChapters",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",101,"operation candidate","fetchChapterPages",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",104,"operation candidate","extensions",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",109,"operation candidate","extensionFacts",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",110,"operation candidate","fetchExtensions",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",112,"operation candidate","updateExtension",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",113,"operation candidate","sourcesOfExtension",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",116,"operation candidate","extensionStores",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",118,"operation candidate","addExtensionStore",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",120,"operation candidate","removeExtensionStore",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",124,"operation candidate","solverSettings",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",125,"operation candidate","setSolverSettings",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",128,"operation candidate","clearCachedImages",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",132,"operation candidate","sourcePreferences",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",135,"operation candidate","setSwitchPreference",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",136,"operation candidate","setCheckBoxPreference",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",137,"operation candidate","setTextPreference",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",138,"operation candidate","setListPreference",declaration only
+"bff/src/lib/sources/suwayomi/operations.ts",139,"operation candidate","setMultiSelectPreference",declaration only
