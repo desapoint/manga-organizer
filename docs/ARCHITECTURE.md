@@ -1,0 +1,44 @@
+# Proposed architecture — not approved
+
+One shared backend and responsive WebUI. Windows 10/11 x64 local mode (embedded backend and local data, no Docker) or remote mode (Unraid client). Unraid Docker uses same API/UI; one server owns scheduling and writes. Candidate ASP.NET Core/.NET + React/TypeScript, SQLite on local appdata, WebView2 desktop shell. Evaluate Python/FastAPI and PostgreSQL alternatives before approval; no language locked in.
+
+```mermaid
+flowchart TD
+ W[Windows local or remote] --> A[Authenticated shared API]
+ B[Browser / PWA] --> A
+ A --> L[Library and catalog]
+ A --> R[Reader and progress]
+ A --> Q[Persistent scheduler and queue]
+ Q --> S[Authorized source adapters]
+ S --> X[Suwayomi extension engine]
+ Q --> I[Indexer / download client adapters]
+ Q --> M[Staged validation and import]
+ M --> L
+ L --> F[Portable media files]
+ R --> F
+ A --> D[Local database]
+ Q --> D
+ A --> T[Trackers and notifications]
+```
+
+Modules: catalog, scanner, import planner, policy/scoring, queue, reader, auth, progress, integrations, diagnostics, backups. Start modular monolith; Suwayomi is the proposed isolated extension service, optional external clients. Versioned adapter contracts: metadata lookup; source search/list/fetch; extension install/configure; indexer search; download submit/status/cancel; import plan/commit; progress and notifications.
+
+Canonical data: work -> edition (language/publication/version) -> volume/chapter identity -> release (group/source/quality/coverage) -> file (root-relative path, format, hashes, ownership/provenance) -> page manifest. A file can cover many chapters and a chapter many releases. Use exact decimal/part identities, never float or title-only merges. Users hold independent progress, bookmarks, permissions. Jobs have retries and idempotency keys.
+
+## Unraid layout (proposed, no image yet)
+
+| Host example | Container | Purpose |
+| --- | --- | --- |
+| /mnt/user/appdata/manga-organizer | /config | local DB/config/backups/cache; suitable local disk, not SMB/NFS |
+| /mnt/user/data | /data | common mount for library/downloads |
+| /mnt/user/data/media/manga | /data/media/manga | library, read-only adoption initially |
+| /mnt/user/data/downloads/manga | /data/downloads/manga | completed downloads |
+| separate engine appdata | engine config | Suwayomi isolated data |
+
+Single /data mount permits hardlink attempts only on same real filesystem; verify actual Unraid storage/share behavior, explicit copy fallback. Example UID/GID 99:100, umask 002; no recursive permission changes. Proposed configurable port 8787; LAN first, HTTPS proxy remote, no default password. amd64 first, arm64 after qualification, Community Applications XML after image works. No placeholder Compose or fake image.
+
+Windows: installer/portable proposal, AppData config, chosen roots, loopback default, optional tray, long/UNC paths, case collisions/locks/reserved names. Remote client uses TLS and protected tokens; no live SQLite on SMB. Suwayomi external or managed process for local mode subject to packaging test. Offline client cache separate; explicit progress conflict handling.
+
+## Safety
+
+Dry-run adoption/rename, managed roots opt-in, stage/verify before atomic publish; never overwrite ambiguous files; protect seeding hardlinks and page provenance, durable jobs. Reject archive traversal/bombs, symlink escapes, oversized resources. Missing or unexpectedly empty mount fences mutations, never mass delete. Quarantine/restore, consistent DB+secrets+version backup, restore/rollback tests. Nonroot, scoped auth, CSRF/host validation, encrypted integration secrets, masked logs, outbound URL validation, per-source limits. Authorized content only. License review before external datasets/models or upstream code.

@@ -1,0 +1,3 @@
+# Repository instructions
+
+Read README, REFERENCES, docs/UPSTREAM-AUDIT.md, docs/FEATURE-MATRIX.md, docs/FEATURE-SELECTION.csv and docs/EXTENSIONS.md first. Documentation-first. Do not silently approve Pending features. Required outcomes are Windows, Unraid/Docker WebUI and Mihon-compatible extension downloading. Keep architecture and dependency choices provisional until approved. Trace claims to upstream revisions; distinguish branch/release/paid/planned/unknown. No copying before license review. One authoritative backend; never overwrite existing media by default. Add tests for approved features and record actual platform qualification. Never commit secrets or personal media.

@@ -1,0 +1,3 @@
+# Contributing and evidence protocol
+
+Audit first. For each feature: upstream ID, commit, link to file/route/test, version, capability, verification (documented/code/runtime), result, caveat and date. Mark planned/premium/unknown separately. Do not infer absence from missing docs. Runtime record includes OS/filesystem/fixture/steps. Add matching stable ID to matrix and CSV; split broad rows as research progresses. Only approved requirements enter implementation. Use synthetic or authorized test media. No secrets, private logs or copyrighted pages committed. No upstream code/assets/models before license review. Prefer reversible changes and safe defaults.
