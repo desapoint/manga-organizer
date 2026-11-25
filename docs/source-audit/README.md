@@ -107,3 +107,7 @@ The owner explicitly required file organization and duplicate handling. [File or
 ## Pass 8 — coverage and reconciliation
 
 [Pass 8](PASS8.md), [coverage baseline](COVERAGE-BASELINE.md), [module coverage](MODULE-COVERAGE.csv), [evidence path index](EVIDENCE-PATH-INDEX.csv), [test evidence](PASS8-TEST-EVIDENCE.csv), [parent coverage](PARENT-COVERAGE.csv), [candidate groups](CANONICAL-CANDIDATE-GROUPS.csv). All 356 existing candidates retained, 17 parent-map correction proposals checked against matrix (actual changed count in report); 32 proposed overlap groups. Mapped paths are not complete code review. No tests run. Current gates remain open.
+
+## Pass 14 — current coverage and remaining module review
+
+[Pass 14](PASS14.md) reconciles citations through the full audit history and records new acquisition, publication recovery, rename, authorization and settings evidence. Use the [current module dispositions](PASS14-MODULE-DISPOSITIONS.csv) for the remaining inventory and the [pinned source evidence](PASS14-EVIDENCE.csv) for line references. Pass 8 remains the historical baseline.

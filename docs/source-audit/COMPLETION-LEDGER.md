@@ -69,6 +69,10 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 
 [Targeted evidence-gap review](PASS13.md) and [pinned evidence](PASS13-EVIDENCE.csv) add 22 selected files across five references, including six test-source files (not executed). F55 v3 alias located and registered, selected compatibility test assertions inspected; six other gap areas strengthened, F68 still proposed-only. G3/G4/G5 open; G6 partial; G7 not executed; G8 not approved. Existing 356 atomic candidates, 126 proposed groups, 70 parent decisions unchanged; no implementation or destructive automation approval.
 
+## Pass 14 progress
+
+[Coverage reconciliation and focused implementation traces](PASS14.md) account for all 13,716 paths across seven pinned trees, with 395 evidence paths through Pass 13 and 403 through Pass 14. The [module dispositions](PASS14-MODULE-DISPOSITIONS.csv) show remaining review per repo/module/role. [Pinned evidence](PASS14-EVIDENCE.csv) covers SABnzbd completion and separate NZBGet submission evidence, selected compatibility API mutations, Manga-arr journal recovery, Maki rename and Suwayomi authorization/settings. Three test-source files inspected, zero upstream tests executed. G3/G4/G5 remain open, G6 partial, G7 unexecuted and G8 pending owner selection.
+
 ## Pass 15 progress
 
 [Destructive-operation and extension authorization review](PASS15.md) cites 13 pinned files across seven references, 8 test-source files, and [13 proposed qualification fixtures](PASS15-QUALIFICATION.csv) (not run). User reported Pass 14 complete, but no Pass 14 record was accessible on the visible repository branches when reviewed; numbering preserved, no Pass 14 contents assumed. [Evidence](PASS15-EVIDENCE.csv). G3/G4/G5 open; G6 partial; G7 not executed; G8 not approved. Existing 356 atomic candidates and 126 proposed groups unchanged; no application implementation or automatic destructive approval.
