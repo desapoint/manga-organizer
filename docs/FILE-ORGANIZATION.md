@@ -110,3 +110,7 @@ Implementation remains gated on feature selection, source audit and target-platf
 ## Pass 4 safety execution evidence (2026-11-25)
 
 [Pass 4 report](source-audit/PASS4.md) traces Maki hash/identity revalidation and uncancellable DB cleanup after direct deletion, Uchiyomi two-phase temporary rename and best-effort rollback, manga-arr lease/staging/prepared-publication boundary, Kavita watcher cap and active-write detection, and Mihon duplicate SQL (title substring OR nonzero matching tracker ID, not physical duplicate detection). Proposed defaults remain quarantine rather than immediate delete, no-clobber operations even after preview, explicit recovery states and distinct bibliographic vs physical identity. Neither UI confirmation nor watcher completion is proof that the filesystem has not changed. Full call paths and runtime fixtures still pending.
+
+## Pass 6 — logical reading anchors
+
+See [reader/data contracts](source-audit/READER-DATA-CONTRACTS.md). Preserve stable logical work/edition/chapter IDs independent of path and retain user-specific resume/bookmarks/history. Original page anchors and occurrence/order are distinct from presentation splits/joins/crops; exact repacks may be mapped only with verified evidence. Changed or ambiguous content requires review, preserving unresolved anchors and old provenance. Do not cascade-delete reader state on physical file removal or merge private resources without ACL review. No migration or runtime fixture executed.

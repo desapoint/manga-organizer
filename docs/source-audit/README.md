@@ -1,4 +1,4 @@
-# Pinned source audit — passes 1–5
+# Pinned source audit — passes 1–6
 
 Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-AUDIT.md) and [68 parent feature clusters](../FEATURE-MATRIX.md). No application code created. All seven pinned Git trees enumerated; targeted implementation declarations and selected logic examined (29 distinct source files in the first pass, followed by declaration extraction from 46 additional files; 75 unique files fetched). This is deeper than README review but not exhaustive implementation verification. No code copied, builds or tests executed.
 
@@ -15,7 +15,7 @@ Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-
 
 ## Selection inventory
 
-[Atomic feature register (281 rows)](ATOMIC-FEATURES.csv) is supplemental to the original parent matrix. Evidence L = targeted implementation logic observed, C = code declaration/route/setting inspected (not complete behavior), T = source-tree path candidate, not confirmed. Each item has a proposed acceptance criterion and pending owner decision. All current atomic evidence paths are pinned; two formerly ambiguous references were resolved in pass 3. Use the pinned report for context and line ranges. A parent is not approved by adding subfeatures. Required extension outcome remains unchanged. Automated extraction uses simple patterns in one focused file per project, not exhaustive route/config enumeration; dynamic/indirect routes, generated settings, comments and consumers need further review.
+[Atomic feature register (330 rows)](ATOMIC-FEATURES.csv) is supplemental to the original parent matrix. Evidence L = targeted implementation logic observed, C = code declaration/route/setting inspected (not complete behavior), T = source-tree path candidate, not confirmed. Each item has a proposed acceptance criterion and pending owner decision. All current atomic evidence paths are pinned; two formerly ambiguous references were resolved in pass 3. Use the pinned report for context and line ranges. A parent is not approved by adding subfeatures. Required extension outcome remains unchanged. Automated extraction uses simple patterns in one focused file per project, not exhaustive route/config enumeration; dynamic/indirect routes, generated settings, comments and consumers need further review.
 
 ## Key cross-project findings and conflicts
 
@@ -95,3 +95,7 @@ The owner explicitly required file organization and duplicate handling. [File or
 ## Pass 5 — integration contracts
 
 [Pass 5](PASS5.md), [evidence CSV](PASS5-EVIDENCE.csv), [integration inventory](INTEGRATION-INVENTORY.csv): 51 distinct pinned files inspected (includes repeat retrievals), 25 integration groups, 42 added candidate rows; total 281. Separates metadata, source, list import, release indexer, client, tracker and external reader. Observed seven SW and twelve MH tracker registrations, not verified runtime or shipped parity. All remaining gates open.
+
+## Pass 6 — reader and database architecture
+
+[Pass 6](PASS6.md), [evidence CSV](PASS6-EVIDENCE.csv), [reader and data contracts](READER-DATA-CONTRACTS.md). 49 distinct pinned files reviewed including repeat retrievals; 49 added candidates, total 330. Separates logical media identity, physical bytes, presentation, user progress and privacy. No executed migrations/runtime tests, no approved stack or new optional features. Gates remain open.

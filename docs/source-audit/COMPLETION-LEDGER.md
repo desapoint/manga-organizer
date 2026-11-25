@@ -36,3 +36,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 5 progress
 
 [Provider and integration audit](PASS5.md) adds pinned provider/source/indexer/client/tracker evidence and [integration inventory](INTEGRATION-INVENTORY.csv). G3/G5 improved but remain open: trace each concrete provider and per-user/role UI, defaults and validation; verify authentication, token refresh, rate limits, status mapping, list completeness, licensing and versioned contract tests. G4 storage protections retained. G6/G7 still open/blocked for release-specific behavior, license and runtime. G8 not approved.
+
+## Pass 6 progress
+
+[Reader and database audit](PASS6.md) and [proposed reader/data contracts](READER-DATA-CONTRACTS.md) extend G3/G4/G5 with reader prefs/UI, progress conflicts, private state, schema/entity and selected migrations across all seven. Still open: complete settings-to-consumer/renderer/ACL traces, relationship cascade and migration histories, provider-specific contracts and full runtime fixture results. G6 license/dependency/packaging audit next; G7 target qualification still not executed; G8 no approval. Do not infer full data safety from schema or declarations.
