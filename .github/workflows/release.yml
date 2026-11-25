@@ -1,0 +1,176 @@
+name: Development release
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ['src/**', 'client/**', 'packaging/**', 'docs/INSTALL.md', 'tests/foundation_smoke.py', 'Dockerfile', '.dockerignore', '.github/workflows/release.yml']
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: development-release-${{ github.event_name }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      build: ${{ steps.plan.outputs.build }}
+      publish: ${{ steps.plan.outputs.publish }}
+      tag: ${{ steps.plan.outputs.tag }}
+      image: ${{ steps.plan.outputs.image }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - id: plan
+        run: bash packaging/release-plan.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  native:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    name: Package ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            rid: win-x64
+          - os: ubuntu-24.04
+            rid: linux-x64
+          - os: ubuntu-24.04-arm
+            rid: linux-arm64
+    env:
+      RID: ${{ matrix.rid }}
+      TAG: ${{ needs.plan.outputs.tag }}
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - working-directory: client
+        run: npm ci && npm run build
+      - name: Publish self-contained server
+        shell: bash
+        run: |
+          dotnet restore src/MangaOrganizer.Server --locked-mode -p:SelfContained=true
+          dotnet publish src/MangaOrganizer.Server --no-restore --self-contained -r "$RID" -c Release \
+            -p:Version="${TAG#v}" -p:SourceRevisionId="$GITHUB_SHA" -o release-payload
+          python packaging/runtime-notices.py "$RID" release-payload
+          cp docs/INSTALL.md release-payload/INSTALL.md
+          mkdir -p release-out release-check
+      - name: Package and smoke-test Windows ZIP and installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          Compress-Archive -Path release-payload/* -DestinationPath release-out/MangaOrganizer-win-x64.zip
+          Expand-Archive -Path release-out/MangaOrganizer-win-x64.zip -DestinationPath release-check
+          python tests/foundation_smoke.py --app release-check/MangaOrganizer.Server.exe
+          ./packaging/windows/package.ps1 -Version ($env:TAG.TrimStart('v')) -Payload release-payload -OutputDir release-out
+      - name: Package and smoke-test Linux archive
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          artifact="release-out/MangaOrganizer-$RID.tar.gz"
+          tar -czf "$artifact" -C release-payload .
+          tar -xzf "$artifact" -C release-check
+          python tests/foundation_smoke.py --app release-check/MangaOrganizer.Server
+      - uses: actions/upload-artifact@v6
+        with:
+          name: native-${{ matrix.rid }}
+          path: release-out/*
+          compression-level: 0
+          if-no-files-found: error
+
+  docker:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    name: Package Docker ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+    env:
+      ARCH: ${{ matrix.arch }}
+      TAG: ${{ needs.plan.outputs.tag }}
+      IMAGE: ${{ needs.plan.outputs.image }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Build and verify the image
+        run: |
+          docker build --platform "linux/$ARCH" --tag "$IMAGE:$TAG" --build-arg "VERSION=${TAG#v}" \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" --label "org.opencontainers.image.version=${TAG#v}" .
+          python tests/foundation_smoke.py --image "$IMAGE:$TAG"
+          python packaging/docker/bundle.py "$RUNNER_TEMP/bundle" "$IMAGE:$TAG" "$IMAGE:$TAG" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          python packaging/docker/smoke.py "$RUNNER_TEMP/bundle" "$IMAGE:$TAG"
+      - name: Archive the exact tested image for offline installation
+        run: |
+          mkdir -p release-out
+          docker save "$IMAGE:$TAG" | gzip -1 > "release-out/MangaOrganizer-docker-$ARCH.tar.gz"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: docker-${{ matrix.arch }}
+          path: release-out/*
+          compression-level: 0
+          if-no-files-found: error
+
+  publish:
+    needs: [plan, native, docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      packages: write
+    env:
+      TAG: ${{ needs.plan.outputs.tag }}
+      IMAGE: ${{ needs.plan.outputs.image }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v7
+        with:
+          path: release-out
+          merge-multiple: true
+      - name: Publish the image and GitHub prerelease
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          bash packaging/publish-release.sh release-out

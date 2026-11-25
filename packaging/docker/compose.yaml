@@ -1,0 +1,22 @@
+name: manga-organizer
+
+services:
+  manga-organizer:
+    image: ${MANGA_ORGANIZER_IMAGE:?Set the image from the release .env.example}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MANGA_ORGANIZER_PORT:-8787}:8787"
+    environment:
+      MANGA_ORGANIZER_BOOTSTRAP_PASSWORD: ${MANGA_ORGANIZER_BOOTSTRAP_PASSWORD:-}
+      MANGA_ORGANIZER_LIBRARY_ROOTS__0: /media/manga
+    volumes:
+      - config:/config
+      - type: bind
+        source: ${MANGA_ORGANIZER_MEDIA_PATH:?Set the absolute path to a library folder}
+        target: /media/manga
+        read_only: true
+        bind:
+          create_host_path: false
+
+volumes:
+  config:

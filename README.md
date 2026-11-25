@@ -4,6 +4,8 @@ A documentation-first project for a unified, self-hosted manga library, acquisit
 
 **Status** — primary-server foundation and read-only catalog in development. The audit ledger tracks remaining source, license and device qualification. [Audit ledger](docs/source-audit/COMPLETION-LEDGER.md)
 
+Install the Windows, Linux, Docker or Unraid build from a GitHub development prerelease. A merged pull request to `main` builds and publishes the installers and container image after the package tests pass. [Releases](https://github.com/desapoint/manga-organizer/releases) · [Installation guide](docs/INSTALL.md)
+
 ## Run the primary-server foundation
 
 Build the WebUI with Node.js 24 and publish the server with the .NET 10 SDK.
