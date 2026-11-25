@@ -107,7 +107,8 @@ def linux(gradle_lib, root):
         docker("volume", "create", config)
         docker("volume", "create", media)
         docker("run", "--rm", "-v", f"{config}:/config", "-v", f"{media}:/media", PYTHON_IMAGE,
-               "python", "-c", "import os; os.chown('/config', 99, 100); os.chown('/media', 99, 100)")
+               "python", "-c", "import os\nos.mkdir('/media/downloads')\n"
+               "for path in ('/config', '/media', '/media/downloads'):\n    os.chown(path, 99, 100)")
         docker("create", "--name", engine, "--network", run, "--user", "99:100", "-p", f"127.0.0.1:{ENGINE_PORT}:4567",
                "-v", f"{config}:/home/suwayomi/.local/share/Tachidesk", "-v", f"{media}:/media",
                "-e", "AUTH_MODE=basic_auth", "-e", "AUTH_USERNAME=audit-fixture", "-e", "AUTH_PASSWORD=synthetic-local-password",
