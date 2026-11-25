@@ -1,8 +1,8 @@
-# Pinned source audit — pass 1
+# Pinned source audit — passes 1 and 2
 
-Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-AUDIT.md) and [68 parent feature clusters](../FEATURE-MATRIX.md). No application code created. All seven pinned Git trees enumerated; targeted implementation declarations and selected logic examined (four files per project, 28 total). This is deeper than README review but not exhaustive implementation verification. No code copied, builds or tests executed.
+Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-AUDIT.md) and [68 parent feature clusters](../FEATURE-MATRIX.md). No application code created. All seven pinned Git trees enumerated; targeted implementation declarations and selected logic examined (29 distinct source files in the first pass, followed by declaration extraction from 46 additional files; 75 unique files fetched). This is deeper than README review but not exhaustive implementation verification. No code copied, builds or tests executed.
 
-| Repository | Tracked paths | Focus-file signals | Report |
+| Repository | Tracked paths | First-pass signals | Report |
 |---|---:|---:|---|
 | [KiranTheRam/mangarr](https://github.com/KiranTheRam/mangarr/tree/09238b58405fb94a5c753405475e30a3b4d5cb78) | 244 | 52 | [KR](KR.md) |
 | [OrbitMPGH/Maki](https://github.com/OrbitMPGH/Maki/tree/0de45e926f368e23ace4dba04e2211d1de83aadb) | 3755 | 231 | [MK](MK.md) |
@@ -15,7 +15,7 @@ Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-
 
 ## Selection inventory
 
-[Atomic feature register (112 rows)](ATOMIC-FEATURES.csv) is supplemental to the original parent matrix. Evidence L = targeted implementation logic observed, C = code declaration/route/setting inspected (not complete behavior), T = source-tree path candidate, not confirmed. Each item has a proposed acceptance criterion and pending owner decision. File basenames resolve through linked per-project full path indexes; use the pinned report for exact locations. A parent is not approved by adding subfeatures. Required extension outcome remains unchanged. Automated extraction uses simple patterns in one focused file per project, not exhaustive route/config enumeration; dynamic/indirect routes, generated settings, comments and consumers need further review.
+[Atomic feature register (172 rows)](ATOMIC-FEATURES.csv) is supplemental to the original parent matrix. Evidence L = targeted implementation logic observed, C = code declaration/route/setting inspected (not complete behavior), T = source-tree path candidate, not confirmed. Each item has a proposed acceptance criterion and pending owner decision. Evidence links resolve to pinned paths when unique; ambiguous filenames remain unlinked and are explicitly recorded below. Use the pinned report for context and line ranges. A parent is not approved by adding subfeatures. Required extension outcome remains unchanged. Automated extraction uses simple patterns in one focused file per project, not exhaustive route/config enumeration; dynamic/indirect routes, generated settings, comments and consumers need further review.
 
 ## Key cross-project findings and conflicts
 
@@ -46,3 +46,37 @@ Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-
 - [x] Persist raw-path metadata inventory, focused symbol/key/route inventory, per-project observations and granular selection leads.
 - [ ] Exhaustive code inspection and tests per repository.
 - [ ] Runtime comparisons / owner feature approvals.
+
+## Second pass — operational surface inventory
+
+| Project | Additional files fetched | Extracted candidate signals | Report |
+|---|---:|---:|---|
+| KiranTheRam/mangarr | 7 | 317 | [KR pass 2](KR-pass2.md) |
+| OrbitMPGH/Maki | 6 | 133 | [MK pass 2](MK-pass2.md) |
+| AngeloSha/uchiyomi | 6 | 295 | [UC pass 2](UC-pass2.md) |
+| Kha-kis/manga-arr | 7 | 259 | [KK pass 2](KK-pass2.md) |
+| Kareadita/Kavita | 6 | 235 | [KV pass 2](KV-pass2.md) |
+| Suwayomi/Suwayomi-Server | 6 | 453 | [SW pass 2](SW-pass2.md) |
+| mihonapp/mihon | 8 | 342 | [MH pass 2](MH-pass2.md) |
+| Total | 46 | 2,034 | |
+
+Combined with 539 first-pass signals: **2,573 extracted identifiers/candidate declarations**. These include settings, routes, functions, local variables and schema fields; they are not 2,573 distinct implemented features. The updated atomic register has **172 candidate rows** (60 added in this pass); some rows intentionally overlap across reference implementations and must be merged before development. Evidence levels and pending decisions remain explicit.
+
+### Additional findings
+
+- KR: manual file/range mapping, cleanup preview, group listing, additional series folders, per-series source linking, volume merge/resync preview and import-list skip workflow deserve independent requirements.
+- KK: separate quality score matrices, format preview, delay order, default profiles, connection test and circuit-reset operations confirm the depth of configuration surfaces.
+- MK: root routing rules with order/test, auto-tag preview/apply, drop-folder settings/manual run, quality-format CRUD and OPDS token settings expand the initial UX comparison.
+- UC: distinguish admin repair runs, source gap scans, fills, refetch, job cancellation and offline download manifests; personal tokens and reader profiles are separate surfaces. GraphQL operations declarations are indexed for future adapter contracts.
+- KV: OPDS smart-filter/collection browsing, KOReader ebook hash sync, Tachiyomi latest/mark-until API and reading-profile parent/promotion operations are present as routes. Individual permissions and behavior still need review.
+- SW: server/user config declarations, GraphQL download/source/chapter types and extension implementation are now indexed. Inspect settings consumers and generated schema; do not treat local variables as configuration options.
+- MH: reader settings include orientation, scaling, zoom, transitions, page flash, navigation positioning and Wi-Fi prefetch; library settings include column layout, sort, update restrictions, duplicate-read policy, filters and badges. Security, tracker and backup schema declarations are separately indexed.
+
+### Unresolved evidence paths
+
+- A051 (UC): titleExtraction.ts; bff/src/lib/titleExtraction.ts, bff/src/routes/titleExtraction.ts, web/lib/titleExtraction.ts. Resolve before approval.
+- A052 (UC): numbering.ts; bff/src/lib/numbering.ts, bff/src/routes/numbering.ts, web/lib/numbering.ts. Resolve before approval.
+
+### Mandatory gate
+
+Source audit remains open. Full path enumeration and source retrieval are not exhaustive logic review. Remaining work: inspect all route implementations and settings consumers, provider and client adapters, permissions and migrations, actual releases and tests; verify runtime on target platforms; resolve duplicate candidates and obtain owner approval. No implementation has started.
