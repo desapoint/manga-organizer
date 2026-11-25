@@ -1,0 +1,318 @@
+Path,Line,Kind,Identifier,Verification
+"backend/mangarr/api/series.py",79,"field candidate","chapters",declaration only
+"backend/mangarr/api/series.py",80,"field candidate","downloaded",declaration only
+"backend/mangarr/api/series.py",81,"field candidate","specials",declaration only
+"backend/mangarr/api/series.py",82,"field candidate","specials_downloaded",declaration only
+"backend/mangarr/api/series.py",85,"function","_count_chapters",declaration only
+"backend/mangarr/api/series.py",97,"function","_apply_counts",declaration only
+"backend/mangarr/api/series.py",104,"function","_series_out",declaration only
+"backend/mangarr/api/series.py",113,"function","_content_source_names",declaration only
+"backend/mangarr/api/series.py",122,"function","_check_source_names",declaration only
+"backend/mangarr/api/series.py",128,"function","_apply_monitoring",declaration only
+"backend/mangarr/api/series.py",130,"field candidate","monitored",declaration only
+"backend/mangarr/api/series.py",131,"field candidate","monitor_mode",declaration only
+"backend/mangarr/api/series.py",132,"field candidate","monitor_from",declaration only
+"backend/mangarr/api/series.py",168,"function","_clean_lines",declaration only
+"backend/mangarr/api/series.py",170,"field candidate","out",declaration only
+"backend/mangarr/api/series.py",178,"HTTP GET","(base)",declaration only
+"backend/mangarr/api/series.py",179,"function","list_series",declaration only
+"backend/mangarr/api/series.py",207,"HTTP POST","(base)",declaration only
+"backend/mangarr/api/series.py",208,"function","add_series",declaration only
+"backend/mangarr/api/series.py",243,"function","_series_in_order",declaration only
+"backend/mangarr/api/series.py",252,"function","_change_root_folder",declaration only
+"backend/mangarr/api/series.py",305,"function","move_and_save",declaration only
+"backend/mangarr/api/series.py",327,"HTTP PUT","/editor",declaration only
+"backend/mangarr/api/series.py",328,"function","edit_series_bulk",declaration only
+"backend/mangarr/api/series.py",365,"HTTP POST","/editor/refresh",declaration only
+"backend/mangarr/api/series.py",366,"function","refresh_series_bulk",declaration only
+"backend/mangarr/api/series.py",377,"function","_cancel_direct_downloads",declaration only
+"backend/mangarr/api/series.py",396,"HTTP POST","/editor/delete",declaration only
+"backend/mangarr/api/series.py",397,"function","delete_series_bulk",declaration only
+"backend/mangarr/api/series.py",408,"function","_schedule_deletion",declaration only
+"backend/mangarr/api/series.py",415,"function","resume_pending_deletions",declaration only
+"backend/mangarr/api/series.py",422,"function","_delete_series_locked",declaration only
+"backend/mangarr/api/series.py",450,"function","_delete_when_free",declaration only
+"backend/mangarr/api/series.py",462,"HTTP GET","/{series_id}",declaration only
+"backend/mangarr/api/series.py",463,"function","get_series",declaration only
+"backend/mangarr/api/series.py",488,"function","_retitle",declaration only
+"backend/mangarr/api/series.py",494,"function","_apply_title_preference",declaration only
+"backend/mangarr/api/series.py",509,"HTTP POST","/apply-title-preference",declaration only
+"backend/mangarr/api/series.py",510,"function","apply_title_preference",declaration only
+"backend/mangarr/api/series.py",530,"HTTP PUT","/{series_id}",declaration only
+"backend/mangarr/api/series.py",531,"function","update_series",declaration only
+"backend/mangarr/api/series.py",532,"field candidate","series_id",declaration only
+"backend/mangarr/api/series.py",555,"function","_refresh_issues_when_free",declaration only
+"backend/mangarr/api/series.py",565,"function","later",declaration only
+"backend/mangarr/api/series.py",577,"function","_refresh_issues",declaration only
+"backend/mangarr/api/series.py",587,"function","_apply_series_edit",declaration only
+"backend/mangarr/api/series.py",588,"field candidate","series_id",declaration only
+"backend/mangarr/api/series.py",654,"HTTP DELETE","/{series_id}",declaration only
+"backend/mangarr/api/series.py",655,"function","delete_series",declaration only
+"backend/mangarr/api/series.py",660,"HTTP POST","/{series_id}/refresh",declaration only
+"backend/mangarr/api/series.py",661,"function","refresh_series",declaration only
+"backend/mangarr/api/series.py",662,"field candidate","series_id",declaration only
+"backend/mangarr/api/series.py",677,"HTTP PUT","/{series_id}/chapters/monitor",declaration only
+"backend/mangarr/api/series.py",678,"function","monitor_chapters",declaration only
+"backend/mangarr/api/series.py",679,"field candidate","series_id",declaration only
+"backend/mangarr/api/series.py",689,"HTTP PUT","/{series_id}/chapters/{chapter_id}/metadata",declaration only
+"backend/mangarr/api/series.py",690,"function","update_chapter_metadata",declaration only
+"backend/mangarr/api/series.py",691,"field candidate","series_id",declaration only
+"backend/mangarr/api/series.py",692,"field candidate","chapter_id",declaration only
+"backend/mangarr/api/series.py",720,"HTTP GET","/{series_id}/groups",declaration only
+"backend/mangarr/api/series.py",721,"function","list_series_groups",declaration only
+"backend/mangarr/api/series.py",735,"function","groups_of",declaration only
+"backend/mangarr/api/series.py",747,"field candidate","out",declaration only
+"backend/mangarr/api/series.py",754,"HTTP POST","/{series_id}/volumes/merge",declaration only
+"backend/mangarr/api/series.py",755,"function","merge_volumes_now",declaration only
+"backend/mangarr/api/series.py",772,"HTTP GET","/{series_id}/related",declaration only
+"backend/mangarr/api/series.py",773,"function","series_related",declaration only
+"backend/mangarr/api/series.py",788,"function","out",declaration only
+"backend/mangarr/api/library.py",71,"function","_load",declaration only
+"backend/mangarr/api/library.py",88,"function","_root_of",declaration only
+"backend/mangarr/api/library.py",94,"function","_folders_of",declaration only
+"backend/mangarr/api/library.py",99,"function","_volume_offsets_of",declaration only
+"backend/mangarr/api/library.py",103,"function","_media_of",declaration only
+"backend/mangarr/api/library.py",110,"function","_active_chapters",declaration only
+"backend/mangarr/api/library.py",115,"function","_require_root_available",declaration only
+"backend/mangarr/api/library.py",125,"function","_canonical_path",declaration only
+"backend/mangarr/api/library.py",133,"function","_media_paths_of",declaration only
+"backend/mangarr/api/library.py",141,"function","_require_series_media_path",declaration only
+"backend/mangarr/api/library.py",152,"HTTP POST","/series/{series_id}/scan",declaration only
+"backend/mangarr/api/library.py",153,"function","scan",declaration only
+"backend/mangarr/api/library.py",185,"HTTP POST","/library/scan",declaration only
+"backend/mangarr/api/library.py",186,"function","scan_all",declaration only
+"backend/mangarr/api/library.py",195,"function","_plan",declaration only
+"backend/mangarr/api/library.py",203,"HTTP GET","/series/{series_id}/rename",declaration only
+"backend/mangarr/api/library.py",204,"function","rename_preview",declaration only
+"backend/mangarr/api/library.py",216,"HTTP POST","/series/{series_id}/rename",declaration only
+"backend/mangarr/api/library.py",217,"function","rename_apply",declaration only
+"backend/mangarr/api/library.py",218,"field candidate","series_id",declaration only
+"backend/mangarr/api/library.py",242,"HTTP GET","/series/{series_id}/files",declaration only
+"backend/mangarr/api/library.py",243,"function","series_files",declaration only
+"backend/mangarr/api/library.py",251,"field candidate","out",declaration only
+"backend/mangarr/api/library.py",268,"function","_pin_pdf_mapping",declaration only
+"backend/mangarr/api/library.py",278,"HTTP POST","/series/{series_id}/files/map",declaration only
+"backend/mangarr/api/library.py",279,"function","map_file",declaration only
+"backend/mangarr/api/library.py",280,"field candidate","series_id",declaration only
+"backend/mangarr/api/library.py",296,"HTTP GET","/series/{series_id}/cleanup",declaration only
+"backend/mangarr/api/library.py",297,"function","cleanup_plan",declaration only
+"backend/mangarr/api/library.py",308,"function","out",declaration only
+"backend/mangarr/api/library.py",320,"HTTP POST","/series/{series_id}/cleanup",declaration only
+"backend/mangarr/api/library.py",321,"function","cleanup_apply",declaration only
+"backend/mangarr/api/library.py",322,"field candidate","series_id",declaration only
+"backend/mangarr/api/library.py",340,"HTTP POST","/series/{series_id}/files/map-range",declaration only
+"backend/mangarr/api/library.py",341,"function","map_file_range",declaration only
+"backend/mangarr/api/library.py",342,"field candidate","series_id",declaration only
+"backend/mangarr/api/library.py",379,"function","_relative_to_root",declaration only
+"backend/mangarr/api/library.py",390,"HTTP GET","/series/{series_id}/folders",declaration only
+"backend/mangarr/api/library.py",391,"function","list_folders",declaration only
+"backend/mangarr/api/library.py",407,"HTTP POST","/series/{series_id}/folders",declaration only
+"backend/mangarr/api/library.py",408,"function","add_folder",declaration only
+"backend/mangarr/api/library.py",409,"field candidate","series_id",declaration only
+"backend/mangarr/api/library.py",433,"HTTP PUT","/series/{series_id}/folders/{folder_id}",declaration only
+"backend/mangarr/api/library.py",434,"function","update_folder",declaration only
+"backend/mangarr/api/library.py",435,"field candidate","series_id",declaration only
+"backend/mangarr/api/library.py",436,"field candidate","folder_id",declaration only
+"backend/mangarr/api/library.py",456,"HTTP DELETE","/series/{series_id}/folders/{folder_id}",declaration only
+"backend/mangarr/api/library.py",457,"function","remove_folder",declaration only
+"backend/mangarr/api/library.py",458,"field candidate","series_id",declaration only
+"backend/mangarr/api/library.py",472,"HTTP GET","/sources",declaration only
+"backend/mangarr/api/library.py",473,"function","list_sources",declaration only
+"backend/mangarr/api/library.py",478,"HTTP GET","/series/{series_id}/sources/search",declaration only
+"backend/mangarr/api/library.py",479,"function","source_search",declaration only
+"backend/mangarr/api/library.py",480,"field candidate","series_id",declaration only
+"backend/mangarr/api/library.py",500,"HTTP GET","/series/{series_id}/sources/details",declaration only
+"backend/mangarr/api/library.py",501,"function","source_details",declaration only
+"backend/mangarr/api/library.py",502,"field candidate","series_id",declaration only
+"backend/mangarr/api/library.py",523,"HTTP POST","/series/{series_id}/sources",declaration only
+"backend/mangarr/api/library.py",524,"function","set_source_link",declaration only
+"backend/mangarr/api/library.py",525,"field candidate","series_id",declaration only
+"backend/mangarr/api/library.py",540,"HTTP DELETE","/series/{series_id}/sources/{link_id}",declaration only
+"backend/mangarr/api/library.py",541,"function","delete_source_link",declaration only
+"backend/mangarr/api/library.py",542,"field candidate","series_id",declaration only
+"backend/mangarr/api/library.py",551,"HTTP POST","/series/{series_id}/resync",declaration only
+"backend/mangarr/api/library.py",552,"function","resync_chapters",declaration only
+"backend/mangarr/api/library.py",693,"function","_run_resync",declaration only
+"backend/mangarr/api/library.py",713,"field candidate","diff",declaration only
+"backend/mangarr/api/library.py",760,"function","_chapter_copies",declaration only
+"backend/mangarr/api/library.py",773,"HTTP GET","/series/{series_id}/volumes/resync-preview",declaration only
+"backend/mangarr/api/library.py",775,"function","resync_volumes_preview",declaration only
+"backend/mangarr/api/library.py",816,"HTTP POST","/series/{series_id}/volumes/resync",declaration only
+"backend/mangarr/api/library.py",817,"function","resync_volumes",declaration only
+"backend/mangarr/api/library.py",818,"field candidate","series_id",declaration only
+"backend/mangarr/api/library.py",873,"function","_reconcile_issues",declaration only
+"backend/mangarr/api/library.py",883,"function","_scan_now",declaration only
+"backend/mangarr/api/library.py",894,"HTTP POST","/library/folder-preview",declaration only
+"backend/mangarr/api/library.py",895,"function","folder_preview",declaration only
+"backend/mangarr/api/library.py",920,"HTTP GET","/filesystem",declaration only
+"backend/mangarr/api/library.py",921,"function","browse",declaration only
+"backend/mangarr/api/library.py",922,"field candidate","path",declaration only
+"backend/mangarr/api/queue.py",41,"HTTP GET","/queue",declaration only
+"backend/mangarr/api/queue.py",42,"function","get_queue",declaration only
+"backend/mangarr/api/queue.py",71,"function","_remove_downloads",declaration only
+"backend/mangarr/api/queue.py",130,"HTTP DELETE","/queue/{download_id}",declaration only
+"backend/mangarr/api/queue.py",131,"function","remove_from_queue",declaration only
+"backend/mangarr/api/queue.py",137,"HTTP POST","/queue/remove",declaration only
+"backend/mangarr/api/queue.py",138,"function","remove_many_from_queue",declaration only
+"backend/mangarr/api/queue.py",148,"function","_verify_direct_availability",declaration only
+"backend/mangarr/api/queue.py",156,"function","_queue_series",declaration only
+"backend/mangarr/api/queue.py",167,"HTTP POST","/queue/{download_id}/retry",declaration only
+"backend/mangarr/api/queue.py",168,"function","retry_failed_download",declaration only
+"backend/mangarr/api/queue.py",169,"field candidate","download_id",declaration only
+"backend/mangarr/api/queue.py",233,"HTTP POST","/queue/grab",declaration only
+"backend/mangarr/api/queue.py",234,"function","grab",declaration only
+"backend/mangarr/api/queue.py",270,"HTTP GET","/history",declaration only
+"backend/mangarr/api/queue.py",271,"function","get_history",declaration only
+"backend/mangarr/api/import_lists.py",33,"field candidate","kind",declaration only
+"backend/mangarr/api/import_lists.py",34,"field candidate","label",declaration only
+"backend/mangarr/api/import_lists.py",36,"field candidate","default_statuses",declaration only
+"backend/mangarr/api/import_lists.py",37,"field candidate","needs_username",declaration only
+"backend/mangarr/api/import_lists.py",38,"field candidate","needs_password",declaration only
+"backend/mangarr/api/import_lists.py",39,"field candidate","needs_client_id",declaration only
+"backend/mangarr/api/import_lists.py",43,"field candidate","key",declaration only
+"backend/mangarr/api/import_lists.py",44,"field candidate","title",declaration only
+"backend/mangarr/api/import_lists.py",47,"function","_out",declaration only
+"backend/mangarr/api/import_lists.py",73,"function","_apply",declaration only
+"backend/mangarr/api/import_lists.py",103,"function","_require",declaration only
+"backend/mangarr/api/import_lists.py",110,"HTTP GET","/providers",declaration only
+"backend/mangarr/api/import_lists.py",111,"function","providers",declaration only
+"backend/mangarr/api/import_lists.py",123,"HTTP GET","(base)",declaration only
+"backend/mangarr/api/import_lists.py",124,"function","list_import_lists",declaration only
+"backend/mangarr/api/import_lists.py",129,"HTTP POST","(base)",declaration only
+"backend/mangarr/api/import_lists.py",130,"function","create_import_list",declaration only
+"backend/mangarr/api/import_lists.py",138,"HTTP PUT","/{list_id}",declaration only
+"backend/mangarr/api/import_lists.py",139,"function","update_import_list",declaration only
+"backend/mangarr/api/import_lists.py",140,"field candidate","list_id",declaration only
+"backend/mangarr/api/import_lists.py",148,"HTTP DELETE","/{list_id}",declaration only
+"backend/mangarr/api/import_lists.py",149,"function","delete_import_list",declaration only
+"backend/mangarr/api/import_lists.py",155,"HTTP POST","/preview",declaration only
+"backend/mangarr/api/import_lists.py",156,"function","preview_import_list",declaration only
+"backend/mangarr/api/import_lists.py",179,"HTTP POST","/{list_id}/sync",declaration only
+"backend/mangarr/api/import_lists.py",180,"function","sync_import_list",declaration only
+"backend/mangarr/api/import_lists.py",192,"HTTP GET","/{list_id}/entries",declaration only
+"backend/mangarr/api/import_lists.py",193,"function","list_entries",declaration only
+"backend/mangarr/api/import_lists.py",198,"HTTP POST","/{list_id}/entries/skip",declaration only
+"backend/mangarr/api/import_lists.py",199,"function","skip_entry",declaration only
+"backend/mangarr/api/import_lists.py",211,"HTTP DELETE","/{list_id}/entries/{entry_id}",declaration only
+"backend/mangarr/api/import_lists.py",212,"function","forget_entry",declaration only
+"backend/mangarr/config.py",14,"field candidate","data_dir",declaration only
+"backend/mangarr/config.py",15,"field candidate","host",declaration only
+"backend/mangarr/config.py",16,"field candidate","port",declaration only
+"backend/mangarr/config.py",17,"field candidate","log_level",declaration only
+"backend/mangarr/config.py",19,"field candidate","api_key",declaration only
+"backend/mangarr/config.py",21,"field candidate","auth_username",declaration only
+"backend/mangarr/config.py",23,"field candidate","allow_unauthenticated_browser",declaration only
+"backend/mangarr/config.py",26,"field candidate","allowed_hosts",declaration only
+"backend/mangarr/config.py",29,"field candidate","sqlite_wal",declaration only
+"backend/mangarr/config.py",32,"function","validate_security",declaration only
+"backend/mangarr/config.py",43,"function","db_path",declaration only
+"backend/mangarr/config.py",47,"function","db_url",declaration only
+"backend/mangarr/config.py",50,"function","resolve_api_key",declaration only
+"backend/mangarr/jobs/tasks.py",163,"function","_source_cooling_down",declaration only
+"backend/mangarr/jobs/tasks.py",167,"function","_note_source_failure",declaration only
+"backend/mangarr/jobs/tasks.py",185,"function","_raise_if_download_removed",declaration only
+"backend/mangarr/jobs/tasks.py",199,"function","_list_chapters_cached",declaration only
+"backend/mangarr/jobs/tasks.py",226,"function","refresh_series_metadata",declaration only
+"backend/mangarr/jobs/tasks.py",291,"function","_metadata_is_stale",declaration only
+"backend/mangarr/jobs/tasks.py",300,"function","link_mangaupdates",declaration only
+"backend/mangarr/jobs/tasks.py",322,"function","_titles_of",declaration only
+"backend/mangarr/jobs/tasks.py",334,"function","link_sources",declaration only
+"backend/mangarr/jobs/tasks.py",336,"field candidate","respect_backoff",declaration only
+"backend/mangarr/jobs/tasks.py",414,"function","update_chapters",declaration only
+"backend/mangarr/jobs/tasks.py",578,"function","_has_internal_number_gap",declaration only
+"backend/mangarr/jobs/tasks.py",591,"function","_add_volume_map_gap_chapters",declaration only
+"backend/mangarr/jobs/tasks.py",623,"function","collect_volume_maps",declaration only
+"backend/mangarr/jobs/tasks.py",632,"field candidate","maps",declaration only
+"backend/mangarr/jobs/tasks.py",659,"function","fetch_volume_map",declaration only
+"backend/mangarr/jobs/tasks.py",672,"function","_series_folders",declaration only
+"backend/mangarr/jobs/tasks.py",691,"function","root_expects_content",declaration only
+"backend/mangarr/jobs/tasks.py",710,"function","library_root_unavailable",declaration only
+"backend/mangarr/jobs/tasks.py",723,"function","disk_volume_numbers",declaration only
+"backend/mangarr/jobs/tasks.py",749,"function","refine_volume_map_with_disk",declaration only
+"backend/mangarr/jobs/tasks.py",781,"function","reconcile_downloaded_files",declaration only
+"backend/mangarr/jobs/tasks.py",810,"function","scan_series_folder",declaration only
+"backend/mangarr/jobs/tasks.py",847,"function","series_lock",declaration only
+"backend/mangarr/jobs/tasks.py",855,"function","acquire_series_lock",declaration only
+"backend/mangarr/jobs/tasks.py",861,"function","try_acquire_series_lock",declaration only
+"backend/mangarr/jobs/tasks.py",869,"function","refresh_series_full",declaration only
+"backend/mangarr/jobs/tasks.py",870,"field candidate","series_id",declaration only
+"backend/mangarr/jobs/tasks.py",929,"function","scan_all_series",declaration only
+"backend/mangarr/jobs/tasks.py",946,"function","_scan_metadata_issues",declaration only
+"backend/mangarr/jobs/tasks.py",965,"function","_notify_kavita",declaration only
+"backend/mangarr/jobs/tasks.py",979,"field candidate","titles",declaration only
+"backend/mangarr/jobs/tasks.py",989,"function","_load_series",declaration only
+"backend/mangarr/jobs/tasks.py",1003,"function","enqueue_direct",declaration only
+"backend/mangarr/jobs/tasks.py",1005,"field candidate","source_name",declaration only
+"backend/mangarr/jobs/tasks.py",1006,"field candidate","commit",declaration only
+"backend/mangarr/jobs/tasks.py",1039,"function","torrent_save_path",declaration only
+"backend/mangarr/jobs/tasks.py",1060,"function","submit_torrent",declaration only
+"backend/mangarr/jobs/tasks.py",1096,"function","enqueue_torrent",declaration only
+"backend/mangarr/jobs/tasks.py",1098,"field candidate","source_name",declaration only
+"backend/mangarr/jobs/tasks.py",1121,"function","_series_accepts_downloads",declaration only
+"backend/mangarr/jobs/tasks.py",1130,"field candidate","download_id",declaration only
+"backend/mangarr/jobs/tasks.py",1134,"function","auto_grab_best_torrent",declaration only
+"backend/mangarr/jobs/tasks.py",1238,"function","process_direct_queue",declaration only
+"backend/mangarr/jobs/tasks.py",1255,"function","_run_direct_download",declaration only
+"backend/mangarr/jobs/tasks.py",1298,"function","library_unavailable_now",declaration only
+"backend/mangarr/jobs/tasks.py",1311,"function","ensure_not_cancelled",declaration only
+"backend/mangarr/jobs/tasks.py",1326,"function","check_still_wanted",declaration only
+"backend/mangarr/jobs/tasks.py",1345,"function","on_progress",declaration only
+"backend/mangarr/jobs/tasks.py",1364,"function","check_destination_owner",declaration only
+"backend/mangarr/jobs/tasks.py",1397,"function","destination_path",declaration only
+"backend/mangarr/jobs/tasks.py",1405,"field candidate","staged",declaration only
+"backend/mangarr/jobs/tasks.py",1560,"function","_backup_direct_archive",declaration only
+"backend/mangarr/jobs/tasks.py",1571,"function","_direct_entry_version",declaration only
+"backend/mangarr/jobs/tasks.py",1580,"function","_remove_direct_backup",declaration only
+"backend/mangarr/jobs/tasks.py",1588,"function","_rollback_direct_archive",declaration only
+"backend/mangarr/jobs/tasks.py",1606,"function","_recover_direct_install",declaration only
+"backend/mangarr/jobs/tasks.py",1636,"function","_publish_direct_archive",declaration only
+"backend/mangarr/jobs/tasks.py",1688,"function","_install_direct_download",declaration only
+"backend/mangarr/jobs/tasks.py",1779,"function","_update_if_still_synced",declaration only
+"backend/mangarr/jobs/tasks.py",1802,"function","sync_qbittorrent",declaration only
+"backend/mangarr/jobs/tasks.py",1877,"function","_place_torrent_files",declaration only
+"backend/mangarr/jobs/tasks.py",1894,"function","_check_torrent_destinations",declaration only
+"backend/mangarr/jobs/tasks.py",1900,"function","_torrent_payload_overlaps_library",declaration only
+"backend/mangarr/jobs/tasks.py",1901,"field candidate","content_path",declaration only
+"backend/mangarr/jobs/tasks.py",1922,"function","_import_torrent",declaration only
+"backend/mangarr/jobs/tasks.py",1924,"field candidate","files",declaration only
+"backend/mangarr/jobs/tasks.py",2079,"function","failed_grab_blocks",declaration only
+"backend/mangarr/jobs/tasks.py",2097,"function","_queue_duplicate_fallback",declaration only
+"backend/mangarr/jobs/tasks.py",2121,"function","_claim_duplicate_fallback",declaration only
+"backend/mangarr/jobs/tasks.py",2166,"function","grab_missing_chapters",declaration only
+"backend/mangarr/jobs/tasks.py",2168,"field candidate","only_monitored",declaration only
+"backend/mangarr/jobs/tasks.py",2171,"field candidate","allowed_series_download_id",declaration only
+"backend/mangarr/jobs/tasks.py",2254,"function","has_blocking_failure",declaration only
+"backend/mangarr/jobs/tasks.py",2357,"function","_merge_input_versions",declaration only
+"backend/mangarr/jobs/tasks.py",2358,"field candidate","chapters",declaration only
+"backend/mangarr/jobs/tasks.py",2371,"function","merge_complete_volumes",declaration only
+"backend/mangarr/jobs/tasks.py",2395,"field candidate","merged",declaration only
+"backend/mangarr/jobs/tasks.py",2494,"function","recover_interrupted_downloads",declaration only
+"backend/mangarr/jobs/tasks.py",2518,"function","_checked_within",declaration only
+"backend/mangarr/jobs/tasks.py",2527,"function","_finished_series_policy",declaration only
+"backend/mangarr/jobs/tasks.py",2538,"function","monitor_all",declaration only
+"backend/mangarr/library/importer.py",41,"function","_dest_ext",declaration only
+"backend/mangarr/library/importer.py",52,"function","_atomic_destination",declaration only
+"backend/mangarr/library/importer.py",72,"function","_validate_existing",declaration only
+"backend/mangarr/library/importer.py",84,"function","_same_contents",declaration only
+"backend/mangarr/library/importer.py",91,"function","_matches_payload",declaration only
+"backend/mangarr/library/importer.py",108,"function","_archive_revision",declaration only
+"backend/mangarr/library/importer.py",112,"function","_require_archive_revision",declaration only
+"backend/mangarr/library/importer.py",117,"function","place_file",declaration only
+"backend/mangarr/library/importer.py",118,"field candidate","src",declaration only
+"backend/mangarr/library/importer.py",147,"function","_inside",declaration only
+"backend/mangarr/library/importer.py",155,"function","_preflight_numbering",declaration only
+"backend/mangarr/library/importer.py",175,"function","_preflight_duplicates",declaration only
+"backend/mangarr/library/importer.py",222,"function","_preflight_destinations",declaration only
+"backend/mangarr/library/importer.py",251,"function","import_torrent_payload",declaration only
+"backend/mangarr/library/importer.py",252,"field candidate","content_path",declaration only
+"backend/mangarr/library/importer.py",254,"field candidate","chapters",declaration only
+"backend/mangarr/library/importer.py",255,"field candidate","library_root",declaration only
+"backend/mangarr/library/importer.py",256,"field candidate","template",declaration only
+"backend/mangarr/library/importer.py",257,"field candidate","template_no_volume",declaration only
+"backend/mangarr/library/importer.py",258,"field candidate","import_mode",declaration only
+"backend/mangarr/library/importer.py",259,"field candidate","files",declaration only
+"backend/mangarr/library/importer.py",283,"field candidate","imported",declaration only
+"backend/mangarr/library/importer.py",292,"function","destination",declaration only
+"backend/mangarr/library/importer.py",321,"function","place",declaration only
+"backend/mangarr/library/importer.py",349,"function","_loose_images",declaration only
+"backend/mangarr/library/importer.py",359,"function","_pack_images",declaration only
