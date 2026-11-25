@@ -56,3 +56,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 10 progress
 
 [Extension and acquisition audit](PASS10.md) and [adapter contract](EXTENSION-ACQUISITION-CONTRACT.md) add selected pinned evidence from 20 SW/MH files, client schema field comparison, trust/requester/queue/recovery and admission requirements. G5 improved but open: actual generated schema, auth/loader/signature and role/backup fixtures, companion runtime and version qualification. G3/G4 open; G6 partial; G7 not executed; G8 not approved. 356 atomic candidates unchanged; no code or automatic deletion approval.
+
+## Pass 11 progress
+
+[Settings and profile audit](PASS11.md) and [settings crosswalk](SETTINGS-CROSSWALK.csv) record 27 grouped observations from 27 distinct cited files across all seven references, including scope/default/validation/storage and selected actual consumers. G3 remains open: complete per-key registry, settings UI/consumers/migrations/role/test trace; remaining profile, integration and module dispositions. G4/G5 open, G6 partial, G7 not executed, G8 not approved. 356 atomic candidates retained; no implementation or automatic mutation approval.
