@@ -1,6 +1,6 @@
-# Pinned source audit — passes 1–6
+# Pinned source audit — passes 1–8
 
-Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-AUDIT.md) and [68 parent feature clusters](../FEATURE-MATRIX.md). No application code created. All seven pinned Git trees enumerated; targeted implementation declarations and selected logic examined (29 distinct source files in the first pass, followed by declaration extraction from 46 additional files; 75 unique files fetched). This is deeper than README review but not exhaustive implementation verification. No code copied, builds or tests executed.
+Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-AUDIT.md) and [70 parent feature clusters](../FEATURE-MATRIX.md). No application code created. All seven pinned Git trees enumerated; targeted implementation declarations and selected logic examined (29 distinct source files in the first pass, followed by declaration extraction from 46 additional files; 75 unique files fetched). This is deeper than README review but not exhaustive implementation verification. No code copied, builds or tests executed.
 
 | Repository | Tracked paths | First-pass signals | Report |
 |---|---:|---:|---|
@@ -15,7 +15,7 @@ Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-
 
 ## Selection inventory
 
-[Atomic feature register (330 rows)](ATOMIC-FEATURES.csv) is supplemental to the original parent matrix. Evidence L = targeted implementation logic observed, C = code declaration/route/setting inspected (not complete behavior), T = source-tree path candidate, not confirmed. Each item has a proposed acceptance criterion and pending owner decision. All current atomic evidence paths are pinned; two formerly ambiguous references were resolved in pass 3. Use the pinned report for context and line ranges. A parent is not approved by adding subfeatures. Required extension outcome remains unchanged. Automated extraction uses simple patterns in one focused file per project, not exhaustive route/config enumeration; dynamic/indirect routes, generated settings, comments and consumers need further review.
+[Atomic feature register (356 rows)](ATOMIC-FEATURES.csv) is supplemental to the original parent matrix. Evidence L = targeted implementation logic observed, C = code declaration/route/setting inspected (not complete behavior), T = source-tree path candidate, not confirmed. Each item has a proposed acceptance criterion and pending owner decision. All current atomic evidence paths are pinned; two formerly ambiguous references were resolved in pass 3. Use the pinned report for context and line ranges. A parent is not approved by adding subfeatures. Required extension outcome remains unchanged. Automated extraction uses simple patterns in one focused file per project, not exhaustive route/config enumeration; dynamic/indirect routes, generated settings, comments and consumers need further review.
 
 ## Key cross-project findings and conflicts
 
@@ -103,3 +103,7 @@ The owner explicitly required file organization and duplicate handling. [File or
 ## Pass 7 — licensing and packaging
 
 [Pass 7](PASS7.md), [evidence CSV](PASS7-EVIDENCE.csv), [license and asset register](LICENSE-ASSET-REGISTER.csv), [deployment qualification](DEPLOYMENT-QUALIFICATION.md). 54 pinned files inspected, 17 rights groups, 26 new candidates, 356 total. All seven root license texts confirmed, MuPDF and noncommercial data/model risks documented. No executed builds or target tests; full SBOM, legal choices and runtime gates open.
+
+## Pass 8 — coverage and reconciliation
+
+[Pass 8](PASS8.md), [coverage baseline](COVERAGE-BASELINE.md), [module coverage](MODULE-COVERAGE.csv), [evidence path index](EVIDENCE-PATH-INDEX.csv), [test evidence](PASS8-TEST-EVIDENCE.csv), [parent coverage](PARENT-COVERAGE.csv), [candidate groups](CANONICAL-CANDIDATE-GROUPS.csv). All 356 existing candidates retained, 17 parent-map correction proposals checked against matrix (actual changed count in report); 32 proposed overlap groups. Mapped paths are not complete code review. No tests run. Current gates remain open.

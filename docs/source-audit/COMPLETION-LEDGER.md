@@ -44,3 +44,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 7 progress
 
 [License and deployment audit](PASS7.md) verifies all seven root license texts and selected build/manifests, separate asset rights and target test plan. G6 remains partial: exact transitive SBOM, license scope, source headers, model/dataset/extension terms, companion image repository and release-specific verification pending. G7 no actual target tests; [qualification matrix](DEPLOYMENT-QUALIFICATION.md) all not run. G3/G4/G5 still open; G8 no owner approval. Do not treat this as release certification.
+
+## Pass 8 progress
+
+[Coverage reconciliation and test-source review](PASS8.md) maps durable evidence to pinned trees; 14 additional test sources, parent correction log and candidate overlap groups. G3/G4/G5 remain open: explicit module dispositions, complete settings/consumer/test traces, mutation/recovery, actual schema/runtime; G6 partial, G7 blocked for host tests, G8 not approved. No test or deployment certification from source assertions. Use [coverage baseline](COVERAGE-BASELINE.md) for outstanding gaps rather than candidate growth.
