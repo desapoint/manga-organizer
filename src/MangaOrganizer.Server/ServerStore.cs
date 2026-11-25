@@ -7,13 +7,15 @@ internal sealed record ServerIdentity(Guid InstanceId, Guid OwnerId, string Pass
 
 internal static class ServerStore
 {
+    public static SqliteConnection CreateConnection(string dataDirectory) => new(new SqliteConnectionStringBuilder
+    {
+        DataSource = Path.Combine(dataDirectory, "organizer.sqlite"),
+        Pooling = false,
+    }.ToString());
+
     public static ServerIdentity Open(string dataDirectory, string? bootstrapPassword)
     {
-        using var database = new SqliteConnection(new SqliteConnectionStringBuilder
-        {
-            DataSource = Path.Combine(dataDirectory, "organizer.sqlite"),
-            Pooling = false,
-        }.ToString());
+        using var database = CreateConnection(dataDirectory);
         database.Open();
 
         // Serialize initialization so only one process can create the owner and server identity.

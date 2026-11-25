@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
+import { getCsrfToken } from './api';
+import { Catalog } from './Catalog';
 import './styles.css';
 
 type Server = { id: string };
@@ -14,10 +16,7 @@ async function loadServer(signal?: AbortSignal): Promise<Connection> {
 }
 
 async function changeSession(method: 'POST' | 'DELETE', password?: string) {
-  const challenge = await fetch('/api/csrf');
-  if (!challenge.ok) throw new Error('Could not reach the server. Try again.');
-  const { token } = await challenge.json() as { token: string };
-  const headers = new Headers({ 'X-CSRF-Token': token });
+  const headers = new Headers({ 'X-CSRF-Token': await getCsrfToken() });
   if (method === 'POST') headers.set('Content-Type', 'application/json');
 
   return fetch('/api/session', {
@@ -31,6 +30,7 @@ function App() {
   const [connection, setConnection] = useState<Connection>('checking');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const returnToSignIn = useCallback(() => setConnection('signed-out'), []);
 
   useEffect(() => {
     const request = new AbortController();
@@ -82,6 +82,25 @@ function App() {
     }
   }
 
+  if (typeof connection === 'object') {
+    return (
+      <main className="catalog-layout">
+        <header className="catalog-header">
+          <div className="brand">Manga Organizer</div>
+          <button type="button" className="secondary" onClick={signOut} disabled={busy}>
+            {busy ? 'Signing out…' : 'Sign out'}
+          </button>
+        </header>
+        {error && <p role="alert" className="error">{error}</p>}
+        <Catalog onSignedOut={returnToSignIn} />
+        <dl className="server-details">
+          <dt>Server ID</dt>
+          <dd><code>{connection.id}</code></dd>
+        </dl>
+      </main>
+    );
+  }
+
   return (
     <main>
       <header className="brand">Manga Organizer</header>
@@ -100,17 +119,6 @@ function App() {
             <input id="password" name="password" type="password" autoComplete="current-password" required maxLength={256} />
             <button disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
           </form>
-        )}
-        {typeof connection === 'object' && (
-          <>
-            <dl>
-              <dt>Server ID</dt>
-              <dd><code>{connection.id}</code></dd>
-            </dl>
-            <button type="button" className="secondary" onClick={signOut} disabled={busy}>
-              {busy ? 'Signing out…' : 'Sign out'}
-            </button>
-          </>
         )}
         {error && <p role="alert" className="error">{error}</p>}
       </section>

@@ -17,6 +17,7 @@ from uuid import UUID, uuid4
 
 
 BOOTSTRAP_VARIABLE = "MANGA_ORGANIZER_BOOTSTRAP_PASSWORD"
+LIBRARY_ROOTS = "/api/library/roots"
 
 
 class Browser:
@@ -52,13 +53,31 @@ class Browser:
     def server_id(self):
         return UUID(json.loads(self.request("/api/server", 200))["id"])
 
+    def roots(self):
+        return json.loads(self.request(LIBRARY_ROOTS, 200))
+
+    def files(self, root_id, query=""):
+        return json.loads(self.request(f"{LIBRARY_ROOTS}/{root_id}/files{query}", 200))
+
+    def scan(self, root_id, expected_state="complete"):
+        self.request(f"{LIBRARY_ROOTS}/{root_id}/scan", 202, method="POST", token=self.csrf())
+        for _ in range(80):
+            root = next(root for root in self.roots() if root["id"] == root_id)
+            if root["state"] not in {"queued", "scanning"}:
+                assert root["state"] == expected_state, root
+                return root
+            time.sleep(0.1)
+        raise AssertionError("Scan did not complete")
+
 
 @contextmanager
-def start_app(executable, data_dir, password):
+def start_app(executable, data_dir, media, password):
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         url = f"http://127.0.0.1:{listener.getsockname()[1]}"
     env = dict(os.environ, ASPNETCORE_URLS=url, MANGA_ORGANIZER_DATA_DIR=str(data_dir))
+    env["MANGA_ORGANIZER_LIBRARY_ROOTS__0"] = str(media / "primary")
+    env["MANGA_ORGANIZER_LIBRARY_ROOTS__1"] = str(media / "archive")
     env.pop(BOOTSTRAP_VARIABLE, None)
     if password is not None:
         env[BOOTSTRAP_VARIABLE] = password
@@ -75,10 +94,13 @@ def start_app(executable, data_dir, password):
 
 
 @contextmanager
-def start_container(image, volume, password):
+def start_container(image, volume, media, password):
     name = f"manga-smoke-{uuid4().hex}"
     command = ["docker", "run", "--detach", "--name", name, "-p", "127.0.0.1::8787",
-               "--mount", f"type=volume,source={volume},target=/config"]
+               "--mount", f"type=volume,source={volume},target=/config",
+               "--mount", f"type=bind,source={media},target=/media,readonly",
+               "--env", "MANGA_ORGANIZER_LIBRARY_ROOTS__0=/media/primary",
+               "--env", "MANGA_ORGANIZER_LIBRARY_ROOTS__1=/media/archive"]
     env = os.environ.copy()
     env.pop(BOOTSTRAP_VARIABLE, None)
     if password is not None:
@@ -107,7 +129,50 @@ def wait_for_server(url):
     raise RuntimeError("Server did not start")
 
 
-def smoke(start):
+def scan_library(owner, media):
+    primary, archive = owner.roots()
+    assert primary["state"] == archive["state"] == "idle"
+    root_id, archive_id = primary["id"], archive["id"]
+    assert owner.files(root_id) == {"total": 0, "items": []}
+    owner.request(f"{LIBRARY_ROOTS}/{root_id}/scan", 400, method="POST")
+    owner.request(f"{LIBRARY_ROOTS}/{uuid4()}/scan", 404, method="POST", token=owner.csrf())
+    owner.request(f"{LIBRARY_ROOTS}/{root_id}/files?limit=101", 400)
+
+    primary_path = media / "primary"
+    chapter = primary_path / "nested" / "Chapter 12.5.CBZ"
+    before = (chapter.read_bytes(), chapter.stat().st_mtime_ns)
+    first_scan = owner.scan(root_id)
+    assert first_scan["fileCount"] == 53 and first_scan["lastScannedAt"]
+    assert first_scan["skippedLinks"] == (1 if os.name == "nt" else 2)
+    first_page = owner.files(root_id)
+    final_page = owner.files(root_id, "?offset=50")
+    assert first_page["total"] == final_page["total"] == 53
+    assert len(first_page["items"]) == 50 and len(final_page["items"]) == 3
+    (chapter_row,) = (row for row in final_page["items"] if row["relativePath"] == "nested/Chapter 12.5.CBZ")
+    assert chapter_row["extension"] == "cbz" and chapter_row["size"] == len(before[0]) and chapter_row["modifiedAt"]
+
+    assert owner.scan(archive_id)["fileCount"] == 1
+    assert owner.files(archive_id)["items"][0]["relativePath"] == "Volume.epub"
+    assert (chapter.read_bytes(), chapter.stat().st_mtime_ns) == before
+
+    offline_path = media / "offline"
+    primary_path.rename(offline_path)
+    assert owner.scan(root_id, "unavailable")["lastScannedAt"] == first_scan["lastScannedAt"]
+    assert owner.files(root_id) == first_page
+    primary_path.mkdir()
+    assert owner.scan(root_id, "emptyReview")["fileCount"] == 53
+    assert owner.files(root_id) == first_page
+    primary_path.rmdir()
+    offline_path.rename(primary_path)
+
+    (primary_path / "Issue 00.pdf").unlink()
+    assert owner.scan(root_id)["fileCount"] == 52
+    assert owner.files(root_id, "?offset=50")["items"][-1]["id"] == chapter_row["id"]
+    assert (chapter.read_bytes(), chapter.stat().st_mtime_ns) == before
+    return owner.roots(), owner.files(root_id)
+
+
+def smoke(start, media):
     password = uuid4().hex
     with start(password) as url:
         wait_for_server(url)
@@ -117,6 +182,7 @@ def smoke(start):
         (script,) = re.findall(r'<script[^>]+src="([^"]+)"', html)
         assert first.request(script, 200)
         first.request("/api/server", 401)
+        first.request(LIBRARY_ROOTS, 401)
         first.request("/api/session", 400, method="POST", body={"password": password})
         first.sign_in(uuid4().hex, 401)
         first.sign_in(password)
@@ -126,6 +192,8 @@ def smoke(start):
         second.request("/api/server", 401)
         second.sign_in(password)
         assert second.server_id() == server_id
+        roots, inventory = scan_library(first, media)
+        assert second.roots() == roots
         first.request("/api/session", 400, method="DELETE")
         first.request("/api/session", 204, method="DELETE", token=first.csrf())
         first.request("/api/server", 401)
@@ -137,6 +205,26 @@ def smoke(start):
         assert browser.server_id() == server_id
         browser.sign_in(password)
         assert browser.server_id() == server_id
+        assert browser.roots() == roots
+        assert browser.files(roots[0]["id"]) == inventory
+
+
+def create_media_fixture(media):
+    primary, archive = media / "primary", media / "archive"
+    (primary / "nested").mkdir(parents=True)
+    archive.mkdir()
+    media.chmod(0o755)
+    (primary / "nested" / "Chapter 12.5.CBZ").write_bytes(b"Synthetic chapter inventory fixture")
+    for index in range(52):
+        (primary / f"Issue {index:02}.pdf").write_bytes(b"Synthetic inventory fixture")
+    (primary / "notes.txt").write_text("Ignored by the inventory.")
+    (archive / "Volume.epub").write_bytes(b"Synthetic volume inventory fixture")
+    if os.name == "nt":
+        subprocess.run(["cmd", "/c", "mklink", "/J", str(primary / "linked-folder"), str(archive)],
+                       check=True, stdout=subprocess.DEVNULL)
+    else:
+        (primary / "linked-folder").symlink_to("../archive", target_is_directory=True)
+        (primary / "linked-file.epub").symlink_to("../archive/Volume.epub")
 
 
 if __name__ == "__main__":
@@ -145,14 +233,17 @@ if __name__ == "__main__":
     mode.add_argument("--app", type=Path, help="published executable")
     mode.add_argument("--image", help="built Docker image")
     target = parser.parse_args()
-    if target.app:
-        with tempfile.TemporaryDirectory() as data_dir:
-            smoke(lambda password: start_app(str(target.app.resolve()), data_dir, password))
-    else:
-        volume = f"manga-smoke-{uuid4().hex}"
-        subprocess.run(["docker", "volume", "create", volume], check=True, stdout=subprocess.DEVNULL)
-        try:
-            smoke(lambda password: start_container(target.image, volume, password))
-        finally:
-            subprocess.run(["docker", "volume", "rm", volume], check=True, stdout=subprocess.DEVNULL)
-    print("Passed WebUI assets, authentication, CSRF, two clients, and restart persistence")
+    with tempfile.TemporaryDirectory() as fixture:
+        media = Path(fixture) / "media"
+        create_media_fixture(media)
+        if target.app:
+            data_dir = Path(fixture) / "data"
+            smoke(lambda password: start_app(str(target.app.resolve()), data_dir, media, password), media)
+        else:
+            volume = f"manga-smoke-{uuid4().hex}"
+            subprocess.run(["docker", "volume", "create", volume], check=True, stdout=subprocess.DEVNULL)
+            try:
+                smoke(lambda password: start_container(target.image, volume, media, password), media)
+            finally:
+                subprocess.run(["docker", "volume", "rm", volume], check=True, stdout=subprocess.DEVNULL)
+    print("Passed WebUI assets, authentication, CSRF, read-only catalog, two clients, and restart persistence")

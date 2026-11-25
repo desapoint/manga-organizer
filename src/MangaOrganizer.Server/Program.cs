@@ -24,8 +24,12 @@ if (string.IsNullOrWhiteSpace(builder.Configuration["urls"]) &&
 var dataDirectory = Path.GetFullPath(builder.Configuration["MANGA_ORGANIZER_DATA_DIR"] ?? Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify),
     "MangaOrganizer"));
+var libraryRoots = LibraryScanner.ReadRoots(builder.Configuration, dataDirectory);
 Directory.CreateDirectory(dataDirectory);
 var identity = ServerStore.Open(dataDirectory, builder.Configuration["MANGA_ORGANIZER_BOOTSTRAP_PASSWORD"]);
+builder.Services.AddSingleton(new LibraryStore(dataDirectory, libraryRoots));
+builder.Services.AddSingleton<LibraryScanQueue>();
+builder.Services.AddHostedService(services => services.GetRequiredService<LibraryScanQueue>());
 
 builder.Services.AddDataProtection()
     .SetApplicationName($"MangaOrganizer/{identity.InstanceId:D}")
@@ -100,6 +104,7 @@ api.MapPost("/session", async (SignIn request, HttpContext context, IAntiforgery
 }).RequireRateLimiting("sign-in").WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(4096));
 
 api.MapGet("/server", () => Results.Ok(new { id = identity.InstanceId })).RequireAuthorization();
+api.MapLibrary();
 
 api.MapDelete("/session", async (HttpContext context, IAntiforgery antiforgery) =>
 {

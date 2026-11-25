@@ -1,6 +1,12 @@
 # File organization and duplicate management
 
-Status: required owner outcomes F69/F70, detailed implementation choices proposed. User wants the application to physically organize files and find/handle duplicates, not merely display a reading catalog. Both standalone Windows and Unraid WebUI must expose these workflows. No implementation yet.
+Physical organization and duplicate handling are required outcomes F69/F70 for standalone Windows and the Unraid WebUI. The first implementation builds the read-only inventory described below.
+
+## Read-only catalog
+
+The server operator configures one or more absolute library folders at startup. The signed-in owner can select a folder, start an inventory scan and browse the results in the WebUI. The scan records relative paths, filename extensions, sizes and modification times for CBZ, CBR, CB7, ZIP, RAR, 7z, PDF and EPUB files. These are filename and filesystem facts. Format validation, loose image folders, chapter matching and duplicate classification have separate acceptance checks.
+
+Scans run one at a time. The server skips symbolic links and Windows reparse points, and publishes a successful full inventory as one database transaction. An unavailable root, failed scan or interrupted scan preserves the prior inventory. If an inventory with files suddenly scans empty, the WebUI reports it for review and keeps the prior entries. The next successful scan with files replaces those entries. Mounted media can remain read-only in Docker. See the [configuration instructions](../README.md#configure-the-read-only-library).
 
 ## 1. Organization workflow
 
@@ -105,7 +111,7 @@ These requirements are proposed breakdowns of the required outcomes, not separat
 7. Quarantine and restore, restore collision, retention disabled, batch preview and audit export. Seeder-owned hardlinks remain intact; duplicate space estimate reports uncertainty.
 8. Repeated scans and imports idempotent; large library background scan bounded and pausable; no unauthorized user can see or mutate unrelated library files.
 
-Implementation remains gated on feature selection, source audit and target-platform testing. 
+Media changes and release qualification remain gated on feature selection, source review and target-platform testing.
 
 ## Pass 4 safety execution evidence (2026-11-25)
 
