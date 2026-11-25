@@ -1,0 +1,8 @@
+Repository,Release tag,Release commit,Audited commit,Status of audited commit,Ahead commits,Behind commits,Reported changed files (API capped at 300),Compare URL
+"KR","v0.2.0","65c6355e62c7d623078d00acb0959912af71adda","09238b58405fb94a5c753405475e30a3b4d5cb78","ahead","79","0","138","https://github.com/KiranTheRam/mangarr/compare/v0.2.0...09238b58405fb94a5c753405475e30a3b4d5cb78"
+"MK","v0.38.0","0de45e926f368e23ace4dba04e2211d1de83aadb","0de45e926f368e23ace4dba04e2211d1de83aadb","identical","0","0","0","https://github.com/OrbitMPGH/Maki/compare/v0.38.0...0de45e926f368e23ace4dba04e2211d1de83aadb"
+"UC","v0.109.0","da8c68eb234d2ee37ceaf4b1f91c4a8df6620140","dc5d52212cbe7ad1984fbb29d1490e524f886e0c","ahead","5","0","22","https://github.com/AngeloSha/uchiyomi/compare/v0.109.0...dc5d52212cbe7ad1984fbb29d1490e524f886e0c"
+"KK","v1.3.2","091b2b12ea235eb0d62306bce94b7e5d70746f4c","d9353fe8629b90dfc4e44a1ba7215d7ffd233eef","ahead","241","0","190","https://github.com/Kha-kis/manga-arr/compare/v1.3.2...d9353fe8629b90dfc4e44a1ba7215d7ffd233eef"
+"KV","v0.9.1.4","879b8b73eb41d66f88dde8eb874cc99a3397eb11","7fcf1085a5355a8c592d17adcfbb28b69276ae40","ahead","71","0","300","https://github.com/Kareadita/Kavita/compare/v0.9.1.4...7fcf1085a5355a8c592d17adcfbb28b69276ae40"
+"SW","v2.4.2373","9f8cc818b5df6d0e7e10e0de415903635d2c04de","4081b05f02456ec099c85127dfa5253e968d48a7","diverged","146","7","300","https://github.com/Suwayomi/Suwayomi-Server/compare/v2.4.2373...4081b05f02456ec099c85127dfa5253e968d48a7"
+"MH","v0.21.3","feadad5e1e2bf638be6e2ca317d11657b09d4596","f8e30a86086020aaee1e89a9d015373b1a4ff026","diverged","96","50","300","https://github.com/mihonapp/mihon/compare/v0.21.3...f8e30a86086020aaee1e89a9d015373b1a4ff026"

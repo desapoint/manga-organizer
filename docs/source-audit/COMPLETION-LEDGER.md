@@ -1,6 +1,6 @@
 # Audit completion ledger — mandatory before implementation
 
-Updated 2026-11-24. User explicitly requested completion of the audit after adding physical organization and duplicates. Do not treat this ledger as sign-off. No runtime/platform tests executed. Status: **OPEN**.
+Updated 2026-11-25. User explicitly requested completion of the audit after adding physical organization and duplicates. Do not treat this ledger as sign-off. No runtime/platform tests executed. Status: **OPEN**.
 
 Evidence: I = indexed paths; C = selected source declarations/logic inspected; S = selected test source inspected; R = release note checked; U = outstanding full behavior review. No "complete" status for modules with uninspected consumers, authorization, migrations or runtime tests.
 
@@ -23,8 +23,12 @@ Evidence: I = indexed paths; C = selected source declarations/logic inspected; S
 | G3 Complete feature and setting audit | Open | For each module enumerate route/schema/settings/UI, actual logic + defaults and tests, or documented exclusion; deduplicate canonical requirements |
 | G4 Organization/dedup correctness | Open | Read mutation and recovery call paths, prove content/coverage/mount rules; all [acceptance fixtures](../FILE-ORGANIZATION.md) |
 | G5 Extension compatibility | Open | Versioned GraphQL contracts and authorized fixture, older/newer APK/JAR formats, legacy/current backup import, trust/security |
-| G6 Release/licensing | Partial | Published tags recorded; compare source/tag, licenses, external datasets/models, premium service and extension rights |
+| G6 Release/licensing | Partial | Published tags and commit comparisons recorded in pass 4; seven tag source checks; remaining full release diff, licenses, external datasets/models, premium and extension rights |
 | G7 Runtime verification | Blocked in this session | Build upstreams in appropriate environment, run tests and Windows/Unraid storage fixtures; Android/Suwayomi compatibility fixtures. No actual target hosts or build results available in this audit. |
 | G8 Owner selection and implementation | Not approved | Complete remaining evidence; select features, technology/license and safety settings; no implementation before gates addressed |
 
 No destructive automation is approved. Do not mark gates G3–G8 complete based on file counts or test names. An exhaustive source audit requires further module-level inspection; report what was actually examined rather than claiming parity. 
+
+## Pass 4 progress
+
+[Behavior and release contracts](PASS4.md) records partial source-to-UI/consumer traces for each repository, safety execution paths, GraphQL permission/version differences and all seven release comparisons. G3/G4/G5 remain open; remaining full settings inventory, provider/client/tracker contracts, migrations/auth/UI/test coverage, actual schema snapshots, mutation recovery and target runtime tests. G6 improved but license and release-specific behavior not yet closed. No new owner approvals.

@@ -106,3 +106,7 @@ These requirements are proposed breakdowns of the required outcomes, not separat
 8. Repeated scans and imports idempotent; large library background scan bounded and pausable; no unauthorized user can see or mutate unrelated library files.
 
 Implementation remains gated on feature selection, source audit and target-platform testing. 
+
+## Pass 4 safety execution evidence (2026-11-25)
+
+[Pass 4 report](source-audit/PASS4.md) traces Maki hash/identity revalidation and uncancellable DB cleanup after direct deletion, Uchiyomi two-phase temporary rename and best-effort rollback, manga-arr lease/staging/prepared-publication boundary, Kavita watcher cap and active-write detection, and Mihon duplicate SQL (title substring OR nonzero matching tracker ID, not physical duplicate detection). Proposed defaults remain quarantine rather than immediate delete, no-clobber operations even after preview, explicit recovery states and distinct bibliographic vs physical identity. Neither UI confirmation nor watcher completion is proof that the filesystem has not changed. Full call paths and runtime fixtures still pending.
