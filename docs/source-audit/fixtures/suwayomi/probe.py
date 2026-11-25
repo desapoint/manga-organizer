@@ -43,7 +43,7 @@ class Engine:
         output.write_bytes(backup)
         print("Exported a Suwayomi gzip backup containing the synthetic title")
 
-    def upload_extension(self, jar):
+    def upload_extension(self, package):
         query = """mutation($file: Upload!) {
           installExternalExtension(input: {extensionFile: $file}) {
             extension { pkgName isInstalled versionName }
@@ -51,10 +51,11 @@ class Engine:
         }"""
         boundary = "MangaOrganizerSyntheticFixture"
         operations = json.dumps({"query": query, "variables": {"file": None}}).encode()
+        mime = "application/vnd.android.package-archive" if package.suffix == ".apk" else "application/java-archive"
         parts = [
             ('name="operations"', "application/json", operations),
             ('name="map"', "application/json", json.dumps({"0": ["variables.file"]}).encode()),
-            (f'name="0"; filename="{jar.name}"', "application/java-archive", jar.read_bytes()),
+            (f'name="0"; filename="{package.name}"', mime, package.read_bytes()),
         ]
         body = bytearray()
         for disposition, content_type, content in parts:
@@ -76,9 +77,10 @@ def wait_for_engine(engine):
     raise RuntimeError("Suwayomi did not become ready") from last_error
 
 
-def verify_download(engine, fixture_dir):
-    extension = engine.upload_extension(fixture_dir / "audit-fixture-1.jar")
-    assert extension["data"]["installExternalExtension"]["extension"] == {
+def verify_download(engine, fixture_dir, fixture_package=None):
+    extension = engine.upload_extension(fixture_package or fixture_dir / "audit-fixture-1.jar")
+    installed = extension.get("data", {}).get("installExternalExtension")
+    assert installed and installed["extension"] == {
         "pkgName": PACKAGE, "isInstalled": True, "versionName": "1.4.1",
     }, extension
     search = engine.graphql(f'''mutation {{

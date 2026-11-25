@@ -114,6 +114,16 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - name: Test the Mihon wire codec
         working-directory: upstream-mihon
+        shell: bash
         run: |
           cp ../docs/source-audit/fixtures/mihon/SuwayomiBackupAuditTest.kt app/src/test/java/eu/kanade/tachiyomi/data/backup/
-          MANGA_AUDIT_BACKUP="$RUNNER_TEMP/manga-audit-backup.tachibk" ./gradlew --no-daemon :app:testDebugUnitTest --tests '*SuwayomiBackupAuditTest'
+          export MANGA_AUDIT_BACKUP="$RUNNER_TEMP/manga-audit-backup.tachibk"
+          for attempt in 1 2 3; do
+            if ./gradlew --no-daemon :app:testDebugUnitTest --tests '*SuwayomiBackupAuditTest' 2>&1 | tee "$RUNNER_TEMP/mihon-gradle.log"; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ] || ! grep -q 'status code 429' "$RUNNER_TEMP/mihon-gradle.log"; then
+              exit 1
+            fi
+            sleep "$((15 * attempt))"
+          done

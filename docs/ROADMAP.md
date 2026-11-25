@@ -4,7 +4,7 @@ Proposed sequencing; not release dates or approval.
 
 | Phase | Work | Exit gate |
 | --- | --- | --- |
-| 0 | Complete source/runtime audit (see [completion ledger](source-audit/COMPLETION-LEDGER.md)), owner feature selection, stack/license | Evidence and acceptance criteria for each selected feature |
+| 0 | Complete source/runtime audit and record the approved initial scope, stack and license | Evidence and acceptance criteria for each initial feature. [Completion ledger](source-audit/COMPLETION-LEDGER.md) |
 | 1 | Shared API/UI, auth, config, DB, Windows/Docker smoke builds | Same fixture on both, restart persists |
 | 2A | Read-only library scan, identity, metadata, duplicate discovery | Exact duplicates, repacks, aliases, translations and overlaps correctly classified; original bytes untouched |
 | 2B | Required physical file organization and duplicate resolution | Preview and reviewed execution; rename/move/relink/quarantine/restore; no overwrite or lost coverage; mount loss, hardlink and crash recovery fixtures pass on Windows and Unraid |
@@ -19,4 +19,4 @@ Tests: corrupt archive, traversal, oversized images, decimals/splits, language e
 
 ## Decisions
 
-Owner requested Windows, Docker/Unraid WebUI, Mihon-compatible extension downloading, physical file organization and duplicate finding/handling. F69/F70 are foundation requirements; see [specification](FILE-ORGANIZATION.md). All other feature scope awaits selection. Decide standalone/remote details, formats, acquisition policies, trackers, privacy/household, optional AI and license/distribution intent. Use [selection CSV](FEATURE-SELECTION.csv).
+The owner approved the initial implementation baseline for the five required outcomes, contingent on the audit gates. Record choices for optional features and detailed deployment modes in the existing register. [Approved baseline](IMPLEMENTATION-DECISIONS.md) · [Feature selection](FEATURE-SELECTION.csv)

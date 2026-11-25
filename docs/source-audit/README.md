@@ -1,6 +1,6 @@
 # Pinned source audit — passes 1–8
 
-For the current audit status and required evidence, see the [completion ledger](COMPLETION-LEDGER.md), [Pass 19 verification](PASS19.md), [Pass 20 runtime results](PASS20.md) and [Pass 21 hosted qualification](PASS21.md). The notes below preserve the original source audit.
+For the current audit status and required evidence, see the [completion ledger](COMPLETION-LEDGER.md), [Pass 21 hosted qualification](PASS21.md) and [Pass 22 implementation prerequisites](PASS22.md). The notes below preserve the original source audit.
 
 Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-AUDIT.md) and [70 parent feature clusters](../FEATURE-MATRIX.md). No application code created. All seven pinned Git trees enumerated; targeted implementation declarations and selected logic examined (29 distinct source files in the first pass, followed by declaration extraction from 46 additional files; 75 unique files fetched). This is deeper than README review but not exhaustive implementation verification. No code copied, builds or tests executed.
 

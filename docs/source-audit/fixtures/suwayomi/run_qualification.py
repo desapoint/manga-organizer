@@ -75,6 +75,7 @@ def windows_engine(engine_dir, gradle_lib, root):
                "-Dsuwayomi.tachidesk.config.server.ip=127.0.0.1", f"-Dsuwayomi.tachidesk.config.server.port={ENGINE_PORT}",
                "-Dsuwayomi.tachidesk.config.server.authMode=BASIC_AUTH", "-Dsuwayomi.tachidesk.config.server.authUsername=audit-fixture",
                "-Dsuwayomi.tachidesk.config.server.authPassword=synthetic-local-password", "-Dsuwayomi.tachidesk.config.server.webUIEnabled=false",
+               "-Dsuwayomi.tachidesk.config.server.kcefEnabled=false",
                "-Dsuwayomi.tachidesk.config.server.initialOpenInBrowserEnabled=false", "-Dsuwayomi.tachidesk.config.server.systemTrayEnabled=false",
                "-Dsuwayomi.tachidesk.config.server.downloadAsCbz=false", "-jar", str(jar)]
     with ThreadingHTTPServer(("127.0.0.1", FIXTURE_PORT), partial(SimpleHTTPRequestHandler, directory=fixture / "site")) as provider:
@@ -103,7 +104,7 @@ def docker(*arguments, check=True):
     return subprocess.run(["docker", *arguments], check=check, text=True, stdout=subprocess.PIPE).stdout.strip()
 
 
-def linux(gradle_lib, root, backup_output=None):
+def linux(gradle_lib, root, backup_output=None, fixture_package=None):
     run = "manga-audit-" + uuid.uuid4().hex[:10]
     engine, provider, config, media = (f"{run}-{name}" for name in ("engine", "provider", "config", "media"))
     docker("network", "create", run)
@@ -132,7 +133,7 @@ def linux(gradle_lib, root, backup_output=None):
         assert docker("exec", engine, "id", "-g") == "100"
         api = Engine(ENGINE_PORT)
         assert wait_for_engine(api) == "v2.4.2373"
-        manga_id = verify_download(api, fixture)
+        manga_id = verify_download(api, fixture, fixture_package)
         downloaded = root / "docker-downloads"
         docker("cp", f"{engine}:/media/downloads", str(downloaded))
         verify_page(downloaded, fixture)
@@ -160,6 +161,7 @@ if __name__ == "__main__":
     windows_source.add_argument("--windows-archive", type=Path)
     windows_source.add_argument("--windows-install-dir", type=Path)
     parser.add_argument("--backup-output", type=Path, help="Write a synthetic backup from the Linux fixture")
+    parser.add_argument("--fixture-apk", type=Path, help="Use a synthetic APK in the Linux fixture")
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="manga-audit-") as temporary:
         if args.windows_archive:
@@ -167,4 +169,4 @@ if __name__ == "__main__":
         elif args.windows_install_dir:
             windows_engine(args.windows_install_dir.resolve(), args.gradle_lib.resolve(), Path(temporary))
         else:
-            linux(args.gradle_lib.resolve(), Path(temporary), args.backup_output)
+            linux(args.gradle_lib.resolve(), Path(temporary), args.backup_output, args.fixture_apk)

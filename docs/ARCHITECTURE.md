@@ -1,6 +1,6 @@
-# Proposed architecture — not approved
+# Proposed architecture
 
-One shared backend and responsive WebUI. Windows 10/11 x64 local mode (embedded backend and local data, no Docker) or remote mode (Unraid client). Unraid Docker uses same API/UI; one server owns scheduling and writes. Candidate ASP.NET Core/.NET + React/TypeScript, SQLite on local appdata, WebView2 desktop shell. Evaluate Python/FastAPI and PostgreSQL alternatives before approval; no language locked in.
+The approved baseline uses .NET 10 / ASP.NET Core, React/TypeScript and SQLite in local appdata after the audit gates are met. The proposed design runs the same backend and WebUI on Windows 10/11 x64 and Unraid Docker. One server owns scheduling and writes. A desktop shell and remote Windows client remain proposed. [Approved baseline](IMPLEMENTATION-DECISIONS.md)
 
 ```mermaid
 flowchart TD
