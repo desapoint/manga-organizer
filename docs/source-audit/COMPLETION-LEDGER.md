@@ -64,3 +64,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 12 progress
 
 [Consolidation and selection inventory](PASS12.md) reconciles all 356 atomic candidates once into 126 proposed canonical groups, all 70 parents and 27 settings groups; six previously unmapped parents have supplemental pinned evidence, F68 remains proposed-only. Original registers/decisions unchanged; five required outcomes, 65 pending. G3/G4/G5 remain open; G6 partial; G7 not executed; G8 not approved. Next close remaining source/consumer/auth/runtime gaps; no implementation or automatic mutation approval.
+
+## Pass 13 progress
+
+[Targeted evidence-gap review](PASS13.md) and [pinned evidence](PASS13-EVIDENCE.csv) add 22 selected files across five references, including six test-source files (not executed). F55 v3 alias located and registered, selected compatibility test assertions inspected; six other gap areas strengthened, F68 still proposed-only. G3/G4/G5 open; G6 partial; G7 not executed; G8 not approved. Existing 356 atomic candidates, 126 proposed groups, 70 parent decisions unchanged; no implementation or destructive automation approval.
