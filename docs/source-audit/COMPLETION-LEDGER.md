@@ -68,3 +68,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 13 progress
 
 [Targeted evidence-gap review](PASS13.md) and [pinned evidence](PASS13-EVIDENCE.csv) add 22 selected files across five references, including six test-source files (not executed). F55 v3 alias located and registered, selected compatibility test assertions inspected; six other gap areas strengthened, F68 still proposed-only. G3/G4/G5 open; G6 partial; G7 not executed; G8 not approved. Existing 356 atomic candidates, 126 proposed groups, 70 parent decisions unchanged; no implementation or destructive automation approval.
+
+## Pass 15 progress
+
+[Destructive-operation and extension authorization review](PASS15.md) cites 13 pinned files across seven references, 8 test-source files, and [13 proposed qualification fixtures](PASS15-QUALIFICATION.csv) (not run). User reported Pass 14 complete, but no Pass 14 record was accessible on the visible repository branches when reviewed; numbering preserved, no Pass 14 contents assumed. [Evidence](PASS15-EVIDENCE.csv). G3/G4/G5 open; G6 partial; G7 not executed; G8 not approved. Existing 356 atomic candidates and 126 proposed groups unchanged; no application implementation or automatic destructive approval.
