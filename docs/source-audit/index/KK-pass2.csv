@@ -1,0 +1,260 @@
+Path,Line,Kind,Identifier,Verification
+"app/routers/settings_.py",27,"function","_encrypt_settings_secrets_in_place",declaration only
+"app/routers/settings_.py",44,"function","_reload_config",declaration only
+"app/routers/settings_.py",51,"function","_get_root_folders",declaration only
+"app/routers/settings_.py",57,"function","_is_first_run",declaration only
+"app/routers/settings_.py",64,"function","_coerce_bool_string",declaration only
+"app/routers/settings_.py",73,"function","_coerce_int_range",declaration only
+"app/routers/settings_.py",130,"function","_coerce_decimal_int_range",declaration only
+"app/routers/settings_.py",133,"field candidate","minimum",declaration only
+"app/routers/settings_.py",134,"field candidate","maximum",declaration only
+"app/routers/settings_.py",143,"function","_coerce_choice",declaration only
+"app/routers/settings_.py",258,"function","_last_form_value",declaration only
+"app/routers/settings_.py",264,"function","_submitted_settings_fields",declaration only
+"app/routers/settings_.py",282,"function","_write_settings_fields",declaration only
+"app/routers/settings_.py",292,"function","update_general_settings_entries",declaration only
+"app/routers/settings_.py",306,"function","update_media_management_settings_entries",declaration only
+"app/routers/settings_.py",316,"function","update_indexer_settings_entries",declaration only
+"app/routers/settings_.py",326,"function","update_metadata_settings_entries",declaration only
+"app/routers/settings_.py",339,"HTTP GET","/settings",declaration only
+"app/routers/settings_.py",340,"function","settings_page",declaration only
+"app/routers/settings_.py",371,"HTTP POST","/settings",declaration only
+"app/routers/settings_.py",372,"function","save_settings",declaration only
+"app/routers/settings_.py",387,"HTTP GET","/settings/general",declaration only
+"app/routers/settings_.py",388,"function","settings_general_page",declaration only
+"app/routers/settings_.py",418,"HTTP POST","/settings/general",declaration only
+"app/routers/settings_.py",419,"function","save_general_settings",declaration only
+"app/routers/settings_.py",509,"function","add_root_folder_entry",declaration only
+"app/routers/settings_.py",532,"function","delete_root_folder_entry",declaration only
+"app/routers/settings_.py",553,"function","update_root_folder_entry",declaration only
+"app/routers/settings_.py",554,"field candidate","folder_id",declaration only
+"app/routers/settings_.py",556,"field candidate","path",declaration only
+"app/routers/settings_.py",557,"field candidate","label",declaration only
+"app/routers/settings_.py",558,"field candidate","is_default",declaration only
+"app/routers/settings_.py",569,"field candidate","fields",declaration only
+"app/routers/settings_.py",570,"field candidate","params",declaration only
+"app/routers/settings_.py",623,"function","set_default_root_folder_entry",declaration only
+"app/routers/settings_.py",638,"HTTP POST","/settings/root-folders/add",declaration only
+"app/routers/settings_.py",639,"function","add_root_folder",declaration only
+"app/routers/settings_.py",640,"field candidate","path",declaration only
+"app/routers/settings_.py",641,"field candidate","label",declaration only
+"app/routers/settings_.py",642,"field candidate","is_default",declaration only
+"app/routers/settings_.py",648,"HTTP POST","/settings/root-folders/{folder_id}/delete",declaration only
+"app/routers/settings_.py",649,"function","delete_root_folder",declaration only
+"app/routers/settings_.py",654,"HTTP POST","/settings/root-folders/{folder_id}/default",declaration only
+"app/routers/settings_.py",655,"function","set_default_root_folder",declaration only
+"app/routers/settings_.py",663,"HTTP POST","/api/system/regenerate-api-key",declaration only
+"app/routers/settings_.py",664,"function","regenerate_api_key",declaration only
+"app/routers/settings_.py",679,"HTTP POST","/api/test/komga",declaration only
+"app/routers/settings_.py",680,"function","test_komga",declaration only
+"app/routers/settings_.py",713,"HTTP GET","/api/tags",declaration only
+"app/routers/settings_.py",714,"function","list_all_tags",declaration only
+"app/routers/download_clients.py",20,"function","_row_decrypted",declaration only
+"app/routers/download_clients.py",43,"function","_cb_load",declaration only
+"app/routers/download_clients.py",54,"function","_cb_write",declaration only
+"app/routers/download_clients.py",67,"function","_cb_clear",declaration only
+"app/routers/download_clients.py",72,"function","_cb_is_open",declaration only
+"app/routers/download_clients.py",87,"function","_cb_record_success",declaration only
+"app/routers/download_clients.py",91,"function","_cb_record_failure",declaration only
+"app/routers/download_clients.py",100,"function","client_base_url",declaration only
+"app/routers/download_clients.py",124,"function","_friendly_client_error",declaration only
+"app/routers/download_clients.py",142,"function","_nzbget_rpc_url",declaration only
+"app/routers/download_clients.py",181,"function","_all_clients",declaration only
+"app/routers/download_clients.py",195,"HTTP GET","/download-clients",declaration only
+"app/routers/download_clients.py",196,"function","download_clients_page",declaration only
+"app/routers/download_clients.py",204,"function","_opt",declaration only
+"app/routers/download_clients.py",230,"HTTP POST","/download-clients",declaration only
+"app/routers/download_clients.py",231,"function","create_download_client",declaration only
+"app/routers/download_clients.py",232,"field candidate","name",declaration only
+"app/routers/download_clients.py",233,"field candidate","type",declaration only
+"app/routers/download_clients.py",234,"field candidate","host",declaration only
+"app/routers/download_clients.py",235,"field candidate","port",declaration only
+"app/routers/download_clients.py",236,"field candidate","use_ssl",declaration only
+"app/routers/download_clients.py",237,"field candidate","url_base",declaration only
+"app/routers/download_clients.py",238,"field candidate","username",declaration only
+"app/routers/download_clients.py",239,"field candidate","password",declaration only
+"app/routers/download_clients.py",240,"field candidate","category",declaration only
+"app/routers/download_clients.py",241,"field candidate","post_import_category",declaration only
+"app/routers/download_clients.py",242,"field candidate","recent_priority",declaration only
+"app/routers/download_clients.py",243,"field candidate","older_priority",declaration only
+"app/routers/download_clients.py",244,"field candidate","initial_state",declaration only
+"app/routers/download_clients.py",245,"field candidate","sequential_order",declaration only
+"app/routers/download_clients.py",246,"field candidate","first_last_first",declaration only
+"app/routers/download_clients.py",247,"field candidate","content_layout",declaration only
+"app/routers/download_clients.py",248,"field candidate","priority",declaration only
+"app/routers/download_clients.py",249,"field candidate","enabled",declaration only
+"app/routers/download_clients.py",250,"field candidate","remove_completed",declaration only
+"app/routers/download_clients.py",251,"field candidate","remove_failed",declaration only
+"app/routers/download_clients.py",252,"field candidate","tags",declaration only
+"app/routers/download_clients.py",253,"field candidate","download_path",declaration only
+"app/routers/download_clients.py",254,"field candidate","merge_chapters",declaration only
+"app/routers/download_clients.py",303,"HTTP POST","/download-clients/remote-path-mappings",declaration only
+"app/routers/download_clients.py",304,"function","create_remote_path_mapping",declaration only
+"app/routers/download_clients.py",305,"field candidate","host",declaration only
+"app/routers/download_clients.py",306,"field candidate","remote_path",declaration only
+"app/routers/download_clients.py",307,"field candidate","local_path",declaration only
+"app/routers/download_clients.py",317,"HTTP POST","/download-clients/remote-path-mappings/{mapping_id}/delete",declaration only
+"app/routers/download_clients.py",318,"function","delete_remote_path_mapping",declaration only
+"app/routers/download_clients.py",325,"HTTP POST","/download-clients/options",declaration only
+"app/routers/download_clients.py",326,"function","save_download_client_options",declaration only
+"app/routers/download_clients.py",327,"field candidate","failed_download_handling",declaration only
+"app/routers/download_clients.py",328,"field candidate","redownload_failed_interactive",declaration only
+"app/routers/download_clients.py",342,"HTTP POST","/download-clients/{client_id}",declaration only
+"app/routers/download_clients.py",343,"function","edit_download_client",declaration only
+"app/routers/download_clients.py",427,"HTTP POST","/download-clients/{client_id}/delete",declaration only
+"app/routers/download_clients.py",428,"function","delete_download_client",declaration only
+"app/routers/download_clients.py",435,"HTTP POST","/api/download-clients/{client_id}/reset-circuit",declaration only
+"app/routers/download_clients.py",436,"function","reset_circuit_breaker",declaration only
+"app/routers/download_clients.py",443,"HTTP POST","/api/download-clients/reset-all-circuits",declaration only
+"app/routers/download_clients.py",444,"function","reset_all_circuit_breakers",declaration only
+"app/routers/download_clients.py",452,"HTTP POST","/api/download-clients/{client_id}/test",declaration only
+"app/routers/download_clients.py",453,"function","test_download_client",declaration only
+"app/routers/download_clients.py",467,"HTTP POST","/api/download-clients/test-form",declaration only
+"app/routers/download_clients.py",468,"function","test_download_client_form",declaration only
+"app/routers/download_clients.py",469,"field candidate","name",declaration only
+"app/routers/download_clients.py",470,"field candidate","type",declaration only
+"app/routers/download_clients.py",471,"field candidate","host",declaration only
+"app/routers/download_clients.py",472,"field candidate","port",declaration only
+"app/routers/download_clients.py",473,"field candidate","use_ssl",declaration only
+"app/routers/download_clients.py",474,"field candidate","url_base",declaration only
+"app/routers/download_clients.py",475,"field candidate","username",declaration only
+"app/routers/download_clients.py",476,"field candidate","password",declaration only
+"app/routers/download_clients.py",477,"field candidate","category",declaration only
+"app/routers/download_clients.py",478,"field candidate","post_import_category",declaration only
+"app/routers/download_clients.py",479,"field candidate","recent_priority",declaration only
+"app/routers/download_clients.py",480,"field candidate","older_priority",declaration only
+"app/routers/download_clients.py",481,"field candidate","initial_state",declaration only
+"app/routers/download_clients.py",482,"field candidate","sequential_order",declaration only
+"app/routers/download_clients.py",483,"field candidate","first_last_first",declaration only
+"app/routers/download_clients.py",484,"field candidate","content_layout",declaration only
+"app/routers/download_clients.py",485,"field candidate","priority",declaration only
+"app/routers/download_clients.py",486,"field candidate","enabled",declaration only
+"app/routers/download_clients.py",487,"field candidate","remove_completed",declaration only
+"app/routers/download_clients.py",488,"field candidate","remove_failed",declaration only
+"app/routers/download_clients.py",489,"field candidate","download_path",declaration only
+"app/routers/download_clients.py",490,"field candidate","merge_chapters",declaration only
+"app/routers/download_clients.py",520,"function","_test_client",declaration only
+"app/routers/download_clients.py",655,"function","apply_remote_path_mapping",declaration only
+"app/routers/download_clients.py",670,"function","get_client_for_protocol",declaration only
+"app/routers/download_clients.py",696,"function","_norm",declaration only
+"app/routers/custom_formats.py",61,"function","detect_source_type",declaration only
+"app/routers/custom_formats.py",81,"function","_all_formats",declaration only
+"app/routers/custom_formats.py",86,"HTTP GET","/custom-formats",declaration only
+"app/routers/custom_formats.py",87,"function","custom_formats_page",declaration only
+"app/routers/custom_formats.py",121,"HTTP GET","/custom-formats/scores",declaration only
+"app/routers/custom_formats.py",122,"function","cf_score_matrix_page",declaration only
+"app/routers/custom_formats.py",153,"HTTP POST","/custom-formats/scores",declaration only
+"app/routers/custom_formats.py",154,"function","cf_score_matrix_save",declaration only
+"app/routers/custom_formats.py",162,"field candidate","updates",declaration only
+"app/routers/custom_formats.py",196,"HTTP POST","/custom-formats",declaration only
+"app/routers/custom_formats.py",197,"function","create_custom_format",declaration only
+"app/routers/custom_formats.py",198,"field candidate","name",declaration only
+"app/routers/custom_formats.py",199,"field candidate","specifications",declaration only
+"app/routers/custom_formats.py",200,"field candidate","include_custom_format_when_renaming",declaration only
+"app/routers/custom_formats.py",217,"function","_validated_spec_json",declaration only
+"app/routers/custom_formats.py",227,"HTTP POST","/custom-formats/{format_id}",declaration only
+"app/routers/custom_formats.py",228,"function","edit_custom_format",declaration only
+"app/routers/custom_formats.py",254,"HTTP POST","/custom-formats/{format_id}/delete",declaration only
+"app/routers/custom_formats.py",255,"function","delete_custom_format",declaration only
+"app/routers/custom_formats.py",262,"HTTP POST","/api/custom-formats/preview",declaration only
+"app/routers/custom_formats.py",263,"function","preview_custom_format",declaration only
+"app/routers/custom_formats.py",278,"function","evaluate_custom_format",declaration only
+"app/routers/custom_formats.py",279,"field candidate","specifications",declaration only
+"app/routers/custom_formats.py",280,"field candidate","title",declaration only
+"app/routers/custom_formats.py",281,"field candidate","size_bytes",declaration only
+"app/routers/custom_formats.py",282,"field candidate","quality_rank",declaration only
+"app/routers/custom_formats.py",283,"field candidate","release_group",declaration only
+"app/routers/custom_formats.py",284,"field candidate","indexer",declaration only
+"app/routers/custom_formats.py",285,"field candidate","language",declaration only
+"app/routers/custom_formats.py",416,"function","score_custom_formats",declaration only
+"app/routers/custom_formats.py",418,"field candidate","series_id",declaration only
+"app/routers/custom_formats.py",419,"field candidate","title",declaration only
+"app/routers/custom_formats.py",420,"field candidate","size_bytes",declaration only
+"app/routers/custom_formats.py",421,"field candidate","quality_rank",declaration only
+"app/routers/custom_formats.py",422,"field candidate","release_group",declaration only
+"app/routers/custom_formats.py",423,"field candidate","indexer",declaration only
+"app/routers/custom_formats.py",424,"field candidate","language",declaration only
+"app/routers/release_profiles.py",15,"function","_all_profiles",declaration only
+"app/routers/release_profiles.py",27,"HTTP GET","/release-profiles",declaration only
+"app/routers/release_profiles.py",28,"function","release_profiles_page",declaration only
+"app/routers/release_profiles.py",48,"HTTP POST","/release-profiles",declaration only
+"app/routers/release_profiles.py",49,"function","create_release_profile",declaration only
+"app/routers/release_profiles.py",50,"field candidate","name",declaration only
+"app/routers/release_profiles.py",51,"field candidate","enabled",declaration only
+"app/routers/release_profiles.py",52,"field candidate","required",declaration only
+"app/routers/release_profiles.py",53,"field candidate","ignored",declaration only
+"app/routers/release_profiles.py",54,"field candidate","preferred",declaration only
+"app/routers/release_profiles.py",55,"field candidate","tags",declaration only
+"app/routers/release_profiles.py",56,"field candidate","include_preferred_when_renaming",declaration only
+"app/routers/release_profiles.py",81,"HTTP POST","/release-profiles/{profile_id}",declaration only
+"app/routers/release_profiles.py",82,"function","edit_release_profile",declaration only
+"app/routers/release_profiles.py",126,"HTTP POST","/release-profiles/{profile_id}/delete",declaration only
+"app/routers/release_profiles.py",127,"function","delete_release_profile",declaration only
+"app/routers/release_profiles.py",134,"function","_parse_term_list",declaration only
+"app/routers/release_profiles.py",142,"field candidate","terms",declaration only
+"app/routers/release_profiles.py",159,"function","_profile_term_match",declaration only
+"app/routers/release_profiles.py",173,"function","_profile_pref_match",declaration only
+"app/routers/release_profiles.py",186,"function","get_applicable_profiles",declaration only
+"app/routers/release_profiles.py",217,"function","score_from_release_profiles",declaration only
+"app/routers/delay_profiles.py",12,"function","_all_profiles",declaration only
+"app/routers/delay_profiles.py",24,"HTTP GET","/delay-profiles",declaration only
+"app/routers/delay_profiles.py",25,"function","delay_profiles_page",declaration only
+"app/routers/delay_profiles.py",36,"HTTP POST","/delay-profiles",declaration only
+"app/routers/delay_profiles.py",37,"function","create_delay_profile",declaration only
+"app/routers/delay_profiles.py",38,"field candidate","name",declaration only
+"app/routers/delay_profiles.py",39,"field candidate","enable_usenet",declaration only
+"app/routers/delay_profiles.py",40,"field candidate","enable_torrent",declaration only
+"app/routers/delay_profiles.py",41,"field candidate","usenet_delay",declaration only
+"app/routers/delay_profiles.py",42,"field candidate","torrent_delay",declaration only
+"app/routers/delay_profiles.py",43,"field candidate","bypass_if_highest_quality",declaration only
+"app/routers/delay_profiles.py",44,"field candidate","tags",declaration only
+"app/routers/delay_profiles.py",65,"HTTP POST","/delay-profiles/reorder",declaration only
+"app/routers/delay_profiles.py",66,"function","reorder_delay_profiles",declaration only
+"app/routers/delay_profiles.py",77,"HTTP POST","/delay-profiles/{profile_id}",declaration only
+"app/routers/delay_profiles.py",78,"function","edit_delay_profile",declaration only
+"app/routers/delay_profiles.py",111,"HTTP POST","/delay-profiles/{profile_id}/delete",declaration only
+"app/routers/delay_profiles.py",112,"function","delete_delay_profile",declaration only
+"app/routers/delay_profiles.py",122,"function","get_delay_for_series",declaration only
+"app/routers/language_profiles.py",37,"function","detect_language",declaration only
+"app/routers/language_profiles.py",46,"function","check_language_profile",declaration only
+"app/routers/language_profiles.py",69,"function","_all_profiles",declaration only
+"app/routers/language_profiles.py",73,"function","_get_default_id",declaration only
+"app/routers/language_profiles.py",83,"function","_parse_languages",declaration only
+"app/routers/language_profiles.py",92,"HTTP GET","/language-profiles",declaration only
+"app/routers/language_profiles.py",93,"function","language_profiles_page",declaration only
+"app/routers/language_profiles.py",106,"HTTP POST","/language-profiles",declaration only
+"app/routers/language_profiles.py",107,"function","create_language_profile",declaration only
+"app/routers/language_profiles.py",108,"field candidate","name",declaration only
+"app/routers/language_profiles.py",109,"field candidate","languages",declaration only
+"app/routers/language_profiles.py",110,"field candidate","allow_any",declaration only
+"app/routers/language_profiles.py",123,"HTTP POST","/language-profiles/{profile_id}",declaration only
+"app/routers/language_profiles.py",124,"function","update_language_profile",declaration only
+"app/routers/language_profiles.py",148,"HTTP POST","/language-profiles/{profile_id}/delete",declaration only
+"app/routers/language_profiles.py",149,"function","delete_language_profile",declaration only
+"app/routers/language_profiles.py",176,"HTTP POST","/language-profiles/{profile_id}/set-default",declaration only
+"app/routers/language_profiles.py",177,"function","set_default_language_profile",declaration only
+"app/routers/quality_profiles.py",14,"function","_all_profiles",declaration only
+"app/routers/quality_profiles.py",18,"function","_profile_custom_formats",declaration only
+"app/routers/quality_profiles.py",30,"HTTP GET","/quality-profiles",declaration only
+"app/routers/quality_profiles.py",31,"function","quality_profiles_page",declaration only
+"app/routers/quality_profiles.py",43,"HTTP POST","/quality-profiles",declaration only
+"app/routers/quality_profiles.py",44,"function","create_quality_profile",declaration only
+"app/routers/quality_profiles.py",45,"field candidate","name",declaration only
+"app/routers/quality_profiles.py",46,"field candidate","qualities",declaration only
+"app/routers/quality_profiles.py",47,"field candidate","cutoff",declaration only
+"app/routers/quality_profiles.py",48,"field candidate","upgrades_allowed",declaration only
+"app/routers/quality_profiles.py",49,"field candidate","minimum_custom_format_score",declaration only
+"app/routers/quality_profiles.py",50,"field candidate","cutoff_format_score",declaration only
+"app/routers/quality_profiles.py",51,"field candidate","min_upgrade_format_score",declaration only
+"app/routers/quality_profiles.py",66,"HTTP GET","/quality-profiles/{profile_id}",declaration only
+"app/routers/quality_profiles.py",67,"function","edit_quality_profile_page",declaration only
+"app/routers/quality_profiles.py",83,"HTTP POST","/quality-profiles/{profile_id}",declaration only
+"app/routers/quality_profiles.py",84,"function","edit_quality_profile",declaration only
+"app/routers/quality_profiles.py",114,"HTTP POST","/quality-profiles/{profile_id}/format-scores",declaration only
+"app/routers/quality_profiles.py",115,"function","set_format_scores",declaration only
+"app/routers/quality_profiles.py",132,"HTTP POST","/quality-profiles/{profile_id}/delete",declaration only
+"app/routers/quality_profiles.py",133,"function","delete_quality_profile",declaration only
+"app/routers/quality_profiles.py",142,"HTTP POST","/quality-profiles/{profile_id}/set-default",declaration only
+"app/routers/quality_profiles.py",143,"function","set_default_quality_profile",declaration only
+"app/routers/quality_profiles.py",151,"function","get_series_quality_profile",declaration only
+"app/routers/quality_profiles.py",167,"function","quality_meets_cutoff",declaration only
