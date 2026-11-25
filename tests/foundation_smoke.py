@@ -169,6 +169,7 @@ def verify_web_setup(executable, fixture, media):
         location = urlencode({"path": str(media)})
         folders = json.loads(browser.request(f"/api/setup/folders?{location}", 200, setup_token=old_token))
         assert "primary" in {folder["name"] for folder in folders["folders"]}
+        assert folders["breadcrumbs"][-1]["path"] == folders["path"]
 
     with start_app(executable, appdata, None, None, expect_setup=True) as (url, token):
         browser = Browser(url)
@@ -198,9 +199,11 @@ def verify_folder_settings(owner, media):
     server_media = Path(primary["path"]).parent
     folders = json.loads(owner.request("/api/library/folders", 200))
     assert folders["folders"], "No server disks or mounts appeared in the picker"
+    assert folders["breadcrumbs"] == []
     location = urlencode({"path": str(server_media)})
     browse = json.loads(owner.request(f"/api/library/folders?{location}", 200))
     assert {"extra", "intake", "primary", "archive"} <= {folder["name"] for folder in browse["folders"]}
+    assert [folder["path"] for folder in browse["breadcrumbs"][-2:]] == [browse["parent"], browse["path"]]
     owner.request("/api/library/folders?path=relative", 400)
     if os.name != "nt":
         link = urlencode({"path": str(server_media / "primary" / "linked-folder")})

@@ -10,7 +10,7 @@ Use a separately installed Suwayomi-Server instance accessed by a narrow adapter
 2. An owner selects a chapter and starts a manual download. Record it in the persistent queue and reconcile retries and unclear download acknowledgements against the companion and staging files.
 3. Validate chapter coverage and files in staging. Present the verified import for review and preserve source and chapter provenance.
 
-Organizer-managed companion packaging, extension lifecycle and source settings, scheduled acquisition, generated ComicInfo and cover processing, and Mihon backup import and progress interoperability are deferred. [Feature selection register](FEATURE-SELECTION.csv)
+Organizer-managed companion packaging, extension lifecycle and source settings, scheduled acquisition, generating ComicInfo and rewriting downloaded covers, and Mihon backup import and progress interoperability are deferred. Catalog scans will offer read-only cover previews for association review. [Feature selection register](FEATURE-SELECTION.csv) · [Cover previews](CATALOG-ASSOCIATION.md#cover-previews-during-scans)
 
 ## Security and compatibility gates
 

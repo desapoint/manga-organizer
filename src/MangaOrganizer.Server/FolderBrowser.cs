@@ -2,7 +2,7 @@ namespace MangaOrganizer.Server;
 
 internal sealed record ServerFolder(string Name, string Path);
 internal sealed record FolderListing(string? Path, string? Parent, bool Selectable,
-    IReadOnlyList<ServerFolder> Folders, IReadOnlyList<ServerFolder> Suggestions);
+    IReadOnlyList<ServerFolder> Folders, IReadOnlyList<ServerFolder> Suggestions, IReadOnlyList<ServerFolder> Breadcrumbs);
 
 internal static class FolderBrowser
 {
@@ -40,7 +40,8 @@ internal static class FolderBrowser
                 new("Unraid shares", "/mnt/user"),
             ]);
         }
-        return new(null, null, false, Accessible(disks, dataDirectory), Accessible(suggestions, dataDirectory));
+        var locations = SortLocations(disks.Where(disk => !IsHidden(disk.Path, dataDirectory)));
+        return new(null, null, false, locations, Accessible(suggestions, dataDirectory), []);
     }
 
     private static FolderListing BrowseFolder(string path, string dataDirectory)
@@ -57,12 +58,19 @@ internal static class FolderBrowser
             .Where(folder => !IsHidden(folder.FullName, dataDirectory))
             .OrderBy(folder => folder.Name, StringComparer.OrdinalIgnoreCase)
             .Select(folder => new ServerFolder(folder.Name, folder.FullName)).ToArray();
-        return new(directory.FullName, directory.Parent?.FullName, !LibraryScanner.Contains(fullPath, dataDirectory), folders, []);
+        var breadcrumbs = new Stack<ServerFolder>();
+        for (DirectoryInfo? target = directory; target is not null; target = target.Parent)
+        {
+            breadcrumbs.Push(new ServerFolder(target.Name, target.FullName));
+        }
+        return new(directory.FullName, directory.Parent?.FullName, !LibraryScanner.Contains(fullPath, dataDirectory), folders, [], breadcrumbs.ToArray());
     }
 
-    private static ServerFolder[] Accessible(IEnumerable<ServerFolder> candidates, string dataDirectory) => candidates
+    private static ServerFolder[] Accessible(IEnumerable<ServerFolder> candidates, string dataDirectory) => SortLocations(candidates
         .Where(folder => Directory.Exists(folder.Path) && !IsHidden(folder.Path, dataDirectory))
-        .Where(folder => CanOpen(folder.Path))
+        .Where(folder => CanOpen(folder.Path)));
+
+    private static ServerFolder[] SortLocations(IEnumerable<ServerFolder> candidates) => candidates
         .DistinctBy(folder => folder.Path, OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
         .OrderBy(folder => folder.Name, StringComparer.OrdinalIgnoreCase)
         .ToArray();
