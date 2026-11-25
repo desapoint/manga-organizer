@@ -48,6 +48,7 @@ button.secondary { background: transparent; color: #e4d8ff; border-color: #62597
 dl { margin: 0 0 1.5rem; }
 dd { margin: .25rem 0 0; overflow-wrap: anywhere; }
 .error { margin: 1rem 0 0; color: #ffb6c4; }
+.field-help { color: #b9b3c8; font-size: .875rem; }
 
 main.catalog-layout { max-width: 72rem; gap: 1.5rem; }
 .catalog-header, .catalog-controls, .catalog-summary, .pagination {

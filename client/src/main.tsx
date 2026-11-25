@@ -3,14 +3,20 @@ import type { FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { getCsrfToken } from './api';
 import { Catalog } from './Catalog';
+import { FirstRunSetup } from './FirstRunSetup';
+import type { SetupStatus } from './FirstRunSetup';
 import './styles.css';
 
 type Server = { id: string };
-type Connection = 'checking' | 'signed-out' | 'unavailable' | Server;
+type Connection = 'checking' | 'signed-out' | 'unavailable' | Server | SetupStatus;
 
 async function loadServer(signal?: AbortSignal): Promise<Connection> {
   const response = await fetch('/api/server', { signal });
-  if (response.status === 401) return 'signed-out';
+  if (response.status === 401) {
+    const setup = await fetch('/api/setup', { signal });
+    if (setup.status === 404) return 'signed-out';
+    return setup.ok ? setup.json() as Promise<SetupStatus> : 'unavailable';
+  }
   if (!response.ok) return 'unavailable';
   return response.json() as Promise<Server>;
 }
@@ -80,6 +86,15 @@ function App() {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (typeof connection === 'object' && 'libraryConfigured' in connection) {
+    return (
+      <main>
+        <header className="brand">Manga Organizer</header>
+        <FirstRunSetup libraryConfigured={connection.libraryConfigured} />
+      </main>
+    );
   }
 
   if (typeof connection === 'object') {

@@ -27,8 +27,8 @@ class Browser:
         self.opener = build_opener(HTTPCookieProcessor(self.cookies))
         self.headers = None
 
-    def request(self, path, expected, *, method="GET", body=None, token=None):
-        headers = {}
+    def request(self, path, expected, *, method="GET", body=None, token=None, setup_token=None):
+        headers = {"X-Setup-Token": setup_token} if setup_token is not None else {}
         if token is not None:
             headers["X-CSRF-Token"] = token
         if body is not None:
@@ -71,22 +71,34 @@ class Browser:
 
 
 @contextmanager
-def start_app(executable, data_dir, media, password):
+def start_app(executable, data_dir, media, password, *, expect_setup=False):
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         url = f"http://127.0.0.1:{listener.getsockname()[1]}"
-    env = dict(os.environ, ASPNETCORE_URLS=url, MANGA_ORGANIZER_DATA_DIR=str(data_dir))
-    env["MANGA_ORGANIZER_LIBRARY_ROOTS__0"] = str(media / "primary")
-    env["MANGA_ORGANIZER_LIBRARY_ROOTS__1"] = str(media / "archive")
+    env = {key: value for key, value in os.environ.items() if not key.upper().startswith("MANGA_ORGANIZER_LIBRARY_ROOTS__")}
+    env.update(ASPNETCORE_URLS=url, MANGA_ORGANIZER_DATA_DIR=str(data_dir))
+    if media is not None:
+        env["MANGA_ORGANIZER_LIBRARY_ROOTS__0"] = str(media / "primary")
+        env["MANGA_ORGANIZER_LIBRARY_ROOTS__1"] = str(media / "archive")
     env.pop(BOOTSTRAP_VARIABLE, None)
     if password is not None:
         env[BOOTSTRAP_VARIABLE] = password
-    with tempfile.TemporaryFile() as log, subprocess.Popen([executable], env=env, stdout=log, stderr=log) as process:
+    log_path = data_dir.parent / f"server-{uuid4().hex}.log"
+    with log_path.open("wb") as log, subprocess.Popen([executable], env=env, stdout=log, stderr=log) as process:
         try:
-            yield url
+            if expect_setup:
+                pattern = re.compile(rf"{re.escape(url)}/#setup=([A-F0-9]{{64}})")
+                for _ in range(60):
+                    if match := pattern.search(log_path.read_text(errors="replace")):
+                        break
+                    time.sleep(0.25)
+                else:
+                    raise RuntimeError("The server did not print a first-launch link")
+                yield url, match[1]
+            else:
+                yield url
         except Exception:
-            log.seek(0)
-            print(log.read().decode(errors="replace"))
+            print(re.sub(r"#setup=[A-F0-9]{64}", "#setup=[redacted]", log_path.read_text(errors="replace")))
             raise
         finally:
             process.terminate()
@@ -120,13 +132,60 @@ def start_container(image, volume, media, password):
 
 
 def wait_for_server(url):
+    opener = build_opener()
     for _ in range(60):
         try:
-            Browser(url).request("/healthz", 200)
-            return
+            with opener.open(f"{url}/healthz", timeout=5) as response:
+                assert response.status == 200
+                return
+        except HTTPError as error:
+            if error.code != 404:
+                raise
         except (URLError, ConnectionError):
-            time.sleep(0.25)
+            pass
+        time.sleep(0.25)
     raise RuntimeError("Server did not start")
+
+
+def verify_web_setup(executable, fixture, media):
+    appdata = fixture / "first-run-data"
+    env = dict(os.environ, ASPNETCORE_URLS="http://0.0.0.0:0", MANGA_ORGANIZER_DATA_DIR=str(appdata))
+    env.pop(BOOTSTRAP_VARIABLE, None)
+    unattended = subprocess.run([executable], env=env, capture_output=True, text=True, timeout=15)
+    assert unattended.returncode == 1 and BOOTSTRAP_VARIABLE in unattended.stderr
+    assert "Unhandled exception" not in unattended.stderr
+
+    password = uuid4().hex
+    setup = {"password": password, "confirmPassword": password, "libraryPath": str(media / "primary")}
+    with start_app(executable, appdata, None, None, expect_setup=True) as (url, old_token):
+        browser = Browser(url)
+        assert json.loads(browser.request("/api/setup", 200)) == {"libraryConfigured": False}
+        browser.request("/api/server", 401)
+        browser.request(LIBRARY_ROOTS, 404)
+        browser.request("/healthz", 404)
+        browser.request("/api/setup", 403, method="POST", body=setup)
+
+    with start_app(executable, appdata, None, None, expect_setup=True) as (url, token):
+        browser = Browser(url)
+        assert token != old_token
+        browser.request("/api/setup", 403, method="POST", body=setup, setup_token=old_token)
+        browser.request("/api/setup", 400, method="POST", body=dict(setup, confirmPassword="different password"), setup_token=token)
+        browser.request("/api/setup", 400, method="POST", body=dict(setup, libraryPath=str(appdata)), setup_token=token)
+        browser.request("/api/setup", 204, method="POST", body=setup, setup_token=token)
+        wait_for_server(url)
+        browser.request("/api/setup", 404, method="POST", body=setup, setup_token=token)
+        browser.sign_in(password)
+        identity = browser.server_id()
+        (root,) = browser.roots()
+        assert Path(root["path"]) == media / "primary"
+
+    with start_app(executable, appdata, None, None) as url:
+        wait_for_server(url)
+        browser = Browser(url)
+        browser.request("/api/setup", 404)
+        browser.sign_in(password)
+        assert browser.server_id() == identity
+        assert browser.roots() == [root]
 
 
 def scan_library(owner, media):
@@ -237,8 +296,10 @@ if __name__ == "__main__":
         media = Path(fixture) / "media"
         create_media_fixture(media)
         if target.app:
+            executable = str(target.app.resolve())
+            verify_web_setup(executable, Path(fixture), media)
             data_dir = Path(fixture) / "data"
-            smoke(lambda password: start_app(str(target.app.resolve()), data_dir, media, password), media)
+            smoke(lambda password: start_app(executable, data_dir, media, password), media)
         else:
             volume = f"manga-smoke-{uuid4().hex}"
             subprocess.run(["docker", "volume", "create", volume], check=True, stdout=subprocess.DEVNULL)

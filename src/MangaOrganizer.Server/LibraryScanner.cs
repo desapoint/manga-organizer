@@ -14,20 +14,33 @@ internal static class LibraryScanner
         var paths = new List<string>();
         foreach (var setting in configuration.GetSection("MANGA_ORGANIZER_LIBRARY_ROOTS").GetChildren())
         {
-            if (setting.Value is not { Length: > 0 } value || !Path.IsPathFullyQualified(value) ||
-                (OperatingSystem.IsWindows() && (value.StartsWith(@"\\?\") || value.StartsWith(@"\\.\"))))
+            try
             {
-                throw new InvalidOperationException($"Set {setting.Path} to an absolute server folder path.");
+                paths.Add(NormalizeRoot(setting.Value, dataDirectory, paths));
             }
-
-            var path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(value));
-            if (Overlaps(path, dataDirectory) || paths.Any(other => Overlaps(path, other)))
+            catch (ArgumentException error)
             {
-                throw new InvalidOperationException($"{setting.Path} overlaps another library folder or the server data directory.");
+                throw new InvalidOperationException($"Invalid library setting {setting.Path}. {error.Message}", error);
             }
-            paths.Add(path);
         }
         return paths;
+    }
+
+    public static string NormalizeRoot(string? value, string dataDirectory, IReadOnlyList<string> otherRoots)
+    {
+        if (string.IsNullOrEmpty(value) || !Path.IsPathFullyQualified(value) ||
+            (OperatingSystem.IsWindows() && (value.StartsWith(@"\\?\", StringComparison.Ordinal) ||
+             value.StartsWith(@"\\.\", StringComparison.Ordinal))))
+        {
+            throw new ArgumentException("Enter an absolute folder path on the server.");
+        }
+
+        var path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(value));
+        if (Overlaps(path, dataDirectory) || otherRoots.Any(other => Overlaps(path, other)))
+        {
+            throw new ArgumentException("Choose a folder separate from the server data directory and other library folders.");
+        }
+        return path;
     }
 
     private static bool Overlaps(string first, string second) => Contains(first, second) || Contains(second, first);

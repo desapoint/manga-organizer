@@ -17,7 +17,7 @@ dotnet restore src/MangaOrganizer.Server --locked-mode
 dotnet publish src/MangaOrganizer.Server --no-restore -c Release -o ./publish
 ```
 
-Set `MANGA_ORGANIZER_BOOTSTRAP_PASSWORD` in the launching process on first startup. Choose 12–256 characters. Run `./publish/MangaOrganizer.Server.exe` on Windows or `./publish/MangaOrganizer.Server` on Linux, then open [the local WebUI](http://127.0.0.1:8787). The server saves a password hash and its ID in the current user's local appdata. Set `MANGA_ORGANIZER_DATA_DIR` to use a different local directory. Remove the bootstrap variable after the first start.
+Run `./publish/MangaOrganizer.Server.exe` on Windows or `./publish/MangaOrganizer.Server` on Linux. On first launch, open the one-time WebUI setup link to choose an owner password and an optional read-only library folder. The server saves its configuration in the current user's local appdata. Set `MANGA_ORGANIZER_DATA_DIR` to use a different local directory. The default WebUI port is `8787`. [Installation guide](docs/INSTALL.md)
 
 The same build runs in Docker with a named volume for the database and session keys. Set the bootstrap variable in your shell before the first run.
 
