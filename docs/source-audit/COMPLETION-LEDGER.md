@@ -84,3 +84,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 17 progress
 
 [Integration and settings consumer review](PASS17.md) adds 12 selected pinned files across KK/KR/KV, one test-source body not run, [15 settings trace rows](PASS17-SETTINGS-TRACE.csv) and [9 new qualification scenarios](PASS17-QUALIFICATION.csv). [Evidence](PASS17-EVIDENCE.csv). NZBGet completion/status not supported by inspected dispatcher/cache; no full adapter claim. Client retirement and Kobo cursor isolation require qualification. G3/G4/G5 open; G6 partial; G7 not executed; G8 pending. Existing selection and candidate counts unchanged. No application implementation or destructive approval.
+
+### Pass 17 coverage reconciliation
+
+[Coverage reconciliation](PASS17-COVERAGE.md) and [delta](PASS17-COVERAGE-DELTA.csv) check all 42 Pass 15–17 evidence paths against previous citations and pinned indexes: 24 new and 18 previously mapped. Historical 403 distinct paths increased to 427; 333 of 7,716 implementation candidates have citations, 7,383 remain without mapped evidence. Original historical snapshot unchanged. Versioned calculator provided, Python execution pending. Coverage is not complete file inspection or passing tests.
