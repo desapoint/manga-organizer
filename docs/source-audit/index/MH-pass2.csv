@@ -1,0 +1,343 @@
+Path,Line,Kind,Identifier,Verification
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",17,"field candidate","preferenceStore",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",20,"preference","displayMode",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",27,"preference","sortingMode",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",34,"preference","randomSortSeed",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",36,"preference","portraitColumns",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",38,"preference","landscapeColumns",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",40,"preference","lastUpdatedTimestamp",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",44,"preference","autoUpdateInterval",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",46,"preference","autoUpdateDeviceRestrictions",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",52,"preference","autoUpdateMangaRestrictions",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",62,"preference","autoUpdateMetadata",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",64,"preference","showContinueReadingButton",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",69,"preference","markDuplicateReadChapterAsRead",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",76,"preference","filterDownloaded",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",81,"preference","filterUnread",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",83,"preference","filterStarted",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",88,"preference","filterBookmarked",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",93,"preference","filterCompleted",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",98,"preference","filterIntervalCustom",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",103,"function","filterTracking",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",112,"preference","downloadBadge",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",114,"preference","unreadBadge",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",116,"preference","localBadge",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",118,"preference","languageBadge",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",120,"preference","newShowUpdatesCount",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",121,"preference","newUpdatesCount",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",130,"preference","defaultCategory",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",132,"preference","lastUsedCategory",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",134,"preference","categoryTabs",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",136,"preference","categoryNumberOfItems",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",138,"preference","categorizedDisplaySettings",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",140,"preference","updateCategories",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",145,"preference","updateCategoriesExclude",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",154,"preference","filterChapterByRead",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",159,"preference","filterChapterByDownloaded",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",164,"preference","filterChapterByBookmarked",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",170,"preference","sortChapterBySourceOrNumber",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",175,"preference","displayChapterByNameOrNumber",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",180,"preference","sortChapterByAscendingOrDescending",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",185,"function","setChapterSettingsDefault",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",196,"preference","autoClearChapterCache",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",198,"preference","hideMissingChapters",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",206,"preference","swipeToStartAction",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",211,"preference","swipeToEndAction",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",216,"preference","updateMangaTitles",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",218,"preference","disallowNonAsciiFilenames",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",222,"preference","enableChapterNameHash",declaration only
+"domain/src/main/java/tachiyomi/domain/library/service/LibraryPreferences.kt",252,"field candidate","categoryPreferenceKeys",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",25,"preference","pageTransitions",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",27,"preference","loadAheadOnlyOverWifi",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",32,"preference","flashOnPageChange",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",34,"preference","flashDurationMillis",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",36,"preference","flashPageInterval",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",38,"preference","flashColor",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",40,"preference","doubleTapAnimSpeed",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",42,"preference","showPageNumber",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",44,"preference","verticalNavigator",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",49,"preference","verticalNavigatorOnLeft",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",54,"preference","verticalNavigatorHeight",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",59,"preference","showReadingMode",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",61,"preference","fullscreen",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",63,"preference","drawUnderCutout",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",65,"preference","keepScreenOn",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",67,"preference","defaultReadingMode",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",72,"preference","defaultOrientationType",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",77,"preference","webtoonDoubleTapZoomEnabled",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",82,"preference","imageScaleType",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",84,"preference","zoomStart",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",86,"preference","readerTheme",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",88,"preference","alwaysShowChapterTransition",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",93,"preference","cropBorders",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",95,"preference","navigateToPan",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",97,"preference","landscapeZoom",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",99,"preference","cropBordersWebtoon",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",101,"preference","webtoonSidePadding",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",103,"preference","readerHideThreshold",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",108,"preference","folderPerManga",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",110,"preference","skipRead",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",112,"preference","skipFiltered",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",114,"preference","skipDupe",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",116,"preference","webtoonDisableZoomOut",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",122,"preference","dualPageSplitPaged",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",124,"preference","dualPageInvertPaged",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",126,"preference","dualPageSplitWebtoon",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",128,"preference","dualPageInvertWebtoon",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",130,"preference","dualPageRotateToFit",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",132,"preference","dualPageRotateToFitInvert",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",137,"preference","dualPageRotateToFitWebtoon",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",142,"preference","dualPageRotateToFitInvertWebtoon",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",147,"preference","dualPageView",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",156,"preference","customBrightness",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",158,"preference","customBrightnessValue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",160,"preference","colorFilter",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",162,"preference","colorFilterValue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",164,"preference","colorFilterMode",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",166,"preference","grayscale",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",168,"preference","invertedColors",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",174,"preference","readWithLongTap",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",176,"preference","readWithVolumeKeys",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",178,"preference","readWithVolumeKeysInverted",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",183,"preference","navigationModePager",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",185,"preference","navigationModeWebtoon",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",187,"preference","pagerNavInverted",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",192,"preference","webtoonNavInverted",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",197,"preference","showNavigationOverlayNewUser",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",202,"preference","showNavigationOverlayOnStart",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",211,"preference","transitionAnimation",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",214,"preference","transitionAnimationDual",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",217,"preference","cutoutMode",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",219,"preference","cutoutModeDual",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",221,"preference","continuousMinWidth",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",223,"preference","continuousGap",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",225,"preference","fastRenderingOnly",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",227,"preference","holdUntilFinal",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",229,"preference","cropInsteadOfZoom",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",231,"preference","disableDoubleTapGestures",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",235,"preference","imageFilters",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",243,"preference","tileFilters",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",251,"preference","upscaler",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",259,"preference","downscaler",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",275,"field candidate","titleRes",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",276,"field candidate","shouldInvertHorizontal",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",277,"field candidate","shouldInvertVertical",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",302,"function","fromValue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",319,"function","fromValue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",334,"function","fromValue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",351,"function","fromValue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",405,"field candidate","TapZones",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",414,"field candidate","ImageScaleType",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",423,"field candidate","ImageScaleTypeWebGpuViewer",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",430,"field candidate","ZoomStart",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/ui/reader/setting/ReaderPreferences.kt",437,"field candidate","ColorFilterMode",declaration only
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/core/security/SecurityPreferences.kt",18,"preference","useAuthenticator",declaration only
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/core/security/SecurityPreferences.kt",20,"preference","lockAppAfter",declaration only
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/core/security/SecurityPreferences.kt",22,"preference","secureScreen",declaration only
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/core/security/SecurityPreferences.kt",27,"preference","hideNotificationContent",declaration only
+"core/common/src/main/kotlin/eu/kanade/tachiyomi/core/security/SecurityPreferences.kt",33,"preference","lastAppClosed",declaration only
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt",18,"field candidate","preferenceStore",declaration only
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt",21,"function","trackUsername",declaration only
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt",26,"function","trackDisplayUsername",declaration only
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt",31,"function","trackPassword",declaration only
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt",36,"function","trackAuthExpired",declaration only
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt",41,"function","setCredentials",declaration only
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt",47,"function","trackToken",declaration only
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt",49,"preference","anilistScoreType",declaration only
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt",51,"preference","kitsuScoreType",declaration only
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt",53,"preference","mangabakaScoreType",declaration only
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt",55,"preference","autoUpdateTrack",declaration only
+"app/src/main/java/eu/kanade/domain/track/service/TrackPreferences.kt",57,"preference","autoUpdateTrackOnMarkRead",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",7,"field candidate","libraryEntries",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",8,"field candidate","categories",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",9,"field candidate","chapters",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",10,"field candidate","tracking",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",11,"field candidate","history",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",12,"field candidate","readEntries",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",13,"field candidate","appSettings",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",14,"field candidate","extensionStores",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",15,"field candidate","sourceSettings",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",16,"field candidate","privateSettings",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",19,"function","asBooleanArray",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",32,"function","canCreate",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",35,"field candidate","libraryOptions",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",72,"field candidate","settingsOptions",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",96,"function","fromBooleanArray",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",111,"field candidate","label",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",112,"field candidate","getter",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",113,"field candidate","setter",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/create/BackupOptions.kt",114,"field candidate","enabled",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt",17,"field candidate","url",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt",18,"field candidate","name",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt",19,"field candidate","scanlator",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt",20,"field candidate","read",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt",21,"field candidate","bookmark",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt",23,"field candidate","lastPageRead",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt",24,"field candidate","dateFetch",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt",25,"field candidate","dateUpload",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt",27,"field candidate","chapterNumber",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt",28,"field candidate","sourceOrder",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt",31,"field candidate","memo",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/backup/models/BackupChapter.kt",33,"function","toChapterImpl",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",54,"field candidate","SUPPORTED_LIB_VERSIONS",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",57,"field candidate","PACKAGE_FLAGS",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",64,"function","getPrivateExtensionDir",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",66,"function","installPrivateExtensionFile",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",68,"field candidate","currentExtension",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",76,"field candidate","extensionSignatures",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",83,"field candidate","target",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",84,"field candidate","staged",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",98,"function","uninstallPrivateExtension",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",102,"function","getArchivePackageInfo",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",114,"function","loadExtensions",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",118,"field candidate","trustExtension",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",119,"field candidate","sourcePreferences",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",120,"field candidate","stores",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",121,"field candidate","enabledContentWarnings",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",122,"field candidate","applyContentWarningsToInstalled",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",124,"field candidate","pkgManager",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",126,"field candidate","installedPkgs",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",132,"field candidate","sharedExtPkgs",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",137,"field candidate","privateExtPkgs",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",147,"field candidate","path",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",155,"field candidate","privateExtPkgsByName",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",157,"field candidate","extPkgs",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",162,"field candidate","privatePkg",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",193,"function","loadExtensionFromPkgName",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",194,"field candidate","extensionPackage",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",200,"field candidate","sourcePreferences",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",211,"function","getExtensionPackageInfoFromPkgName",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",215,"function","getExtensionInfoFromPkgName",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",216,"field candidate","privateExtensionFile",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",217,"field candidate","privatePkg",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",231,"field candidate","sharedPkg",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",252,"function","loadExtensionCatching",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",272,"field candidate","pkgInfo",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",274,"field candidate","signatures",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",295,"function","loadExtension",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",304,"field candidate","pkgManager",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",305,"field candidate","pkgInfo",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",306,"field candidate","appInfo",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",307,"field candidate","metaData",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",308,"field candidate","pkgName",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",310,"field candidate","extName",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",313,"field candidate","versionName",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",314,"field candidate","versionCode",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",315,"field candidate","signatures",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",316,"field candidate","store",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",317,"field candidate","contentWarning",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",330,"function","notLoaded",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",357,"field candidate","libVersion",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",391,"field candidate","classLoader",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",398,"field candidate","sourceClasses",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",404,"field candidate","sources",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",407,"field candidate","sourceClass",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",430,"field candidate","langs",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",431,"field candidate","lang",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",459,"function","selectExtensionPackage",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",480,"function","isPackageAnExtension",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",490,"function","getSignatures",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",492,"field candidate","signingInfo",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",520,"field candidate","packageInfo",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",521,"field candidate","isShared",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/extension/util/ExtensionLoader.kt",530,"field candidate","root",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",79,"field candidate","scope",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",80,"field candidate","context",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",81,"field candidate","provider",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",82,"field candidate","cache",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",83,"field candidate","sourceManager",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",84,"field candidate","chapterCache",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",85,"field candidate","downloadPreferences",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",86,"field candidate","xml",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",87,"field candidate","getCategories",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",88,"field candidate","getTracks",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",89,"field candidate","store",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",90,"field candidate","notifier",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",95,"field candidate","_queueState",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",96,"field candidate","queueState",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",100,"field candidate","lock",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",104,"field candidate","downloaderJob",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",109,"field candidate","isRunning",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",116,"field candidate","isPaused",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",130,"function","start",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",135,"function","stop",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",139,"function","stopIfFinished",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",143,"function","stopIfCurrent",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",150,"function","pause",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",158,"function","clearQueue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",165,"function","startLocked",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",170,"field candidate","pending",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",180,"function","stopLocked",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",200,"function","pauseLocked",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",211,"function","launchDownloaderJob",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",214,"field candidate","previousJob",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",219,"field candidate","owner",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",221,"field candidate","activeDownloadsFlow",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",226,"field candidate","activeDownloads",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",237,"field candidate","activeDownloadsErroredFlow",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",248,"field candidate","sourceJobs",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",249,"field candidate","downloadJobs",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",259,"field candidate","activeSources",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",260,"field candidate","sourceJobsToStop",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",266,"field candidate","sourcesToStart",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",285,"field candidate","slots",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",288,"field candidate","download",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",298,"field candidate","pagesStarted",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",299,"field candidate","job",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",341,"function","cancelDownloaderJob",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",353,"function","queueChapters",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",356,"field candidate","source",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",357,"field candidate","wasEmpty",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",358,"field candidate","chaptersToQueue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",359,"field candidate","downloadedChapterIds",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",360,"field candidate","queuedChapterIds",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",379,"field candidate","queuedDownloads",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",380,"field candidate","maxDownloadsFromSource",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",411,"function","downloadChapter",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",412,"field candidate","mangaDir",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",418,"field candidate","availSpace",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",430,"field candidate","chapterDirname",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",445,"field candidate","tmpDir",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",449,"field candidate","pageList",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",451,"field candidate","pages",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",457,"field candidate","reIndexedPages",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",528,"function","getOrDownloadImage",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",534,"field candidate","digitCount",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",535,"field candidate","filename",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",538,"field candidate","imageFile",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",544,"field candidate","file",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",571,"function","downloadImage",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",575,"field candidate","file",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",586,"field candidate","extension",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",616,"function","copyImageFromCache",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",617,"field candidate","tmpFile",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",627,"field candidate","extension",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",639,"function","getImageExtension",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",640,"field candidate","mime",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",650,"function","isDownloadSuccessful",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",655,"field candidate","downloadPageCount",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",663,"field candidate","downloadedImagesCount",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",664,"field candidate","fileName",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",682,"function","isDownloadedPageImage",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",691,"function","archiveChapter",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",696,"field candidate","zip",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",709,"function","createComicInfoFile",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",715,"field candidate","categories",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",716,"field candidate","urls",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",723,"field candidate","comicInfo",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",734,"field candidate","comicInfoString",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",742,"function","areAllDownloadsFinished",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",746,"function","addAllToQueue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",749,"field candidate","queuedChapterIds",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",750,"field candidate","toAdd",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",759,"function","removeFromQueue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",771,"field candidate","downloads",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",782,"function","removeFromQueue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",783,"field candidate","chapterIds",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",787,"function","removeFromQueue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",791,"function","internalClearQueue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",807,"function","updateQueue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",810,"field candidate","downloads",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",811,"field candidate","kept",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",829,"function","dequeue",declaration only
+"app/src/main/java/eu/kanade/tachiyomi/data/download/Downloader.kt",834,"field candidate","wasRunning",declaration only
