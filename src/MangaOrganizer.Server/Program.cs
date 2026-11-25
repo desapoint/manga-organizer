@@ -14,7 +14,6 @@ var builder = WebUi.CreateBuilder(args);
 var dataDirectory = Path.GetFullPath(builder.Configuration["MANGA_ORGANIZER_DATA_DIR"] ?? Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify),
     "MangaOrganizer"));
-var libraryRoots = LibraryScanner.ReadRoots(builder.Configuration, dataDirectory);
 Directory.CreateDirectory(dataDirectory);
 var bootstrapPassword = builder.Configuration[bootstrapPasswordSetting];
 var (identity, _) = ServerStore.Open(dataDirectory, bootstrapPassword);
@@ -27,7 +26,7 @@ if (identity is null)
         return;
     }
 
-    identity = await WebSetup.RunAsync(builder, dataDirectory, libraryRoots);
+    identity = await WebSetup.RunAsync(builder, dataDirectory, LibraryScanner.ReadRoots(builder.Configuration, dataDirectory));
     if (identity is null)
     {
         return;
@@ -35,12 +34,13 @@ if (identity is null)
     builder = WebUi.CreateBuilder(args);
 }
 
-if (libraryRoots.Count == 0 && identity.LibraryPath is { } libraryPath)
+builder.Services.AddSingleton(new LibraryStore(dataDirectory, () =>
 {
-    libraryRoots = [LibraryScanner.NormalizeRoot(libraryPath, dataDirectory, libraryRoots)];
-}
-
-builder.Services.AddSingleton(new LibraryStore(dataDirectory, libraryRoots));
+    var configuredPaths = LibraryScanner.ReadRoots(builder.Configuration, dataDirectory);
+    return configuredPaths.Count == 0 && identity.LibraryPath is { } libraryPath
+        ? [LibraryScanner.NormalizeRoot(libraryPath, dataDirectory, configuredPaths)]
+        : configuredPaths;
+}));
 builder.Services.AddSingleton<LibraryScanQueue>();
 builder.Services.AddHostedService(services => services.GetRequiredService<LibraryScanQueue>());
 
@@ -106,7 +106,7 @@ api.MapPost("/session", async (SignIn request, HttpContext context, IAntiforgery
 }).RequireRateLimiting("sign-in").WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(4096));
 
 api.MapGet("/server", () => Results.Ok(new { id = identity.InstanceId })).RequireAuthorization();
-api.MapLibrary();
+api.MapLibrary(dataDirectory);
 
 api.MapDelete("/session", async (HttpContext context, IAntiforgery antiforgery) =>
 {

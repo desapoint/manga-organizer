@@ -23,7 +23,7 @@ F21,Translation group preference wait upgrade,UC,Defer,Core,
 F22,Source fallback replacement rate limits,UC,Defer,Core,
 F23,Live queue history retry blocklist,KK/MK,Include,Core,Persistent manual download queue with status and reconciled retries. Blocklists and broader queue controls are deferred.
 F24,Durable backfill partial download repair,UC,Defer,Core,
-F25,Auto manual import conflict review,KK,Include,Foundation,"Verified, reviewed imports are included. Explicit device uploads to the primary are optional. Automatic import is deferred. See REMOTE-READING.md."
+F25,Auto manual import conflict review,KK,Include,Foundation,"Verified, reviewed imports are included. Intake moves follow an unambiguous or manual association and the managed-storage requirements. Device uploads are optional. See FILE-ORGANIZATION.md."
 F26,Copy move hardlink seeding,KK/KR,Include,Core,Reviewed moves and verified copies when needed for cross-filesystem moves. Hardlink creation and seeding integration are deferred.
 F27,Rename preview no overwrite,KR/KK,Include,Core,Preview and revalidate managed rename and move operations. Protect destination files from overwrite.
 F28,CBZ ComicInfo cover provenance,KR/MK,Defer,Foundation,Generated ComicInfo and cover processing are deferred. Reviewed imports retain source and chapter provenance under F25.

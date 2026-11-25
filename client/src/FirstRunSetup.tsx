@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { FolderField } from './FolderField';
 
 export type SetupStatus = { libraryConfigured: boolean };
 
@@ -11,6 +12,7 @@ export function FirstRunSetup({ libraryConfigured }: SetupStatus) {
   const [token, setToken] = useState(setupToken);
   const [phase, setPhase] = useState<'editing' | 'saving' | 'starting' | 'waiting'>('editing');
   const [error, setError] = useState('');
+  const [libraryPath, setLibraryPath] = useState('');
 
   useEffect(() => {
     const updateToken = () => setToken(setupToken());
@@ -81,13 +83,8 @@ export function FirstRunSetup({ libraryConfigured }: SetupStatus) {
           <span className="field-help" id="setup-password-help">Use 12–256 characters. You’ll use this password to sign in.</span>
           <label htmlFor="setup-confirm">Confirm password</label>
           <input id="setup-confirm" name="confirmPassword" type="password" autoComplete="new-password" required minLength={12} maxLength={256} />
-          {!libraryConfigured && (
-            <>
-              <label htmlFor="setup-library">Library folder (optional)</label>
-              <input id="setup-library" name="libraryPath" autoComplete="off" spellCheck={false} aria-describedby="setup-library-help" />
-              <span className="field-help" id="setup-library-help">Paste the full path to a folder on this server. The catalog scans it read-only.</span>
-            </>
-          )}
+          {!libraryConfigured && <FolderField id="setup-library" label="Library folder (optional)" value={libraryPath}
+            onChange={setLibraryPath} setupToken={token} />}
           {error && <p role="alert" className="error">{error}</p>}
           <button disabled={phase === 'saving'}>{phase === 'saving' ? 'Saving…' : 'Finish setup'}</button>
         </form>

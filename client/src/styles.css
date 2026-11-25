@@ -50,6 +50,31 @@ dd { margin: .25rem 0 0; overflow-wrap: anywhere; }
 .error { margin: 1rem 0 0; color: #ffb6c4; }
 .field-help { color: #b9b3c8; font-size: .875rem; }
 
+.catalog-navigation, .folder-browser-controls, .folder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+}
+.catalog-navigation { margin-bottom: 1.25rem; }
+.catalog-navigation button[aria-pressed='true'] { background: #c5b1ff; color: #20143c; }
+.folder-field { display: flex; flex-wrap: wrap; gap: .5rem; }
+.folder-field input { flex: 1 1 12rem; }
+.folder-browser, .settings-form {
+  border: 1px solid #34394b;
+  border-radius: .6rem;
+  padding: .9rem;
+  min-width: 0;
+}
+.folder-browser h3 { font-size: 1rem; margin: .75rem 0 .45rem; }
+.folder-location { display: block; overflow-wrap: anywhere; margin-top: .65rem; }
+.folder-links, .settings-folders { list-style: none; padding: 0; margin: 0 0 .8rem; }
+.folder-links { max-height: 16rem; overflow: auto; }
+.folder-links button { display: block; width: 100%; text-align: start; overflow-wrap: anywhere; margin-bottom: .3rem; }
+.settings-folders li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .6rem; padding: .8rem 0; border-bottom: 1px solid #34394b; }
+.folder-description { display: grid; gap: .15rem; overflow-wrap: anywhere; }
+.folder-description span { color: #b9b3c8; font-size: .875rem; }
+.settings-form h2 { margin: 0; font-size: 1.2rem; }
+
 main.catalog-layout { max-width: 72rem; gap: 1.5rem; }
 .catalog-header, .catalog-controls, .catalog-summary, .pagination {
   display: flex;

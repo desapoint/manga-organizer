@@ -15,7 +15,7 @@ Android, Windows and Linux clients use the server's WebUI. For these development
 
 Run the setup program to install for your Windows user. Open **Manga Organizer** from the Start menu, or run `MangaOrganizer.Server.exe` from the extracted portable ZIP. On first launch the app opens a one-time link to the WebUI setup page. If the browser stays closed, open the link printed in the server window.
 
-Choose and confirm an owner password of 12–256 characters. You can enter a full path to a library folder on the server. Finish setup and sign in when the WebUI is ready. The server keeps showing setup until an owner has been configured. On later launches it opens directly in server mode. The default data folder is `%LOCALAPPDATA%\MangaOrganizer`.
+Choose and confirm an owner password of 12–256 characters. Use **Browse server** to choose an optional library folder, then finish setup and sign in. The server shows setup until an owner has been configured. On later launches it opens directly in server mode. The default data folder is `%LOCALAPPDATA%\MangaOrganizer`.
 
 The WebUI defaults to `http://127.0.0.1:8787`. To choose a different local port, start the executable with `--urls http://127.0.0.1:8788` or set `ASPNETCORE_URLS` in its launching environment.
 
@@ -50,6 +50,6 @@ For an offline Unraid install, load `MangaOrganizer-docker-amd64.tar.gz` on the 
 
 ## Upgrades and catalog setup
 
-Stop the running server before replacing binaries or changing the image. Back up its data directory or config volume and retain it across reinstalls. To supply library folders through the launching environment, set `MANGA_ORGANIZER_LIBRARY_ROOTS__0`, `MANGA_ORGANIZER_LIBRARY_ROOTS__1` and so on. These folders take precedence over the first-launch library folder. Restart and select **Scan folder** in the WebUI.
+Stop the running server before replacing binaries or changing the image. Back up its data directory or config volume and retain it across reinstalls. Open **Library settings** to add, edit or remove library and import folders. The server saves changes in SQLite. Existing first-launch paths and `MANGA_ORGANIZER_LIBRARY_ROOTS__0`, `MANGA_ORGANIZER_LIBRARY_ROOTS__1` and later values are used when seeding the database configuration. For Docker, bind-mount each folder before selecting it in the WebUI.
 
 For automation, merges to `main` publish development prereleases with versioned images and SHA-256 checksums. Pull requests and manual runs validate the same build without publishing. Physical Unraid, release signing and full platform qualification continue in the audit ledger. [Qualification matrix](https://github.com/desapoint/manga-organizer/blob/main/docs/source-audit/DEPLOYMENT-QUALIFICATION.md)

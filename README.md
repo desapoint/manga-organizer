@@ -32,9 +32,9 @@ On subsequent starts, omit the bootstrap `--env` option and reuse the volume. Ke
 
 ### Configure the read-only library
 
-Set `MANGA_ORGANIZER_LIBRARY_ROOTS__0` to an absolute path on the server. Use `MANGA_ORGANIZER_LIBRARY_ROOTS__1`, `MANGA_ORGANIZER_LIBRARY_ROOTS__2` and so on for additional folders. Keep these folders separate from each other and from the server data directory. Restart, sign in and select **Scan folder** to populate the catalog.
+Sign in and open **Library settings** to add, edit or remove multiple folders. **Browse server** shows suggested locations, disks and subfolders on the server. Choose **Read-only library** for a catalog folder or **Import intake** for incoming files awaiting association. Settings are saved in SQLite and take effect immediately. Select **Scan folder** in the appropriate view to discover files.
 
-In Docker, use a read-only bind mount and set the environment variable to its container path. Add these options before the image name in `docker run`.
+In Docker, bind-mount folders you want to browse and select their container paths in the WebUI. `MANGA_ORGANIZER_LIBRARY_ROOTS__0` and higher numbered variables can seed library settings when the database is initialized. For example, add these options before the image name in `docker run`.
 
 ```sh
 --mount type=bind,source=/path/to/manga,target=/media/manga,readonly \

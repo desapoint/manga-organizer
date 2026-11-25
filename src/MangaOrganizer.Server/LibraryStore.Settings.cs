@@ -1,0 +1,110 @@
+using Microsoft.Data.Sqlite;
+
+namespace MangaOrganizer.Server;
+
+internal sealed record LibraryFolderChange(string? Path, string? Name, string? Kind);
+internal sealed record LibraryFolder(Guid Id, string Path, string? Name, string Kind);
+
+internal sealed class LibraryFolderBusyException() : Exception("Wait for the folder scan to finish before changing this folder.");
+
+internal sealed partial class LibraryStore
+{
+    public LibraryFolder? SaveFolder(Guid? id, LibraryFolderChange change)
+    {
+        if (change.Kind is not ("library" or "import"))
+        {
+            throw new ArgumentException("Choose a library folder or an import folder.");
+        }
+
+        var name = string.IsNullOrWhiteSpace(change.Name) ? null : change.Name.Trim();
+        var path = LibraryScanner.NormalizeRoot(change.Path, dataDirectory, []);
+        LibraryScanner.RequireRoot(path);
+        using var database = OpenDatabase();
+        using var transaction = database.BeginTransaction(deferred: false);
+        using var command = database.CreateCommand();
+        command.Transaction = transaction;
+        if (id is { } currentId && !CanChangeFolder(command, currentId))
+        {
+            return null;
+        }
+
+        command.CommandText = "SELECT root_id, path FROM library_folder;";
+        var otherPaths = new List<string>();
+        using (var rows = command.ExecuteReader())
+        {
+            while (rows.Read())
+            {
+                if (rows.GetGuid(0) != id)
+                {
+                    otherPaths.Add(rows.GetString(1));
+                }
+            }
+        }
+
+        LibraryScanner.NormalizeRoot(path, dataDirectory, otherPaths);
+        var folder = SaveFolder(command, id, path, name, change.Kind);
+        transaction.Commit();
+        return folder;
+    }
+
+    public bool RemoveFolder(Guid id)
+    {
+        using var database = OpenDatabase();
+        using var transaction = database.BeginTransaction(deferred: false);
+        using var command = database.CreateCommand();
+        command.Transaction = transaction;
+        if (!CanChangeFolder(command, id))
+        {
+            return false;
+        }
+
+        command.CommandText = "DELETE FROM library_folder WHERE root_id = $id;";
+        command.ExecuteNonQuery();
+        transaction.Commit();
+        return true;
+    }
+
+    private static bool CanChangeFolder(SqliteCommand command, Guid id)
+    {
+        command.Parameters.Clear();
+        command.CommandText = """
+            SELECT r.state FROM library_folder f JOIN library_root r ON r.id = f.root_id
+            WHERE f.root_id = $id;
+            """;
+        command.Parameters.AddWithValue("$id", id);
+        var state = command.ExecuteScalar() as string;
+        if (state is "queued" or "scanning")
+        {
+            throw new LibraryFolderBusyException();
+        }
+
+        return state is not null;
+    }
+
+    private static LibraryFolder SaveFolder(SqliteCommand command, Guid? currentId, string path, string? name, string kind)
+    {
+        command.Parameters.Clear();
+        command.CommandText = """
+            INSERT INTO library_root(id, path_key) VALUES ($id, $pathKey)
+            ON CONFLICT(path_key) DO UPDATE SET path_key = excluded.path_key RETURNING id;
+            """;
+        command.Parameters.AddWithValue("$id", Guid.NewGuid());
+        command.Parameters.AddWithValue("$pathKey", OperatingSystem.IsWindows() ? path.ToUpperInvariant() : path);
+        var rootId = Guid.Parse((string)command.ExecuteScalar()!);
+
+        command.Parameters.Clear();
+        command.CommandText = currentId is null
+            ? "INSERT INTO library_folder(root_id, path, name, kind) VALUES ($id, $path, $name, $kind);"
+            : "UPDATE library_folder SET root_id = $id, path = $path, name = $name, kind = $kind WHERE root_id = $currentId;";
+        command.Parameters.AddWithValue("$id", rootId);
+        command.Parameters.AddWithValue("$path", path);
+        command.Parameters.AddWithValue("$name", (object?)name ?? DBNull.Value);
+        command.Parameters.AddWithValue("$kind", kind);
+        if (currentId is not null)
+        {
+            command.Parameters.AddWithValue("$currentId", currentId.Value);
+        }
+        command.ExecuteNonQuery();
+        return new LibraryFolder(rootId, path, name, kind);
+    }
+}

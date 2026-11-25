@@ -35,6 +35,10 @@ internal static class WebSetup
         app.MapGet("/api/setup", (HttpContext context) => IsLocal(context)
             ? Results.Ok(new { libraryConfigured = libraryRoots.Count > 0 })
             : Results.NotFound());
+        app.MapGet("/api/setup/folders", (HttpContext context, string? path) =>
+            IsLocal(context) && MatchesToken(context.Request.Headers["X-Setup-Token"].ToString(), tokenBytes)
+                ? FolderBrowser.Browse(path, dataDirectory)
+                : Results.StatusCode(StatusCodes.Status403Forbidden));
 
         app.MapPost("/api/setup", (HttpContext context, SetupRequest request) =>
         {

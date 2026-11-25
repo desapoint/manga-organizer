@@ -28,14 +28,7 @@ internal static class LibraryScanner
 
     public static string NormalizeRoot(string? value, string dataDirectory, IReadOnlyList<string> otherRoots)
     {
-        if (string.IsNullOrEmpty(value) || !Path.IsPathFullyQualified(value) ||
-            (OperatingSystem.IsWindows() && (value.StartsWith(@"\\?\", StringComparison.Ordinal) ||
-             value.StartsWith(@"\\.\", StringComparison.Ordinal))))
-        {
-            throw new ArgumentException("Enter an absolute folder path on the server.");
-        }
-
-        var path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(value));
+        var path = NormalizePath(value);
         if (Overlaps(path, dataDirectory) || otherRoots.Any(other => Overlaps(path, other)))
         {
             throw new ArgumentException("Choose a folder separate from the server data directory and other library folders.");
@@ -43,9 +36,21 @@ internal static class LibraryScanner
         return path;
     }
 
+    public static string NormalizePath(string? value)
+    {
+        if (string.IsNullOrEmpty(value) || !Path.IsPathFullyQualified(value) ||
+            (OperatingSystem.IsWindows() && (value.StartsWith(@"\\?\", StringComparison.Ordinal) ||
+             value.StartsWith(@"\\.\", StringComparison.Ordinal))))
+        {
+            throw new ArgumentException("Enter an absolute folder path on the server.");
+        }
+
+        return Path.TrimEndingDirectorySeparator(Path.GetFullPath(value));
+    }
+
     private static bool Overlaps(string first, string second) => Contains(first, second) || Contains(second, first);
 
-    private static bool Contains(string directory, string path)
+    public static bool Contains(string directory, string path)
     {
         var relative = Path.GetRelativePath(directory, path);
         return !Path.IsPathRooted(relative) && relative != ".." &&

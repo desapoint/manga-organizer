@@ -4,16 +4,15 @@ namespace MangaOrganizer.Server;
 
 internal sealed record LibraryRoot(Guid Id, string Path);
 internal sealed record LibraryRootStatus(Guid Id, string Path, string State, long FileCount,
-    DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks);
+    DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks, string? Name, string Kind);
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt);
 internal sealed record CatalogPage(long Total, IReadOnlyList<CatalogEntry> Items);
 
-internal sealed class LibraryStore
+internal sealed partial class LibraryStore
 {
     private readonly string dataDirectory;
-    private readonly Dictionary<Guid, LibraryRoot> roots = new();
 
-    public LibraryStore(string dataDirectory, IReadOnlyList<string> configuredPaths)
+    public LibraryStore(string dataDirectory, Func<IReadOnlyList<string>> initialPaths)
     {
         this.dataDirectory = dataDirectory;
         using var database = OpenDatabase();
@@ -39,48 +38,58 @@ internal sealed class LibraryStore
                 modified_at TEXT NOT NULL,
                 UNIQUE(root_id, relative_path)
             );
+            CREATE TABLE IF NOT EXISTS library_folder (
+                root_id TEXT NOT NULL PRIMARY KEY REFERENCES library_root(id),
+                path TEXT NOT NULL,
+                name TEXT,
+                kind TEXT NOT NULL CHECK (kind IN ('library', 'import'))
+            );
+            CREATE TABLE IF NOT EXISTS library_settings (
+                singleton INTEGER PRIMARY KEY CHECK (singleton = 1)
+            );
             UPDATE library_root SET state = 'interrupted' WHERE state IN ('queued', 'scanning');
             """;
         command.ExecuteNonQuery();
 
-        command.CommandText = """
-            INSERT INTO library_root(id, path_key) VALUES ($id, $path)
-            ON CONFLICT(path_key) DO UPDATE SET path_key = excluded.path_key RETURNING id;
-            """;
-        var rootId = command.Parameters.Add("$id", SqliteType.Text);
-        var pathKey = command.Parameters.Add("$path", SqliteType.Text);
-        foreach (var path in configuredPaths)
+        command.CommandText = "INSERT OR IGNORE INTO library_settings(singleton) VALUES (1);";
+        if (command.ExecuteNonQuery() == 1)
         {
-            rootId.Value = Guid.NewGuid();
-            pathKey.Value = OperatingSystem.IsWindows() ? path.ToUpperInvariant() : path;
-            using var row = command.ExecuteReader();
-            row.Read();
-            var root = new LibraryRoot(row.GetGuid(0), path);
-            roots.Add(root.Id, root);
+            foreach (var path in initialPaths())
+            {
+                SaveFolder(command, null, path, null, "library");
+            }
         }
         transaction.Commit();
     }
 
-    public bool TryGetRoot(Guid id, out LibraryRoot? root) => roots.TryGetValue(id, out root);
+    public bool TryGetRoot(Guid id, out LibraryRoot? root)
+    {
+        using var database = OpenDatabase();
+        using var command = database.CreateCommand();
+        command.CommandText = "SELECT path FROM library_folder WHERE root_id = $id;";
+        command.Parameters.AddWithValue("$id", id);
+        root = command.ExecuteScalar() is string path ? new LibraryRoot(id, path) : null;
+        return root is not null;
+    }
 
     public IReadOnlyList<LibraryRootStatus> ReadRoots()
     {
         using var database = OpenDatabase();
         using var command = database.CreateCommand();
         command.CommandText = """
-            SELECT state, file_count, last_attempt_at, last_scanned_at, skipped_links
-            FROM library_root WHERE id = $id;
+            SELECT r.id, f.path, r.state, r.file_count, r.last_attempt_at,
+                r.last_scanned_at, r.skipped_links, f.name, f.kind
+            FROM library_folder f JOIN library_root r ON r.id = f.root_id
+            ORDER BY f.rowid;
             """;
-        var id = command.Parameters.Add("$id", SqliteType.Text);
-        var result = new List<LibraryRootStatus>(roots.Count);
-        foreach (var root in roots.Values)
+        var result = new List<LibraryRootStatus>();
+        using var row = command.ExecuteReader();
+        while (row.Read())
         {
-            id.Value = root.Id;
-            using var row = command.ExecuteReader();
-            row.Read();
-            result.Add(new(root.Id, root.Path, row.GetString(0), row.GetInt64(1),
-                row.IsDBNull(2) ? null : row.GetDateTimeOffset(2),
-                row.IsDBNull(3) ? null : row.GetDateTimeOffset(3), row.GetInt64(4)));
+            result.Add(new(row.GetGuid(0), row.GetString(1), row.GetString(2), row.GetInt64(3),
+                row.IsDBNull(4) ? null : row.GetDateTimeOffset(4),
+                row.IsDBNull(5) ? null : row.GetDateTimeOffset(5), row.GetInt64(6),
+                row.IsDBNull(7) ? null : row.GetString(7), row.GetString(8)));
         }
         return result;
     }
@@ -115,7 +124,8 @@ internal sealed class LibraryStore
         using var command = database.CreateCommand();
         command.CommandText = """
             UPDATE library_root SET state = 'queued', last_attempt_at = $now
-            WHERE id = $id AND state NOT IN ('queued', 'scanning');
+            WHERE id = $id AND state NOT IN ('queued', 'scanning')
+                AND EXISTS (SELECT 1 FROM library_folder WHERE root_id = $id);
             """;
         command.Parameters.AddWithValue("$id", id);
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);

@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 import time
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 from uuid import UUID, uuid4
 
@@ -164,6 +165,10 @@ def verify_web_setup(executable, fixture, media):
         browser.request(LIBRARY_ROOTS, 404)
         browser.request("/healthz", 404)
         browser.request("/api/setup", 403, method="POST", body=setup)
+        browser.request("/api/setup/folders", 403)
+        location = urlencode({"path": str(media)})
+        folders = json.loads(browser.request(f"/api/setup/folders?{location}", 200, setup_token=old_token))
+        assert "primary" in {folder["name"] for folder in folders["folders"]}
 
     with start_app(executable, appdata, None, None, expect_setup=True) as (url, token):
         browser = Browser(url)
@@ -186,6 +191,44 @@ def verify_web_setup(executable, fixture, media):
         browser.sign_in(password)
         assert browser.server_id() == identity
         assert browser.roots() == [root]
+
+
+def verify_folder_settings(owner, media):
+    primary, archive = owner.roots()
+    server_media = Path(primary["path"]).parent
+    folders = json.loads(owner.request("/api/library/folders", 200))
+    assert folders["folders"], "No server disks or mounts appeared in the picker"
+    location = urlencode({"path": str(server_media)})
+    browse = json.loads(owner.request(f"/api/library/folders?{location}", 200))
+    assert {"extra", "intake", "primary", "archive"} <= {folder["name"] for folder in browse["folders"]}
+    owner.request("/api/library/folders?path=relative", 400)
+    if os.name != "nt":
+        link = urlencode({"path": str(server_media / "primary" / "linked-folder")})
+        owner.request(f"/api/library/folders?{link}", 400)
+
+    extra = {"path": str(server_media / "extra"), "name": "Extras", "kind": "library"}
+    owner.request(LIBRARY_ROOTS, 400, method="POST", body=extra)
+    owner.request(LIBRARY_ROOTS, 400, method="POST", token=owner.csrf(), body=dict(extra, path=primary["path"]))
+    saved = json.loads(owner.request(LIBRARY_ROOTS, 200, method="POST", token=owner.csrf(), body=extra))
+    folder_url = f"{LIBRARY_ROOTS}/{saved['id']}"
+    changed = json.loads(owner.request(folder_url, 200, method="PUT", token=owner.csrf(), body=dict(extra, name="Reference Manga")))
+    assert changed["id"] == saved["id"] and changed["name"] == "Reference Manga"
+    moved_binding = json.loads(owner.request(folder_url, 200, method="PUT", token=owner.csrf(),
+                                             body=dict(extra, path=str(server_media / "spare"))))
+    assert moved_binding["id"] != saved["id"]
+    owner.request(f"{folder_url}/files", 404)
+    owner.request(f"{LIBRARY_ROOTS}/{moved_binding['id']}", 204, method="DELETE", token=owner.csrf())
+
+    intake = {"path": str(server_media / "intake"), "name": "Incoming Manga", "kind": "import"}
+    added_intake = json.loads(owner.request(LIBRARY_ROOTS, 200, method="POST", token=owner.csrf(), body=intake))
+    owner.scan(added_intake["id"])
+    (incoming,) = owner.files(added_intake["id"])["items"]
+    assert incoming["relativePath"] == "Unmatched.cbz"
+    owner.request(f"{LIBRARY_ROOTS}/{archive['id']}", 204, method="DELETE", token=owner.csrf())
+    assert (media / "archive" / "Volume.epub").exists()
+    assert (media / "intake" / "Unmatched.cbz").exists()
+    assert (media / "extra" / "Keep.cbz").exists()
+    return owner.roots()
 
 
 def scan_library(owner, media):
@@ -242,6 +285,7 @@ def smoke(start, media):
         assert first.request(script, 200)
         first.request("/api/server", 401)
         first.request(LIBRARY_ROOTS, 401)
+        first.request("/api/library/folders", 401)
         first.request("/api/session", 400, method="POST", body={"password": password})
         first.sign_in(uuid4().hex, 401)
         first.sign_in(password)
@@ -251,7 +295,8 @@ def smoke(start, media):
         second.request("/api/server", 401)
         second.sign_in(password)
         assert second.server_id() == server_id
-        roots, inventory = scan_library(first, media)
+        _, inventory = scan_library(first, media)
+        roots = verify_folder_settings(first, media)
         assert second.roots() == roots
         first.request("/api/session", 400, method="DELETE")
         first.request("/api/session", 204, method="DELETE", token=first.csrf())
@@ -278,6 +323,10 @@ def create_media_fixture(media):
         (primary / f"Issue {index:02}.pdf").write_bytes(b"Synthetic inventory fixture")
     (primary / "notes.txt").write_text("Ignored by the inventory.")
     (archive / "Volume.epub").write_bytes(b"Synthetic volume inventory fixture")
+    for folder in ("extra", "spare", "intake"):
+        (media / folder).mkdir()
+    (media / "extra" / "Keep.cbz").write_bytes(b"Synthetic file outside the catalog after a settings update")
+    (media / "intake" / "Unmatched.cbz").write_bytes(b"Synthetic unmatched intake file")
     if os.name == "nt":
         subprocess.run(["cmd", "/c", "mklink", "/J", str(primary / "linked-folder"), str(archive)],
                        check=True, stdout=subprocess.DEVNULL)
