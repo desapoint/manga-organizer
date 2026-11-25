@@ -1,0 +1,30 @@
+# Audit completion ledger — mandatory before implementation
+
+Updated 2026-11-24. User explicitly requested completion of the audit after adding physical organization and duplicates. Do not treat this ledger as sign-off. No runtime/platform tests executed. Status: **OPEN**.
+
+Evidence: I = indexed paths; C = selected source declarations/logic inspected; S = selected test source inspected; R = release note checked; U = outstanding full behavior review. No "complete" status for modules with uninspected consumers, authorization, migrations or runtime tests.
+
+| Repository | Source/route/settings evidence | Required file organization & duplicates | Integrations, release and test evidence | Remaining to close |
+|---|---|---|---|---|
+| KR | I/C: model, defaults, settings/API, tasks, importer, rename | C/S: scanner, matcher, publish, volume merge, rename tests | R: v0.2.0; partial qBit/Torznab/Kavita/metadata surfaces | U: each provider contract, auth, jobs, image provenance, volume cleanup, frontend bindings, full test suite |
+| MK | I/C: controllers, settings, custom stores, upgrade rules, jobs | C/S: hash groups, file row repair, physical identity, rename and perceptual pages | R: v0.38.0; selected integration controllers | U: service consumers, quality evaluator, provider/client contracts, custom repository trust, actual UI/settings, enhancement and model/data licenses |
+| UC | I/C: admin, sources, extensions, health, personal, numbering, title extraction | C/S: fingerprints, backfill, page hash, health and preview | R: v0.109.0; extension bridge and reader/progress surface | U: DB/schema, repair and actual renumber mutation, private permission paths, all source/tracker clients, offline/desktop behavior, full tests |
+| KK | I/C: policy, profiles, API, import plans, publication/identity and locks | C/S: conflict plan, claims, volume evidence, journal tests | R: v1.3.2; branch differs from qualified tag; Suwayomi/client surfaces | U: full publication/recovery state machine, NAS qualification scope, profile scoring, provider APIs, migration, backup/restore, UI and release diff |
+| KV | I/C: reader, settings, plugin, Kobo, library, OPDS and device routes | C/S: mount and scanner guards, scan request dedup tests | R: v0.9.1.4; premium boundaries partly noted | U: parser/metadata and folder validation internals, permissions, file identity, read/write sync, actual formats, plus entitlements, UI, migrations |
+| SW | I/C: extension types/store, download manager, config, folder/archive providers | C/S: output/provider tests | R: v2.4.2373; GraphQL declarations and backup validator | U: actual generated GraphQL schema/mutations/auth, installer/trust, extension compatibility, download completion and backup import/export, container/Windows runtime |
+| MH | I/C: extension manager/loader, source contract, preferences, backup models/restore | C/S: duplicate candidates, download naming and legacy tests | R: v0.21.3; legacy backup/extension warning | U: SQL duplicate matching, reader/preference consumers, backup version fixtures, tracker adapters, update policy, Android integration/runtime |
+
+## Exit gates and remaining execution
+
+| Gate | State | Required evidence to close |
+|---|---|---|
+| G1 All seven pinned tracked trees indexed | Done | Existing indexes, no truncation |
+| G2 Filename-only candidates resolved | Done for prior 23 | Pass 3 exact path/source references; narrow compound claims |
+| G3 Complete feature and setting audit | Open | For each module enumerate route/schema/settings/UI, actual logic + defaults and tests, or documented exclusion; deduplicate canonical requirements |
+| G4 Organization/dedup correctness | Open | Read mutation and recovery call paths, prove content/coverage/mount rules; all [acceptance fixtures](../FILE-ORGANIZATION.md) |
+| G5 Extension compatibility | Open | Versioned GraphQL contracts and authorized fixture, older/newer APK/JAR formats, legacy/current backup import, trust/security |
+| G6 Release/licensing | Partial | Published tags recorded; compare source/tag, licenses, external datasets/models, premium service and extension rights |
+| G7 Runtime verification | Blocked in this session | Build upstreams in appropriate environment, run tests and Windows/Unraid storage fixtures; Android/Suwayomi compatibility fixtures. No actual target hosts or build results available in this audit. |
+| G8 Owner selection and implementation | Not approved | Complete remaining evidence; select features, technology/license and safety settings; no implementation before gates addressed |
+
+No destructive automation is approved. Do not mark gates G3–G8 complete based on file counts or test names. An exhaustive source audit requires further module-level inspection; report what was actually examined rather than claiming parity. 

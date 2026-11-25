@@ -1,4 +1,4 @@
-# Pinned source audit — passes 1 and 2
+# Pinned source audit — passes 1–3
 
 Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-AUDIT.md) and [68 parent feature clusters](../FEATURE-MATRIX.md). No application code created. All seven pinned Git trees enumerated; targeted implementation declarations and selected logic examined (29 distinct source files in the first pass, followed by declaration extraction from 46 additional files; 75 unique files fetched). This is deeper than README review but not exhaustive implementation verification. No code copied, builds or tests executed.
 
@@ -15,7 +15,7 @@ Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-
 
 ## Selection inventory
 
-[Atomic feature register (172 rows)](ATOMIC-FEATURES.csv) is supplemental to the original parent matrix. Evidence L = targeted implementation logic observed, C = code declaration/route/setting inspected (not complete behavior), T = source-tree path candidate, not confirmed. Each item has a proposed acceptance criterion and pending owner decision. Evidence links resolve to pinned paths when unique; ambiguous filenames remain unlinked and are explicitly recorded below. Use the pinned report for context and line ranges. A parent is not approved by adding subfeatures. Required extension outcome remains unchanged. Automated extraction uses simple patterns in one focused file per project, not exhaustive route/config enumeration; dynamic/indirect routes, generated settings, comments and consumers need further review.
+[Atomic feature register (196 rows)](ATOMIC-FEATURES.csv) is supplemental to the original parent matrix. Evidence L = targeted implementation logic observed, C = code declaration/route/setting inspected (not complete behavior), T = source-tree path candidate, not confirmed. Each item has a proposed acceptance criterion and pending owner decision. All current atomic evidence paths are pinned; two formerly ambiguous references were resolved in pass 3. Use the pinned report for context and line ranges. A parent is not approved by adding subfeatures. Required extension outcome remains unchanged. Automated extraction uses simple patterns in one focused file per project, not exhaustive route/config enumeration; dynamic/indirect routes, generated settings, comments and consumers need further review.
 
 ## Key cross-project findings and conflicts
 
@@ -74,8 +74,7 @@ Combined with 539 first-pass signals: **2,573 extracted identifiers/candidate de
 
 ### Unresolved evidence paths
 
-- A051 (UC): titleExtraction.ts; bff/src/lib/titleExtraction.ts, bff/src/routes/titleExtraction.ts, web/lib/titleExtraction.ts. Resolve before approval.
-- A052 (UC): numbering.ts; bff/src/lib/numbering.ts, bff/src/routes/numbering.ts, web/lib/numbering.ts. Resolve before approval.
+Resolved in pass 3: A051 bff/src/routes/titleExtraction.ts; A052 bff/src/routes/numbering.ts. The 23 historical T-level entries now have C/L source evidence.
 
 ### Mandatory gate
 
@@ -84,3 +83,7 @@ Source audit remains open. Full path enumeration and source retrieval are not ex
 ## Focused follow-up: physical files and duplicates
 
 The owner explicitly required file organization and duplicate handling. [File organization and duplicate management](../FILE-ORGANIZATION.md) records five additional pinned implementation-file inspections (KR rename, MK duplicate groups and record repair, UC fingerprint, KK rename planner), their limitations, and proposed unified requirements. This supplements the historical pass 1/2 metrics above; it is not a claim of runtime testing or exhaustive upstream parity.
+
+## Pass 3 — continued audit
+
+[Pass 3 findings](PASS3.md), [organization evidence CSV](PASS3-EVIDENCE.csv), and [mandatory completion ledger](COMPLETION-LEDGER.md). 51 additional source/test files retrieved, all 23 prior filename-only candidates resolved to source evidence, seven latest published release notes recorded, and 24 additional atomic candidates added. Current register has 196 rows; historical counts above are retained for traceability. Runtime and exhaustive settings/integration/logic gates remain open. No implementation.

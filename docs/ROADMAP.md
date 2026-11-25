@@ -4,7 +4,7 @@ Proposed sequencing; not release dates or approval.
 
 | Phase | Work | Exit gate |
 | --- | --- | --- |
-| 0 | Complete source/runtime audit, owner feature selection, stack/license | Evidence and acceptance criteria for each selected feature |
+| 0 | Complete source/runtime audit (see [completion ledger](source-audit/COMPLETION-LEDGER.md)), owner feature selection, stack/license | Evidence and acceptance criteria for each selected feature |
 | 1 | Shared API/UI, auth, config, DB, Windows/Docker smoke builds | Same fixture on both, restart persists |
 | 2A | Read-only library scan, identity, metadata, duplicate discovery | Exact duplicates, repacks, aliases, translations and overlaps correctly classified; original bytes untouched |
 | 2B | Required physical file organization and duplicate resolution | Preview and reviewed execution; rename/move/relink/quarantine/restore; no overwrite or lost coverage; mount loss, hardlink and crash recovery fixtures pass on Windows and Unraid |
