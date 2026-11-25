@@ -60,3 +60,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 11 progress
 
 [Settings and profile audit](PASS11.md) and [settings crosswalk](SETTINGS-CROSSWALK.csv) record 27 grouped observations from 27 distinct cited files across all seven references, including scope/default/validation/storage and selected actual consumers. G3 remains open: complete per-key registry, settings UI/consumers/migrations/role/test trace; remaining profile, integration and module dispositions. G4/G5 open, G6 partial, G7 not executed, G8 not approved. 356 atomic candidates retained; no implementation or automatic mutation approval.
+
+## Pass 12 progress
+
+[Consolidation and selection inventory](PASS12.md) reconciles all 356 atomic candidates once into 126 proposed canonical groups, all 70 parents and 27 settings groups; six previously unmapped parents have supplemental pinned evidence, F68 remains proposed-only. Original registers/decisions unchanged; five required outcomes, 65 pending. G3/G4/G5 remain open; G6 partial; G7 not executed; G8 not approved. Next close remaining source/consumer/auth/runtime gaps; no implementation or automatic mutation approval.
