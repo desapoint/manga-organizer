@@ -52,3 +52,7 @@ No destructive automation is approved. Do not mark gates G3–G8 complete based 
 ## Pass 9 progress
 
 [Physical operations and recovery](PASS9.md) reviews selected logic in eight pinned files across seven references; [evidence and fixture crosswalk](PASS9-EVIDENCE.csv) records limits and proposed ORG/DUP/SAFE tests. G4 improved but open: complete caller/authorization/identity/mount and recovery traces, actual host fixtures. G3/G5 open; G6 partial; G7 not executed; G8 not approved. No atomic count change, no automatic deletion approval. Pass 8 baseline retained as historical snapshot.
+
+## Pass 10 progress
+
+[Extension and acquisition audit](PASS10.md) and [adapter contract](EXTENSION-ACQUISITION-CONTRACT.md) add selected pinned evidence from 20 SW/MH files, client schema field comparison, trust/requester/queue/recovery and admission requirements. G5 improved but open: actual generated schema, auth/loader/signature and role/backup fixtures, companion runtime and version qualification. G3/G4 open; G6 partial; G7 not executed; G8 not approved. 356 atomic candidates unchanged; no code or automatic deletion approval.
