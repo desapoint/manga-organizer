@@ -1,7 +1,5 @@
 using System.Globalization;
 using System.Security.Cryptography;
-using System.Xml;
-using System.Xml.Linq;
 
 namespace MangaOrganizer.Server;
 
@@ -102,32 +100,13 @@ internal static class CoverArt
 
     private static int? ComicInfoCover(ComicArchive archive)
     {
-        const int maxMetadataBytes = 256 * 1024;
-        var metadata = archive.Entries.Where(entry => entry.Name.Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(entry => entry.FullName.Contains('/')).FirstOrDefault();
-        if (metadata is null || metadata.Length is <= 0 or > maxMetadataBytes) return null;
-
-        try
-        {
-            using var stream = metadata.Open();
-            using var reader = XmlReader.Create(stream, new XmlReaderSettings
-            {
-                DtdProcessing = DtdProcessing.Prohibit,
-                XmlResolver = null,
-                MaxCharactersInDocument = maxMetadataBytes,
-            });
-            var info = XDocument.Load(reader).Root;
-            if (info?.Name.LocalName != "ComicInfo") return null;
-            var ns = info.Name.Namespace;
-            var cover = info.Element(ns + "Pages")?.Elements(ns + "Page").FirstOrDefault(page =>
-                string.Equals((string?)page.Attribute("Type"), "FrontCover", StringComparison.OrdinalIgnoreCase));
-            return int.TryParse((string?)cover?.Attribute("Image"), NumberStyles.None, CultureInfo.InvariantCulture, out var index)
-                ? index : null;
-        }
-        catch (Exception error) when (error is XmlException || ArchivePages.IsUnreadable(error))
-        {
-            return null;
-        }
+        var info = ComicInfoXml.Read(archive);
+        if (info is null) return null;
+        var ns = info.Name.Namespace;
+        var cover = info.Element(ns + "Pages")?.Elements(ns + "Page").FirstOrDefault(page =>
+            string.Equals((string?)page.Attribute("Type"), "FrontCover", StringComparison.OrdinalIgnoreCase));
+        return int.TryParse((string?)cover?.Attribute("Image"), NumberStyles.None, CultureInfo.InvariantCulture, out var index)
+            ? index : null;
     }
 
     public static RasterImage? Read(string root, CoverSource source)

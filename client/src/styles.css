@@ -96,6 +96,25 @@
 }
 
 @layer components {
+  .coverage-mark {
+    --coverage-fill: var(--coverage-color);
+    background-color: var(--coverage-fill);
+  }
+
+  .coverage-mark[data-variant='band'] {
+    --coverage-fill: color-mix(in oklab, var(--coverage-color) 66%, var(--color-elevated));
+  }
+
+  .coverage-mark[data-pattern='striped'] {
+    background-image: repeating-linear-gradient(135deg, transparent 0 2px,
+      color-mix(in oklch, var(--coverage-fill) 74%, black) 2px 4px);
+  }
+
+  .coverage-label {
+    -webkit-text-stroke: 2px var(--color-elevated);
+    paint-order: stroke fill;
+  }
+
   .reader-shell {
     color-scheme: dark;
     --color-ink: var(--color-reader-ink);
@@ -144,12 +163,12 @@
   .scan-state { @apply mt-3.5 mb-1; }
   .catalog-summary { @apply flex-wrap text-sm text-muted; }
   .catalog-files { @apply m-0 list-none p-0; }
-  .catalog-columns, .catalog-files li {
+  .catalog-columns, .catalog-files > li {
     @apply grid items-baseline gap-x-3 gap-y-1.5 border-b border-line px-4 py-3 text-sm text-detail;
     grid-template-columns: minmax(0, 1fr) 4rem 6rem 7rem;
   }
   .catalog-columns { @apply font-semibold text-label; }
-  .catalog-files li:last-child { @apply border-b-0; }
+  .catalog-files > li:last-child { @apply border-b-0; }
   .catalog-files .file-path { @apply wrap-anywhere text-ink; }
   .catalog-files .file-path small { @apply mt-1 block text-muted; }
   .file-format { @apply font-semibold text-accent-readable; }
@@ -160,7 +179,7 @@
 
   @media (max-width: 36rem) {
     .catalog-columns { @apply hidden; }
-    .catalog-files li { grid-template-columns: 3rem max-content 1fr; }
+    .catalog-files > li { grid-template-columns: 3rem max-content 1fr; }
     .catalog-files .file-path { @apply col-span-full; }
     .catalog-files time { @apply text-end; }
   }

@@ -8,3 +8,5 @@ The next release focuses on logical chapter progress, reviewed batch organizatio
 4. Open editing forms in dialogs, preserve the underlying page and return focus to the action.
 
 The release acceptance includes upgrading an existing library, checking reading handoff on real devices, and rehearsing recovery on Windows and an actual Unraid share. Keep unattended organization behind storage qualification.
+
+The Duplicates tab shows a series chapter map with indexed and manifest chapters, matching byte groups, and all local files. Compare this file opens the starting file and its candidates. Equal chapter spans and same-number volumes with unresolved chapters use a compact archive comparison. Review a chapter to mark exact standalone copies, or review a volume to see its entire coverage and same-number variants. Quarantine requires a separate, hash-identical file in the same scanned, managed series group with equal full chapter and volume assignments for every marked copy. Hardlink aliases, uncertain identity, and different releases remain protected. Quarantine keeps a verified recovery copy and a journal entry. Restore through File operation history.

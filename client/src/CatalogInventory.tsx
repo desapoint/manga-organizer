@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ChapterCoverage } from './ChapterCoverage';
 import { CollectionForm, emptyFilters, SeriesCollectionMembership, TagRulesFields, useTagNames } from './CollectionControls';
 import type { TagRules } from './CollectionControls';
+import { DuplicateReview, DuplicateReviewDialog } from './DuplicateReview';
 import { FileMove } from './FileOperations';
 import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataEditor, SeriesInfo, useSeriesDetails } from './SeriesInfo';
@@ -110,6 +111,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
   const [showMove, setShowMove] = useState(false);
+  const [showDuplicates, setShowDuplicates] = useState(false);
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
   const readable = file.contentId && ['cbz', 'zip', 'cbr', 'rar'].includes(file.extension);
@@ -137,6 +139,11 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
       {readable && <div className="col-span-full">
         <ActionLink variant="ghost" icon={BookOpen} href={onInspect ? `#read/${file.contentId}/intake` :
           seriesKey ? seriesReaderHref(file.contentId!, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>
+      </div>}
+      {file.contentId && <div className="col-span-full">
+        <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare this file</Button>
+        {showDuplicates && <DuplicateReviewDialog rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
+          onClose={() => setShowDuplicates(false)} onChanged={onMoved} />}
       </div>}
       {coverageUrl && file.contentId && <details className="col-span-full" onToggle={event => setShowCoverage(event.currentTarget.open)}>
         <summary className="min-h-9 cursor-pointer py-2 text-sm text-accent-readable">Set chapter coverage</summary>
@@ -230,7 +237,8 @@ export function CoverGrid({ series, coverVersion }: { series: Series[]; coverVer
   );
 }
 
-const seriesViews = [{ value: 'chapters', label: 'Chapters' }, { value: 'volumes', label: 'Volumes' }, { value: 'files', label: 'Files' }] as const;
+const seriesViews = [{ value: 'chapters', label: 'Chapters' }, { value: 'volumes', label: 'Volumes' }, { value: 'files', label: 'Files' },
+  { value: 'duplicates', label: 'Duplicates' }] as const;
 type SeriesView = typeof seriesViews[number]['value'];
 
 function ChapterTotal({ label, value, total }: { label: string; value: number; total: number | null }) {
@@ -291,16 +299,18 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
       {page && !series && <p>This series is no longer in the selected library folder.</p>}
       {moved && <p role="status" className="m-0 text-sm text-positive">File change completed. See File operation history in Settings for recovery.</p>}
       {series && detailsError && <p role="alert" className="m-0 text-danger">{detailsError}</p>}
-      {series && details && <section aria-label="Reading and collection progress" className="surface grid gap-4 p-4 sm:grid-cols-2">
+      {series && details && view !== 'duplicates' && <section aria-label="Reading and collection progress" className="surface grid gap-4 p-4 sm:grid-cols-2">
         <ChapterTotal label="Read chapters · owned" value={details.readChapters} total={details.availableChapters} />
         <ChapterTotal label="Owned chapters · released" value={details.availableChapters} total={metadata?.totalChapters ?? null} />
       </section>}
-      {series && <EditionCoverage {...seriesTools} volume={details?.volumes.length === 1 ? details.volumes[0] : undefined}
+      {series && view !== 'duplicates' && <EditionCoverage {...seriesTools} volume={details?.volumes.length === 1 ? details.volumes[0] : undefined}
         onBrowse={number => { setVolume(number); setView('chapters'); }} />}
       {series && <section className="grid min-w-0 gap-3" aria-label="Series inventory">
         <SegmentedControl label="Series views" options={seriesViews} value={view} onChange={value => { setVolume(null); setView(value); }} />
         <div className="surface min-w-0">
           {view === 'files' && <FileInventory {...catalog} seriesKey={seriesKey} />}
+          {view === 'duplicates' && <DuplicateReview rootId={rootId} seriesKey={seriesKey} version={version}
+            onSignedOut={onSignedOut} onChanged={() => { catalog.onDataChanged(); catalog.onMoved(); }} />}
           {view === 'chapters' && <>
             {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all chapters</Button></div>}
             <SeriesChapterList {...seriesTools} rootId={rootId} seriesKey={seriesKey}

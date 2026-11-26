@@ -6,7 +6,7 @@ internal sealed record FileOperationRequest(Guid SourceRoot, string? FileId, Gui
     bool KeepBoth = false, bool CopyFolderCovers = false);
 internal sealed record FileOperationCoverView(string Source, string Target, bool Published);
 internal sealed record FileOperationView(Guid Id, string State, string Source, string Target, long Size, string Sha256,
-    string? Recovery, string? Message, IReadOnlyList<FileOperationCoverView> Covers);
+    string? Recovery, string? Message, IReadOnlyList<FileOperationCoverView> Covers, string Kind);
 internal sealed class FileOperationException(string message) : Exception(message);
 
 internal sealed partial class ManagedFileOperations(LibraryStore store, string dataDirectory) : IDisposable
@@ -125,6 +125,7 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
             throw new FileOperationException("The indexed source changed after preview. Create a new plan after rescanning.");
         }
         ValidateCovers(operation);
+        VerifyQuarantine(operation);
 
         var backup = Backup(operation);
         if (!PathExists(backup.FullName))
@@ -155,6 +156,7 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
 
         CopyCovers(operation);
 
+        VerifyQuarantine(operation);
         var parked = ParkPath(original, operation.Id, "original");
         LibraryScanner.RequireRoot(original.DirectoryName!);
         File.Move(original.FullName, parked.FullName, overwrite: false);
@@ -280,7 +282,8 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
         return new(operation.Id, operation.State, Source(operation).FullName, Target(operation).FullName, operation.Size,
             Convert.ToHexStringLower(operation.Sha256), File.Exists(recovery) ? recovery : null, operation.Message,
             operation.Covers.Select(cover => new FileOperationCoverView(Path.Combine(operation.SourceBase, cover.SourcePath),
-                Path.Combine(operation.TargetBase, cover.TargetPath), cover.Published)).ToArray());
+                Path.Combine(operation.TargetBase, cover.TargetPath), cover.Published)).ToArray(),
+            operation.QuarantineKeepFile is null ? "move" : "quarantine");
     }
 
     private static FileInfo Source(FileOperation operation) =>
