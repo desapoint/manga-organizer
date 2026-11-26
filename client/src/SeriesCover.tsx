@@ -17,11 +17,15 @@ export function FileCover({ fileId, available, seriesCoverKey, ...props }: Cover
 }
 
 function Cover({ rootId, path, available, revision, className, title }: CoverProps & { path?: string; available: boolean; title?: string }) {
-  const url = `${ROOTS_URL}/${rootId}/${path}/cover?revision=${encodeURIComponent(revision)}`;
+  const src = available ? `${ROOTS_URL}/${rootId}/${path}/cover?revision=${encodeURIComponent(revision)}` : undefined;
+  return <CoverImage src={src} className={className} title={title} />;
+}
+
+export function CoverImage({ src, className, title }: { src?: string; className?: string; title?: string }) {
   const [failed, setFailed] = useState('');
   return (
     <span title={title} className={`grid place-items-center overflow-hidden bg-nav-active text-nav-icon ${className ?? ''}`}>
-      {available && failed !== url ? <img src={url} alt="" loading="lazy" decoding="async" onError={() => setFailed(url)}
+      {src && failed !== src ? <img src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(src)}
         className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.025] motion-reduce:transform-none" /> :
         <BookOpen className="size-6" aria-hidden="true" />}
     </span>
