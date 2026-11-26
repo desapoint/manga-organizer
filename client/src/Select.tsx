@@ -1,6 +1,7 @@
 import * as SelectPrimitive from '@radix-ui/react-select';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
-import { useId } from 'react';
+import { useContext, useId } from 'react';
+import { ModalPortalContext } from './ui';
 
 export type SelectOption<Value extends string> = {
   value: Value;
@@ -17,6 +18,7 @@ export function Select<Value extends string>({ label, value, options, onChange, 
   className?: string;
 }) {
   const id = useId();
+  const portal = useContext(ModalPortalContext);
 
   return (
     <div className={`grid min-w-0 gap-1.5 ${className}`}>
@@ -34,7 +36,7 @@ export function Select<Value extends string>({ label, value, options, onChange, 
             <ChevronDown className="size-4 shrink-0 text-muted group-data-[state=open]:rotate-180" aria-hidden="true" />
           </SelectPrimitive.Icon>
         </SelectPrimitive.Trigger>
-        <SelectPrimitive.Portal>
+        <SelectPrimitive.Portal container={portal ?? undefined}>
           <SelectPrimitive.Content position="popper" sideOffset={5} align="start" collisionPadding={12}
             className="z-30 max-h-[min(20rem,var(--radix-select-content-available-height))] w-[var(--radix-select-trigger-width)]
               max-w-[var(--radix-select-content-available-width)] overflow-hidden rounded-xl border border-control bg-elevated text-ink shadow-lg">

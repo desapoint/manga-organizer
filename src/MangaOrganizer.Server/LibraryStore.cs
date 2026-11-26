@@ -7,7 +7,7 @@ internal sealed record LibraryRootStatus(Guid Id, string Path, string State, lon
     DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks, string? Name, string Kind, bool HasCovers,
     bool Managed, ScanSnapshot? ScanProgress = null);
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt,
-    string? ContentId, string? Sha256, long? IndexedLocations, string? Volume, string? Chapter, bool HasCover, string? SeriesCoverKey);
+    string? ContentId, string? Sha256, long? IndexedLocations, string? Volume, string? Chapter, bool HasCover, string? SeriesCoverKey, string? SeriesTitle, bool HasSeriesMetadata);
 internal sealed record CatalogPage<T>(long Total, IReadOnlyList<T> Items);
 
 internal sealed partial class LibraryStore
@@ -108,7 +108,8 @@ internal sealed partial class LibraryStore
                     WHERE location.content_id = c.id
                 ) END, f.volume_hint, f.chapter_hint,
                 EXISTS(SELECT 1 FROM artwork.archive_cover cover WHERE cover.archive_sha = c.sha256),
-                (SELECT cover.series_key FROM library_series_cover cover WHERE cover.root_id = f.root_id AND cover.series_key = f.series_key)
+                (SELECT cover.series_key FROM library_series_cover cover WHERE cover.root_id = f.root_id AND cover.series_key = f.series_key),
+                COALESCE(m.title, f.series_title), m.id IS NOT NULL
             """ + " " + sources + scope + " ORDER BY f.relative_path LIMIT $limit OFFSET $offset;";
         command.Parameters.AddWithValue("$limit", limit);
         command.Parameters.AddWithValue("$offset", offset);
@@ -119,7 +120,7 @@ internal sealed partial class LibraryStore
             var verified = !rows.IsDBNull(5);
             items.Add(new(rows.GetString(0), rows.GetString(1), rows.GetString(2), rows.GetInt64(3), rows.GetDateTimeOffset(4),
                 verified ? rows.GetString(5) : null, verified ? rows.GetString(6) : null, verified ? rows.GetInt64(7) : null,
-                ReadText(rows, 8), ReadText(rows, 9), rows.GetBoolean(10), ReadText(rows, 11)));
+                ReadText(rows, 8), ReadText(rows, 9), rows.GetBoolean(10), ReadText(rows, 11), ReadText(rows, 12), rows.GetBoolean(13)));
         }
         return new(total, items);
     }

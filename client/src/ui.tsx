@@ -1,5 +1,5 @@
 import { BookOpen, Search, X } from 'lucide-react';
-import { useId, useLayoutEffect, useRef } from 'react';
+import { createContext, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
 import type { ScanState } from './library';
@@ -77,11 +77,14 @@ export function SectionHeader({ id, title }: { id?: string; title: string }) {
   return <h2 id={id} className="m-0 text-lg font-semibold tracking-tight">{title}</h2>;
 }
 
-export function Modal({ title, onClose, children, className = '' }: {
-  title: string; onClose: () => void; children: ReactNode; className?: string;
+export const ModalPortalContext = createContext<HTMLElement | null>(null);
+
+export function Modal({ title, onClose, children, className = '', wide = false }: {
+  title: string; onClose: () => void; children: ReactNode; className?: string; wide?: boolean;
 }) {
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
+  const [portal, setPortal] = useState<HTMLElement | null>(null);
 
   useLayoutEffect(() => {
     const element = dialog.current;
@@ -94,12 +97,13 @@ export function Modal({ title, onClose, children, className = '' }: {
   }, []);
 
   return <dialog ref={dialog} aria-labelledby={id} onCancel={event => { event.preventDefault(); onClose(); }}
-    className={`m-auto w-[min(36rem,calc(100%-2rem))] max-h-[calc(100dvh-2rem)] overflow-auto rounded-xl border border-line bg-panel p-4 text-ink backdrop:bg-black/70 sm:p-5 ${className}`}>
+    className={`m-auto ${wide ? 'w-[min(64rem,calc(100%-2rem))]' : 'w-[min(36rem,calc(100%-2rem))]'} max-h-[calc(100dvh-2rem)] overflow-auto rounded-xl border border-line bg-panel p-4 text-ink backdrop:bg-black/70 sm:p-5 ${className}`}>
     <div className="mb-4 flex items-center justify-between gap-3">
       <SectionHeader id={id} title={title} />
       <Button variant="ghost" icon={X} aria-label="Close dialog" onClick={onClose} autoFocus />
     </div>
-    {children}
+    <ModalPortalContext.Provider value={portal}>{children}</ModalPortalContext.Provider>
+    <div ref={setPortal} />
   </dialog>;
 }
 

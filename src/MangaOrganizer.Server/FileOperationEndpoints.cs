@@ -8,6 +8,7 @@ internal static class FileOperationEndpoints
     public static void MapFileOperations(this RouteGroupBuilder api)
     {
         var operations = api.MapGroup("/file-operations").RequireAuthorization();
+        operations.MapBatchFileOperations();
         operations.MapGet("", (ManagedFileOperations manager) => Results.Ok(manager.History()));
         operations.MapPost("/preview", async (FileOperationRequest request, ManagedFileOperations manager, HttpContext context, IAntiforgery antiforgery) =>
         {

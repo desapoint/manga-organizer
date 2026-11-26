@@ -8,7 +8,7 @@ import { Select } from './Select';
 import { Button, SectionHeader } from './ui';
 
 const url = '/api/file-operations';
-type Operation = { id: string; state: 'planned' | 'applying' | 'completed' | 'restoring' | 'restored' | 'review';
+export type Operation = { id: string; state: 'planned' | 'applying' | 'completed' | 'restoring' | 'restored' | 'review';
   source: string; target: string; size: number; sha256: string; recovery: string | null; message: string | null;
   covers: { source: string; target: string; published: boolean }[] };
 
@@ -16,7 +16,7 @@ const stateLabel: Record<Operation['state'], string> = {
   planned: 'Previewed', applying: 'Applying', completed: 'Completed', restoring: 'Restoring', restored: 'Restored', review: 'Needs review',
 };
 
-async function post(path: string, onSignedOut: () => void, body?: object) {
+export async function postFileOperation<T = Operation>(path: string, onSignedOut: () => void, body?: object) {
   const response = await fetch(url + path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
     body: body ? JSON.stringify(body) : undefined });
   if (response.status === 401) {
@@ -27,7 +27,7 @@ async function post(path: string, onSignedOut: () => void, body?: object) {
     const details = await response.json().catch(() => null) as { message?: string } | null;
     throw new Error(details?.message ?? 'Could not finish the file operation. Check its history before retrying.');
   }
-  return await response.json() as Operation;
+  return await response.json() as T;
 }
 
 function OperationDetails({ operation }: { operation: Operation }) {
@@ -66,7 +66,7 @@ export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, o
     setError('');
     setBusy(true);
     try {
-      setPlan(await post('/preview', onSignedOut, { sourceRoot: rootId, fileId, targetRoot, targetPath, keepBoth, copyFolderCovers }));
+      setPlan(await postFileOperation('/preview', onSignedOut, { sourceRoot: rootId, fileId, targetRoot, targetPath, keepBoth, copyFolderCovers }));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not preview this change.');
     } finally {
@@ -79,7 +79,7 @@ export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, o
     setBusy(true);
     setError('');
     try {
-      if (await post('/' + plan.id + '/apply', onSignedOut)) onApplied();
+      if (await postFileOperation('/' + plan.id + '/apply', onSignedOut)) onApplied();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Check the operation history before retrying.');
       setPlan(null);
@@ -138,7 +138,7 @@ export function FileOperationHistory({ onSignedOut, onChanged }: { onSignedOut: 
     setBusy(id);
     setError('');
     try {
-      if (await post('/' + id + '/restore', onSignedOut)) {
+      if (await postFileOperation('/' + id + '/restore', onSignedOut)) {
         setConfirmation(null);
         onChanged();
       }
