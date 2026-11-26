@@ -14,6 +14,9 @@ internal static class DuplicateEndpoints
         operations.MapGet("/duplicates/{root:guid}/{fileId}", (Guid root, string fileId, ManagedFileOperations manager) =>
             IsFileId(fileId) && manager.ReviewDuplicates(root, fileId.ToLowerInvariant()) is { } comparison ? Results.Ok(comparison) : Results.NotFound());
 
+        operations.MapGet("/duplicates/{root:guid}/{fileId}/archive", (Guid root, string fileId, ManagedFileOperations manager) =>
+            IsFileId(fileId) && manager.ReviewArchive(root, fileId.ToLowerInvariant()) is { } evidence ? Results.Ok(evidence) : Results.NotFound());
+
         operations.MapPost("/quarantine-preview", async (QuarantineRequest request, ManagedFileOperations manager,
             HttpContext context, IAntiforgery antiforgery) =>
         {

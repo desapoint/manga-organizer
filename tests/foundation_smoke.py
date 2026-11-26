@@ -1280,7 +1280,29 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     owner.request(url + "/restore", 200, method="POST", token=owner.csrf())
     assert copy.read_bytes() == volume.read_bytes() == backup_source
 
-    for path in (volume, chapter, copy, alias, unrelated_chapter):
+    unassigned = directory / "Safety Fixture Vol.02.cbz"
+    alternate = directory / "Safety Fixture Vol.02 [Alternate].zip"
+    for path, count in ((unassigned, 2), (alternate, 3)):
+        with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
+            for page in range(count):
+                archive.writestr(f"{page + 1}.png", synthetic_png(125, 25, page + 5))
+            archive.writestr("ComicInfo.xml", "<ComicInfo><Series>Safety Fixture</Series><Volume>2</Volume>"
+                             "<Publisher>Fixture press</Publisher><PageCount>50</PageCount></ComicInfo>")
+    owner.scan(root)
+    files = {item["relativePath"]: item for item in owner.files(root)["items"]}
+    unresolved = compare(unassigned)
+    assert unresolved["source"]["chapters"] == []
+    (candidate,) = unresolved["comparisons"]
+    assert candidate["kind"] == "same-volume" and not candidate["canQuarantine"]
+    assert candidate["candidate"]["relativePath"] == alternate.name and candidate["candidate"]["format"] == "zip"
+    evidence = json.loads(owner.request(f"{operations}/duplicates/{root}/{files[unassigned.name]['id']}/archive", 200))
+    assert evidence["imagePages"] == 2
+    assert {field["label"]: field["value"] for field in evidence["comicInfo"]} == {
+        "Series": "Safety Fixture", "Volume": "2", "Publisher": "Fixture press", "Declared page count": "50",
+    }
+    quarantine(unassigned, alternate, 409)
+
+    for path in (volume, chapter, copy, alias, unrelated_chapter, unassigned, alternate):
         path.unlink()
     owner.scan(root)
 

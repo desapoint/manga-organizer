@@ -1,6 +1,7 @@
 import { Archive, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
-import { byteGroups, chapterKey, fileName, isBundle, matchingCoverage } from './duplicateCoverage';
+import { DuplicateFileEvidence } from './DuplicateFileEvidence';
+import { byteGroups, chapterKey, fileName, isBundle, matchingCoverage, sameVolume } from './duplicateCoverage';
 import type { CoverageChapter, CoverageFile } from './duplicateCoverage';
 import { postFileOperation } from './FileOperations';
 import type { Operation } from './FileOperations';
@@ -10,18 +11,19 @@ const MAX_MARKED_FILES = 50;
 type Pair = { source: CoverageFile; keep: CoverageFile };
 type Preview = Pair & { plan?: Operation; error?: string };
 type BatchResult = { id: string; result: Operation | null; error: string | null };
+export type DuplicateScope = { kind: 'file'; file: CoverageFile } | { kind: 'chapter'; chapter: CoverageChapter };
 
-function quarantineCandidates(focus: CoverageFile, files: CoverageFile[], nearby: CoverageChapter[]) {
+function quarantineCandidates(files: CoverageFile[], nearby: CoverageChapter[], rootId: string, focus?: CoverageFile) {
   const coveredFiles = new Set(nearby.flatMap(chapter => chapter.files.map(file => file.fileId)));
-  const exactMatches = byteGroups(files.filter(file => file.rootId === focus.rootId));
+  const exactMatches = byteGroups(files.filter(file => file.rootId === rootId));
   const pairs: Pair[] = [];
   for (const group of exactMatches) {
-    const remaining = [...group].sort((a, b) => Number(b.fileId === focus.fileId) - Number(a.fileId === focus.fileId));
+    const remaining = [...group].sort((a, b) => Number(b.fileId === focus?.fileId) - Number(a.fileId === focus?.fileId));
     while (remaining.length > 1) {
       const keep = remaining.shift()!;
       const matches = remaining.filter(file => matchingCoverage(file, keep));
       for (const file of matches) remaining.splice(remaining.indexOf(file), 1);
-      if (keep.fileId === focus.fileId || (isBundle(focus) &&
+      if (!focus || keep.fileId === focus.fileId || (isBundle(focus) && !isBundle(keep) &&
         [keep, ...matches].some(file => coveredFiles.has(file.fileId)))) {
         pairs.push(...matches.map(source => ({ source, keep })));
       }
@@ -30,20 +32,24 @@ function quarantineCandidates(focus: CoverageFile, files: CoverageFile[], nearby
   return pairs;
 }
 
-export function DuplicateBatch({ file, files, chapters, canReview, onClose, onChanged, onSignedOut }: {
-  file: CoverageFile; files: CoverageFile[]; chapters: CoverageChapter[];
-  canReview: boolean; onClose: () => void; onChanged: () => void; onSignedOut: () => void;
+export function DuplicateBatch({ scope, files, chapters, colors, version, rootId, canReview, onClose, onChanged, onSignedOut }: {
+  scope: DuplicateScope; files: CoverageFile[]; chapters: CoverageChapter[]; rootId: string;
+  colors: Map<string, string>; version: string; canReview: boolean; onClose: () => void; onChanged: () => void; onSignedOut: () => void;
 }) {
-  const volume = isBundle(file);
+  const file = scope.kind === 'file' ? scope.file : undefined;
+  const chapter = scope.kind === 'chapter' ? scope.chapter : undefined;
+  const volume = file && isBundle(file);
   const [marked, setMarked] = useState<string[]>([]);
   const [previews, setPreviews] = useState<Preview[] | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [results, setResults] = useState<BatchResult[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const keys = new Set(file.chapters.map(chapterKey));
+  const keys = new Set(file?.chapters.map(chapterKey));
   const covered = chapters.filter(chapter => keys.has(chapter.key));
-  const candidates = canReview ? quarantineCandidates(file, files, covered) : [];
+  const reviewFiles = chapter ? chapter.files.filter(item => !isBundle(item)) : files;
+  const candidates = canReview ? quarantineCandidates(reviewFiles, covered, file?.rootId ?? rootId, file) : [];
+  const volumeFiles = file && volume ? [file, ...files.filter(other => other.fileId !== file.fileId && sameVolume(file, other))] : [];
   const ids = previews?.flatMap(item => item.plan ? [item.plan.id] : []) ?? [];
 
   async function preview() {
@@ -84,10 +90,23 @@ export function DuplicateBatch({ file, files, chapters, canReview, onClose, onCh
     if (results?.some(item => item.result?.state === 'completed')) onChanged();
   }
 
-  return <Modal title={volume ? 'Review volume chapters' : 'Review exact copies'} wide onClose={close}>
+  return <Modal title={chapter ? 'Review chapter duplicates' : volume ? covered.length ? 'Review volume chapters' : 'Review volume duplicates' : 'Review exact copies'} wide onClose={close}>
     <div className="grid gap-4">
-      <p className="m-0 font-semibold wrap-anywhere">{fileName(file)}</p>
-      {volume && <details open={previews === null} className="rounded-lg border border-line px-3">
+      {file && <p className="m-0 font-semibold wrap-anywhere">{fileName(file)}</p>}
+      {volumeFiles.length > 1 && !previews && <details open={covered.length === 0} className="rounded-lg border border-line px-3 pb-2">
+        <summary className="min-h-11 cursor-pointer py-2.5 font-semibold">Compare volume files ({volumeFiles.length})</summary>
+        <DuplicateFileEvidence files={volumeFiles} colors={colors} version={version} onSignedOut={onSignedOut} />
+      </details>}
+      {chapter && <details open={previews === null} className="rounded-lg border border-line px-3">
+        <summary className="min-h-11 cursor-pointer py-2.5 font-semibold">Chapter {chapter.chapter}{chapter.volume && ` · Vol. ${chapter.volume}`} files</summary>
+        <ul aria-label="Chapter files and protection" className="m-0 grid list-none gap-2 pb-3 pl-0" role="list">
+          {chapter.files.map(item => <li key={item.fileId} className="border-t border-line pt-2 text-sm wrap-anywhere">
+            <strong>{item.relativePath}</strong>
+            <p className="m-0 text-xs text-muted">{isBundle(item) ? 'Volume or bundle · Review from its file entry' : 'Standalone chapter'}</p>
+          </li>)}
+        </ul>
+      </details>}
+      {file && volume && <details open={previews === null} className="rounded-lg border border-line px-3">
         <summary className="flex min-h-11 cursor-pointer items-center font-semibold">Chapters covered by this file ({covered.length})</summary>
         <ul className="m-0 grid list-none gap-2 pb-3 pl-0" role="list">
           {covered.map(chapter => <li key={chapter.key} className="border-t border-line pt-2 text-sm">
