@@ -51,7 +51,7 @@ export function ChapterComparison({ chapters, colors, selected, highlighted, onS
             {files.map(file => <CoverageMark key={file.fileId} file={file} color={colors.get(file.fileId)} variant="band"
               dimmed={Boolean(highlighted) && highlighted !== file.fileId} />)}
           </span>
-          <span aria-hidden="true" className="absolute inset-0 grid place-items-center px-0.5 text-xs leading-none font-semibold tabular-nums wrap-anywhere">{chapter}</span>
+          <span aria-hidden="true" className="coverage-label absolute inset-0 grid place-items-center px-0.5 text-xs leading-none font-semibold tabular-nums wrap-anywhere">{chapter}</span>
         </button>
         {tooltip && <div id={tooltipId} role="tooltip" style={tooltip.position}
           className="pointer-events-none absolute z-20 grid max-h-40 gap-1.5 overflow-hidden rounded-lg border border-control bg-elevated p-2.5 text-xs shadow-lg">
