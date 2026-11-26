@@ -26,6 +26,10 @@ Tests: corrupt archive, traversal, oversized images, decimals/splits, language e
 
 Build and validate each feature in a stacked pull request based on the preceding checked branch. The owner merges and tests them in order. Downloads and complex metadata scraping follow the MVP. A right-to-left layout is sufficient for the first reader. Managed rename and move workflows retain their storage qualification and recovery gates. [Remote reading](REMOTE-READING.md) · [Managed changes](FILE-ORGANIZATION.md)
 
+## Series detail enhancements
+
+Track the responsive series layout, More info dialog, library coverage and chapter browsing in the dedicated checklist. The checklist links to the interactive design reference and records data dependencies such as the release manifest needed to confirm missing chapters or volumes. [Series detail checklist](SERIES-DETAIL-TODO.md)
+
 ## Decisions
 
 The remaining candidates, including scheduled acquisition, torrent and Usenet integrations, advanced duplicate classification, household accounts, offline reading and external reader or tracker integrations, are deferred. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [Feature selection](FEATURE-SELECTION.csv)
