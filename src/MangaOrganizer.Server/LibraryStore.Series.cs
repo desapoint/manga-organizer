@@ -34,7 +34,7 @@ internal sealed partial class LibraryStore
         command.ExecuteNonQuery();
     }
 
-    private const string SeriesQuery = """
+    private static string SeriesQuery(string? view = null) => """
         WITH file_groups AS (
             SELECT f.root_id, f.series_key, MIN(COALESCE(f.series_title, f.relative_path)) AS path_title, COUNT(*) AS file_count,
                 MAX(f.series_title IS NOT NULL) AS suggested, MAX(f.modified_at) AS latest,
@@ -43,7 +43,10 @@ internal sealed partial class LibraryStore
             FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
             LEFT JOIN content_metadata cm ON cm.content_id = f.content_id
             WHERE (f.root_id = $id OR $id IS NULL AND folder.kind IN ('library', 'both'))
-                AND ($seriesKey IS NULL OR f.series_key = $seriesKey) GROUP BY f.root_id, f.series_key
+                AND ($seriesKey IS NULL OR f.series_key = $seriesKey)
+        """ + CatalogVisibility(view) + """
+
+            GROUP BY f.root_id, f.series_key
         ), folder_series AS (
             SELECT g.root_id, g.series_key, m.provider_details, COALESCE(m.title, g.path_title) AS title, g.path_title, m.alternate_title, g.file_count,
                 g.suggested AND m.id IS NULL AS suggested, g.latest, g.has_cover, m.id IS NOT NULL AS has_metadata
@@ -53,9 +56,9 @@ internal sealed partial class LibraryStore
         """;
 
     public CatalogPage<CatalogSeries> ReadSeries(Guid? id, int offset, int limit, SeriesFilters filters, string? sort = null,
-        string? seriesKey = null, Guid? manualCollection = null)
+        string? seriesKey = null, Guid? manualCollection = null, string? view = null)
     {
-        using var database = OpenDatabase();
+        using var database = view is "cover" or "attention" ? OpenCoverDatabase() : OpenDatabase();
         RegisterTitleSearch(database);
         database.CreateFunction<string?, string, bool>("tag_equals",
             (left, right) => string.Equals(left, right, StringComparison.OrdinalIgnoreCase), isDeterministic: true);
@@ -73,7 +76,8 @@ internal sealed partial class LibraryStore
             AND ($collection IS NULL OR EXISTS (SELECT 1 FROM series_collection_item i
                 WHERE i.collection_id = $collection AND i.root_id = folder_series.root_id AND i.series_key = folder_series.series_key))
             """;
-        command.CommandText = SeriesQuery + " SELECT COUNT(*)" + filter;
+        var query = SeriesQuery(view);
+        command.CommandText = query + " SELECT COUNT(*)" + filter;
         command.Parameters.AddWithValue("$id", (object?)id ?? DBNull.Value);
         command.Parameters.AddWithValue("$seriesKey", (object?)seriesKey ?? DBNull.Value);
         command.Parameters.AddWithValue("$search", filters.Search);
@@ -83,7 +87,7 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$collection", (object?)manualCollection ?? DBNull.Value);
         var total = (long)command.ExecuteScalar()!;
         var order = sort switch { "recent" => "latest DESC, ", "files" => "file_count DESC, ", _ => "" };
-        command.CommandText = SeriesQuery + " SELECT root_id, series_key, title, file_count, suggested, has_cover, has_metadata" + filter +
+        command.CommandText = query + " SELECT root_id, series_key, title, file_count, suggested, has_cover, has_metadata" + filter +
             " ORDER BY " + order + "title COLLATE NOCASE, series_key, root_id LIMIT $limit OFFSET $offset;";
         command.Parameters.AddWithValue("$limit", limit);
         command.Parameters.AddWithValue("$offset", offset);
@@ -101,7 +105,7 @@ internal sealed partial class LibraryStore
     {
         using var database = OpenDatabase();
         using var command = database.CreateCommand();
-        command.CommandText = SeriesQuery + """
+        command.CommandText = SeriesQuery() + """
              SELECT DISTINCT json_extract(tag.value, '$.Name') COLLATE NOCASE AS name
              FROM folder_series, json_each(provider_details, '$.Tags') tag
              WHERE COALESCE(json_extract(tag.value, '$.Spoiler'), 0) = 0 AND name IS NOT NULL

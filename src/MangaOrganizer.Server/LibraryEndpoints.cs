@@ -35,22 +35,22 @@ internal static class LibraryEndpoints
             }
         });
 
-        library.MapGet("/{id:guid}/files", (Guid id, int? offset, int? limit, string? seriesKey, string? search, string? volume, LibraryStore store) =>
+        library.MapGet("/{id:guid}/files", (Guid id, int? offset, int? limit, string? seriesKey, string? search, string? volume, string? view, LibraryStore store) =>
         {
             if (!store.TryGetRoot(id, out _))
             {
                 return Results.NotFound();
             }
-            if (!IsValidPage(offset, limit) || (seriesKey is not null && !IsSeriesKey(seriesKey)) || search is { Length: > 160 } ||
+            if (!IsValidPage(offset, limit) || !IsCatalogView(view) || (seriesKey is not null && !IsSeriesKey(seriesKey)) || search is { Length: > 160 } ||
                 (volume is not null && (seriesKey is null || !BookNumbers.IsNumber(volume))))
             {
                 return Results.BadRequest();
             }
             return Results.Ok(store.ReadFiles(id, offset ?? 0, limit ?? 50, seriesKey?.ToLowerInvariant(), search?.Trim() ?? "",
-                volume is null ? null : BookNumbers.Canonical(volume)));
+                volume is null ? null : BookNumbers.Canonical(volume), view));
         });
 
-        library.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, string? search, string? sort, bool? coverOnly, string? seriesKey, LibraryStore store, HttpContext context) =>
+        library.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, string? search, string? sort, bool? coverOnly, string? seriesKey, string? view, LibraryStore store, HttpContext context) =>
         {
             if (!store.TryGetRoot(id, out _))
             {
@@ -59,9 +59,9 @@ internal static class LibraryEndpoints
 
             var query = context.Request.Query;
             var filters = SeriesFilters.FromInput(search, coverOnly == true, query["includeTag"], query["excludeTag"]);
-            return IsValidPage(offset, limit) && filters is not null && sort is null or "title" or "recent" or "files" &&
+            return IsValidPage(offset, limit) && IsCatalogView(view) && filters is not null && sort is null or "title" or "recent" or "files" &&
                 (seriesKey is null || IsSeriesKey(seriesKey))
-                ? Results.Ok(store.ReadSeries(id, offset ?? 0, limit ?? 50, filters, sort, seriesKey?.ToLowerInvariant()))
+                ? Results.Ok(store.ReadSeries(id, offset ?? 0, limit ?? 50, filters, sort, seriesKey?.ToLowerInvariant(), view: view))
                 : Results.BadRequest();
         });
 
@@ -94,6 +94,7 @@ internal static class LibraryEndpoints
 
     internal static bool IsValidPage(int? offset, int? limit) => offset is not < 0 && limit is not (< 1 or > 100);
     internal static bool IsSeriesKey(string value) => value.Length == 64 && value.All(char.IsAsciiHexDigit);
+    private static bool IsCatalogView(string? view) => view is null or "all" or "library" or "attention" or "association" or "series" or "metadata" or "cover";
 
     private static IResult CoverResult(HttpContext context, byte[]? cover)
     {

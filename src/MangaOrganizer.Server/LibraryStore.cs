@@ -8,7 +8,7 @@ internal sealed record LibraryRootStatus(Guid Id, string Path, string State, lon
     bool Managed, ScanSnapshot? ScanProgress = null);
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt,
     string? ContentId, string? Sha256, long? IndexedLocations, string? Volume, string? Chapter, bool HasCover,
-    string? SeriesCoverKey, string? SeriesTitle, bool HasSeriesMetadata, string SeriesKey);
+    string? SeriesCoverKey, string? SeriesTitle, bool HasSeriesMetadata, string SeriesKey, bool AssociationConfirmed, bool HasSeriesSuggestion);
 internal sealed record CatalogPage<T>(long Total, IReadOnlyList<T> Items);
 
 internal sealed partial class LibraryStore
@@ -74,7 +74,7 @@ internal sealed partial class LibraryStore
         return result;
     }
 
-    public CatalogPage<CatalogEntry> ReadFiles(Guid id, int offset, int limit, string? seriesKey, string search, string? volume)
+    public CatalogPage<CatalogEntry> ReadFiles(Guid id, int offset, int limit, string? seriesKey, string search, string? volume, string? view)
     {
         using var database = OpenCoverDatabase();
         RegisterTitleSearch(database);
@@ -87,13 +87,13 @@ internal sealed partial class LibraryStore
         {
             command.Parameters.AddWithValue("$series", seriesKey);
         }
-        var scope = " WHERE f.root_id = $root" + (seriesKey is null ? "" : " AND f.series_key = $series");
+        var scope = " WHERE f.root_id = $root" + (seriesKey is null ? "" : " AND f.series_key = $series") + CatalogVisibility(view);
         var volumeCoverage = "";
         if (volume is not null && seriesKey is not null)
         {
             AddWorkKey(command, id, seriesKey);
             command.Parameters.AddWithValue("$volume", volume);
-            volumeCoverage = "WITH covered AS (" + GroupCoverage + ") ";
+            volumeCoverage = "WITH covered AS (" + ScopedGroupCoverage(view == "library") + ") ";
             scope += " AND " + GroupVolumeMatch;
         }
         const string sources = """
@@ -118,8 +118,9 @@ internal sealed partial class LibraryStore
                 ) END, f.volume_hint, f.chapter_hint,
                 EXISTS(SELECT 1 FROM artwork.archive_cover cover WHERE cover.archive_sha = c.sha256),
                 (SELECT cover.series_key FROM library_series_cover cover WHERE cover.root_id = f.root_id AND cover.series_key = f.series_key),
-                COALESCE(m.title, f.series_title), m.id IS NOT NULL, f.series_key
-            """ + " " + sources + scope + " ORDER BY f.relative_path LIMIT $limit OFFSET $offset;";
+                COALESCE(m.title, f.series_title), NOT (
+            """ + " " + MissingMetadata + "), f.series_key, " + ConfirmedSeries + ", f.series_title IS NOT NULL "
+            + sources + scope + " ORDER BY f.relative_path LIMIT $limit OFFSET $offset;";
         command.Parameters.AddWithValue("$limit", limit);
         command.Parameters.AddWithValue("$offset", offset);
         var items = new List<CatalogEntry>(limit);
@@ -129,7 +130,8 @@ internal sealed partial class LibraryStore
             var verified = !rows.IsDBNull(5);
             items.Add(new(rows.GetString(0), rows.GetString(1), rows.GetString(2), rows.GetInt64(3), rows.GetDateTimeOffset(4),
                 verified ? rows.GetString(5) : null, verified ? rows.GetString(6) : null, verified ? rows.GetInt64(7) : null,
-                ReadText(rows, 8), ReadText(rows, 9), rows.GetBoolean(10), ReadText(rows, 11), ReadText(rows, 12), rows.GetBoolean(13), rows.GetString(14)));
+                ReadText(rows, 8), ReadText(rows, 9), rows.GetBoolean(10), ReadText(rows, 11), ReadText(rows, 12),
+                rows.GetBoolean(13), rows.GetString(14), rows.GetBoolean(15), rows.GetBoolean(16)));
         }
         return new(total, items);
     }

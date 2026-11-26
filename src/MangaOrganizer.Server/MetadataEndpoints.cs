@@ -6,22 +6,32 @@ namespace MangaOrganizer.Server;
 internal sealed record MetadataChange(int? ProviderId, string? Title, string? Kind, string? AlternateTitle, string? Summary,
     string? Status, int? TotalChapters, int? TotalVolumes);
 internal sealed record CoverageChange(string? ContentId, string? Volume, string[]? Chapters);
+internal sealed record AssociationConfirmation(string? FileId, string? ContentId);
 
 internal static class MetadataEndpoints
 {
     public static void MapSeriesMetadata(this RouteGroupBuilder library)
     {
         var series = library.MapGroup("/{root:guid}/series/{seriesKey}");
-        series.MapGet("/details", (Guid root, string seriesKey, LibraryStore store, HttpContext context) =>
+        series.MapGet("/details", (Guid root, string seriesKey, bool? published, LibraryStore store, HttpContext context) =>
         {
             if (!ReaderEndpoints.TryOwner(context, out var owner)) return Results.Unauthorized();
-            return LibraryEndpoints.IsSeriesKey(seriesKey) && store.ReadSeriesDetails(root, seriesKey.ToLowerInvariant(), owner) is { } details
+            return LibraryEndpoints.IsSeriesKey(seriesKey) && store.ReadSeriesDetails(root, seriesKey.ToLowerInvariant(), owner, published == true) is { } details
                 ? Results.Ok(details) : Results.NotFound();
         });
         series.MapGet("/coverage", (Guid root, string seriesKey, string? contentId, LibraryStore store) =>
             LibraryEndpoints.IsSeriesKey(seriesKey) && IsContentId(contentId) &&
                 store.ReadCoverage(root, seriesKey.ToLowerInvariant(), contentId!.ToLowerInvariant()) is { } coverage
                 ? Results.Ok(coverage) : Results.NotFound());
+        series.MapPost("/association", async (Guid root, string seriesKey, AssociationConfirmation change, LibraryStore store,
+            HttpContext context, IAntiforgery antiforgery) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context) || !LibraryEndpoints.IsSeriesKey(seriesKey)
+                || !IsContentId(change.FileId) || !IsContentId(change.ContentId)) return Results.BadRequest();
+            return store.ConfirmFileAssociation(root, seriesKey.ToLowerInvariant(), change.FileId!.ToLowerInvariant(), change.ContentId!.ToLowerInvariant())
+                ? Results.NoContent()
+                : Results.Conflict(new { message = "The file or its series metadata changed. Refresh the inventory and review the association again." });
+        }).WithMetadata(new RequestSizeLimitAttribute(4096));
         series.MapGet("/metadata/search", async (Guid root, string seriesKey, string? title, LibraryStore store,
             MetadataAgent agent, CancellationToken cancellationToken) =>
         {
@@ -36,7 +46,7 @@ internal static class MetadataEndpoints
                 return Results.Json(new { message = error.Message }, statusCode: StatusCodes.Status502BadGateway);
             }
         });
-        series.MapPut("/metadata", async (Guid root, string seriesKey, MetadataChange change, LibraryStore store,
+        series.MapPut("/metadata", async (Guid root, string seriesKey, bool? published, MetadataChange change, LibraryStore store,
             MetadataAgent agent, HttpContext context, IAntiforgery antiforgery, CancellationToken cancellationToken) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context)) return Results.BadRequest();
@@ -71,7 +81,7 @@ internal static class MetadataEndpoints
                     EmptyAsNull(change.Status), change.TotalChapters, change.TotalVolumes, null, null);
             }
 
-            return store.SaveMetadata(root, seriesKey.ToLowerInvariant(), metadata) is { } saved ? Results.Ok(saved) : Results.NotFound();
+            return store.SaveMetadata(root, seriesKey.ToLowerInvariant(), metadata, published == true) is { } saved ? Results.Ok(saved) : Results.NotFound();
         }).WithMetadata(new RequestSizeLimitAttribute(32 * 1024));
 
         series.MapPut("/coverage", async (Guid root, string seriesKey, CoverageChange change, LibraryStore store,

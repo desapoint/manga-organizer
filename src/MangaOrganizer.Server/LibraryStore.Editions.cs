@@ -42,18 +42,18 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$work", metadataId ?? localKey);
     }
 
-    public IReadOnlyList<ChapterRelease>? ReadChapterReleases(Guid root, string series, string volume, string chapter, Guid owner)
+    public IReadOnlyList<ChapterRelease>? ReadChapterReleases(Guid root, string series, string volume, string chapter, Guid owner, bool published)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: true);
         using var command = GroupCommand(database, transaction, root, series);
-        if (!GroupExists(command)) return null;
+        if (!GroupExists(command, published)) return null;
 
         AddWorkKey(command, root, series);
         command.Parameters.AddWithValue("$volume", volume);
         command.Parameters.AddWithValue("$chapter", chapter);
         command.Parameters.AddWithValue("$owner", owner);
-        command.CommandText = "WITH covered AS (" + GroupCoverage + """
+        command.CommandText = "WITH covered AS (" + ScopedGroupCoverage(published) + """
             )
             SELECT f.content_id, MIN(f.relative_path), f.extension, p.page_index, p.page_count, 0,
                 f.content_id = COALESCE(preferred.content_id, local.content_id, '') AS preferred_release
@@ -66,22 +66,24 @@ internal sealed partial class LibraryStore
                 AND local.volume = $volume AND local.chapter = $chapter
             WHERE c.volume = $volume AND c.chapter = $chapter AND f.root_id = $root AND f.series_key = $series
                 AND r.state <> 'unavailable' AND f.extension IN ('cbz', 'zip', 'cbr', 'rar')
+            """ + SeriesVisibility(published) + """
+
             GROUP BY f.content_id ORDER BY preferred_release DESC, MIN(f.relative_path);
             """;
         return ReadReleases(command);
     }
 
-    public IReadOnlyList<ChapterRelease>? ReadVolumeReleases(Guid root, string series, string volume, Guid owner)
+    public IReadOnlyList<ChapterRelease>? ReadVolumeReleases(Guid root, string series, string volume, Guid owner, bool published)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: true);
         using var command = GroupCommand(database, transaction, root, series);
-        if (!GroupExists(command)) return null;
+        if (!GroupExists(command, published)) return null;
 
         command.Parameters.AddWithValue("$volume", volume);
         command.Parameters.AddWithValue("$owner", owner);
-        command.CommandText = "WITH covered AS (" + GroupCoverage + "), volume_archive AS (" + GroupVolumeArchives
-            + "), readable AS (" + ReadableGroupFiles + """
+        command.CommandText = "WITH covered AS (" + ScopedGroupCoverage(published) + "), volume_archive AS (" + GroupVolumeArchives
+            + "), readable AS (" + ReadableGroupFiles + SeriesVisibility(published) + """
             )
             SELECT f.content_id, MIN(f.relative_path), f.extension, p.page_index, p.page_count,
                 NOT EXISTS(SELECT 1 FROM covered c WHERE c.content_id = f.content_id AND c.volume = $volume),
@@ -155,15 +157,15 @@ internal sealed partial class LibraryStore
         return saved;
     }
 
-    public IReadOnlyList<EditionVolume>? ReadEditionVolumes(Guid root, string series)
+    public IReadOnlyList<EditionVolume>? ReadEditionVolumes(Guid root, string series, bool published)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: true);
         using var command = GroupCommand(database, transaction, root, series);
-        if (!GroupExists(command)) return null;
+        if (!GroupExists(command, published)) return null;
 
         AddWorkKey(command, root, series);
-        command.CommandText = "WITH covered AS (" + GroupCoverage + """
+        command.CommandText = "WITH covered AS (" + ScopedGroupCoverage(published) + """
             )
             SELECT m.id, m.edition, m.volume, m.chapters,
                 (SELECT json_group_array(content_id) FROM edition_volume_release e WHERE e.manifest_id = m.id),
@@ -173,6 +175,8 @@ internal sealed partial class LibraryStore
                     WHERE c.volume = m.volume)),
                 EXISTS(SELECT 1 FROM edition_volume_release e JOIN library_file f ON f.content_id = e.content_id
                     WHERE e.manifest_id = m.id AND f.root_id = $root AND f.series_key = $series
+            """ + SeriesVisibility(published) + """
+
                         AND NOT EXISTS(SELECT 1 FROM covered c WHERE c.content_id = e.content_id AND c.volume = m.volume))
             FROM edition_volume_manifest m WHERE m.work_key = $work OR m.work_key = $localWork
             ORDER BY CAST(m.volume AS REAL), m.edition, m.id;

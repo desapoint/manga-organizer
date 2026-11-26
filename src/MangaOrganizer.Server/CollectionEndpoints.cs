@@ -16,12 +16,13 @@ internal static class CollectionEndpoints
             seriesKey is not null && !LibraryEndpoints.IsSeriesKey(seriesKey) ? Results.BadRequest() :
                 Results.Ok(store.ReadCollections(rootId, seriesKey?.ToLowerInvariant())));
         collections.MapGet("/tags", (LibraryStore store) => Results.Ok(store.ReadSeriesTags(null)));
-        collections.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, LibraryStore store) =>
+        collections.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, bool? published, LibraryStore store) =>
         {
             if (!LibraryEndpoints.IsValidPage(offset, limit)) return Results.BadRequest();
             var collection = store.ReadCollections(id: id).SingleOrDefault();
             return collection is null ? Results.NotFound() : Results.Ok(store.ReadSeries(null, offset ?? 0, limit ?? 50,
-                collection.Filters ?? SeriesFilters.Empty, manualCollection: collection.Filters is null ? id : null));
+                collection.Filters ?? SeriesFilters.Empty, manualCollection: collection.Filters is null ? id : null,
+                view: published == true ? "library" : null));
         });
 
         collections.MapPost("", (CollectionChange change, LibraryStore store, HttpContext context, IAntiforgery antiforgery) =>

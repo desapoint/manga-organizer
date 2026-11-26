@@ -13,7 +13,7 @@ type EditionVolume = {
   id: string; edition: string; volume: string; chapters: string[]; contentIds: string[];
   available: string[]; state: 'complete' | 'partial' | 'missing' | 'unknown';
 };
-type SeriesTools = { url: string; version: string; onSignedOut: () => void; onChange: () => void };
+type SeriesTools = { url: string; version: string; onSignedOut: () => void; onChange: () => void; published?: boolean };
 
 function useSeriesList<T>(url: string, version: string, onSignedOut: () => void) {
   const [items, setItems] = useState<T[] | null>(null);
@@ -46,10 +46,10 @@ async function saveSeries(url: string, data: object, onSignedOut: () => void) {
   }
 }
 
-export function VolumeReleasePicker({ volume, rootId, seriesKey, url, version, onSignedOut, onClose }: Omit<SeriesTools, 'onChange'> & {
+export function VolumeReleasePicker({ volume, rootId, seriesKey, url, version, onSignedOut, onClose, published }: Omit<SeriesTools, 'onChange'> & {
   volume: string; rootId: string; seriesKey: string; onClose: () => void;
 }) {
-  const { items, error } = useSeriesList<Release>(url + '/volume-releases?' + new URLSearchParams({ volume }), version, onSignedOut);
+  const { items, error } = useSeriesList<Release>(url + '/volume-releases?' + new URLSearchParams({ volume, published: String(!!published) }), version, onSignedOut);
   return <Modal title={`Read volume ${volume}`} onClose={onClose}>
     {error && <p role="alert" className="text-danger">Could not load volume files.</p>}
     {!items && !error && <p role="status">Loading volume files…</p>}
@@ -68,10 +68,10 @@ export function VolumeReleasePicker({ volume, rootId, seriesKey, url, version, o
   </Modal>;
 }
 
-function ReleasePicker({ chapter, rootId, seriesKey, url, version, onSignedOut, onChange, onClose }: SeriesTools & {
+function ReleasePicker({ chapter, rootId, seriesKey, url, version, onSignedOut, onChange, onClose, published }: SeriesTools & {
   chapter: Chapter; rootId: string; seriesKey: string; onClose: () => void;
 }) {
-  const query = new URLSearchParams({ chapter: chapter.chapter, volume: chapter.volume ?? '' });
+  const query = new URLSearchParams({ chapter: chapter.chapter, volume: chapter.volume ?? '', published: String(!!published) });
   const { items, error } = useSeriesList<Release>(url + '/chapter-releases?' + query, version, onSignedOut);
   const [busy, setBusy] = useState(false);
   const [preferenceError, setPreferenceError] = useState('');
@@ -115,7 +115,7 @@ function ReleasePicker({ chapter, rootId, seriesKey, url, version, onSignedOut, 
   </Modal>;
 }
 
-export function SeriesChapterList({ chapters, rootId, seriesKey, url, version, onSignedOut, onChange }: SeriesTools & {
+export function SeriesChapterList({ chapters, rootId, seriesKey, url, version, onSignedOut, onChange, published }: SeriesTools & {
   chapters: Chapter[]; rootId: string; seriesKey: string;
 }) {
   const [chosen, setChosen] = useState<Chapter | null>(null);
@@ -161,7 +161,7 @@ export function SeriesChapterList({ chapters, rootId, seriesKey, url, version, o
       </li>)}
     </ul> : <p className="m-0 p-4 text-sm text-muted">{filter ? 'No matching chapter numbers.' : 'No indexed chapter numbers. Files remain available in the Files tab.'}</p>}
     {filtered.length > limit && <div className="p-4"><Button variant="secondary" onClick={() => setLimit(count => count + 50)}>Show more chapters</Button></div>}
-    {chosen && <ReleasePicker chapter={chosen} rootId={rootId} seriesKey={seriesKey} url={url}
+    {chosen && <ReleasePicker chapter={chosen} rootId={rootId} seriesKey={seriesKey} url={url} published={published}
       version={version} onSignedOut={onSignedOut} onChange={onChange} onClose={() => setChosen(null)} />}
   </>;
 }
@@ -231,10 +231,10 @@ function ManifestEditor({ initial, volume: initialVolume, url, version, onChange
   </Modal>;
 }
 
-export function EditionCoverage({ url, version, onSignedOut, onChange, onBrowse, volume, editable = true }: SeriesTools & {
+export function EditionCoverage({ url, version, onSignedOut, onChange, onBrowse, volume, editable = true, published }: SeriesTools & {
   onBrowse?: (number: string) => void; volume?: string; editable?: boolean;
 }) {
-  const { items, error } = useSeriesList<EditionVolume>(url + '/edition-volumes', version, onSignedOut);
+  const { items, error } = useSeriesList<EditionVolume>(url + '/edition-volumes' + (published ? '?published=true' : ''), version, onSignedOut);
   const [selectedId, setSelectedId] = useState('');
   const [editing, setEditing] = useState<'new' | EditionVolume | null>(null);
   const selected = items?.find(item => item.id === selectedId) ?? items?.[0];

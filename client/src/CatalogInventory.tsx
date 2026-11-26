@@ -1,5 +1,6 @@
 import { ArrowLeft, BookOpen, ChevronRight, Info, Library, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { getCsrfToken } from './api';
 import { ChapterCoverage } from './ChapterCoverage';
 import { CollectionForm, emptyFilters, SeriesCollectionMembership, TagRulesFields, useTagNames } from './CollectionControls';
 import type { TagRules } from './CollectionControls';
@@ -29,6 +30,10 @@ type CatalogEntry = {
   hasCover: boolean;
   seriesCoverKey: string | null;
   seriesKey: string;
+  seriesTitle: string | null;
+  hasSeriesMetadata: boolean;
+  associationConfirmed: boolean;
+  hasSeriesSuggestion: boolean;
 };
 
 export type Series = { rootId: string; key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean };
@@ -40,6 +45,15 @@ type Inspection = { kind: 'series'; series: Series } | { kind: 'file'; file: Cat
 type Inspect = (item: Inspection) => void;
 type InventoryView = 'covers' | 'series' | 'files';
 type SeriesSort = 'title' | 'recent' | 'files';
+const intakeViews = [
+  { value: 'attention', label: 'Needs attention' },
+  { value: 'association', label: 'Unconfirmed association' },
+  { value: 'series', label: 'No series suggestion' },
+  { value: 'metadata', label: 'Missing metadata' },
+  { value: 'cover', label: 'Missing cover' },
+  { value: 'all', label: 'All files' },
+] as const;
+type CatalogView = typeof intakeViews[number]['value'] | 'library';
 
 const sortOptions = [
   { value: 'title', label: 'Title' },
@@ -107,6 +121,39 @@ function InventoryError({ children, retry }: { children: string; retry: () => vo
   );
 }
 
+function FileAssociationAction({ file, rootId, onSignedOut, onChange }: {
+  file: CatalogEntry; rootId: string; onSignedOut: () => void; onChange: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const title = file.seriesTitle ?? file.relativePath.split('/').at(-1) ?? file.relativePath;
+
+  async function confirm() {
+    setBusy(true);
+    setError('');
+    try {
+      const response = await fetch(`${ROOTS_URL}/${rootId}/series/${file.seriesKey}/association`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
+        body: JSON.stringify({ fileId: file.id, contentId: file.contentId }),
+      });
+      if (response.status === 401) return onSignedOut();
+      if (!response.ok) throw new Error();
+      onChange();
+    } catch {
+      setError('Could not confirm this file. Refresh the inventory and check its current association.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return file.hasSeriesMetadata ? <>
+    <Button variant="secondary" title={`Confirm association with ${title}`} disabled={busy} onClick={confirm}>Confirm association</Button>
+    {error && <span role="alert" className="text-sm text-danger">{error}</span>}
+  </> : <MetadataDialogAction rootId={rootId} seriesKey={file.seriesKey} title={title} metadata={null}
+    onChange={onChange} onSignedOut={onSignedOut} actionLabel="Assign series metadata" />;
+}
+
 function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut }:
   Pick<InventoryProps, 'rootId' | 'version'> & {
   file: CatalogEntry; seriesKey?: string; onInspect?: Inspect; onSignedOut: () => void; management?: FileManagement;
@@ -145,6 +192,8 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
           seriesKey ? seriesReaderHref(file.contentId, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>}
         {onInspect ? <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare this file</Button> :
           <ActionLink variant="ghost" href={duplicateToolsHref({ rootId, seriesKey: file.seriesKey }, file.id)}>Compare in Tools</ActionLink>}
+        {management && !file.associationConfirmed && <FileAssociationAction file={file} rootId={rootId}
+          onChange={management.onDataChanged} onSignedOut={onSignedOut} />}
         {coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>Set chapter coverage</Button>}
         {!!management?.managedFolders.length && <Button variant="ghost" onClick={() => setShowMove(true)}>Move or rename</Button>}
         {showDuplicates && management && <DuplicateReviewDialog rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
@@ -163,16 +212,19 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   );
 }
 
-export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut, management, onInspect, search = '' }:
-  InventoryProps & { seriesKey?: string; volume?: string; management?: FileManagement; onInspect?: Inspect; search?: string }) {
-  const { page, offset, setOffset, error, retry } = useInventoryPage<CatalogEntry>(`${ROOTS_URL}/${rootId}/files`, version, onSignedOut,
-    seriesKey ? { seriesKey, search, ...(volume ? { volume } : {}) } : { search });
+export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut, management, onInspect, search = '', catalogView = 'all' }:
+  InventoryProps & { seriesKey?: string; volume?: string; management?: FileManagement; onInspect?: Inspect; search?: string; catalogView?: CatalogView }) {
+  const params = new URLSearchParams({ search, view: catalogView });
+  if (seriesKey) params.set('seriesKey', seriesKey);
+  if (volume) params.set('volume', volume);
+  const { page, offset, setOffset, error, retry } = useInventoryPage<CatalogEntry>(`${ROOTS_URL}/${rootId}/files`, version, onSignedOut, params);
   const label = seriesKey ? 'Series files' : 'Catalog files';
   return (
     <>
       {error && <div className="px-4 pb-3"><InventoryError retry={retry}>Could not load files.</InventoryError></div>}
       {!page && !error && <p className="px-4" role="status">Loading files…</p>}
-      {page?.total === 0 && <p className="px-4">{search ? 'No files match this search.' : 'No files in the current inventory.'}</p>}
+      {page?.total === 0 && <p className="px-4">{search ? 'No files match this search.' : catalogView === 'all' ?
+        'No files in the current inventory.' : 'No files match this view.'}</p>}
       {page && page.total > 0 && (
         <div className={seriesKey ? 'min-w-0 rounded-b-xl border-t border-line bg-inset' : 'surface'}>
           <div className="catalog-columns" aria-hidden="true"><span>File</span><span>Type</span><span>Size</span><span>Modified</span></div>
@@ -191,7 +243,9 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
   );
 }
 
-function SeriesRow({ series, onInspect, coverVersion, ...inventory }: InventoryActions & { series: Series; onInspect?: Inspect; coverVersion: string }) {
+function SeriesRow({ series, onInspect, coverVersion, catalogView, ...inventory }: InventoryActions & {
+  series: Series; onInspect?: Inspect; coverVersion: string; catalogView: CatalogView;
+}) {
   const [open, setOpen] = useState(false);
   const rowClass = 'grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl p-3 hover:bg-nav-hover sm:gap-3 sm:px-4';
   const contents = <>
@@ -215,7 +269,7 @@ function SeriesRow({ series, onInspect, coverVersion, ...inventory }: InventoryA
         {open && <>
           <SeriesInfo rootId={inventory.rootId} seriesKey={series.key} title={series.title} version={inventory.version}
             onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut} />
-          <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} management={inventory} />
+          <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} management={inventory} catalogView={catalogView} />
         </>}
       </details> : <a className={`${rowClass} text-ink no-underline`} href={seriesHref(inventory.rootId, series.key)}>{contents}</a>}
     </li>
@@ -261,14 +315,14 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
   const catalog = { ...inventory, version: `${inventory.version}:${revision}` };
   const onDataChanged = () => setRevision(value => value + 1);
   const { rootId, version, onSignedOut } = catalog;
-  const { page, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut, { seriesKey });
+  const { page, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut, { seriesKey, view: 'library' });
   const series = page?.items[0];
-  const { details, error: detailsError } = useSeriesDetails({ rootId, seriesKey, version, onSignedOut });
+  const { details, error: detailsError } = useSeriesDetails({ rootId, seriesKey, version, onSignedOut, published: true });
   const metadata = details?.metadata ?? null;
   const reading = details?.reading;
   const title = metadata?.title ?? series?.title ?? 'Series';
   const seriesUrl = `${ROOTS_URL}/${rootId}/series/${seriesKey}`;
-  const seriesTools = { url: seriesUrl, version, onSignedOut, onChange: onDataChanged };
+  const seriesTools = { url: seriesUrl, version, onSignedOut, onChange: onDataChanged, published: true };
   const view = selectedView ?? (details?.chapters.length ? 'chapters' : details?.volumes.length ? 'volumes' :
     metadata?.totalChapters != null ? 'chapters' : metadata?.totalVolumes != null ? 'volumes' : 'files');
   return (
@@ -288,7 +342,7 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
               {reading.pageIndex !== null ? 'Continue reading' : reading.hasFinishedFile ? 'Read next file' : 'Start reading'}
             </ActionLink>}
             <Button variant="secondary" icon={Info} onClick={() => setDialog('info')}>More info</Button>
-            <MetadataDialogAction rootId={rootId} seriesKey={seriesKey} title={title} metadata={metadata}
+            <MetadataDialogAction rootId={rootId} seriesKey={seriesKey} title={title} metadata={metadata} published
               onChange={onDataChanged} onSignedOut={onSignedOut} />
             <ActionLink variant="ghost" href={duplicateToolsHref({ rootId, seriesKey })}>Review duplicates in Tools</ActionLink>
           </div>}
@@ -298,7 +352,8 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
       </div>
       {error && <InventoryError retry={retry}>Could not load this series.</InventoryError>}
       {!error && !page && <p role="status">Loading series…</p>}
-      {page && !series && <p>This series is no longer in the selected library folder.</p>}
+      {page && !series && <div className="action-row"><p className="m-0">No confirmed files are published for this series in this folder.</p>
+        <ActionLink variant="secondary" href={organizeToolsHref(rootId, seriesKey)}>Review files in Tools</ActionLink></div>}
       {series && detailsError && <p role="alert" className="m-0 text-danger">{detailsError}</p>}
       {series && details && <section aria-label="Reading and collection progress" className="surface grid gap-4 p-4 sm:grid-cols-3">
         <CollectionTotal label="Read chapters · indexed" value={details.readChapters} total={details.availableChapters} />
@@ -313,7 +368,7 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
           {view === 'files' && <>
             <div className="action-row p-3"><ActionLink variant="ghost" href={organizeToolsHref(rootId, seriesKey)}>Organize series in Tools</ActionLink></div>
             {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all files</Button></div>}
-            <FileInventory key={volume ?? 'all-files'} {...catalog} seriesKey={seriesKey} volume={volume ?? undefined} />
+            <FileInventory key={volume ?? 'all-files'} {...catalog} seriesKey={seriesKey} volume={volume ?? undefined} catalogView="library" />
           </>}
           {view === 'chapters' && <>
             {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all chapters</Button></div>}
@@ -352,11 +407,12 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
   );
 }
 
-function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, search, sort, coverOnly, rules, ...inventory }: InventoryActions & {
-  scanComplete: boolean; onInspect?: Inspect; coverVersion: string; coverGrid: boolean; search: string; sort: SeriesSort; coverOnly: boolean; rules: TagRules;
+function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, search, sort, coverOnly, rules, catalogView, ...inventory }: InventoryActions & {
+  scanComplete: boolean; onInspect?: Inspect; coverVersion: string; coverGrid: boolean; search: string; sort: SeriesSort;
+  coverOnly: boolean; rules: TagRules; catalogView: CatalogView;
 }) {
   const { rootId, version, onSignedOut } = inventory;
-  const filters = new URLSearchParams({ search, sort, coverOnly: String(coverOnly) });
+  const filters = new URLSearchParams({ search, sort, coverOnly: String(coverOnly), view: catalogView });
   rules.includeTags.forEach(tag => filters.append('includeTag', tag));
   rules.excludeTags.forEach(tag => filters.append('excludeTag', tag));
   const { page, offset, setOffset, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut, filters);
@@ -365,12 +421,17 @@ function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, se
     <>
       {error && <InventoryError retry={retry}>Could not load the inventory.</InventoryError>}
       {!page && !error && <p role="status">Loading inventory…</p>}
-      {page?.total === 0 && (search || coverOnly || rules.includeTags.length || rules.excludeTags.length ? <p>No series match these filters.</p> : scanComplete && <p>No supported files found.</p>)}
+      {page?.total === 0 && (search || coverOnly || rules.includeTags.length || rules.excludeTags.length ?
+        <p>No series match these filters.</p> : scanComplete && (catalogView === 'library' ?
+          <div className="action-row"><p className="m-0">No confirmed series are published in this folder.</p>
+            <ActionLink variant="secondary" href="#tools/metadata">Review associations and metadata</ActionLink></div> :
+          <p>{catalogView === 'all' ? 'No supported files found.' : 'No series match this view.'}</p>))}
       {page && page.total > 0 && (
         <>
           {coverGrid ? <CoverGrid series={page.items} coverVersion={coverVersion} /> : (
             <ul className="m-0 grid list-none gap-2 p-0" role="list" aria-label="Series groups">
-              {page.items.map(series => <SeriesRow key={series.key} series={series} onInspect={onInspect} coverVersion={coverVersion} {...inventory} />)}
+              {page.items.map(series => <SeriesRow key={series.key} series={series} catalogView={catalogView}
+                onInspect={onInspect} coverVersion={coverVersion} {...inventory} />)}
             </ul>
           )}
           <PageControls label="Series pages" offset={offset} count={page.items.length} total={page.total} onChange={setOffset} />
@@ -405,11 +466,14 @@ function IntakeInspector({ item, rootPath, onClose }: { item: Inspection | null;
             <div><dt className="text-muted">File</dt><dd><code>{item.file.relativePath}</code></dd></div>
             <div><dt className="text-muted">Format and size</dt><dd>{item.file.extension.toUpperCase()} · {formatSize(item.file.size)}</dd></div>
             <div><dt className="text-muted">SHA-256</dt><dd>{item.file.sha256 ? <code>{item.file.sha256}</code> : 'Unavailable'}</dd></div>
+            <div><dt className="text-muted">Series association</dt>
+              <dd>{item.file.associationConfirmed ? 'Confirmed' : item.file.hasSeriesSuggestion ? 'Unconfirmed' : 'No series suggestion'}</dd></div>
+            {!item.file.hasSeriesMetadata && <div><dt className="text-muted">Metadata</dt><dd>Missing series metadata</dd></div>}
+            {!item.file.hasCover && !item.file.seriesCoverKey && <div><dt className="text-muted">Artwork</dt><dd>Missing cover</dd></div>}
           </>
         )}
       </dl>
-      {item ? <p className="m-0 border-t border-line pt-3 text-sm text-muted">Chapter association is pending.</p> :
-        <p className="m-0 border-t border-line pt-3 text-sm text-muted">Open a group or select a file to inspect it.</p>}
+      {!item && <p className="m-0 border-t border-line pt-3 text-sm text-muted">Open a group or select a file to inspect it.</p>}
     </aside>
   );
 }
@@ -418,6 +482,7 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
   InventoryProps & { scanComplete: boolean; intake: boolean; rootPath: string; hasCovers: boolean; coverVersion: string;
     managedFolders: LibraryRoot[]; onInventoryChanged: () => void }) {
   const [selectedView, setView] = useState<InventoryView | null>(null);
+  const [intakeView, setIntakeView] = useState<typeof intakeViews[number]['value']>('attention');
   const [item, setItem] = useState<Inspection | null>(null);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
@@ -431,11 +496,15 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
   const [catalogRevision, setCatalogRevision] = useState(0);
   const [notice, setNotice] = useState('');
   const catalog = { ...inventory, version: `${inventory.version}:${catalogRevision}`, managedFolders,
-    onDataChanged: () => setCatalogRevision(value => value + 1), onMoved: () => {
+    onDataChanged: () => {
+      setCatalogRevision(value => value + 1);
+      setItem(null);
+    }, onMoved: () => {
       setNotice('File change completed. A verified recovery copy is in Organize under File operation history.');
       onInventoryChanged();
     } };
   const onInspect = intake ? setItem : undefined;
+  const catalogView = intake ? intakeView : 'library';
   const coverView = hasCovers && !intake;
   const view = selectedView && (selectedView !== 'covers' || coverView) ? selectedView : coverView ? 'covers' : 'series';
   const options: { value: InventoryView; label: string }[] = [];
@@ -457,6 +526,10 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
       </div>
       {notice && <p role="status" className="m-0 text-sm text-positive">{notice}</p>}
       <div className="flex flex-wrap items-end gap-3">
+        {intake && <Select label="Intake filter" value={intakeView} options={intakeViews} onChange={value => {
+          setIntakeView(value);
+          setItem(null);
+        }} />}
         <SearchField className="flex-[1_1_13rem]" placeholder={view === 'files' ? 'Search files' : 'Search series'}
           aria-label={view === 'files' ? 'Search files' : 'Search series'} maxLength={160}
           value={search} onChange={event => setSearch(event.target.value)} />
@@ -481,8 +554,10 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
       </Modal>}
       <div className={intake ? 'grid min-w-0 items-start gap-4 min-[72rem]:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]' : undefined}>
         <div className="grid min-w-0 gap-3">
-          {view === 'files' ? <FileInventory key={query} {...catalog} onInspect={onInspect} management={intake ? catalog : undefined} search={query} /> :
-            <GroupedInventory key={JSON.stringify([view, query, sort, coverOnly, rules.includeTags, rules.excludeTags])} {...catalog} scanComplete={scanComplete} onInspect={onInspect}
+          {view === 'files' ? <FileInventory key={`${catalogView}:${query}`} {...catalog} onInspect={onInspect}
+            management={intake ? catalog : undefined} search={query} catalogView={catalogView} /> :
+            <GroupedInventory key={JSON.stringify([view, catalogView, query, sort, coverOnly, rules.includeTags, rules.excludeTags])}
+              {...catalog} scanComplete={scanComplete} onInspect={onInspect} catalogView={catalogView}
               coverVersion={coverVersion} coverGrid={view === 'covers'} search={query} sort={sort} coverOnly={coverOnly && hasCovers} rules={rules} />}
         </div>
         {intake && <IntakeInspector rootPath={rootPath} item={item} onClose={() => setItem(null)} />}

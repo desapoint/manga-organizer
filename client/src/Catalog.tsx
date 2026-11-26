@@ -125,14 +125,14 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
             </div>
             <ScanStatus root={selected} />
             <div className="catalog-summary">
-              <span>{selected.fileCount.toLocaleString()} {selected.fileCount === 1 ? 'file' : 'files'}</span>
+              <span>{selected.fileCount.toLocaleString()} {selected.fileCount === 1 ? 'scanned file' : 'scanned files'}</span>
               {selected.lastScannedAt && <span>Last indexed {new Date(selected.lastScannedAt).toLocaleString()}</span>}
               {selected.skippedLinks > 0 && <span>{selected.skippedLinks.toLocaleString()} linked {selected.skippedLinks === 1 ? 'path' : 'paths'} skipped</span>}
             </div>
           </div>
           {scanError && <p role="alert" className="error">{scanError}</p>}
           {view === 'import' && <ActionLink variant="secondary" href={organizeToolsHref(selected.id)} className="justify-self-start">Organize intake in Tools</ActionLink>}
-          <CatalogInventory key={selected.id} rootId={selected.id} version={`${inventoryVersion}:${refresh}`}
+          <CatalogInventory key={`${view}:${selected.id}`} rootId={selected.id} version={`${inventoryVersion}:${refresh}`}
             onSignedOut={onSignedOut} scanComplete={selected.state === 'complete'} intake={view === 'import'} rootPath={selected.path}
             hasCovers={selected.hasCovers} coverVersion={`${selected.lastScannedAt ?? ''}:${refresh}`}
             managedFolders={selected.managed ? roots?.filter(root => root.managed) ?? [] : []}
