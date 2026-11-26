@@ -11,6 +11,15 @@ export const coverageLabels: Record<CoverageState, string> = {
 };
 
 const chapterNumber = new Intl.Collator(undefined, { numeric: true });
+const bundlePalette = [
+  [61, 0.23, 275], [87, 0.18, 95], [75, 0.15, 215], [64, 0.22, 28],
+  [81, 0.20, 134], [72, 0.23, 335], [75, 0.18, 57], [51, 0.17, 252],
+] as const;
+const paletteDistances = bundlePalette.map(([lightness, chroma, hue]) =>
+  bundlePalette.map(([otherLightness, otherChroma, otherHue]) =>
+    ((lightness - otherLightness) / 100) ** 2 + chroma ** 2 + otherChroma ** 2 -
+    2 * chroma * otherChroma * Math.cos((hue - otherHue) * Math.PI / 180)));
+
 export const chapterKey = (chapter: Chapter) => `${chapter.volume ?? ''}:${chapter.chapter}`;
 export const fileName = (file: CoverageFile) => file.relativePath.split('/').at(-1) ?? file.relativePath;
 export const isBundle = (file: CoverageFile) => file.volumeArchive || file.chapters.length > 1;
@@ -49,8 +58,8 @@ export function chapterCoverage(files: CoverageFile[], expected: Chapter[]): Cov
 export function fileColors(files: CoverageFile[]) {
   const colors = new Map<string, string>();
   const usedByChapter = new Map<string, Set<number>>();
-  const paletteSize = 8;
-  let next = 0;
+  // Also separate nearby bundles that do not share a chapter.
+  const recent: number[] = [];
   for (const file of files) {
     if (!isBundle(file)) {
       colors.set(file.fileId, file.chapters.length === 1 ? 'var(--color-coverage-single)' : 'var(--color-muted)');
@@ -58,17 +67,26 @@ export function fileColors(files: CoverageFile[]) {
     }
     const chapters = file.chapters.map(chapterKey);
     const used = new Set(chapters.flatMap(key => [...(usedByChapter.get(key) ?? [])]));
-    let index = Array.from({ length: paletteSize }, (_, offset) => (next + offset) % paletteSize)
-      .find(candidate => !used.has(candidate));
-    if (index === undefined) {
-      index = paletteSize;
-      while (used.has(index)) index++;
+    const neighbors = [...new Set([...used, ...recent])].filter(index => index < bundlePalette.length);
+    let index = bundlePalette.length;
+    let bestDistance = -1;
+    for (const [candidate, distances] of paletteDistances.entries()) {
+      if (used.has(candidate)) continue;
+      const distance = Math.min(...neighbors.map(neighbor => distances[neighbor]!));
+      if (distance > bestDistance) {
+        index = candidate;
+        bestDistance = distance;
+      }
     }
-    if (index < paletteSize) {
-      colors.set(file.fileId, `var(--color-coverage-bundle-${index + 1})`);
-      next = (index + 1) % paletteSize;
+    const swatch = bundlePalette[index];
+    if (swatch) {
+      const [lightness, chroma, hue] = swatch;
+      colors.set(file.fileId, `oklch(${lightness}% ${chroma} ${hue})`);
+      recent.push(index);
+      if (recent.length > 3) recent.shift();
     } else {
-      const hue = ((index - paletteSize) * 137.508) % 360;
+      while (used.has(index)) index++;
+      const hue = ((index - bundlePalette.length) * 137.508) % 360;
       colors.set(file.fileId, `oklch(${index % 2 ? 86 : 64}% 0.16 ${hue})`);
     }
     for (const key of chapters) {
