@@ -23,7 +23,9 @@ Files in the library and import intake are eligible for reading when their forma
 
 ## Progress validation
 
-The WebUI MVP reads CBZ and image ZIP in a right-to-left page layout. The server verifies archive bytes and bounds archive entries and page sizes. Files can open from Library or Import intake while metadata is unresolved. Resume entries use the verified content ID, so a rescan after a rename or move can find the same position.
+The WebUI uses a right-to-left page layout for the supported formats. The series page can open the earliest indexed reading file or continue the most recent unfinished file in that series. The server verifies archive bytes and bounds archive entries and page sizes. Files can open from Library or Import intake while metadata is unresolved. Resume entries use the verified content ID, so a rescan after a rename or move can find the same position.
+
+Reader settings offer Fit page, Fit width and Original size. Zoom ranges from 50% to 300% of that fit. Scroll to see the rest of an enlarged page. Fit is remembered in the current browser. Hiding the controls gives the page the full available viewport inside device safe areas. The reader recalculates the fit when controls return or the viewport changes.
 
 The MVP saves page position automatically as pages load. Finishing a file is a separate action. For series counters, a finished file counts its verified or explicitly numbered chapters once. Reopening an archive whose bytes changed creates a separate reading identity once scanned.
 

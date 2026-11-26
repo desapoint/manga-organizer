@@ -584,19 +584,23 @@ def verify_series_metadata(owner, root_id, path):
     owner.request(f"{url}/coverage", 204, method="PUT", token=owner.csrf(), body=coverage)
     details = json.loads(owner.request(f"{url}/details", 200))
     assert details["metadata"]["kind"] == "doujin" and details["metadata"]["totalChapters"] == 10
-    assert details["availableChapters"] == 3 and details["chapters"][1] == {"volume": "1", "chapter": "1.5"}
+    assert details["availableChapters"] == 3 and details["chapters"][1] == {
+        "volume": "1", "chapter": "1.5", "contentId": volume["contentId"], "readableFiles": 1,
+    }
+    assert details["reading"]["contentId"] == volume["contentId"] and details["reading"]["pageIndex"] is None
 
     original = path / volume["relativePath"]
     original.rename(path / "Same content without original title.cbz")
     owner.scan(root_id)
     after = json.loads(owner.request(f"{url}/details", 200))
-    assert after == details
+    assert after["reading"]["relativePath"] != details["reading"]["relativePath"]
+    assert dict(after, reading=details["reading"]) == details
 
 
 def verify_external_metadata(executable, fixture, media):
     cover = "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/fixture.jpg"
     media_result = {"id": 123, "title": {"english": "Synthetic provider title", "native": "本"},
-                    "description": "Metadata fixture", "status": "FINISHED", "chapters": 12, "volumes": 3,
+                    "description": "Metadata &amp; tags<br><br><i>Second paragraph</i>", "status": "FINISHED", "chapters": 12, "volumes": 3,
                     "format": "ONE_SHOT", "countryOfOrigin": "JP", "startDate": {"year": 2011},
                     "endDate": {"year": 2012}, "genres": ["Drama", "drama"],
                     "coverImage": {"medium": cover}, "staff": {"edges": [
@@ -644,6 +648,7 @@ def verify_external_metadata(executable, fixture, media):
                 result, fallback = json.loads(browser.request(f"{url}/metadata/search?title=Issue+01", 200))
                 assert result["providerId"] == 123 and result["kind"] == "doujin" and result["totalChapters"] == 12
                 assert result["providerUrl"] == "https://anilist.co/manga/123"
+                assert result["summary"] == "Metadata & tags\n\nSecond paragraph"
                 assert result["providerDetails"] == {
                     "coverUrl": cover, "format": "ONE_SHOT", "countryOfOrigin": "JP", "startYear": 2011, "endYear": 2012,
                     "genres": ["Drama"], "tags": [{"name": "Doujinshi", "spoiler": False}, {"name": "Hidden outcome", "spoiler": True}],
@@ -694,6 +699,8 @@ def verify_reader(owner, peer, root_id, path):
     result = json.loads(owner.request(f"{book_url}/progress", 200, method="PUT", token=owner.csrf(), body=first_update))
     assert result == {"pageIndex": 1, "revision": 1, "completed": False}
     assert json.loads(peer.request(book_url, 200))["progress"] == result
+    series_reading = json.loads(peer.request(f"{details}/details", 200))["reading"]
+    assert series_reading["contentId"] == identity and (series_reading["pageIndex"], series_reading["pageCount"]) == (1, 2)
     assert json.loads(peer.request("/api/reader/resume", 200))["contentId"] == identity
     assert json.loads(owner.request(f"{book_url}/progress", 200, method="PUT", token=owner.csrf(), body=first_update)) == result
     conflict = dict(first_update, updateId=str(uuid4()), pageIndex=0)

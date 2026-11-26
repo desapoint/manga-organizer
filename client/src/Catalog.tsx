@@ -85,6 +85,7 @@ export function Catalog({ view, title, section, onSignedOut, series, children }:
     const seriesRoot = roots?.find(root => root.id === series.rootId);
     return <SeriesPage key={`${series.rootId}/${series.seriesKey}`} {...series} onSignedOut={onSignedOut}
       version={`${inventoryVersion}:${refresh}`} coverVersion={`${seriesRoot?.lastScannedAt ?? ''}:${refresh}`}
+      rootPath={seriesRoot?.path}
       managedFolders={seriesRoot?.managed ? roots?.filter(root => root.managed) ?? [] : []}
       onInventoryChanged={() => setRefresh(value => value + 1)} />;
   }

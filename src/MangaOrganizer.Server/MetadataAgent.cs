@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace MangaOrganizer.Server;
 
@@ -18,7 +19,7 @@ internal sealed record AniListCredit(string Name, string? Role);
 
 internal sealed class MetadataLookupException(string message) : Exception(message);
 
-internal sealed class MetadataAgent : IDisposable
+internal sealed partial class MetadataAgent : IDisposable
 {
     private const string MediaFields = """
         id title { english romaji native } description(asHtml:false) status chapters volumes
@@ -120,8 +121,22 @@ internal sealed class MetadataAgent : IDisposable
         var details = new AniListDetails(CoverUrl(media.CoverImage?.Medium) ?? CoverUrl(media.CoverImage?.Large),
             Truncate(media.Format, 40), country, ValidYear(media.StartDate), ValidYear(media.EndDate), genres, tags, credits);
         return new(media.Id, titles[0], titles.Skip(1).FirstOrDefault(), doujin ? "doujin" : "manga",
-            Truncate(media.Description, 6000), Truncate(media.Status, 40), ValidTotal(media.Chapters), ValidTotal(media.Volumes), details);
+            Truncate(PlainDescription(media.Description), 6000), Truncate(media.Status, 40), ValidTotal(media.Chapters), ValidTotal(media.Volumes), details);
     }
+
+    internal static string? PlainDescription(string? value)
+    {
+        if (value is null) return null;
+        var text = WebUtility.HtmlDecode(value);
+        text = DescriptionBreaks().Replace(text, "\n");
+        return DescriptionFormatting().Replace(text, "").Trim();
+    }
+
+    [GeneratedRegex(@"<br\s*/?>|</p\s*>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex DescriptionBreaks();
+
+    [GeneratedRegex(@"</?(?:p|i|b|em|strong|u|s|del|sup|sub)\s*>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex DescriptionFormatting();
 
     private static string? CoverUrl(string? value)
     {

@@ -1,13 +1,14 @@
-import { ArrowLeft, BookOpen, ChevronRight, Library, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronRight, Info, Library, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ChapterCoverage } from './ChapterCoverage';
 import { FileMove } from './FileOperations';
 import type { LibraryRoot } from './library';
-import { SeriesInfo } from './SeriesInfo';
+import { MetadataDescription, MetadataEditor, SeriesInfo, useSeriesDetails } from './SeriesInfo';
+import type { Details } from './SeriesInfo';
 import { FileCover, SeriesCover } from './SeriesCover';
-import { formatSize, ROOTS_URL, seriesHref } from './library';
+import { formatSize, ROOTS_URL, seriesHref, seriesReaderHref } from './library';
 import { Select } from './Select';
-import { ActionLink, Button, PageHeader, SearchField, SectionHeader, SegmentedControl } from './ui';
+import { ActionLink, Button, Modal, PageHeader, SearchField, SectionHeader, SegmentedControl } from './ui';
 
 const PAGE_SIZE = 50;
 
@@ -98,9 +99,9 @@ function InventoryError({ children, retry }: { children: string; retry: () => vo
   );
 }
 
-function FileRow({ file, rootId, version, onInspect, coverageUrl, onSaved, onSignedOut, managedFolders, onMoved }:
+function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onSaved, onSignedOut, managedFolders, onMoved }:
   Pick<InventoryProps, 'rootId' | 'version'> & {
-  file: CatalogEntry; onInspect?: Inspect; coverageUrl?: string; onSaved: () => void; onSignedOut: () => void;
+  file: CatalogEntry; seriesKey?: string; onInspect?: Inspect; coverageUrl?: string; onSaved: () => void; onSignedOut: () => void;
   managedFolders: LibraryRoot[]; onMoved: () => void;
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
@@ -130,7 +131,8 @@ function FileRow({ file, rootId, version, onInspect, coverageUrl, onSaved, onSig
       <span>{formatSize(file.size)}</span>
       <time dateTime={file.modifiedAt}>{new Date(file.modifiedAt).toLocaleDateString()}</time>
       {readable && <div className="col-span-full">
-        <ActionLink variant="ghost" icon={BookOpen} href={`#read/${file.contentId}${onInspect ? '/intake' : ''}`}>Read file</ActionLink>
+        <ActionLink variant="ghost" icon={BookOpen} href={onInspect ? `#read/${file.contentId}/intake` :
+          seriesKey ? seriesReaderHref(file.contentId!, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>
       </div>}
       {coverageUrl && file.contentId && <details className="col-span-full" onToggle={event => setShowCoverage(event.currentTarget.open)}>
         <summary className="min-h-9 cursor-pointer py-2 text-sm text-accent-readable">Set chapter coverage</summary>
@@ -161,7 +163,7 @@ function FileInventory({ rootId, seriesKey, version, onSignedOut, onDataChanged,
         <div className={seriesKey ? 'min-w-0 rounded-b-xl border-t border-line bg-inset' : 'surface'}>
           <div className="catalog-columns" aria-hidden="true"><span>File</span><span>Type</span><span>Size</span><span>Modified</span></div>
           <ul className="catalog-files" role="list" aria-label={label}>
-            {page.items.map(file => <FileRow key={file.id} file={file} rootId={rootId} version={version}
+            {page.items.map(file => <FileRow key={file.id} file={file} rootId={rootId} seriesKey={seriesKey} version={version}
               coverageUrl={coverageUrl} onInspect={onInspect} onSaved={onDataChanged} onSignedOut={onSignedOut}
               managedFolders={managedFolders} onMoved={onMoved} />)}
           </ul>
@@ -224,11 +226,38 @@ function CoverGrid({ series, rootId, coverVersion }: { series: Series[]; rootId:
   );
 }
 
-export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventoryChanged, ...inventory }: InventoryProps & {
-  seriesKey: string; coverVersion: string; managedFolders: LibraryRoot[]; onInventoryChanged: () => void;
+const seriesViews = [{ value: 'chapters', label: 'Chapters' }, { value: 'volumes', label: 'Volumes' }, { value: 'files', label: 'Files' }] as const;
+type SeriesView = typeof seriesViews[number]['value'];
+
+function ChapterTotal({ label, value, total }: { label: string; value: number; total: number | null }) {
+  return <div className="grid min-w-0 gap-1.5">
+    <strong className="text-sm">{label}</strong>
+    <span className="text-sm text-muted">{value.toLocaleString()}{total === null ? ' · released total unknown' : ` of ${total.toLocaleString()}`}</span>
+    {!!total && <progress className="h-2 w-full accent-accent" aria-label={label} value={Math.min(value, total)} max={total} />}
+  </div>;
+}
+
+function SeriesChapters({ chapters, rootId, seriesKey, onFiles }: {
+  chapters: Details['chapters']; rootId: string; seriesKey: string; onFiles: () => void;
+}) {
+  return chapters.length ? <ul className="m-0 grid list-none divide-y divide-line p-0" aria-label="Indexed chapters" role="list">
+    {chapters.map(chapter => <li key={`${chapter.volume ?? ''}:${chapter.chapter}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
+      <div className="grid"><strong>Chapter {chapter.chapter}</strong>{chapter.volume && <span className="text-sm text-muted">Volume {chapter.volume}</span>}</div>
+      {chapter.contentId ? <ActionLink variant="ghost" icon={BookOpen} href={seriesReaderHref(chapter.contentId, rootId, seriesKey)}
+        aria-label={`Read file for chapter ${chapter.chapter}${chapter.volume ? ` in volume ${chapter.volume}` : ''}`}>Read file</ActionLink> :
+        chapter.readableFiles > 1 ? <Button variant="secondary" onClick={onFiles}>View files ({chapter.readableFiles})</Button> : null}
+    </li>)}
+  </ul> : <p className="m-0 p-4 text-sm text-muted">No indexed chapter numbers for this series. You can still open files directly.</p>;
+}
+
+export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventoryChanged, rootPath, ...inventory }: InventoryProps & {
+  seriesKey: string; coverVersion: string; managedFolders: LibraryRoot[]; onInventoryChanged: () => void; rootPath?: string;
 }) {
   const [revision, setRevision] = useState(0);
   const [moved, setMoved] = useState(false);
+  const [dialog, setDialog] = useState<'info' | 'cover' | null>(null);
+  const [selectedView, setView] = useState<SeriesView | null>(null);
+  const [volume, setVolume] = useState<string | null>(null);
   const catalog = { ...inventory, version: `${inventory.version}:${revision}`, managedFolders,
     onDataChanged: () => setRevision(value => value + 1), onMoved: () => {
       setMoved(true);
@@ -237,27 +266,79 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
   const { rootId, version, onSignedOut } = catalog;
   const { page, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut, { seriesKey });
   const series = page?.items[0];
+  const { details, error: detailsError } = useSeriesDetails({ rootId, seriesKey, version, onSignedOut });
+  const metadata = details?.metadata ?? null;
+  const reading = details?.reading;
+  const title = metadata?.title ?? series?.title ?? 'Series';
+  const view = selectedView ?? (details?.chapters.length ? 'chapters' : details?.volumes.length ? 'volumes' : 'files');
   return (
     <section className="workspace-page" aria-labelledby="series-heading">
       <ActionLink href="#library" variant="ghost" icon={ArrowLeft} className="justify-self-start">Back to library</ActionLink>
-      <div className="flex min-w-0 flex-wrap items-end gap-4 sm:gap-6">
-        {series?.hasCover && <SeriesCover rootId={rootId} seriesKey={seriesKey} available={series.hasCover} revision={coverVersion}
-          className="aspect-[2/3] w-24 shrink-0 rounded-xl sm:w-36" />}
-        <div className="min-w-0 flex-1">
-          <PageHeader id="series-heading" section="Library" title={series?.title ?? 'Series'} />
-          {series && <p className="text-sm text-muted">{series.fileCount.toLocaleString()} {series.fileCount === 1 ? 'file' : 'files'}</p>}
+      <div className="surface grid min-w-0 gap-4 bg-linear-to-br from-nav-active/45 to-panel p-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-6 sm:p-6">
+        {series?.hasCover && <Button variant="ghost" className="w-24 justify-self-start p-0 sm:w-37" aria-label="Enlarge cover" onClick={() => setDialog('cover')}>
+          <SeriesCover rootId={rootId} seriesKey={seriesKey} available revision={coverVersion} className="aspect-[2/3] w-full rounded-lg" />
+        </Button>}
+        <div className="grid min-w-0 gap-3">
+          <PageHeader id="series-heading" section="Library" title={title} />
+          {series && <p className="m-0 text-sm text-muted">{series.fileCount.toLocaleString()} {series.fileCount === 1 ? 'file' : 'files'}
+            {metadata && ` · ${metadata.kind === 'doujin' ? 'Doujin' : 'Manga'}`}</p>}
+          {metadata?.summary && <p className="m-0 line-clamp-3 max-w-prose text-sm text-detail">{metadata.summary}</p>}
+          {series && <div className="action-row">
+            {reading && <ActionLink icon={BookOpen} href={seriesReaderHref(reading.contentId, rootId, seriesKey)}>
+              {reading.pageIndex !== null ? 'Continue reading' : reading.hasFinishedFile ? 'Read next file' : 'Start reading'}
+            </ActionLink>}
+            <Button variant="secondary" icon={Info} onClick={() => setDialog('info')}>More info</Button>
+          </div>}
+          {reading?.pageIndex != null && <p className="m-0 text-sm text-muted wrap-anywhere">
+            Page {reading.pageIndex + 1} of {reading.pageCount} · {reading.relativePath.split('/').at(-1)}</p>}
         </div>
       </div>
       {error && <InventoryError retry={retry}>Could not load this series.</InventoryError>}
       {!error && !page && <p role="status">Loading series…</p>}
       {page && !series && <p>This series is no longer in the selected library folder.</p>}
       {moved && <p role="status" className="m-0 text-sm text-positive">File change completed. See File operation history in Settings for recovery.</p>}
-      {series && <SeriesInfo rootId={rootId} seriesKey={seriesKey} title={series.title} version={version}
-        onChange={catalog.onDataChanged} onSignedOut={onSignedOut} />}
-      {series && <section className="grid gap-3" aria-labelledby="series-files-heading">
-        <SectionHeader id="series-files-heading" title="Files" />
-        <FileInventory {...catalog} seriesKey={seriesKey} />
+      {series && detailsError && <p role="alert" className="m-0 text-danger">{detailsError}</p>}
+      {series && details && <section aria-label="Reading and collection progress" className="surface grid gap-4 p-4 sm:grid-cols-2">
+        <ChapterTotal label="Read chapters · owned" value={details.readChapters} total={details.availableChapters} />
+        <ChapterTotal label="Owned chapters · released" value={details.availableChapters} total={metadata?.totalChapters ?? null} />
       </section>}
+      {series && <section className="grid min-w-0 gap-3" aria-label="Series inventory">
+        <SegmentedControl label="Series views" options={seriesViews} value={view} onChange={value => { setVolume(null); setView(value); }} />
+        <div className="surface min-w-0">
+          {view === 'files' && <FileInventory {...catalog} seriesKey={seriesKey} />}
+          {view === 'chapters' && <>
+            {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all chapters</Button></div>}
+            <SeriesChapters rootId={rootId} seriesKey={seriesKey} onFiles={() => setView('files')}
+              chapters={details?.chapters.filter(chapter => !volume || chapter.volume === volume) ?? []} />
+            {details && details.availableChapters > details.chapters.length && <p className="m-0 p-4 text-sm text-muted">Showing the first {details.chapters.length.toLocaleString()} chapters. All indexed files are in Files.</p>}
+          </>}
+          {view === 'volumes' && (details?.volumes.length ? <ul aria-label="Indexed volumes" role="list" className="m-0 list-none divide-y divide-line p-0">
+            {details.volumes.map(number => <li key={number} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
+              <strong>Volume {number}</strong>
+              {details.chapters.some(chapter => chapter.volume === number) ? <Button variant="ghost" onClick={() => { setVolume(number); setView('chapters'); }}>View chapters</Button> :
+                <Button variant="ghost" onClick={() => setView('files')}>View files</Button>}
+            </li>)}
+          </ul> : <p className="m-0 p-4 text-sm text-muted">No indexed volumes for this series.</p>)}
+        </div>
+      </section>}
+      {series && <section className="surface p-4" aria-label="Manage series metadata">
+        <details>
+          <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Manage metadata</summary>
+          <MetadataEditor rootId={rootId} seriesKey={seriesKey} title={title} metadata={metadata}
+            onChange={catalog.onDataChanged} onSignedOut={onSignedOut} />
+        </details>
+      </section>}
+      {dialog === 'info' && <Modal title="More info" onClose={() => setDialog(null)}>
+        <div className="grid gap-4">
+          <strong>{title}</strong>
+          {metadata ? <MetadataDescription metadata={metadata} /> : <p className="m-0 text-sm text-muted">No metadata has been assigned.</p>}
+          {rootPath && <p className="m-0 text-sm wrap-anywhere">Library folder <code>{rootPath}</code></p>}
+        </div>
+      </Modal>}
+      {dialog === 'cover' && <Modal title={title} onClose={() => setDialog(null)}>
+        <SeriesCover rootId={rootId} seriesKey={seriesKey} available revision={coverVersion}
+          className="rounded-lg [&_img]:max-h-[70dvh] [&_img]:object-contain" />
+      </Modal>}
     </section>
   );
 }

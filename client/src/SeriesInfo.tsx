@@ -8,7 +8,7 @@ import { CoverImage } from './SeriesCover';
 import { ActionLink, Button, SearchField, SectionHeader } from './ui';
 
 type BookKind = 'manga' | 'doujin';
-type Metadata = {
+export type Metadata = {
   title: string;
   kind: BookKind;
   alternateTitle: string | null;
@@ -31,12 +31,13 @@ type AniListDetails = {
   credits: { name: string; role: string | null }[];
 };
 
-type Details = {
+export type Details = {
   metadata: Metadata | null;
   availableChapters: number;
   readChapters: number;
   volumes: string[];
-  chapters: { volume: string | null; chapter: string }[];
+  chapters: { volume: string | null; chapter: string; contentId: string | null; readableFiles: number }[];
+  reading: { contentId: string; relativePath: string; pageIndex: number | null; pageCount: number | null; hasFinishedFile: boolean } | null;
 };
 
 const kinds = [{ value: 'manga', label: 'Manga' }, { value: 'doujin', label: 'Doujin' }] as const;
@@ -117,18 +118,12 @@ function SeriesMetadataForm({ title, metadata, save }: { title: string; metadata
   );
 }
 
-export function SeriesInfo({ rootId, seriesKey, title, version, onSignedOut, onChange }: {
-  rootId: string; seriesKey: string; title: string; version: string; onSignedOut: () => void; onChange: () => void;
-}) {
+type SeriesContext = { rootId: string; seriesKey: string; title: string; version: string; onSignedOut: () => void };
+
+export function useSeriesDetails({ rootId, seriesKey, version, onSignedOut }: Omit<SeriesContext, 'title'>) {
   const url = ROOTS_URL + '/' + rootId + '/series/' + seriesKey;
   const [details, setDetails] = useState<Details | null>(null);
-  const [query, setQuery] = useState(title);
-  const [matches, setMatches] = useState<Metadata[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState<number | null>(null);
   const [error, setError] = useState('');
-  const [edit, setEdit] = useState(false);
-
   useEffect(() => {
     const request = new AbortController();
     async function readDetails() {
@@ -136,11 +131,25 @@ export function SeriesInfo({ rootId, seriesKey, title, version, onSignedOut, onC
       if (response.status === 401) return onSignedOut();
       if (!response.ok) throw new Error();
       const details = await response.json() as Details;
-      if (!request.signal.aborted) setDetails(details);
+      if (!request.signal.aborted) { setDetails(details); setError(''); }
     }
     void readDetails().catch(() => { if (!request.signal.aborted) setError('Could not load series details.'); });
     return () => request.abort();
   }, [url, version, onSignedOut]);
+
+  return { details, error };
+}
+
+export function MetadataEditor({ rootId, seriesKey, title, metadata, onSignedOut, onChange }: Omit<SeriesContext, 'version'> & {
+  metadata: Metadata | null; onChange: () => void;
+}) {
+  const url = ROOTS_URL + '/' + rootId + '/series/' + seriesKey;
+  const [query, setQuery] = useState(title);
+  const [matches, setMatches] = useState<Metadata[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState<number | null>(null);
+  const [error, setError] = useState('');
+  const [edit, setEdit] = useState(false);
 
   async function findMetadata(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -196,49 +205,12 @@ export function SeriesInfo({ rootId, seriesKey, title, version, onSignedOut, onC
     }
   }
 
-  const metadata = details?.metadata;
   return (
-    <section className="grid min-w-0 gap-4 border-t border-line p-4" aria-label="Series details">
-      {!details && !error && <p role="status" className="m-0 text-sm text-muted">Loading series details…</p>}
-      {details && <>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="grid gap-1">
-            <SectionHeader title={metadata?.title ?? 'Series details'} />
-            {metadata && <span className="text-sm text-muted">{metadata.kind === 'doujin' ? 'Doujin' : 'Manga'}
-              {metadata.status && ' · ' + metadata.status.toLowerCase().replaceAll('_', ' ')}
-              {metadata.providerUrl && <> · <a className="text-accent-readable" href={metadata.providerUrl}
-                target="_blank" rel="noreferrer">Open in AniList</a></>}
-            </span>}
-          </div>
-          <Button variant="secondary" onClick={() => setEdit(value => !value)}>{edit ? 'Close editor' : 'Edit metadata'}</Button>
-        </div>
-        {metadata?.alternateTitle && <p className="m-0 text-sm text-muted">{metadata.alternateTitle}</p>}
-        {metadata?.summary && <p className="m-0 max-w-prose text-sm whitespace-pre-line text-detail">{metadata.summary}</p>}
-        {metadata?.providerDetails && <ProviderFacts details={metadata.providerDetails} />}
-        <div className="grid gap-1 text-sm">
-          <strong>Available chapters</strong>
-          <span className="text-muted">{details.availableChapters.toLocaleString()}
-            {metadata?.totalChapters ? ' of ' + metadata.totalChapters.toLocaleString() : ' · total unknown'}</span>
-          {metadata?.totalChapters && <progress className="h-2 w-full max-w-80 accent-accent" aria-label="Available chapters"
-            value={Math.min(details.availableChapters, metadata.totalChapters)} max={metadata.totalChapters} />}
-        </div>
-        <div className="grid gap-1 text-sm">
-          <strong>Read chapters</strong>
-          <span className="text-muted">{details.readChapters.toLocaleString()}
-            {metadata?.totalChapters ? ' of ' + metadata.totalChapters.toLocaleString() : ' · total unknown'}</span>
-          {metadata?.totalChapters && <progress className="h-2 w-full max-w-80 accent-accent" aria-label="Read chapters"
-            value={Math.min(details.readChapters, metadata.totalChapters)} max={metadata.totalChapters} />}
-        </div>
-        {(details.volumes.length > 0 || details.chapters.length > 0) && <details>
-          <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Volumes and chapters</summary>
-          <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
-            {details.volumes.map(volume => <li key={'v' + volume} className="rounded-lg bg-nav-active px-2 py-1 text-sm">Vol. {volume}</li>)}
-            {details.chapters.map(chapter => <li key={(chapter.volume ?? '') + ':' + chapter.chapter} className="rounded-lg border border-line px-2 py-1 text-sm">
-              {chapter.volume && 'Vol. ' + chapter.volume + ' · '}Ch. {chapter.chapter}</li>)}
-          </ul>
-        </details>}
-        {edit && <SeriesMetadataForm title={title} metadata={metadata ?? null} save={save} />}
-      </>}
+    <div className="grid min-w-0 gap-4">
+      <Button variant="secondary" className="justify-self-start" onClick={() => setEdit(value => !value)}>
+        {edit ? 'Close editor' : 'Edit metadata'}
+      </Button>
+      {edit && <SeriesMetadataForm title={title} metadata={metadata} save={save} />}
       <form onSubmit={findMetadata} className="action-row">
         <SearchField aria-label="Metadata title" value={query} onChange={event => setQuery(event.target.value)} required maxLength={300}
           className="flex-[1_1_12rem]" />
@@ -271,6 +243,40 @@ export function SeriesInfo({ rootId, seriesKey, title, version, onSignedOut, onC
         </li>)}
       </ul>}
       {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
-    </section>
+    </div>
   );
+}
+
+export function MetadataDescription({ metadata }: { metadata: Metadata }) {
+  return <div className="grid gap-3 wrap-anywhere">
+    {metadata.alternateTitle && <p className="m-0 text-sm text-muted">{metadata.alternateTitle}</p>}
+    <p className="m-0 text-sm text-muted">{metadata.kind === 'doujin' ? 'Doujin' : 'Manga'}
+      {metadata.status && ' · ' + metadata.status.toLowerCase().replaceAll('_', ' ')}
+      {metadata.providerUrl && <> · <a className="text-accent-readable" href={metadata.providerUrl}
+        target="_blank" rel="noreferrer">Open in AniList</a></>}
+    </p>
+    {metadata.summary && <p className="m-0 max-w-prose text-sm whitespace-pre-line text-detail">{metadata.summary}</p>}
+    {metadata.providerDetails && <ProviderFacts details={metadata.providerDetails} />}
+  </div>;
+}
+
+export function SeriesInfo({ onChange, ...context }: SeriesContext & { onChange: () => void }) {
+  const { details, error } = useSeriesDetails(context);
+  const metadata = details?.metadata ?? null;
+  return <section className="grid min-w-0 gap-4 border-t border-line p-4" aria-label="Series details">
+    {!details && !error && <p role="status" className="m-0 text-sm text-muted">Loading series details…</p>}
+    {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
+    {metadata && <><SectionHeader title={metadata.title} /><MetadataDescription metadata={metadata} /></>}
+    {details && <>
+      <p className="m-0 text-sm text-muted">{details.availableChapters.toLocaleString()} indexed chapters
+        {metadata?.totalChapters && ` of ${metadata.totalChapters.toLocaleString()} released`}
+        {' · '}{details.readChapters.toLocaleString()} read</p>
+      {(details.volumes.length > 0 || details.chapters.length > 0) && <details>
+        <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Volumes and chapters</summary>
+        <MetadataTags names={[...details.volumes.map(volume => `Vol. ${volume}`),
+          ...details.chapters.map(({ volume, chapter }) => `${volume ? `Vol. ${volume} · ` : ''}Ch. ${chapter}`)]} />
+      </details>}
+    </>}
+    <MetadataEditor {...context} metadata={metadata} onChange={onChange} />
+  </section>;
 }

@@ -5,7 +5,7 @@ import type { Appearance } from './appearance';
 import { Catalog } from './Catalog';
 import type { CatalogView } from './Catalog';
 import { Reader } from './Reader';
-import { seriesLocation } from './library';
+import { seriesHref, seriesLocation } from './library';
 import { Brand, Button, SectionHeader, SegmentedControl } from './ui';
 
 type Destination = { id: CatalogView; href: string; label: string; title: string; section: string; icon: LucideIcon };
@@ -142,9 +142,12 @@ export function Workspace({ serverId, signingOut, error, onSignOut, onSignedOut,
     return () => window.removeEventListener('hashchange', handleNavigation);
   }, []);
 
-  const reader = /^#read\/([a-f0-9]{32})(\/intake)?$/i.exec(hash);
+  const reader = /^#read\/([a-f0-9]{32})(?:(\/intake)|\/series\/([a-f0-9-]{36})\/([a-f0-9]{64}))?$/i.exec(hash);
   if (reader?.[1]) {
-    return <Reader key={reader[1]} contentId={reader[1]} backToIntake={!!reader[2]} onSignedOut={onSignedOut} />;
+    const backToSeries = reader[3] && reader[4];
+    return <Reader key={reader[1]} contentId={reader[1]} onSignedOut={onSignedOut}
+      back={backToSeries ? seriesHref(reader[3]!, reader[4]!) : reader[2] ? '#intake' : '#library'}
+      backLabel={backToSeries ? 'Back to series' : reader[2] ? 'Back to intake' : 'Back to library'} />;
   }
 
   return (

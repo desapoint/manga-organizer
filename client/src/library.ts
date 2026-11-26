@@ -61,6 +61,10 @@ export function seriesHref(rootId: string, seriesKey: string) {
   return `#series/${rootId}/${seriesKey}`;
 }
 
+export function seriesReaderHref(contentId: string, rootId: string, seriesKey: string) {
+  return `#read/${contentId}/series/${rootId}/${seriesKey}`;
+}
+
 export function seriesLocation(hash: string): SeriesLocation | null {
   const [, rootId, seriesKey] = /^#series\/([a-f0-9-]{36})\/([a-f0-9]{64})$/i.exec(hash) ?? [];
   return rootId && seriesKey ? { rootId, seriesKey } : null;
