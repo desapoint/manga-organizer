@@ -16,7 +16,7 @@ type Review = { files: CoverageFile[]; expected: Chapter[]; canReviewQuarantine:
 type Compared = { candidate: CoverageFile; kind: string; reason: string };
 type FileScope = { source: CoverageFile; comparisons: Compared[]; canReviewQuarantine: boolean };
 type ReviewProps = {
-  rootId: string; seriesKey?: string; fileId?: string; version: string; onSignedOut: () => void; onChanged: () => void;
+  rootId: string; seriesKey?: string; fileId?: string; version: string; quickReview?: boolean; onSignedOut: () => void; onChanged: () => void;
 };
 
 const percentage = new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 });
@@ -33,9 +33,10 @@ export function DuplicateReviewDialog(props: ReviewProps & { onClose: () => void
   return <Modal title="Compare this file" wide onClose={props.onClose}><DuplicateReview {...props} /></Modal>;
 }
 
-export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOut, onChanged }: ReviewProps) {
-  const [review, setReview] = useState<Review | null>(null);
+export function DuplicateReview({ rootId, seriesKey, fileId, version, quickReview, onSignedOut, onChanged }: ReviewProps) {
+  const [loaded, setReview] = useState<Review | null>(null);
   const [comparisons, setComparisons] = useState<Compared[]>([]);
+  const [includeOverlaps, setIncludeOverlaps] = useState(false);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [query, setQuery] = useState('');
@@ -74,6 +75,15 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
     return () => request.abort();
   }, [fileId, onSignedOut, retry, rootId, seriesKey, version]);
 
+  const quick = useMemo(() => {
+    const focus = quickReview && loaded?.files.find(file => file.fileId === fileId);
+    if (!focus || !loaded) return null;
+    const files = loaded.files.filter(file => file === focus ||
+      (!!focus.chapters.length === !!file.chapters.length && sameCoverageSpan(focus, file)) ||
+      !!focus.sha256 && focus.sha256 === file.sha256 && focus.size === file.size);
+    return files.length > 1 ? { ...loaded, files } : null;
+  }, [fileId, loaded, quickReview]);
+  const review = quick && !includeOverlaps ? quick : loaded;
   const chapters = useMemo(() => review ? chapterCoverage(review.files, review.expected) : [], [review]);
   const colors = useMemo(() => review ? fileColors(review.files) : new Map<string, string>(), [review]);
   const groups = useMemo(() => review ? byteGroups(review.files) : [], [review]);
@@ -97,8 +107,9 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
   const visibleGroups = groups.filter(group => group.some(file => fileResults.includes(file)));
   const allFileCount = review.files.length;
   const rate = chapters.length ? counts.matching / chapters.length : 0;
-  const compact = focus && (focus.chapters.length > 0 || focus.volumeArchive) &&
-    review.files.every(file => file === focus || sameCoverageSpan(focus, file));
+  const compact = focus && (review === quick || !quickReview && (focus.chapters.length > 0 || focus.volumeArchive) &&
+    review.files.every(file => file === focus || sameCoverageSpan(focus, file)));
+  const bothViews = quick && quick.files.length !== loaded?.files.length;
 
   function showInspector() {
     requestAnimationFrame(() => {
@@ -129,13 +140,15 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
     {error && <p role="alert" className="m-0 text-danger">{error}</p>}
     <div className="flex flex-wrap items-start justify-between gap-2.5">
       <div>
-        <SectionHeader title={isBundle(focus) ? focus.volume ? `Compare volume ${focus.volume}` : 'Compare bundles' : `Compare chapter ${focus.chapters[0]?.chapter}`} />
+        <SectionHeader title={isBundle(focus) ? focus.volume ? `Compare volume ${focus.volume}` : 'Compare bundles' :
+          focus.chapters[0] ? `Compare chapter ${focus.chapters[0].chapter}` : 'Compare matching files'} />
         <p className="m-0 mt-1 text-xs text-muted">{allFileCount === 1 ? 'No other candidates indexed.' : `${allFileCount - 1} candidate${allFileCount === 2 ? '' : 's'}`}</p>
       </div>
       {allFileCount > 1 && <Button variant="secondary" icon={ScanSearch} onClick={() => setBatchScope({ kind: 'file', file: focus })}>
         {isBundle(focus) ? 'Review volume duplicates' : 'Review exact copies'}
       </Button>}
     </div>
+    {bothViews && <Button variant="ghost" className="justify-self-start" onClick={() => setIncludeOverlaps(true)}>Show all candidate overlaps</Button>}
     <DuplicateFileEvidence files={review.files} colors={colors} version={version} onSignedOut={onSignedOut}
       notes={new Map(comparisons.map(item => [item.candidate.fileId, item.reason]))} />
     {batch}
@@ -157,6 +170,8 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
 
   return <div className="grid min-w-0 gap-4 bg-canvas p-3 sm:p-4">
     {error && <p role="alert" className="m-0 text-danger">{error}</p>}
+    {bothViews && includeOverlaps && <Button variant="ghost" className="justify-self-start"
+      onClick={() => setIncludeOverlaps(false)}>Show matching files</Button>}
     <section aria-label="Chapter duplicate coverage" className="grid min-w-0 gap-4 rounded-xl border border-line bg-panel p-3.5 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div><span className="text-[0.6875rem] font-medium tracking-wide text-muted uppercase">{fileId ? 'File and candidates' : 'Series integrity'}</span>

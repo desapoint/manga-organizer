@@ -1,11 +1,11 @@
-import { Ellipsis, Folders, Inbox, LayoutGrid, Library, LogOut, PanelLeftClose, PanelLeftOpen, SlidersHorizontal } from 'lucide-react';
+import { Ellipsis, Folders, Inbox, LayoutGrid, Library, LogOut, PanelLeftClose, PanelLeftOpen, SlidersHorizontal, Wrench } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { Appearance } from './appearance';
 import { Catalog } from './Catalog';
 import type { CatalogView } from './Catalog';
 import { Reader } from './Reader';
-import { seriesHref, seriesLocation } from './library';
+import { seriesHref, seriesLocation, toolsLocation } from './library';
 import { Brand, Button, SectionHeader, SegmentedControl } from './ui';
 
 type Destination = { id: CatalogView; href: string; label: string; title: string; section: string; icon: LucideIcon };
@@ -16,13 +16,15 @@ const destinations = [
   { id: 'import', href: '#intake', label: 'Import intake', title: 'Import intake', section: 'Management', icon: Inbox },
   { id: 'settings', href: '#settings', label: 'Settings', title: 'Library settings', section: 'System', icon: SlidersHorizontal },
   { id: 'collections', href: '#collections', label: 'Collections', title: 'Collections', section: 'Library', icon: Folders },
+  { id: 'tools', href: '#tools', label: 'Tools', title: 'Tools', section: 'Management', icon: Wrench },
 ] as const satisfies readonly Destination[];
 
 const sidebarSections = ['Library', 'Management', 'System'] as const;
-const overflowDestinations = [destinations[4], destinations[3]];
+const overflowDestinations = [destinations[5], destinations[4], destinations[3]];
 
 function currentDestination(hash: string) {
   if (seriesLocation(hash)) return destinations[1];
+  if (toolsLocation(hash)) return destinations[5];
   return destinations.find(item => item.href === hash) ?? destinations[0];
 }
 
@@ -61,7 +63,7 @@ function MobileNavigation({ view, signingOut, onSignOut }: { view: CatalogView; 
   return (
     <nav aria-label="Library views" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 gap-1 border-t border-line bg-sidebar
       px-[max(.5rem,env(safe-area-inset-left))] pt-1.5 pb-[max(.5rem,env(safe-area-inset-bottom))] desktop:hidden">
-      {destinations.filter(item => item.id !== 'settings' && item.id !== 'collections').map(item => (
+      {destinations.filter(item => !overflowDestinations.some(destination => destination.id === item.id)).map(item => (
         <NavigationItem key={item.id} destination={item} current={view === item.id} mobile />
       ))}
       <details ref={overflow} className="group relative" onKeyDown={event => {
@@ -70,7 +72,7 @@ function MobileNavigation({ view, signingOut, onSignOut }: { view: CatalogView; 
           overflow.current.querySelector('summary')?.focus();
         }
       }}>
-        <summary data-current={view === 'settings' || view === 'collections'}
+        <summary data-current={overflowDestinations.some(destination => destination.id === view)}
           className="flex min-h-14 cursor-pointer list-none flex-col items-center justify-center gap-1 rounded-xl border border-transparent
             px-1 py-1 text-center text-[.72rem] leading-tight font-semibold text-muted hover:bg-nav-hover
             data-[current=true]:border-nav-line data-[current=true]:bg-nav-active data-[current=true]:text-ink [&::-webkit-details-marker]:hidden">
@@ -184,7 +186,7 @@ export function Workspace({ serverId, signingOut, error, onSignOut, onSignedOut,
       <main className="min-w-0 px-[clamp(1rem,3vw,3rem)] pt-[clamp(1.5rem,4vw,3rem)]
         pb-[calc(6rem+env(safe-area-inset-bottom))] wrap-anywhere desktop:pb-10">
         {error && <p role="alert" className="error">{error}</p>}
-        <Catalog view={view.id} title={view.title} section={view.section} onSignedOut={onSignedOut} series={series}>
+        <Catalog view={view.id} title={view.title} section={view.section} onSignedOut={onSignedOut} series={series} tools={toolsLocation(hash)}>
           {view.id === 'settings' && <SettingsDetails appearance={appearance} onAppearanceChange={onAppearanceChange} serverId={serverId} />}
         </Catalog>
       </main>

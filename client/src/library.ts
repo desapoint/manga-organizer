@@ -73,3 +73,15 @@ export function seriesLocation(hash: string): SeriesLocation | null {
   const [, rootId, seriesKey] = /^#series\/([a-f0-9-]{36})\/([a-f0-9]{64})$/i.exec(hash) ?? [];
   return rootId && seriesKey ? { rootId, seriesKey } : null;
 }
+
+export function duplicateToolsHref(location?: SeriesLocation, fileId?: string) {
+  return '#tools/duplicates' + (location ? `/${location.rootId}/${location.seriesKey}` : '') + (fileId ? `/${fileId}` : '');
+}
+
+export function toolsLocation(hash: string) {
+  if (hash === '#tools') return { module: 'home' as const };
+  const match = /^#tools\/duplicates(?:\/([a-f0-9-]{36})\/([a-f0-9]{64})(?:\/([a-f0-9]{32}))?)?$/i.exec(hash);
+  if (!match) return null;
+  const [, rootId, seriesKey, fileId] = match;
+  return { module: 'duplicates' as const, series: rootId && seriesKey ? { rootId, seriesKey } : null, fileId };
+}
