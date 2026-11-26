@@ -205,6 +205,9 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE edition_volume_release;
+            DROP TABLE edition_volume_manifest;
+            DROP TABLE chapter_completion;
             DROP TABLE inferred_volume_chapters;
             DROP TABLE series_collection_item;
             DROP TABLE series_collection;
@@ -588,7 +591,7 @@ def verify_series_metadata(owner, root_id, path):
     details = json.loads(owner.request(f"{url}/details", 200))
     assert details["metadata"]["kind"] == "doujin" and details["metadata"]["totalChapters"] == 10
     assert details["availableChapters"] == 3 and details["chapters"][1] == {
-        "volume": "1", "chapter": "1.5", "contentId": volume["contentId"], "readableFiles": 1,
+        "volume": "1", "chapter": "1.5", "contentId": volume["contentId"], "readableFiles": 1, "completed": False,
     }
     assert details["reading"]["contentId"] == volume["contentId"] and details["reading"]["pageIndex"] is None
 
@@ -875,10 +878,11 @@ def verify_volume_chapters(owner, root_id, path):
     archive_file = editions / "Collected editions Vol.03.cbz"
     ambiguous_file = editions / "Collected editions Vol.04 Ch.13-17.cbz"
     unnamed_file = editions / "Collected editions Vol.05.cbz"
+    standalone = editions / "Collected editions Vol.02 Ch.3.cbz"
     examples = [(range_file, ["1.png", "2.png"]),
                 (archive_file, ["cover.png", "Chapter 6 - Beginnings/1.png", "Chapter 7.5/1.png"]),
                 (ambiguous_file, ["Chapter 13/1.png", "Chapter 17/1.png"]),
-                (unnamed_file, ["001.png", "002.png"])]
+                (unnamed_file, ["001.png", "002.png"]), (standalone, ["1.png"])]
     for index, (archive_file_path, pages) in enumerate(examples):
         with ZipFile(archive_file_path, "w") as archive:
             for page in pages:
@@ -898,6 +902,29 @@ def verify_volume_chapters(owner, root_id, path):
     assert [(item["chapter"], item["source"]) for item in coverage(archive_file)] == [("6", "archive"), ("7.5", "archive")]
     assert coverage(ambiguous_file) == coverage(unnamed_file) == []
     assert json.loads(owner.request(f"{group_url}/details", 200))["availableChapters"] == 5
+    releases = json.loads(owner.request(f"{group_url}/chapter-releases?volume=2&chapter=3", 200))
+    assert {item["contentId"] for item in releases} == {files[range_file.name]["contentId"], files[standalone.name]["contentId"]}
+    mark = {"volume": "02", "chapter": "03", "completed": True}
+    owner.request(f"{group_url}/chapter-progress", 400, method="PUT", body=mark)
+    owner.request(f"{group_url}/chapter-progress", 204, method="PUT", token=owner.csrf(), body=mark)
+    marked = json.loads(owner.request(f"{group_url}/details", 200))
+    assert marked["readChapters"] == 1 and marked["chapters"][0]["completed"]
+    assert all(item["pageIndex"] is None for item in json.loads(owner.request(f"{group_url}/chapter-releases?volume=2&chapter=3", 200)))
+    owner.request(f"{group_url}/chapter-progress", 204, method="PUT", token=owner.csrf(), body=dict(mark, completed=False))
+    assert json.loads(owner.request(f"{group_url}/details", 200))["readChapters"] == 0
+
+    candidates = json.loads(owner.request(f"{group_url}/edition-candidates?volume=5", 200))
+    assert len(candidates) == 1 and candidates[0]["unresolvedVolume"]
+    manifest = {"edition": "Fixture digital edition", "volume": "5", "chapters": ["21", "22"],
+                "contentIds": [files[unnamed_file.name]["contentId"]]}
+    owner.request(f"{group_url}/edition-volumes", 204, method="PUT", token=owner.csrf(), body=manifest)
+    (unknown,) = json.loads(owner.request(f"{group_url}/edition-volumes", 200))
+    assert unknown["state"] == "unknown"
+    verified = dict(manifest, fullVolumeContentId=files[unnamed_file.name]["contentId"])
+    owner.request(f"{group_url}/edition-volumes", 204, method="PUT", token=owner.csrf(), body=verified)
+    (complete,) = json.loads(owner.request(f"{group_url}/edition-volumes", 200))
+    assert complete["id"] == unknown["id"] and complete["state"] == "complete" and complete["available"] == ["21", "22"]
+    owner.request(f"{group_url}/edition-volumes", 409, method="PUT", token=owner.csrf(), body=verified)
     manual = {"contentId": files[range_file.name]["contentId"], "volume": "2", "chapters": ["9"]}
     owner.request(f"{group_url}/coverage", 204, method="PUT", token=owner.csrf(), body=manual)
     assert coverage(range_file) == [{"volume": "2", "chapter": "9"}]

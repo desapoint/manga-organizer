@@ -43,3 +43,5 @@ Track the responsive series layout, More info dialog, library coverage and chapt
 ## Decisions
 
 The remaining candidates, including scheduled acquisition, torrent and Usenet integrations, advanced duplicate classification, household accounts, offline reading and external reader or tracker integrations, are deferred. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [Feature selection](FEATURE-SELECTION.csv)
+
+The next import-to-reading MVP is tracked in the dedicated implementation plan. [Next MVP](NEXT-MVP.md)

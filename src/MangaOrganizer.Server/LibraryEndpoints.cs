@@ -9,6 +9,7 @@ internal static class LibraryEndpoints
     {
         var library = api.MapGroup("/library/roots").RequireAuthorization();
         library.MapSeriesMetadata();
+        library.MapChapterEditions();
         api.MapCollections();
         library.MapGet("", (LibraryStore store, LibraryScanQueue scans) => Results.Ok(store.ReadRoots()
             .Select(root => root.State is "queued" or "scanning" ? root with { ScanProgress = scans.Status(root.Id) } : root)));
