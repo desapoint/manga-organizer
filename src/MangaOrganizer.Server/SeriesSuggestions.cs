@@ -132,7 +132,7 @@ internal static partial class SeriesSuggestions
     [GeneratedRegex(@"[\s._-]+\d+(?:\.\d+)?$", MatchOptions)]
     private static partial Regex BareNumberSuffix();
 
-    [GeneratedRegex(@"(?:\s*(?:[\[(](?:ongoing|completed|hiatus)[\])]|\[Group\b[^\]]*\]|\[[^\]]*\b(?:scans?|scanlations?|fansubs?)\b[^\]]*\])|[\s._-]+ongoing)+$", MatchOptions)]
+    [GeneratedRegex(@"(?:\s*(?:[\[(](?:ongoing|completed|hiatus)[\])]|\[Variant [0-9]+\]|\[Group\b[^\]]*\]|\[[^\]]*\b(?:scans?|scanlations?|fansubs?)\b[^\]]*\])|[\s._-]+ongoing)+$", MatchOptions)]
     private static partial Regex TrailingTags();
 
     [GeneratedRegex(@"^\[(?:Group\b[^\]]*|[^\]]*\b(?:scans?|scanlations?|fansubs?)\b[^\]]*)\]\s*", MatchOptions)]

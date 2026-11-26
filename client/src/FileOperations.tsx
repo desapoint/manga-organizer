@@ -9,7 +9,8 @@ import { Button, SectionHeader } from './ui';
 
 const url = '/api/file-operations';
 type Operation = { id: string; state: 'planned' | 'applying' | 'completed' | 'restoring' | 'restored' | 'review';
-  source: string; target: string; size: number; sha256: string; recovery: string | null; message: string | null };
+  source: string; target: string; size: number; sha256: string; recovery: string | null; message: string | null;
+  covers: { source: string; target: string; published: boolean }[] };
 
 const stateLabel: Record<Operation['state'], string> = {
   planned: 'Previewed', applying: 'Applying', completed: 'Completed', restoring: 'Restoring', restored: 'Restored', review: 'Needs review',
@@ -35,6 +36,14 @@ function OperationDetails({ operation }: { operation: Operation }) {
       <div><dt className="text-muted">Original path</dt><dd><code>{operation.source}</code></dd></div>
       <div><dt className="text-muted">Destination</dt><dd><code>{operation.target}</code></dd></div>
       <div><dt className="text-muted">Verified identity · {formatSize(operation.size)}</dt><dd><code>{operation.sha256}</code></dd></div>
+      {operation.covers.length > 0 && <div>
+        <dt className="text-muted">Folder covers</dt>
+        <dd><ul className="m-0 grid gap-2 pl-4">
+          {operation.covers.map(cover => <li key={cover.target}>
+            <code>{cover.source}</code><br />{cover.published ? 'Copied to ' : 'Copy to '}<code>{cover.target}</code>
+          </li>)}
+        </ul></dd>
+      </div>}
       {operation.recovery && <div><dt className="text-muted">Recovery copy</dt><dd><code>{operation.recovery}</code></dd></div>}
       {operation.message && <div><dt className="text-muted">Result</dt><dd>{operation.message}</dd></div>}
     </dl>
@@ -46,6 +55,8 @@ export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, o
 }) {
   const [targetRoot, setTargetRoot] = useState(rootId);
   const [targetPath, setTargetPath] = useState(relativePath);
+  const [keepBoth, setKeepBoth] = useState(false);
+  const [copyFolderCovers, setCopyFolderCovers] = useState(false);
   const [plan, setPlan] = useState<Operation | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -55,7 +66,7 @@ export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, o
     setError('');
     setBusy(true);
     try {
-      setPlan(await post('/preview', onSignedOut, { sourceRoot: rootId, fileId, targetRoot, targetPath }));
+      setPlan(await post('/preview', onSignedOut, { sourceRoot: rootId, fileId, targetRoot, targetPath, keepBoth, copyFolderCovers }));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not preview this change.');
     } finally {
@@ -83,6 +94,7 @@ export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, o
       {plan ? <>
         <OperationDetails operation={plan} />
         <p className="m-0 text-sm text-muted">The file is rechecked before moving. A recovery copy is retained.</p>
+        {plan.covers.length > 0 && <p className="m-0 text-sm text-muted">Folder covers are copied and kept at both locations.</p>}
         <div className="action-row">
           <Button icon={ArrowRightLeft} disabled={busy} onClick={() => void apply()}>{busy ? 'Moving file…' : 'Confirm move or rename'}</Button>
           <Button variant="secondary" disabled={busy} onClick={() => setPlan(null)}>Back to path</Button>
@@ -91,6 +103,10 @@ export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, o
         <Select label="Destination folder" value={targetRoot} options={options} onChange={setTargetRoot} disabled={busy} />
         <label className="grid gap-1">Destination path<input value={targetPath} onChange={event => setTargetPath(event.target.value)}
           maxLength={4096} required /><span className="field-help">Enter a path inside that folder, including the file extension.</span></label>
+        <label className="flex items-start gap-2"><input type="checkbox" checked={keepBoth}
+          onChange={event => setKeepBoth(event.target.checked)} /> Keep both when the destination exists</label>
+        <label className="flex items-start gap-2"><input type="checkbox" checked={copyFolderCovers}
+          onChange={event => setCopyFolderCovers(event.target.checked)} /> Copy folder covers</label>
         <Button type="submit" variant="secondary" disabled={busy} className="justify-self-start">Preview change</Button>
       </form>}
       {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}

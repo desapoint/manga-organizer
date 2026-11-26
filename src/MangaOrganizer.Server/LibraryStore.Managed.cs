@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
@@ -6,13 +7,14 @@ internal sealed record ManagedFile(string Id, string RelativePath, string Conten
     string? SeriesTitle, string? Volume, string? Chapter);
 internal sealed record FileOperation(Guid Id, string State, Guid SourceRoot, Guid TargetRoot, string SourceBase, string TargetBase,
     string SourcePath, string TargetPath, string FileId, string ContentId, long Size, byte[] Sha256, string SeriesKey,
-    string? SeriesTitle, string? Volume, string? Chapter, string? Message);
+    string? SeriesTitle, string? Volume, string? Chapter, string? Message, FileOperationCover[] Covers);
+internal sealed record FileOperationCover(string SourcePath, string TargetPath, long Size, byte[] Sha256, bool Published = false);
 
 internal sealed partial class LibraryStore
 {
     private const string OperationColumns = """
         id, state, source_root, target_root, source_base, target_base, source_path, target_path,
-        file_id, content_id, size, sha256, series_key, series_title, volume_hint, chapter_hint, message
+        file_id, content_id, size, sha256, series_key, series_title, volume_hint, chapter_hint, message, cover_plan
         """;
 
     public ManagedFile? ReadManagedFile(Guid root, string fileId)
@@ -39,6 +41,22 @@ internal sealed partial class LibraryStore
         command.CommandText = "SELECT path FROM library_folder WHERE root_id = $root AND managed = 1;";
         command.Parameters.AddWithValue("$root", root);
         return command.ExecuteScalar() as string;
+    }
+
+    public bool HasOtherSeriesInFolder(Guid root, string path, string series)
+    {
+        var directory = path[..(path.LastIndexOf('/') + 1)];
+        using var database = OpenDatabase();
+        using var command = database.CreateCommand();
+        command.CommandText = """
+            SELECT EXISTS(SELECT 1 FROM library_file WHERE root_id = $root AND series_key <> $series
+                AND substr(relative_path, 1, length($directory)) = $directory
+                AND instr(substr(relative_path, length($directory) + 1), '/') = 0);
+            """;
+        command.Parameters.AddWithValue("$root", root);
+        command.Parameters.AddWithValue("$directory", directory);
+        command.Parameters.AddWithValue("$series", series);
+        return (long)command.ExecuteScalar()! != 0;
     }
 
     public IReadOnlyList<FileOperation> ReadFileOperations()
@@ -68,9 +86,9 @@ internal sealed partial class LibraryStore
         using var command = database.CreateCommand();
         command.CommandText = """
             INSERT INTO file_operation(id, state, source_root, target_root, source_base, target_base, source_path,
-                target_path, file_id, content_id, size, sha256, series_key, series_title, volume_hint, chapter_hint, created_at, updated_at)
+                target_path, file_id, content_id, size, sha256, series_key, series_title, volume_hint, chapter_hint, created_at, updated_at, cover_plan)
             VALUES($id, 'planned', $sourceRoot, $targetRoot, $sourceBase, $targetBase, $sourcePath,
-                $targetPath, $file, $content, $size, $sha256, $series, $title, $volume, $chapter, $now, $now);
+                $targetPath, $file, $content, $size, $sha256, $series, $title, $volume, $chapter, $now, $now, $covers);
             """;
         command.Parameters.AddWithValue("$id", operation.Id);
         command.Parameters.AddWithValue("$sourceRoot", operation.SourceRoot);
@@ -84,6 +102,18 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$size", operation.Size);
         command.Parameters.AddWithValue("$sha256", operation.Sha256);
         AddSeriesParameters(command, operation);
+        command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);
+        command.Parameters.AddWithValue("$covers", JsonSerializer.Serialize(operation.Covers));
+        command.ExecuteNonQuery();
+    }
+
+    public void RecordCoverPublication(Guid id, FileOperationCover[] covers)
+    {
+        using var database = OpenDatabase();
+        using var command = database.CreateCommand();
+        command.CommandText = "UPDATE file_operation SET cover_plan = $covers, updated_at = $now WHERE id = $id AND state = 'applying';";
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$covers", JsonSerializer.Serialize(covers));
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);
         command.ExecuteNonQuery();
     }
@@ -117,12 +147,34 @@ internal sealed partial class LibraryStore
         command.ExecuteNonQuery();
     }
 
-    public void FinishFileOperation(FileOperation operation, bool restore, DateTimeOffset modified, bool retainTarget, CoverSource? cover)
+    private CoverSource? FindManagedCover(FileOperation operation, bool restore, DateTimeOffset modified,
+        SqliteConnection database, SqliteTransaction transaction)
+    {
+        var id = restore ? operation.SourceRoot : operation.TargetRoot;
+        var root = restore ? operation.SourceBase : operation.TargetBase;
+        var path = restore ? operation.SourcePath : operation.TargetPath;
+        var cache = new CoverCache(database, transaction);
+        var directory = path[..Math.Max(0, path.LastIndexOf('/'))];
+        if (!HasOtherSeriesInFolder(id, path, operation.SeriesKey) &&
+            CoverArt.FindSidecars(root, directory, cache).FirstOrDefault() is { } sidecar)
+        {
+            return sidecar;
+        }
+        if (!ArchivePages.Supports(Path.GetExtension(path)[1..].ToLowerInvariant())) return null;
+        var cover = cache.FindArchive(operation.Sha256, path, operation.Size, modified);
+        if (cover is not null) return cover;
+        cover = CoverArt.FindArchiveCover(cache, root, path, operation.Size, modified, CancellationToken.None);
+        if (cover is not null) cache.RememberArchive(operation.Sha256, cover);
+        return cover;
+    }
+
+    public void FinishFileOperation(FileOperation operation, bool restore, DateTimeOffset modified, bool retainTarget)
     {
         var root = restore ? operation.SourceRoot : operation.TargetRoot;
         var path = restore ? operation.SourcePath : operation.TargetPath;
-        using var database = OpenDatabase();
+        using var database = OpenCoverDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
+        var cover = FindManagedCover(operation, restore, modified, database, transaction);
         using var command = database.CreateCommand();
         command.Transaction = transaction;
         command.Parameters.AddWithValue("$id", operation.Id);
@@ -177,12 +229,17 @@ internal sealed partial class LibraryStore
         if (cover is not null)
         {
             command.Parameters.AddWithValue("$coverSeries", operation.SeriesKey);
+            command.Parameters.AddWithValue("$coverPath", cover.RelativePath);
             command.Parameters.AddWithValue("$coverSize", cover.Size);
-            command.Parameters.AddWithValue("$coverEntry", cover.ArchiveEntry!);
+            command.Parameters.AddWithValue("$coverModified", cover.ModifiedAt);
+            command.Parameters.AddWithValue("$coverEntry", (object?)cover.ArchiveEntry ?? DBNull.Value);
             command.Parameters.AddWithValue("$coverHash", cover.Sha256);
             command.CommandText = """
-                INSERT OR IGNORE INTO library_series_cover(root_id, series_key, relative_path, size, modified_at, archive_entry, sha256)
-                VALUES($root, $coverSeries, $path, $coverSize, $modified, $coverEntry, $coverHash);
+                INSERT INTO library_series_cover(root_id, series_key, relative_path, size, modified_at, archive_entry, sha256)
+                VALUES($root, $coverSeries, $coverPath, $coverSize, $coverModified, $coverEntry, $coverHash)
+                ON CONFLICT(root_id, series_key) DO UPDATE SET relative_path = excluded.relative_path, size = excluded.size,
+                    modified_at = excluded.modified_at, archive_entry = excluded.archive_entry, sha256 = excluded.sha256
+                WHERE library_series_cover.archive_entry IS NOT NULL AND excluded.archive_entry IS NULL;
                 """;
             command.ExecuteNonQuery();
         }
@@ -192,7 +249,7 @@ internal sealed partial class LibraryStore
     private static FileOperation ReadOperation(SqliteDataReader rows) => new(rows.GetGuid(0), rows.GetString(1), rows.GetGuid(2),
         rows.GetGuid(3), rows.GetString(4), rows.GetString(5), rows.GetString(6), rows.GetString(7), rows.GetString(8), rows.GetString(9),
         rows.GetInt64(10), rows.GetFieldValue<byte[]>(11), rows.GetString(12), ReadText(rows, 13), ReadText(rows, 14),
-        ReadText(rows, 15), ReadText(rows, 16));
+        ReadText(rows, 15), ReadText(rows, 16), JsonSerializer.Deserialize<FileOperationCover[]>(rows.GetString(17)) ?? []);
 
     private static void AddSeriesParameters(SqliteCommand command, FileOperation operation)
     {

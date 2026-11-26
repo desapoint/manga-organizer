@@ -2,9 +2,11 @@ using System.Text.RegularExpressions;
 
 namespace MangaOrganizer.Server;
 
-internal sealed record FileOperationRequest(Guid SourceRoot, string? FileId, Guid TargetRoot, string? TargetPath);
+internal sealed record FileOperationRequest(Guid SourceRoot, string? FileId, Guid TargetRoot, string? TargetPath,
+    bool KeepBoth = false, bool CopyFolderCovers = false);
+internal sealed record FileOperationCoverView(string Source, string Target, bool Published);
 internal sealed record FileOperationView(Guid Id, string State, string Source, string Target, long Size, string Sha256,
-    string? Recovery, string? Message);
+    string? Recovery, string? Message, IReadOnlyList<FileOperationCoverView> Covers);
 internal sealed class FileOperationException(string message) : Exception(message);
 
 internal sealed partial class ManagedFileOperations(LibraryStore store, string dataDirectory) : IDisposable
@@ -31,7 +33,7 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
         var targetPath = NormalizeTargetPath(request.TargetPath, file.RelativePath);
         var operation = new FileOperation(Guid.NewGuid(), "planned", request.SourceRoot, request.TargetRoot,
             sourceRoot, targetRoot, file.RelativePath, targetPath, file.Id, file.ContentId, file.Size, file.Sha256,
-            file.SeriesKey, file.SeriesTitle, file.Volume, file.Chapter, null);
+            file.SeriesKey, file.SeriesTitle, file.Volume, file.Chapter, null, []);
         ValidateRoots(operation);
         var source = Source(operation);
         var target = Target(operation);
@@ -43,12 +45,22 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
         {
             throw new FileOperationException("The indexed source has changed. Rescan it first.");
         }
+        ValidateTargetParents(target, operation.TargetBase);
         if (!PathsAlias(source, target) && PathExists(target.FullName))
         {
-            throw new FileOperationException("The destination already exists.");
+            if (!request.KeepBoth) throw new FileOperationException("The destination already exists. Choose Keep both to preview a numbered destination.");
+            target = FindVariantTarget(target);
+            operation = operation with { TargetPath = Relative(operation.TargetBase, target) };
         }
 
-        ValidateTargetParents(target, operation.TargetBase);
+        if (request.CopyFolderCovers && !string.Equals(source.DirectoryName, target.DirectoryName, PathComparison))
+        {
+            if (store.HasOtherSeriesInFolder(operation.SourceRoot, operation.SourcePath, operation.SeriesKey))
+            {
+                throw new FileOperationException("This source folder contains several series. Clear Copy folder covers to move this file on its own.");
+            }
+            operation = operation with { Covers = PlanCovers(operation, source.Directory!, target.Directory!) };
+        }
         store.RecordFileOperation(operation);
         return View(operation);
     }
@@ -106,6 +118,7 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
         {
             throw new FileOperationException("The indexed source changed after preview. Create a new plan after rescanning.");
         }
+        ValidateCovers(operation);
 
         var backup = Backup(operation);
         if (!PathExists(backup.FullName))
@@ -133,6 +146,8 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
         {
             throw new FileOperationException("The source changed during the operation. Verified recovery and staging copies were retained.");
         }
+
+        CopyCovers(operation);
 
         var parked = ParkPath(original, operation.Id, "original");
         LibraryScanner.RequireRoot(original.DirectoryName!);
@@ -198,11 +213,7 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
     {
         file.Refresh();
         DateTimeOffset modified = file.LastWriteTimeUtc;
-        var cover = ArchivePages.Supports(file.Extension[1..].ToLowerInvariant())
-            ? CoverArt.FindFirstPage(restore ? operation.SourceBase : operation.TargetBase,
-                restore ? operation.SourcePath : operation.TargetPath, operation.Size, modified, CancellationToken.None)
-            : null;
-        store.FinishFileOperation(operation, restore, modified, retainTarget, cover);
+        store.FinishFileOperation(operation, restore, modified, retainTarget);
     }
 
     private static void ParkTarget(FileInfo target, FileOperation operation)
@@ -218,13 +229,16 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
         }
     }
 
-    private static bool CopyVerified(FileInfo source, FileInfo target, FileOperation operation)
+    private static bool CopyVerified(FileInfo source, FileInfo target, FileOperation operation) =>
+        CopyVerified(source, target, operation.Size, operation.Sha256);
+
+    private static bool CopyVerified(FileInfo source, FileInfo target, long size, byte[] digest)
     {
         source.Refresh();
-        if (!source.Exists || source.Length != operation.Size) return false;
+        if (!source.Exists || source.Length != size) return false;
         LibraryScanner.RequireRoot(target.DirectoryName!);
 
-        var copied = MediaFiles.Read(source, operation.Size, source.LastWriteTimeUtc, input =>
+        var copied = MediaFiles.Read(source, size, source.LastWriteTimeUtc, input =>
         {
             using var output = new FileStream(target.FullName, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
             input.CopyTo(output);
@@ -232,15 +246,17 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
             output.Position = 0;
             return MediaFiles.Hash(output, CancellationToken.None);
         });
-        return copied is not null && copied.AsSpan().SequenceEqual(operation.Sha256) && Matches(target, operation);
+        return copied is not null && copied.AsSpan().SequenceEqual(digest) && Matches(target, size, digest);
     }
 
-    private static bool Matches(FileInfo file, FileOperation operation)
+    private static bool Matches(FileInfo file, FileOperation operation) => Matches(file, operation.Size, operation.Sha256);
+
+    private static bool Matches(FileInfo file, long size, byte[] digest)
     {
         file.Refresh();
-        if (!file.Exists || file.Length != operation.Size) return false;
-        var hash = MediaFiles.Read(file, operation.Size, file.LastWriteTimeUtc, stream => MediaFiles.Hash(stream, CancellationToken.None));
-        return hash is not null && hash.AsSpan().SequenceEqual(operation.Sha256);
+        if (!file.Exists || file.Length != size) return false;
+        var hash = MediaFiles.Read(file, size, file.LastWriteTimeUtc, stream => MediaFiles.Hash(stream, CancellationToken.None));
+        return hash is not null && hash.AsSpan().SequenceEqual(digest);
     }
 
     private FileInfo Backup(FileOperation operation)
@@ -256,7 +272,9 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
     {
         var recovery = Path.Combine(dataDirectory, "file-recovery", operation.Id.ToString("N") + ".backup");
         return new(operation.Id, operation.State, Source(operation).FullName, Target(operation).FullName, operation.Size,
-            Convert.ToHexStringLower(operation.Sha256), File.Exists(recovery) ? recovery : null, operation.Message);
+            Convert.ToHexStringLower(operation.Sha256), File.Exists(recovery) ? recovery : null, operation.Message,
+            operation.Covers.Select(cover => new FileOperationCoverView(Path.Combine(operation.SourceBase, cover.SourcePath),
+                Path.Combine(operation.TargetBase, cover.TargetPath), cover.Published)).ToArray());
     }
 
     private static FileInfo Source(FileOperation operation) =>

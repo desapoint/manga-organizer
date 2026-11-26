@@ -819,9 +819,9 @@ def verify_managed_files(start, media, *, shared_permissions=False, data_directo
             saved = json.loads(owner.request(f"{LIBRARY_ROOTS}/{root['id']}", 200, method="PUT", token=owner.csrf(), body=options))
             assert saved["managed"] and saved["id"] == root["id"]
 
-        def preview(path, destination=archive["id"], expected=200):
+        def preview(path, destination=archive["id"], expected=200, **options):
             return json.loads(owner.request(f"{operations}/preview", expected, method="POST", token=owner.csrf(),
-                                            body=dict(plan, targetPath=path, targetRoot=destination)))
+                                            body=dict(plan, targetPath=path, targetRoot=destination, **options)))
 
         preview("../Escaped.cbz", expected=409)
         collision = preview("Occupied.cbz")
@@ -861,6 +861,49 @@ def verify_managed_files(start, media, *, shared_permissions=False, data_directo
         assert "chapter 1.cbz" in {file.name for file in original.parent.iterdir()}
         owner.request(f"{case_url}/restore", 200, method="POST", token=owner.csrf())
         assert original.name in {file.name for file in original.parent.iterdir()}
+
+        # Distinct same-chapter editions and their folder images can share a final directory.
+        variants = media / "archive" / "primary"
+        variants.mkdir()
+        variants.chmod(0o777)
+        existing_release = variants / "Chapter 1.cbz"
+        with ZipFile(existing_release, "w", compression=ZIP_DEFLATED) as translated:
+            translated.writestr("pages/1.png", synthetic_png(218, 102, 65))
+        existing_bytes = existing_release.read_bytes()
+        existing_cover = synthetic_png(61, 110, 184, 15, 21)
+        (variants / "cover.png").write_bytes(existing_cover)
+        source_covers = [synthetic_png(140, 91, 72, 18, 23), synthetic_png(85, 190, 126, 23, 34)]
+        for name, cover in zip(("cover.png", "cover-1.png"), source_covers):
+            (original.parent / name).write_bytes(cover)
+
+        variant_path = "primary/Chapter 1.cbz"
+        preview(variant_path, expected=409)
+        plan_with_covers = preview(variant_path, keepBoth=True, copyFolderCovers=True)
+        assert Path(plan_with_covers["target"]).name == "Chapter 1 [Variant 1].cbz"
+        assert [Path(cover["target"]).name for cover in plan_with_covers["covers"]] == ["cover-1.png", "cover-2.png"]
+        assert not any(cover["published"] for cover in plan_with_covers["covers"])
+        blocked_cover = variants / "cover-1.png"
+        blocked_cover.write_bytes(b"An independent file created after preview")
+        owner.request(f"{operations}/{plan_with_covers['id']}/apply", 409, method="POST", token=owner.csrf())
+        assert original.read_bytes() == original_bytes and blocked_cover.read_bytes() == b"An independent file created after preview"
+        blocked_cover.unlink()
+
+        plan_with_covers = preview(variant_path, keepBoth=True, copyFolderCovers=True)
+        variant_operation = f"{operations}/{plan_with_covers['id']}"
+        result = json.loads(owner.request(f"{variant_operation}/apply", 200, method="POST", token=owner.csrf()))
+        assert result["state"] == "completed" and all(cover["published"] for cover in result["covers"])
+        assert existing_release.read_bytes() == existing_bytes
+        assert (variants / "Chapter 1 [Variant 1].cbz").read_bytes() == original_bytes
+        assert (variants / "cover.png").read_bytes() == existing_cover
+        assert [(variants / f"cover-{index}.png").read_bytes() for index in (1, 2)] == source_covers
+        assert [(original.parent / name).read_bytes() for name in ("cover.png", "cover-1.png")] == source_covers
+        owner.scan(archive["id"])
+        (variant_group,) = [group for group in owner.series(archive["id"])["items"] if group["key"] == series["key"]]
+        assert variant_group["fileCount"] == 2
+        assert webp_dimensions(owner.request(moved_cover, 200)) == (15, 21)
+        restored_variant = json.loads(owner.request(f"{variant_operation}/restore", 200, method="POST", token=owner.csrf()))
+        assert restored_variant["state"] == "restored" and original.read_bytes() == original_bytes
+        assert [(variants / f"cover-{index}.png").read_bytes() for index in (1, 2)] == source_covers
 
         changed = preview("Changed.cbz")
         old = original.stat()

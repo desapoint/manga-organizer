@@ -32,6 +32,8 @@ Folders start read-only. Enable **Allow reviewed file moves and renames** separa
 
 The server revalidates the file digest and prepares a verified recovery copy before moving the source. It verifies a staged copy on the destination storage and publishes it without overwriting an existing path. The catalog updates the file location while preserving content identity, chapter coverage and reading progress. An archive cover can follow the file immediately, and existing folder artwork takes precedence. Recovery material uses additional storage in the server data directory and hidden recovery files on the media root.
 
+Choose **Keep both when the destination exists** to preview an unused name ending in `[Variant 1]` or the next available number. Choose **Copy folder covers** to include artwork from a source folder that contains one indexed series. The preview lists each cover's destination. Distinct artwork uses `cover-1`, `cover-2`, and later numbers when the destination already has artwork. Originals stay in the source folder, and copied covers stay at the destination after restoring the manga file.
+
 Use **File operation history** in Library settings to inspect results and explicitly restore an original path. Restores recheck content and protect occupied paths. An interrupted operation is marked for review at restart. Docker mounts must be writable for the folders you opt into management. [Installation](INSTALL.md)
 
 ## 1. Organization workflow
