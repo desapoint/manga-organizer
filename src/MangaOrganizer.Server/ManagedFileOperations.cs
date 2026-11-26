@@ -17,6 +17,13 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
 
     public FileOperationView Preview(FileOperationRequest request)
     {
+        var operation = BuildPlan(request);
+        store.RecordFileOperation(operation);
+        return View(operation);
+    }
+
+    private FileOperation BuildPlan(FileOperationRequest request)
+    {
         if (request.FileId is not { Length: 32 } id || !id.All(char.IsAsciiHexDigit))
         {
             throw new FileOperationException("Choose an indexed file with a verified hash.");
@@ -61,8 +68,7 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
             }
             operation = operation with { Covers = PlanCovers(operation, source.Directory!, target.Directory!) };
         }
-        store.RecordFileOperation(operation);
-        return View(operation);
+        return operation;
     }
 
     public IReadOnlyList<FileOperationView> History() => store.ReadFileOperations().Select(View).ToArray();

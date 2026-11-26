@@ -2,6 +2,7 @@ import { FolderCog, ScanSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getCsrfToken } from './api';
+import { BatchOrganizer } from './BatchOrganizer';
 import { CatalogInventory, SeriesPage } from './CatalogInventory';
 import { Collections } from './Collections';
 import { FileOperationHistory } from './FileOperations';
@@ -130,6 +131,9 @@ export function Catalog({ view, title, section, onSignedOut, series, children }:
             </div>
           </div>
           {scanError && <p role="alert" className="error">{scanError}</p>}
+          {view === 'import' && selected.managed && roots?.some(root => root.managed && root.kind !== 'import') &&
+            <BatchOrganizer key={selected.id} source={selected} targets={roots.filter(root => root.managed && root.kind !== 'import')}
+              version={`${inventoryVersion}:${refresh}`} onSignedOut={onSignedOut} onChanged={() => setRefresh(value => value + 1)} />}
           <CatalogInventory key={selected.id} rootId={selected.id} version={`${inventoryVersion}:${refresh}`}
             onSignedOut={onSignedOut} scanComplete={selected.state === 'complete'} intake={view === 'import'} rootPath={selected.path}
             hasCovers={selected.hasCovers} coverVersion={`${selected.lastScannedAt ?? ''}:${refresh}`}

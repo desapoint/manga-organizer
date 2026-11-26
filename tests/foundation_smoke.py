@@ -1148,6 +1148,26 @@ def verify_managed_files(start, media, *, shared_permissions=False, data_directo
         assert restored_variant["state"] == "restored" and original.read_bytes() == original_bytes
         assert [(variants / f"cover-{index}.png").read_bytes() for index in (1, 2)] == source_covers
 
+        second_source = original.parent / "Batch Chapter 2.cbz"
+        second_source.write_bytes(b"Another indexed archive fixture")
+        owner.scan(primary["id"])
+        (second_file,) = [file for file in owner.files(primary["id"])["items"] if file["relativePath"] == second_source.name]
+        second_plan = dict(plan, fileId=second_file["id"])
+        collision_plans = {"items": [dict(plan, targetPath="Batch.cbz"), dict(second_plan, targetPath="Batch.cbz")]}
+        owner.request(operations + "/batch-preview", 400, method="POST", body=collision_plans)
+        collisions = json.loads(owner.request(operations + "/batch-preview", 200, method="POST", token=owner.csrf(), body=collision_plans))
+        assert all(item["plan"] is None and "conflicts" in item["error"] for item in collisions)
+        planned = json.loads(owner.request(operations + "/batch-preview", 200, method="POST", token=owner.csrf(), body={"items": [
+            dict(plan, targetPath="Batch-one.cbz"), dict(second_plan, targetPath="Batch-two.cbz")]}))
+        assert all(item["plan"] and not item["error"] for item in planned)
+        applied = json.loads(owner.request(operations + "/batch-apply", 200, method="POST", token=owner.csrf(), body={"ids": [planned[0]["plan"]["id"]]}))
+        assert len(applied) == 1 and applied[0]["result"]["state"] == "completed"
+        assert second_source.exists() and not original.exists()
+        owner.request(f"{operations}/{planned[0]['plan']['id']}/restore", 200, method="POST", token=owner.csrf())
+        assert original.read_bytes() == original_bytes
+        second_source.unlink()
+        owner.scan(primary["id"])
+
         changed = preview("Changed.cbz")
         old = original.stat()
         modified = b"!" + original_bytes[1:]
