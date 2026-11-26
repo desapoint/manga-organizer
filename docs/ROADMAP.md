@@ -30,6 +30,8 @@ Build and validate each feature in a stacked pull request based on the preceding
 
 Track the responsive series layout, More info dialog, library coverage and chapter browsing in the dedicated checklist. The checklist links to the interactive design reference and records data dependencies such as the release manifest needed to confirm missing chapters or volumes. [Series detail checklist](SERIES-DETAIL-TODO.md)
 
+- [ ] In a separate UI PR, move in-page editing panels into dialogs so editing metadata, coverage, folders, and file operations keeps the underlying layout and scroll position steady. Return focus to the action that opened the dialog and keep validation and unsaved changes visible while editing.
+
 ## Metadata enhancements
 
 - [ ] Add opt-in automatic series matching with high-confidence criteria, provenance and manual review for ambiguous results. Keep confirmed matches and local overrides stable across scans.

@@ -36,15 +36,17 @@ def verify(app, fixture):
 
     # Exercise the exact schema from the previous managed-file preview with an AniList assignment.
     with closing(sqlite3.connect(fresh / "organizer.sqlite")) as database:
+        database.execute("DROP TABLE series_collection_item")
+        database.execute("DROP TABLE series_collection")
         database.execute("ALTER TABLE series_metadata DROP COLUMN provider_details")
-        database.execute("DELETE FROM schema_migration WHERE name = '0009-anilist-details'")
+        database.execute("DELETE FROM schema_migration WHERE version >= 9")
         database.execute("""
             INSERT INTO series_metadata(id, series_key, title, kind, provider_id, updated_at)
             VALUES ('saved-series', 'series-key', 'Saved title', 'manga', 123, '2026-01-01')
             """)
         database.commit()
     run_migrations(app, fresh)
-    assert entries(fresh)[:-1] == installed[:-1]
+    assert entries(fresh)[:8] == installed[:8]
     with closing(sqlite3.connect(fresh / "organizer.sqlite")) as database:
         assert database.execute("SELECT title, provider_id, provider_details FROM series_metadata").fetchone() == ("Saved title", 123, None)
 

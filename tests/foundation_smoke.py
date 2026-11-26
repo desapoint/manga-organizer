@@ -205,6 +205,8 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE series_collection_item;
+            DROP TABLE series_collection;
             DROP TABLE file_operation;
             DROP TABLE reading_progress_event;
             DROP TABLE reading_progress;
@@ -598,6 +600,7 @@ def verify_series_metadata(owner, root_id, path):
 
 
 def verify_external_metadata(executable, fixture, media):
+    (media / "primary" / "Issue 01.pdf").write_bytes(b"Unique synthetic issue for matching tests")
     cover = "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/fixture.jpg"
     media_result = {"id": 123, "title": {"english": "Synthetic provider title", "native": "本"},
                     "description": "Metadata &amp; tags<br><br><i>Second paragraph</i>", "status": "FINISHED", "chapters": 12, "volumes": 3,
@@ -662,6 +665,35 @@ def verify_external_metadata(executable, fixture, media):
                 assert corrected["title"] == edit["title"] and corrected["providerUrl"] == result["providerUrl"]
                 assert corrected["providerDetails"] == result["providerDetails"]
                 assert json.loads(browser.request(f"{url}/details", 200))["metadata"] == corrected
+                collections = "/api/library/collections"
+                assert json.loads(browser.request(f"{LIBRARY_ROOTS}/{root_id}/tags", 200)) == ["Doujinshi"]
+                tagged = browser.series(root_id, "?includeTag=doujinshi")
+                assert tagged["total"] == 1, tagged
+                assert browser.series(root_id, "?includeTag=Doujinshi&includeTag=Adventure")["total"] == 0
+                assert browser.series(root_id, "?search=My+corrected+title&excludeTag=Doujinshi")["total"] == 0
+                browser.request(f"{LIBRARY_ROOTS}/{root_id}/series?includeTag=Doujinshi&excludeTag=doujinshi", 400)
+                Browser(address).request(collections, 401)
+                browser.request(collections, 400, method="POST", body={"name": "Favorites"})
+                manual = json.loads(browser.request(collections, 200, method="POST", token=browser.csrf(), body={"name": "Favorites"}))
+                dynamic = json.loads(browser.request(collections, 200, method="POST", token=browser.csrf(), body={
+                    "name": "Doujin saved search", "filters": {"includeTags": ["doujinshi"], "excludeTags": ["Adventure"]},
+                }))
+                member_path = f"{collections}/{manual['id']}/membership"
+                membership = {"rootId": root_id, "seriesKey": series["key"], "included": True}
+                browser.request(member_path, 204, method="PUT", token=browser.csrf(), body=membership)
+                browser.request(member_path, 204, method="PUT", token=browser.csrf(), body=membership)
+                browser.request(f"{collections}/{dynamic['id']}/membership", 404, method="PUT", token=browser.csrf(), body=membership)
+            with start_app(executable, fixture / "metadata-data", media, None) as address:
+                wait_for_server(address)
+                browser = Browser(address)
+                browser.sign_in(password)
+                for collection in (manual, dynamic):
+                    items = json.loads(browser.request(f"{collections}/{collection['id']}/series", 200))["items"]
+                    assert [(item["rootId"], item["key"]) for item in items] == [(root_id, series["key"])]
+                browser.request(member_path, 204, method="PUT", token=browser.csrf(), body=dict(membership, included=False))
+                assert json.loads(browser.request(f"{collections}/{manual['id']}/series", 200))["total"] == 0
+                browser.request(f"{collections}/{manual['id']}", 204, method="DELETE", token=browser.csrf())
+                assert browser.series(root_id, "?includeTag=doujinshi")["total"] == 1
         finally:
             service.shutdown()
             server.join(timeout=5)

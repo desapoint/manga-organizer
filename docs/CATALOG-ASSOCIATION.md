@@ -40,6 +40,8 @@ Series details can search AniList by title and apply an owner-selected manga or 
 
 Owners can also enter titles, summaries, publication types and totals directly. Search matches local paths, inferred titles and saved titles and alternates. Metadata lookups are initiated from the WebUI. [Deferred metadata enhancements](ROADMAP.md#metadata-enhancements)
 
+Filter Library series by saved tags. A series must have every included tag and is excluded if it has any excluded tag. Dynamic collections save the title search, cover requirement and tag filters and reevaluate them across active library folders. Manual collections retain explicit series selections. Deleting a collection removes its rules or selections and leaves the series and files in the library.
+
 Visible volume and chapter labels come from explicit filename numbers or owner-confirmed coverage. A volume with unknown coverage has a volume label and no inferred chapter count. The owner can list every verified chapter in a volume file. Availability counts distinct indexed chapter and volume pairs once. A missing publication total stays unknown. Metadata and confirmed coverage follow the verified content ID during a rescan after a move.
 
 ## Cover previews during scans

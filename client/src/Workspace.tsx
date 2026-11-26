@@ -1,4 +1,4 @@
-import { Ellipsis, Inbox, LayoutGrid, Library, LogOut, PanelLeftClose, PanelLeftOpen, SlidersHorizontal } from 'lucide-react';
+import { Ellipsis, Folders, Inbox, LayoutGrid, Library, LogOut, PanelLeftClose, PanelLeftOpen, SlidersHorizontal } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { Appearance } from './appearance';
@@ -15,10 +15,11 @@ const destinations = [
   { id: 'library', href: '#library', label: 'Library', title: 'Library catalog', section: 'Library', icon: Library },
   { id: 'import', href: '#intake', label: 'Import intake', title: 'Import intake', section: 'Management', icon: Inbox },
   { id: 'settings', href: '#settings', label: 'Settings', title: 'Library settings', section: 'System', icon: SlidersHorizontal },
+  { id: 'collections', href: '#collections', label: 'Collections', title: 'Collections', section: 'Library', icon: Folders },
 ] as const satisfies readonly Destination[];
 
 const sidebarSections = ['Library', 'Management', 'System'] as const;
-const settings = destinations[3];
+const overflowDestinations = [destinations[4], destinations[3]];
 
 function currentDestination(hash: string) {
   if (seriesLocation(hash)) return destinations[1];
@@ -60,7 +61,7 @@ function MobileNavigation({ view, signingOut, onSignOut }: { view: CatalogView; 
   return (
     <nav aria-label="Library views" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 gap-1 border-t border-line bg-sidebar
       px-[max(.5rem,env(safe-area-inset-left))] pt-1.5 pb-[max(.5rem,env(safe-area-inset-bottom))] desktop:hidden">
-      {destinations.filter(item => item.id !== 'settings').map(item => (
+      {destinations.filter(item => item.id !== 'settings' && item.id !== 'collections').map(item => (
         <NavigationItem key={item.id} destination={item} current={view === item.id} mobile />
       ))}
       <details ref={overflow} className="group relative" onKeyDown={event => {
@@ -69,7 +70,7 @@ function MobileNavigation({ view, signingOut, onSignOut }: { view: CatalogView; 
           overflow.current.querySelector('summary')?.focus();
         }
       }}>
-        <summary data-current={view === 'settings'}
+        <summary data-current={view === 'settings' || view === 'collections'}
           className="flex min-h-14 cursor-pointer list-none flex-col items-center justify-center gap-1 rounded-xl border border-transparent
             px-1 py-1 text-center text-[.72rem] leading-tight font-semibold text-muted hover:bg-nav-hover
             data-[current=true]:border-nav-line data-[current=true]:bg-nav-active data-[current=true]:text-ink [&::-webkit-details-marker]:hidden">
@@ -78,7 +79,7 @@ function MobileNavigation({ view, signingOut, onSignOut }: { view: CatalogView; 
         </summary>
         <div className="absolute end-0 bottom-full mb-2 grid w-48 max-w-[calc(100vw-1rem)] gap-1 rounded-xl border border-line
           bg-elevated p-2 shadow-lg">
-          <div onClick={closeOverflow}><NavigationItem destination={settings} current={view === 'settings'} /></div>
+          <div onClick={closeOverflow}>{overflowDestinations.map(item => <NavigationItem key={item.id} destination={item} current={view === item.id} />)}</div>
           <Button variant="ghost" align="start" icon={LogOut} onClick={onSignOut} disabled={signingOut}>
             {signingOut ? 'Signing out…' : 'Sign out'}
           </Button>

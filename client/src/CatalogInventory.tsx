@@ -1,6 +1,8 @@
 import { ArrowLeft, BookOpen, ChevronRight, Info, Library, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ChapterCoverage } from './ChapterCoverage';
+import { CollectionForm, emptyFilters, SeriesCollectionMembership, TagRulesFields, useTagNames } from './CollectionControls';
+import type { TagRules } from './CollectionControls';
 import { FileMove } from './FileOperations';
 import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataEditor, SeriesInfo, useSeriesDetails } from './SeriesInfo';
@@ -27,7 +29,7 @@ type CatalogEntry = {
   seriesCoverKey: string | null;
 };
 
-type Series = { key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean };
+export type Series = { rootId: string; key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean };
 type Page<T> = { total: number; items: T[] };
 type InventoryProps = { rootId: string; version: string; onSignedOut: () => void };
 type InventoryActions = InventoryProps & { onDataChanged: () => void; managedFolders: LibraryRoot[]; onMoved: () => void };
@@ -42,12 +44,14 @@ const sortOptions = [
   { value: 'files', label: 'Most files' },
 ] as const;
 
-function useInventoryPage<T>(url: string, version: string, onSignedOut: () => void, query?: Record<string, string>) {
+export function useInventoryPage<T>(url: string, version: string, onSignedOut: () => void, query?: Record<string, string> | URLSearchParams) {
   const [offset, setOffset] = useState(0);
   const [stored, setStored] = useState<{ url: string; page: Page<T> } | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const params = new URLSearchParams({ ...query, offset: String(offset), limit: String(PAGE_SIZE) });
+  const params = new URLSearchParams(query);
+  params.set('offset', String(offset));
+  params.set('limit', String(PAGE_SIZE));
   const pageUrl = `${url}?${params}`;
 
   useEffect(() => {
@@ -77,7 +81,7 @@ function useInventoryPage<T>(url: string, version: string, onSignedOut: () => vo
   return { page, error, offset, setOffset, retry: () => setAttempt(value => value + 1) };
 }
 
-function PageControls({ label, offset, count, total, onChange }: {
+export function PageControls({ label, offset, count, total, onChange }: {
   label: string; offset: number; count: number; total: number; onChange: (offset: number) => void;
 }) {
   if (total <= PAGE_SIZE) return null;
@@ -209,13 +213,13 @@ function SeriesRow({ series, onInspect, coverVersion, ...inventory }: InventoryA
   );
 }
 
-function CoverGrid({ series, rootId, coverVersion }: { series: Series[]; rootId: string; coverVersion: string }) {
+export function CoverGrid({ series, coverVersion }: { series: Series[]; coverVersion: string }) {
   return (
     <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(100%,8rem),1fr))] gap-4 p-0 sm:gap-5" role="list" aria-label="Series covers">
       {series.map(item => (
-        <li key={item.key} className="min-w-0">
-          <a href={seriesHref(rootId, item.key)} className="group grid gap-2 rounded-xl border border-transparent p-1 text-start text-ink no-underline hover:bg-panel">
-            <SeriesCover rootId={rootId} seriesKey={item.key} available={item.hasCover} revision={coverVersion}
+        <li key={item.rootId + item.key} className="min-w-0">
+          <a href={seriesHref(item.rootId, item.key)} className="group grid gap-2 rounded-xl border border-transparent p-1 text-start text-ink no-underline hover:bg-panel">
+            <SeriesCover rootId={item.rootId} seriesKey={item.key} available={item.hasCover} revision={coverVersion}
               className="aspect-[2/3] rounded-lg" />
             <span className="line-clamp-2 min-h-10 px-1 text-sm font-semibold wrap-anywhere" title={item.title}>{item.title}</span>
             <span className="px-1 pb-1 text-xs text-muted">{item.fileCount.toLocaleString()} {item.fileCount === 1 ? 'file' : 'files'}</span>
@@ -328,6 +332,7 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
             onChange={catalog.onDataChanged} onSignedOut={onSignedOut} />
         </details>
       </section>}
+      {series && <SeriesCollectionMembership rootId={rootId} seriesKey={seriesKey} onSignedOut={onSignedOut} />}
       {dialog === 'info' && <Modal title="More info" onClose={() => setDialog(null)}>
         <div className="grid gap-4">
           <strong>{title}</strong>
@@ -343,21 +348,23 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
   );
 }
 
-function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, search, sort, coverOnly, ...inventory }: InventoryActions & {
-  scanComplete: boolean; onInspect?: Inspect; coverVersion: string; coverGrid: boolean; search: string; sort: SeriesSort; coverOnly: boolean;
+function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, search, sort, coverOnly, rules, ...inventory }: InventoryActions & {
+  scanComplete: boolean; onInspect?: Inspect; coverVersion: string; coverGrid: boolean; search: string; sort: SeriesSort; coverOnly: boolean; rules: TagRules;
 }) {
   const { rootId, version, onSignedOut } = inventory;
-  const { page, offset, setOffset, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut,
-    { search, sort, coverOnly: String(coverOnly) });
+  const filters = new URLSearchParams({ search, sort, coverOnly: String(coverOnly) });
+  rules.includeTags.forEach(tag => filters.append('includeTag', tag));
+  rules.excludeTags.forEach(tag => filters.append('excludeTag', tag));
+  const { page, offset, setOffset, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut, filters);
 
   return (
     <>
       {error && <InventoryError retry={retry}>Could not load the inventory.</InventoryError>}
       {!page && !error && <p role="status">Loading inventory…</p>}
-      {page?.total === 0 && (search || coverOnly ? <p>No series match these filters.</p> : scanComplete && <p>No supported files found.</p>)}
+      {page?.total === 0 && (search || coverOnly || rules.includeTags.length || rules.excludeTags.length ? <p>No series match these filters.</p> : scanComplete && <p>No supported files found.</p>)}
       {page && page.total > 0 && (
         <>
-          {coverGrid ? <CoverGrid series={page.items} rootId={rootId} coverVersion={coverVersion} /> : (
+          {coverGrid ? <CoverGrid series={page.items} coverVersion={coverVersion} /> : (
             <ul className="m-0 grid list-none gap-2 p-0" role="list" aria-label="Series groups">
               {page.items.map(series => <SeriesRow key={series.key} series={series} onInspect={onInspect} coverVersion={coverVersion} {...inventory} />)}
             </ul>
@@ -412,6 +419,11 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SeriesSort>('title');
   const [coverOnly, setCoverOnly] = useState(false);
+  const [rules, setRules] = useState<TagRules>(emptyFilters);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [saveFilters, setSaveFilters] = useState(false);
+  const { tags, error: tagsError } = useTagNames(filtersOpen ? `${ROOTS_URL}/${inventory.rootId}/tags` : '', inventory.version, inventory.onSignedOut);
+  const activeRules = rules.includeTags.length + rules.excludeTags.length;
   const [catalogRevision, setCatalogRevision] = useState(0);
   const [notice, setNotice] = useState('');
   const catalog = { ...inventory, version: `${inventory.version}:${catalogRevision}`, managedFolders,
@@ -450,11 +462,23 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
             options={[{ value: 'all', label: 'All series' }, { value: 'only', label: 'With cover' }]} onChange={option => setCoverOnly(option === 'only')} />}
         </>}
       </div>
+      {view !== 'files' && <details className="surface p-3" onToggle={event => setFiltersOpen(event.currentTarget.open)}>
+        <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Filter by tag{activeRules ? ` (${activeRules})` : ''}</summary>
+        <div className="grid gap-3">
+          {tagsError && <p role="alert" className="m-0 text-danger">Could not load saved tags.</p>}
+          <TagRulesFields tags={tags} rules={rules} onChange={setRules} />
+        </div>
+      </details>}
+      {!intake && view !== 'files' && (activeRules > 0 || query || coverOnly) && <div className="grid gap-3">
+        {!saveFilters ? <Button variant="secondary" className="justify-self-start" onClick={() => setSaveFilters(true)}>Save filters as collection</Button> :
+          <CollectionForm preset={{ ...rules, search: query, coverOnly: coverOnly && hasCovers }} tags={tags} onSignedOut={inventory.onSignedOut}
+            onCancel={() => setSaveFilters(false)} onSaved={collection => { setSaveFilters(false); setNotice(`Created collection “${collection.name}”.`); }} />}
+      </div>}
       <div className={intake ? 'grid min-w-0 items-start gap-4 min-[72rem]:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]' : undefined}>
         <div className="grid min-w-0 gap-3">
           {view === 'files' ? <FileInventory key={query} {...catalog} onInspect={onInspect} search={query} /> :
-            <GroupedInventory key={`${view}:${query}:${sort}:${coverOnly}`} {...catalog} scanComplete={scanComplete} onInspect={onInspect}
-              coverVersion={coverVersion} coverGrid={view === 'covers'} search={query} sort={sort} coverOnly={coverOnly && hasCovers} />}
+            <GroupedInventory key={JSON.stringify([view, query, sort, coverOnly, rules.includeTags, rules.excludeTags])} {...catalog} scanComplete={scanComplete} onInspect={onInspect}
+              coverVersion={coverVersion} coverGrid={view === 'covers'} search={query} sort={sort} coverOnly={coverOnly && hasCovers} rules={rules} />}
         </div>
         {intake && <IntakeInspector rootPath={rootPath} item={item} onClose={() => setItem(null)} />}
       </div>

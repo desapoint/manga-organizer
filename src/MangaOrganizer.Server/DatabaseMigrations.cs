@@ -21,6 +21,7 @@ internal static class DatabaseMigrations
         new("0007-managed-files"),
         new("0008-operation-artwork"),
         new("0009-anilist-details"),
+        new("0010-series-collections"),
     ];
 
     public static int Apply(string dataDirectory)
