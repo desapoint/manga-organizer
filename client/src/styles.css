@@ -177,6 +177,7 @@ dd { margin: .25rem 0 0; overflow-wrap: anywhere; }
 .catalog-columns { color: #d3ccdf; font-weight: 650; }
 .catalog-files li:last-child { border-bottom: 0; }
 .catalog-files .file-path { color: #f0edf7; overflow-wrap: anywhere; }
+.catalog-files .file-path small { display: block; margin-top: .2rem; color: #b9b3c8; }
 .file-format { color: #c5b1ff; font-weight: 600; }
 .pagination { font-size: .875rem; }
 .server-details { margin-top: 1.5rem; color: #c7c1d3; font-size: .875rem; }

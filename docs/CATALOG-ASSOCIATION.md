@@ -25,6 +25,8 @@ Give each logical chapter a stable identity. Account for the work, language or e
 
 After a rename, manual move or library relocation, match the verified content digest and attach the new location to the existing content and associations. Keep progress, manual metadata and logical chapter identities. If both paths still exist, preserve both locations. A changed digest at the same path creates or reuses its own content record and asks for review before inheriting prior links.
 
+The read-only scanner keeps the original inventory IDs for path rows and assigns stable content IDs after hashing. A verified content record persists even if a scan removes its last indexed location. Series, volume and chapter associations can use that content ID when those workflows are implemented.
+
 Different hashes with explicit links to the same chapter should appear together in duplicate review. Show covers, file paths, release group, edition, coverage and available page evidence so the owner can compare versions and choose what to keep. Titles and cover similarity are matching evidence. Revalidation, recovery and the managed file policy govern any move or cleanup. [Duplicate review and safety](FILE-ORGANIZATION.md#3-duplicate-manager-ux-and-resolution)
 
 ## Cover previews during scans
