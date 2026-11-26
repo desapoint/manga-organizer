@@ -6,9 +6,80 @@ namespace MangaOrganizer.Server;
 internal sealed record DuplicateFile(Guid RootId, string FileId, string RootPath, string RelativePath, string SeriesKey,
     string? SeriesTitle, string ContentId, string Format, long Size, DateTimeOffset ModifiedAt, byte[] Sha256, string? VolumeHint,
     string? ChapterHint, bool Managed, string State, bool HasCover, string? SeriesCoverKey, IReadOnlyList<SeriesChapter> Coverage);
+internal sealed record SeriesDuplicateFile(Guid RootId, string FileId, string RelativePath, string FullPath, string Format, long Size,
+    string? Sha256, string? Volume, bool VolumeArchive, bool HasCover, string? SeriesCoverKey, List<SeriesChapter> Chapters);
+internal sealed record SeriesDuplicateReview(bool CanReviewQuarantine, IReadOnlyList<SeriesDuplicateFile> Files,
+    IReadOnlyList<SeriesChapter> Expected);
 
 internal sealed partial class LibraryStore
 {
+    public SeriesDuplicateReview? ReadSeriesDuplicateReview(Guid root, string series)
+    {
+        using var database = OpenCoverDatabase();
+        using var transaction = database.BeginTransaction(deferred: true);
+        using var command = GroupCommand(database, transaction, root, series);
+        command.CommandText = """
+            WITH identities AS (
+                SELECT DISTINCT content_id FROM library_file WHERE root_id = $root AND series_key = $series
+            ), mapped AS (
+                SELECT c.content_id, c.volume, c.chapter, 'manual' AS source
+                FROM content_chapter c JOIN identities i ON i.content_id = c.content_id
+                UNION ALL
+                SELECT v.content_id, v.volume, chapter.value, v.source
+                FROM inferred_volume_chapters v JOIN identities i ON i.content_id = v.content_id, json_each(v.chapters) chapter
+                WHERE NOT EXISTS(SELECT 1 FROM content_chapter c WHERE c.content_id = v.content_id)
+            )
+            SELECT f.id, f.relative_path, folder.path, f.extension, f.size, c.sha256, f.volume_hint, f.chapter_hint,
+                folder.managed AND r.state = 'complete',
+                EXISTS(SELECT 1 FROM artwork.archive_cover art WHERE art.archive_sha = c.sha256),
+                (SELECT cover.series_key FROM library_series_cover cover WHERE cover.root_id = f.root_id AND cover.series_key = f.series_key),
+                mapped.volume, mapped.chapter, mapped.source
+            FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
+            JOIN library_root r ON r.id = f.root_id LEFT JOIN library_content c ON c.id = f.content_id
+            LEFT JOIN mapped ON mapped.content_id = f.content_id
+            WHERE f.root_id = $root AND f.series_key = $series
+            ORDER BY f.relative_path, mapped.volume, mapped.chapter;
+            """;
+        var files = new Dictionary<string, SeriesDuplicateFile>(StringComparer.Ordinal);
+        var managed = false;
+        using (var rows = command.ExecuteReader())
+        {
+            while (rows.Read())
+            {
+                var id = rows.GetString(0);
+                var volume = ReadText(rows, 6);
+                var chapter = ReadText(rows, 7);
+                if (!files.TryGetValue(id, out var file))
+                {
+                    var path = rows.GetString(1);
+                    file = new(root, id, path, Path.Combine(rows.GetString(2), path), rows.GetString(3), rows.GetInt64(4),
+                        rows.IsDBNull(5) ? null : Convert.ToHexStringLower(rows.GetFieldValue<byte[]>(5)), volume,
+                        volume is not null && chapter is null, rows.GetBoolean(9), ReadText(rows, 10), []);
+                    files.Add(id, file);
+                    managed = rows.GetBoolean(8);
+                }
+                if (ReadText(rows, 12) is { } number)
+                {
+                    var mappedVolume = rows.GetString(11);
+                    file.Chapters.Add(new(mappedVolume.Length == 0 ? null : mappedVolume, number, rows.GetString(13)));
+                }
+                else if (chapter is not null) file.Chapters.Add(new(volume, chapter, "filename"));
+            }
+        }
+        if (files.Count == 0) return null;
+
+        AddWorkKey(command, root, series);
+        command.CommandText = """
+            SELECT DISTINCT manifest.volume, chapter.value
+            FROM edition_volume_manifest manifest, json_each(manifest.chapters) chapter
+            WHERE manifest.work_key = $work OR manifest.work_key = $localWork;
+            """;
+        using var expectedRows = command.ExecuteReader();
+        var expected = new List<SeriesChapter>();
+        while (expectedRows.Read()) expected.Add(new(expectedRows.GetString(0), expectedRows.GetString(1)));
+        return new(managed, files.Values.ToArray(), expected);
+    }
+
     private const string DuplicateColumns = """
         f.root_id, f.id, folder.path, f.relative_path, f.series_key, f.series_title, f.content_id,
         f.extension, f.size, f.modified_at, c.sha256, f.volume_hint, f.chapter_hint, folder.managed, r.state,
@@ -51,7 +122,7 @@ internal sealed partial class LibraryStore
              WHERE f.id <> $file AND (f.content_id = $sameContent
                 OR (f.root_id = $root AND f.series_key = $series AND EXISTS(
                     SELECT 1 FROM covered g WHERE g.content_id = f.content_id AND g.chapter IN (SELECT value FROM json_each($labels)))))
-             ORDER BY f.content_id = $sameContent DESC, folder.path, f.relative_path LIMIT 50;
+             ORDER BY f.content_id = $sameContent DESC, folder.path, f.relative_path;
             """;
         var matches = new List<DuplicateFile>();
         using (var rows = command.ExecuteReader())

@@ -7,6 +7,10 @@ internal static class DuplicateEndpoints
 {
     public static void MapDuplicateReview(this RouteGroupBuilder operations)
     {
+        operations.MapGet("/duplicates/{root:guid}/series/{series}", (Guid root, string series, LibraryStore store) =>
+            LibraryEndpoints.IsSeriesKey(series) && store.ReadSeriesDuplicateReview(root, series.ToLowerInvariant()) is { } review
+                ? Results.Ok(review) : Results.NotFound());
+
         operations.MapGet("/duplicates/{root:guid}/{fileId}", (Guid root, string fileId, ManagedFileOperations manager) =>
             IsFileId(fileId) && manager.ReviewDuplicates(root, fileId.ToLowerInvariant()) is { } comparison ? Results.Ok(comparison) : Results.NotFound());
 

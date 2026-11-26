@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { ChapterCoverage } from './ChapterCoverage';
 import { CollectionForm, emptyFilters, SeriesCollectionMembership, TagRulesFields, useTagNames } from './CollectionControls';
 import type { TagRules } from './CollectionControls';
-import { DuplicateReview } from './DuplicateReview';
+import { DuplicateReview, DuplicateReviewDialog } from './DuplicateReview';
 import { FileMove } from './FileOperations';
 import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataEditor, SeriesInfo, useSeriesDetails } from './SeriesInfo';
@@ -141,8 +141,8 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
           seriesKey ? seriesReaderHref(file.contentId!, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>
       </div>}
       {file.contentId && <div className="col-span-full">
-        <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare duplicates</Button>
-        {showDuplicates && <DuplicateReview rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
+        <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare this file</Button>
+        {showDuplicates && <DuplicateReviewDialog rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
           onClose={() => setShowDuplicates(false)} onChanged={onMoved} />}
       </div>}
       {coverageUrl && file.contentId && <details className="col-span-full" onToggle={event => setShowCoverage(event.currentTarget.open)}>
@@ -237,7 +237,8 @@ export function CoverGrid({ series, coverVersion }: { series: Series[]; coverVer
   );
 }
 
-const seriesViews = [{ value: 'chapters', label: 'Chapters' }, { value: 'volumes', label: 'Volumes' }, { value: 'files', label: 'Files' }] as const;
+const seriesViews = [{ value: 'chapters', label: 'Chapters' }, { value: 'volumes', label: 'Volumes' }, { value: 'files', label: 'Files' },
+  { value: 'duplicates', label: 'Duplicates' }] as const;
 type SeriesView = typeof seriesViews[number]['value'];
 
 function ChapterTotal({ label, value, total }: { label: string; value: number; total: number | null }) {
@@ -308,6 +309,8 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
         <SegmentedControl label="Series views" options={seriesViews} value={view} onChange={value => { setVolume(null); setView(value); }} />
         <div className="surface min-w-0">
           {view === 'files' && <FileInventory {...catalog} seriesKey={seriesKey} />}
+          {view === 'duplicates' && <DuplicateReview rootId={rootId} seriesKey={seriesKey} version={version}
+            onSignedOut={onSignedOut} onChanged={() => { catalog.onDataChanged(); catalog.onMoved(); }} />}
           {view === 'chapters' && <>
             {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all chapters</Button></div>}
             <SeriesChapterList {...seriesTools} rootId={rootId} seriesKey={seriesKey}

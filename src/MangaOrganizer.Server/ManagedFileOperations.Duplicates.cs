@@ -4,7 +4,7 @@ internal sealed record DuplicateFileView(Guid RootId, string FileId, string Rela
     long Size, string Sha256, string? Volume, bool VolumeArchive, IReadOnlyList<SeriesChapter> Chapters, bool HasCover, string? SeriesCoverKey);
 internal sealed record DuplicateComparison(DuplicateFileView Candidate, string Kind, bool CanQuarantine, string Reason,
     IReadOnlyList<SeriesChapter> Shared, IReadOnlyList<SeriesChapter> SourceOnly, IReadOnlyList<SeriesChapter> CandidateOnly);
-internal sealed record DuplicateReview(DuplicateFileView Source, IReadOnlyList<DuplicateComparison> Comparisons);
+internal sealed record DuplicateReview(DuplicateFileView Source, IReadOnlyList<DuplicateComparison> Comparisons, bool CanReviewQuarantine);
 internal sealed record QuarantineRequest(Guid RootId, string? SourceFile, string? KeepFile);
 
 internal sealed partial class ManagedFileOperations
@@ -18,7 +18,7 @@ internal sealed partial class ManagedFileOperations
         var identity = Identity(source);
         var comparisons = store.ReadDuplicateCandidates(source).Select(candidate => Compare(source, candidate, identity))
             .Where(item => item.Kind != "unrelated").ToArray();
-        return new(FileView(source), comparisons);
+        return new(FileView(source), comparisons, source.Managed && source.State == "complete");
     }
 
     public FileOperationView PreviewQuarantine(Guid root, string sourceId, string keepId)
