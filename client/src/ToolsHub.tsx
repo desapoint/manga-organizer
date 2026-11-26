@@ -1,6 +1,7 @@
 import { ArrowLeft, ChevronRight, Files, FolderCog, Layers, NotebookPen, ScanSearch, Settings2 } from 'lucide-react';
 import { useState } from 'react';
 import { PageControls, useInventoryPage } from './CatalogInventory';
+import { DuplicateDecisions, duplicateReviewStates, findingNames } from './DuplicateDecisions';
 import { DuplicateReview } from './DuplicateReview';
 import { duplicateToolsHref, organizeToolsHref, ROOTS_URL, seriesHref, versionsToolsHref } from './library';
 import type { LibraryRoot, SeriesLocation, toolsLocation } from './library';
@@ -14,9 +15,15 @@ import { VersionsTool } from './VersionsTool';
 const duplicateUrl = '/api/file-operations/duplicates';
 const kindOptions = [
   { value: 'all', label: 'All candidate types' },
-  { value: 'bytes', label: 'Same indexed bytes' },
-  { value: 'chapter', label: 'Shared chapter numbers' },
-  { value: 'volume', label: 'Same numbered volume' },
+  { value: 'bytes', label: findingNames.bytes },
+  { value: 'chapter', label: findingNames.chapter },
+  { value: 'volume', label: findingNames.volume },
+] as const;
+const duplicateStatuses = [
+  { value: 'pending', label: duplicateReviewStates.pending },
+  { value: 'kept', label: duplicateReviewStates.kept },
+  { value: 'deferred', label: duplicateReviewStates.deferred },
+  { value: 'all', label: 'All review states' },
 ] as const;
 
 const reviewViews = [{ value: 'files', label: 'File duplicates' }, { value: 'overlaps', label: 'Series overlaps' }] as const;
@@ -30,6 +37,7 @@ export function ToolsHub({ route, roots, version, onSignedOut, onChanged }: Inve
 }) {
   const [root, setRoot] = useState('');
   const [kind, setKind] = useState<typeof kindOptions[number]['value']>('all');
+  const [status, setStatus] = useState<typeof duplicateStatuses[number]['value']>('pending');
   const [search, setSearch] = useState('');
   const series = route.module === 'duplicates' ? route.series : null;
   const versionSeries = route.module === 'versions' ? route.series : null;
@@ -37,6 +45,7 @@ export function ToolsHub({ route, roots, version, onSignedOut, onChanged }: Inve
     organize: 'Organize', maintenance: 'Maintenance', versions: 'Versions and alternatives' }[route.module];
   const query: Record<string, string> = { search: search.trim() };
   if (kind !== 'all') query.kind = kind;
+  if (status !== 'all') query.status = status;
   if (root) query.root = root;
   return <section className="workspace-page" aria-labelledby="tools-heading">
     {route.module !== 'home' && <ActionLink variant="ghost" icon={ArrowLeft}
@@ -56,7 +65,8 @@ export function ToolsHub({ route, roots, version, onSignedOut, onChanged }: Inve
       route.module === 'maintenance' ? <MaintenanceTools roots={roots} onSignedOut={onSignedOut} onChanged={onChanged} /> :
       route.module === 'versions' ? <VersionsTool roots={roots} series={versionSeries} version={version}
         onSignedOut={onSignedOut} onChanged={onChanged} /> :
-      series ? <DuplicateWorkbench key={series.rootId + series.seriesKey} series={series} fileId={route.fileId} kind={query.kind} version={version}
+      series ? <DuplicateWorkbench key={series.rootId + series.seriesKey} series={series} fileId={route.fileId} kind={query.kind}
+        status={query.status} version={version}
         onSignedOut={onSignedOut} onChanged={onChanged} /> :
         <>
           <div className="surface flex flex-wrap items-end gap-3 p-4">
@@ -66,8 +76,9 @@ export function ToolsHub({ route, roots, version, onSignedOut, onChanged }: Inve
               value: folder.id, label: folder.name || folder.path,
             }))]} onChange={setRoot} />
             <Select label="Candidate type" value={kind} options={kindOptions} onChange={setKind} />
+            <Select label="Review status" value={status} options={duplicateStatuses} onChange={setStatus} />
           </div>
-          <DuplicateIndex key={JSON.stringify([root, kind, search])} roots={roots} version={version} onSignedOut={onSignedOut}
+          <DuplicateIndex key={JSON.stringify([root, kind, status, search])} roots={roots} version={version} onSignedOut={onSignedOut}
             query={query} />
         </>}
   </section>;
@@ -106,8 +117,8 @@ function QueueError({ children, onRetry }: { children: string; onRetry: () => vo
     <Button variant="secondary" onClick={onRetry}>Retry</Button></div>;
 }
 
-function DuplicateWorkbench({ series, fileId, kind, version, onSignedOut, onChanged }: Inventory & {
-  series: SeriesLocation; fileId?: string; kind?: string; onChanged: () => void;
+function DuplicateWorkbench({ series, fileId, kind, status, version, onSignedOut, onChanged }: Inventory & {
+  series: SeriesLocation; fileId?: string; kind?: string; status?: string; onChanged: () => void;
 }) {
   const [view, setView] = useState<typeof reviewViews[number]['value']>('files');
   const { rootId, seriesKey } = series;
@@ -116,6 +127,7 @@ function DuplicateWorkbench({ series, fileId, kind, version, onSignedOut, onChan
     {page?.items[0] && <SectionHeader title={page.items[0].title} />}
     <div className="action-row">
       <SegmentedControl label="Duplicate views" options={reviewViews} value={view} onChange={setView} />
+      <DuplicateDecisions {...series} version={version} onSignedOut={onSignedOut} onChanged={onChanged} />
       <ActionLink variant="ghost" href={seriesHref(rootId, seriesKey)}>Open series in Library</ActionLink>
     </div>
     {view === 'overlaps' ? <div className="surface overflow-hidden">
@@ -125,18 +137,19 @@ function DuplicateWorkbench({ series, fileId, kind, version, onSignedOut, onChan
       <div className="surface overflow-hidden">
         <DuplicateReview key={fileId} {...series} fileId={fileId} quickReview version={version} onSignedOut={onSignedOut} onChanged={onChanged} />
       </div>
-    </div> : <FileQueue series={series} kind={kind} version={version} onSignedOut={onSignedOut} />}
+    </div> : <FileQueue series={series} kind={kind} status={status} version={version} onSignedOut={onSignedOut} />}
   </div>;
 }
 
-function FileQueue({ series, kind, version, onSignedOut }: Inventory & { series: SeriesLocation; kind?: string }) {
+function FileQueue({ series, kind, status, version, onSignedOut }: Inventory & { series: SeriesLocation; kind?: string; status?: string }) {
   const url = `${duplicateUrl}/${series.rootId}/series/${series.seriesKey}/queue`;
-  const { page, error, retry, offset, setOffset } = useInventoryPage<QueueFile>(url, version, onSignedOut, kind ? { kind } : undefined);
+  const filters = { ...(kind && { kind }), ...(status && { status }) };
+  const { page, error, retry, offset, setOffset } = useInventoryPage<QueueFile>(url, version, onSignedOut, filters);
   return <section aria-label="Candidate files" className="surface grid gap-3 p-4">
     <SectionHeader title="Candidate files" />
     {error && <QueueError onRetry={retry}>Could not load matching files.</QueueError>}
     {!page && !error && <p role="status">Loading matching files…</p>}
-    {page?.total === 0 && <p>No indexed duplicate candidates for this series.</p>}
+    {page?.total === 0 && <p>No duplicate candidates in this series match the current filters.</p>}
     {page && page.total > 0 && <>
       <ul className="m-0 list-none divide-y divide-line p-0" role="list">
         {page.items.map(file => <li key={file.fileId} className="flex flex-wrap items-center justify-between gap-2 py-2">

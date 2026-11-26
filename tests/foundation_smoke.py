@@ -209,6 +209,7 @@ def verify_web_setup(executable, fixture, media):
             DROP TABLE metadata_suggestion;
             DROP TABLE release_tag;
             DROP TABLE maintenance_reset;
+            DROP TABLE duplicate_review_decision;
             DROP TABLE library_intake_target;
             DROP TABLE edition_volume_release;
             DROP TABLE edition_volume_manifest;
@@ -1585,6 +1586,7 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     second = json.loads(owner.request(f"{queue}?limit=2&offset=2", 200))
     assert first["total"] == second["total"] == 4
     assert {item["relativePath"] for item in first["items"] + second["items"]} == {volume.name, chapter.name, copy.name, alias.name}
+    verify_duplicate_decisions(owner, root, series["key"], files[chapter.name])
     owner.request(f"{LIBRARY_ROOTS}/{root}/series/{series['key']}/edition-volumes", 204, method="PUT", token=owner.csrf(),
                   body={"edition": "Safety fixture", "volume": "1", "chapters": ["1", "24"], "contentIds": []})
     series_review = json.loads(owner.request(f"{operations}/duplicates/{root}/series/{series['key']}", 200))
@@ -1678,6 +1680,51 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     for path in (volume, chapter, copy, alias, unrelated_chapter, unassigned, alternate, translated):
         path.unlink()
     owner.scan(root)
+
+
+def verify_duplicate_decisions(owner, root, series, chapter):
+    api = f"/api/file-operations/duplicates/{root}/series/{series}"
+    url = api + "/decisions"
+    index = "/api/file-operations/duplicates/series?search=Safety+Fixture"
+    Browser(owner.url).request(url, 401)
+
+    def summary():
+        return json.loads(owner.request(url, 200))
+
+    def save(kind, finding, decision, status=204, note=None):
+        owner.request(f"{url}/{kind}", status, method="PUT", token=owner.csrf(), body={
+            "fingerprint": finding["fingerprint"], "latest": finding["latest"], "decision": decision, "note": note,
+        })
+
+    original = {item["kind"]: item for item in summary()["groups"]}
+    assert set(original) == {"bytes", "chapter"} and all(item["status"] == "pending" for item in original.values())
+    body = {"fingerprint": original["bytes"]["fingerprint"], "latest": 0, "decision": "defer"}
+    owner.request(url + "/bytes", 400, method="PUT", body=body)
+    save("chapter", original["chapter"], "keep", note="Keep the standalone and volume.")
+    save("chapter", original["chapter"], "keep", status=409)
+    save("bytes", original["bytes"], "defer")
+    assert json.loads(owner.request(index + "&status=pending", 200))["total"] == 0
+    assert json.loads(owner.request(index + "&status=kept&kind=chapter", 200))["total"] == 1
+    assert json.loads(owner.request(index + "&status=deferred&kind=bytes", 200))["total"] == 1
+    page = json.loads(owner.request(api + "/queue?status=kept&limit=1", 200))
+    assert page["total"] == 4 and page["items"][0]["reasons"] == ["chapter"]
+    owner.request(index + "&status=other", 400)
+
+    before = summary()
+    owner.scan(root)
+    assert summary() == before
+    version = f"/api/versions/{root}/files/{chapter['id']}"
+    owner.request(version, 204, method="PUT", token=owner.csrf(),
+                  body={"contentId": chapter["contentId"], "revision": 0, "language": "en"})
+    changed = summary()
+    by_kind = {item["kind"]: item for item in changed["groups"]}
+    assert by_kind["chapter"]["status"] == "pending" and by_kind["chapter"]["evidenceChanged"]
+    assert by_kind["bytes"]["status"] == "deferred" and not by_kind["bytes"]["evidenceChanged"]
+    assert changed["recent"] == before["recent"]
+    assert changed["recent"][1]["note"] == "Keep the standalone and volume."
+    save("bytes", by_kind["bytes"], "reopen")
+    assert summary()["recent"][0]["decision"] == "reopen"
+    assert json.loads(owner.request(index + "&status=pending&kind=bytes", 200))["total"] == 1
 
 
 def verify_metadata_queue(executable, fixture):
