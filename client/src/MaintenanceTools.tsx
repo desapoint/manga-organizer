@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { getCsrfToken } from './api';
 import { formatSize, scanIsActive } from './library';
 import type { LibraryRoot } from './library';
+import { MaintenanceResets } from './MaintenanceResets';
 import { ScanStatus } from './ScanStatus';
 import { Button, SectionHeader } from './ui';
 
@@ -110,5 +111,6 @@ export function MaintenanceTools({ roots, onSignedOut, onChanged }: {
       <Button icon={Image} variant="secondary" className="justify-self-start" disabled={!roots || pending !== null || scanActive}
         onClick={() => void clearArtwork()}>Clear artwork cache</Button>
     </section>
+    <MaintenanceResets roots={roots} onSignedOut={onSignedOut} onChanged={onChanged} />
   </>;
 }
