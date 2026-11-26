@@ -20,6 +20,8 @@ The first usable WebUI reader must show cover art from the media files. Honor a 
 
 The MVP requires live scan progress, searchable local files and basic manga and doujin metadata, series and chapter availability, reading completion counts, one functional right-to-left reader, reviewed file moves and renames, and versioned SQLite migrations with a runnable command and verification job. Keep acquisition, downloads and complex metadata scraping outside the MVP. Track deliverables in docs/ROADMAP.md.
 
+Add new SQLite schema changes as numbered SQL migrations in src/MangaOrganizer.Server/Migrations and register them in DatabaseMigrations. Keep applied migrations immutable. Test fresh installation and supported legacy upgrades with the packaged migration command.
+
 File organization and deduplication are core features (F69/F70), not optional reader extras. Read-only discovery first; never remove a file based on title, size, weak fingerprint or similar-looking pages. Protect hardlinks, alternate editions, progress and unique chapter/page coverage. No automatic permanent deletion without explicit owner policy; preview/revalidate/journal/restore all approved mutations. See docs/FILE-ORGANIZATION.md for requirements and acceptance gates.
 
 Audit completion is explicitly requested. Consult docs/source-audit/COMPLETION-LEDGER.md and PASS3.md. Close module behavior, release/license and runtime gates with recorded evidence. Foundation smoke tests verify the development build and retain the target qualification gates.

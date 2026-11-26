@@ -13,3 +13,5 @@
 !src/MangaOrganizer.Server/*.cs
 !src/MangaOrganizer.Server/*.csproj
 !src/MangaOrganizer.Server/packages.lock.json
+!src/MangaOrganizer.Server/Migrations/
+!src/MangaOrganizer.Server/Migrations/*.sql

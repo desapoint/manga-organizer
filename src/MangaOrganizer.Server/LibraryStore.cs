@@ -21,57 +21,8 @@ internal sealed partial class LibraryStore
         using var transaction = database.BeginTransaction();
         using var command = database.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = """
-            CREATE TABLE IF NOT EXISTS library_root (
-                id TEXT PRIMARY KEY,
-                path_key TEXT NOT NULL UNIQUE,
-                state TEXT NOT NULL DEFAULT 'idle',
-                file_count INTEGER NOT NULL DEFAULT 0,
-                last_attempt_at TEXT,
-                last_scanned_at TEXT,
-                skipped_links INTEGER NOT NULL DEFAULT 0
-            );
-            CREATE TABLE IF NOT EXISTS library_content (
-                id TEXT PRIMARY KEY NOT NULL DEFAULT (lower(hex(randomblob(16)))),
-                sha256 BLOB NOT NULL UNIQUE CHECK (length(sha256) = 32)
-            );
-            CREATE TABLE IF NOT EXISTS library_file (
-                id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-                root_id TEXT NOT NULL REFERENCES library_root(id),
-                relative_path TEXT NOT NULL,
-                extension TEXT NOT NULL,
-                size INTEGER NOT NULL,
-                modified_at TEXT NOT NULL,
-                content_id TEXT REFERENCES library_content(id),
-                UNIQUE(root_id, relative_path)
-            );
-            CREATE TABLE IF NOT EXISTS library_settings (
-                singleton INTEGER PRIMARY KEY CHECK (singleton = 1)
-            );
-            CREATE TABLE IF NOT EXISTS library_series_cover (
-                root_id TEXT NOT NULL REFERENCES library_root(id),
-                series_key TEXT NOT NULL,
-                relative_path TEXT NOT NULL,
-                size INTEGER NOT NULL,
-                modified_at TEXT NOT NULL,
-                archive_entry TEXT,
-                sha256 BLOB NOT NULL CHECK (length(sha256) = 32),
-                PRIMARY KEY(root_id, series_key)
-            );
-            UPDATE library_root SET state = 'interrupted' WHERE state IN ('queued', 'scanning');
-            """;
+        command.CommandText = "UPDATE library_root SET state = 'interrupted' WHERE state IN ('queued', 'scanning');";
         command.ExecuteNonQuery();
-
-        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('library_file') WHERE name = 'content_id';";
-        if ((long)command.ExecuteScalar()! == 0)
-        {
-            command.CommandText = "ALTER TABLE library_file ADD COLUMN content_id TEXT REFERENCES library_content(id);";
-            command.ExecuteNonQuery();
-        }
-        command.CommandText = "CREATE INDEX IF NOT EXISTS library_file_content ON library_file(content_id, root_id);";
-        command.ExecuteNonQuery();
-        InitializeFolders(command);
-        InitializeSeries(database, command);
 
         command.CommandText = "INSERT OR IGNORE INTO library_settings(singleton) VALUES (1);";
         if (command.ExecuteNonQuery() == 1)

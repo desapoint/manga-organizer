@@ -6,15 +6,33 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.Sqlite;
 
 const string sessionScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 const string bootstrapPasswordSetting = "MANGA_ORGANIZER_BOOTSTRAP_PASSWORD";
-var builder = WebUi.CreateBuilder(args);
+var migrationOnly = args is ["--migrate"];
+var builder = WebUi.CreateBuilder(migrationOnly ? [] : args);
 
 var dataDirectory = Path.GetFullPath(builder.Configuration["MANGA_ORGANIZER_DATA_DIR"] ?? Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify),
     "MangaOrganizer"));
 Directory.CreateDirectory(dataDirectory);
+try
+{
+    var schemaVersion = DatabaseMigrations.Apply(dataDirectory);
+    if (migrationOnly)
+    {
+        Console.WriteLine($"Database schema version {schemaVersion} is ready.");
+        return;
+    }
+}
+catch (Exception error) when (error is SqliteException or IOException or InvalidOperationException)
+{
+    Console.Error.WriteLine($"Database migration failed: {error.Message}");
+    Environment.ExitCode = 1;
+    return;
+}
+
 var bootstrapPassword = builder.Configuration[bootstrapPasswordSetting];
 var (identity, _) = ServerStore.Open(dataDirectory, bootstrapPassword);
 if (identity is null)

@@ -7,7 +7,7 @@ internal sealed record CatalogSeries(string Key, string Title, long FileCount, b
 
 internal sealed partial class LibraryStore
 {
-    private static void InitializeSeries(SqliteConnection database, SqliteCommand command)
+    internal static void InitializeSeries(SqliteConnection database, SqliteCommand command)
     {
         command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('library_file') WHERE name = 'series_key';";
         if ((long)command.ExecuteScalar()! == 0)
