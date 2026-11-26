@@ -85,6 +85,7 @@ export function organizeToolsHref(rootId?: string, seriesKey?: string) {
 export function toolsLocation(hash: string) {
   if (hash === '#tools') return { module: 'home' as const };
   if (hash === '#tools/metadata') return { module: 'metadata' as const };
+  if (hash === '#tools/maintenance') return { module: 'maintenance' as const };
   const organize = /^#tools\/organize(?:\/([a-f0-9-]{36})(?:\/([a-f0-9]{64}))?)?$/i.exec(hash);
   if (organize) return { module: 'organize' as const, rootId: organize[1], seriesKey: organize[2] };
   const match = /^#tools\/duplicates(?:\/([a-f0-9-]{36})\/([a-f0-9]{64})(?:\/([a-f0-9]{32}))?)?$/i.exec(hash);

@@ -2,8 +2,40 @@ using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
+internal sealed record ClearedArtwork(long Images, long ImageBytes);
+
 internal sealed partial class LibraryStore
 {
+    public ClearedArtwork? ClearArtworkCache()
+    {
+        using var database = OpenCoverDatabase();
+        using var transaction = database.BeginTransaction(deferred: false);
+        using var command = database.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT EXISTS(SELECT 1 FROM library_root WHERE state IN ('queued', 'scanning'))
+                OR EXISTS(SELECT 1 FROM file_operation WHERE state IN ('applying', 'restoring'));
+            """;
+        if ((long)command.ExecuteScalar()! != 0) return null;
+
+        command.CommandText = "SELECT COUNT(*), COALESCE(SUM(length(data)), 0) FROM artwork.image;";
+        ClearedArtwork cleared;
+        using (var rows = command.ExecuteReader())
+        {
+            rows.Read();
+            cleared = new(rows.GetInt64(0), rows.GetInt64(1));
+        }
+        command.CommandText = """
+            DELETE FROM artwork.archive_cover;
+            DELETE FROM artwork.folder_cover;
+            DELETE FROM artwork.image;
+            PRAGMA artwork.incremental_vacuum;
+            """;
+        command.ExecuteNonQuery();
+        transaction.Commit();
+        return cleared;
+    }
+
     public byte[]? ReadCover(Guid rootId, string seriesKey)
     {
         using var database = OpenCoverDatabase();

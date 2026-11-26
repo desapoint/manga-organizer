@@ -968,6 +968,42 @@ def verify_volume_chapters(owner, root_id, path):
     assert len(coverage(moved, new_url)) == 3
 
 
+def verify_maintenance(owner):
+    url = "/api/maintenance"
+    roots = owner.roots()
+    root, file = next((item, file) for item in roots if item["kind"] in {"library", "both"}
+                      for file in owner.files(item["id"], "?limit=100")["items"] if file["hasCover"])
+    cover = f"{LIBRARY_ROOTS}/{root['id']}/files/{file['id']}/cover"
+    original_cover = owner.request(cover, 200)
+    inventory = owner.files(root["id"], "?limit=100")
+    owner.request(url + "/artwork-cache/clear", 400, method="POST")
+    cleared = json.loads(owner.request(url + "/artwork-cache/clear", 200, method="POST", token=owner.csrf()))
+    assert cleared["images"] > 0 and cleared["imageBytes"] > 0
+    owner.request(cover, 404)
+    after = owner.files(root["id"], "?limit=100")
+    assert [(item["id"], item["sha256"]) for item in inventory["items"]] == [(item["id"], item["sha256"]) for item in after["items"]]
+
+    def wait(ids):
+        for _ in range(100):
+            current = {item["id"]: item["state"] for item in owner.roots() if item["id"] in ids}
+            if len(current) == len(ids) and not any(state in {"queued", "scanning"} for state in current.values()):
+                return
+            time.sleep(0.1)
+        raise AssertionError("Maintenance scans did not finish")
+
+    missing = str(uuid4())
+    selection = {"rootIds": [root["id"], root["id"], missing]}
+    owner.request(url + "/scans", 400, method="POST", body=selection)
+    body = owner.request(url + "/scans", 202, method="POST", token=owner.csrf(), body=selection)
+    assert json.loads(body) == [{"rootId": root["id"], "state": "queued"}, {"rootId": missing, "state": "missing"}]
+    wait({root["id"]})
+    assert owner.request(cover, 200) == original_cover
+    all_scans = json.loads(owner.request(url + "/scans", 202, method="POST", token=owner.csrf(), body={"allLibraries": True}))
+    library_ids = {item["id"] for item in roots if item["kind"] in {"library", "both"}}
+    assert {result["rootId"] for result in all_scans} == library_ids
+    wait(library_ids)
+
+
 def smoke(start, media):
     password = uuid4().hex
     with start(password) as url:
@@ -984,6 +1020,7 @@ def smoke(start, media):
         first.request(LIBRARY_ROOTS, 401)
         first.request(f"{LIBRARY_ROOTS}/{uuid4()}/series", 401)
         first.request("/api/library/folders", 401)
+        first.request("/api/maintenance/artwork-cache/clear", 401, method="POST")
         first.request("/api/session", 400, method="POST", body={"password": password})
         first.sign_in(uuid4().hex, 401)
         first.sign_in(password)
@@ -998,6 +1035,7 @@ def smoke(start, media):
         roots = verify_folder_settings(first, media)
         verify_reader(first, second, roots[-1]["id"], media / "intake")
         verify_volume_chapters(first, roots[-1]["id"], media / "intake")
+        verify_maintenance(first)
         roots = first.roots()
         inventory = first.files(roots[0]["id"], "?limit=100")
         series = first.series(roots[-1]["id"])
