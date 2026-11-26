@@ -21,7 +21,6 @@
   --color-violet: #bda5fa;
   --color-mint: #96e2c5;
   --color-coral: #ffa5a2;
-  --color-coverage-single: #96e2c5;
   --color-accent: var(--color-violet);
   --color-accent-hover: color-mix(in srgb, var(--color-accent), white 20%);
   --color-accent-readable: var(--color-accent);
@@ -104,10 +103,6 @@
 
   .coverage-mark[data-variant='band'] {
     --coverage-fill: color-mix(in oklab, var(--coverage-color) 66%, var(--color-elevated));
-  }
-
-  .coverage-mark[data-variant='band'][data-pattern='striped'] {
-    --coverage-fill: color-mix(in srgb, var(--coverage-color) 46%, var(--color-elevated));
   }
 
   .coverage-mark[data-pattern='striped'] {
