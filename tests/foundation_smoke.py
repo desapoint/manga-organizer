@@ -1,6 +1,7 @@
 """Exercise the published server through its browser-facing HTTP API."""
 
 import argparse
+from base64 import b64decode
 from contextlib import closing, contextmanager
 from hashlib import sha256
 from http.cookiejar import CookieJar
@@ -371,29 +372,83 @@ def synthetic_png(red, green, blue, width=12, height=18):
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(pixels)) + chunk(b"IEND", b"")
 
 
+def webp_dimensions(image):
+    assert image[:4] == b"RIFF" and image[8:12] == b"WEBP"
+    if image[12:16] == b"VP8X":
+        return 1 + int.from_bytes(image[24:27], "little"), 1 + int.from_bytes(image[27:30], "little")
+    if image[12:16] == b"VP8L":
+        bits = int.from_bytes(image[21:25], "little")
+        return 1 + (bits & 0x3fff), 1 + ((bits >> 14) & 0x3fff)
+    assert image[12:16] == b"VP8 " and image[23:26] == b"\x9d\x01\x2a"
+    width, height = struct.unpack_from("<HH", image, 26)
+    return width & 0x3fff, height & 0x3fff
+
+
 def verify_cover_art(owner, root_id, path):
-    sidecar_bytes, first_page, later_page = synthetic_png(90, 20, 220), synthetic_png(32, 160, 122), synthetic_png(221, 42, 70)
+    first_page = synthetic_png(32, 160, 122, 12, 18)
+    later_page = synthetic_png(221, 42, 70, 26, 39)
+    detailed_cover = synthetic_png(42, 70, 225, 1600, 2400)
+    # Independently encoded 21×33 JPEG and 19×30 WebP examples.
+    jpeg = b64decode("/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFR"
+                     "ERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4e"
+                     "Hh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAAhABUDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xA"
+                     "AUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAUI/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/a"
+                     "AAwDAQACEQMRAD8Ai4DRq6AAAAAAAAAA/9k=")
+    webp = b64decode("UklGRkgAAABXRUJQVlA4IDwAAABQAwCdASoTAB4APlEkj0WjoiEUBAA4BQSygDsAfgAAZN/sAAD9xx//"
+                     "8guWF1yNf//ILlhdcUo2YiQAAAA=")
     src = path / "Éclipse"
     src.mkdir()
-    with ZipFile(src / "Éclipse v01.cbz", "w", compression=ZIP_DEFLATED) as archive:
+    first_archive = src / "Éclipse v01.cbz"
+    with ZipFile(first_archive, "w", compression=ZIP_DEFLATED) as archive:
         archive.writestr("./unsafe.png", later_page)
         archive.writestr("pages/1.png", b"Corrupt first entry")
         archive.writestr("pages/10.png", later_page)
         archive.writestr("pages/2.png", first_page)
-    (src / "cover.png").write_bytes(sidecar_bytes)
+    with ZipFile(src / "Éclipse v02.cbz", "w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr("pages/1.png", first_page)
+        archive.writestr("pages/2.png", detailed_cover)
+        archive.writestr("pages/front-cover.png", later_page)
+        archive.writestr("ComicInfo.xml", '<ComicInfo><Pages><Page Image="1" Type="FrontCover"/></Pages></ComicInfo>')
+    with ZipFile(src / "Éclipse v03.zip", "w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr("pages/1.png", first_page)
+        archive.writestr("pages/front-cover.png", later_page)
+        archive.writestr("ComicInfo.xml", '<ComicInfo><Pages><Page Image="999" Type="FrontCover"/></Pages></ComicInfo>')
+    (src / "Éclipse v04.cbz").write_bytes(first_archive.read_bytes())
+    (src / "cover.jpg").write_bytes(jpeg)
+    (src / "cover-1.webp").write_bytes(webp)
+    (src / "cover-2.png").write_bytes(later_page)
     owner.scan(root_id)
     assert any(root["id"] == root_id and root["hasCovers"] for root in owner.roots())
     (series,) = owner.series(root_id, "?search=eclipse&coverOnly=true")["items"]
     assert series["title"] == "Éclipse" and series["hasCover"]
     url = f"{LIBRARY_ROOTS}/{root_id}/series/{series['key']}/cover"
-    assert owner.request(url, 200) == sidecar_bytes
-    assert owner.headers.get_content_type() == "image/png" and owner.headers["X-Content-Type-Options"] == "nosniff"
+    sidecar = owner.request(url, 200)
+    assert webp_dimensions(sidecar) == (21, 33)
+    assert owner.headers.get_content_type() == "image/webp" and owner.headers["X-Content-Type-Options"] == "nosniff"
     Browser(owner.url).request(url, 401)
 
-    (src / "cover.png").write_bytes(b"Invalid cover")
-    owner.request(url, 404)
+    files = owner.files(root_id, f"?seriesKey={series['key']}")["items"]
+    assert len(files) == 4 and all(file["hasCover"] for file in files)
+    archive_urls = [f"{LIBRARY_ROOTS}/{root_id}/files/{file['id']}/cover" for file in files]
+    archive_covers = [owner.request(cover_url, 200) for cover_url in archive_urls]
+    assert [webp_dimensions(cover) for cover in archive_covers] == [(12, 18), (1365, 2048), (26, 39), (12, 18)]
+    assert archive_covers[0] == archive_covers[3]
+    Browser(owner.url).request(archive_urls[0], 401)
+
+    offline_archive = first_archive.with_suffix(".offline")
+    first_archive.rename(offline_archive)
+    try:
+        assert owner.request(archive_urls[0], 200) == archive_covers[0]
+        (src / "cover.jpg").write_bytes(b"Invalid cover")
+        assert owner.request(url, 200) == sidecar
+    finally:
+        offline_archive.rename(first_archive)
     owner.scan(root_id)
-    assert owner.request(url, 200) == first_page
+    assert webp_dimensions(owner.request(url, 200)) == (19, 30)
+    (src / "cover-1.webp").unlink()
+    (src / "cover-2.png").unlink()
+    owner.scan(root_id)
+    assert owner.request(url, 200) == archive_covers[0]
     all_series = owner.series(root_id, "?sort=files")["items"]
     assert all_series[0]["fileCount"] == 53 and any(not grouped["hasCover"] for grouped in all_series)
     owner.request(f"{LIBRARY_ROOTS}/{root_id}/series?sort=unknown", 400)
