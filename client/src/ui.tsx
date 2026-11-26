@@ -1,4 +1,5 @@
-import { BookOpen, Search } from 'lucide-react';
+import { BookOpen, Search, X } from 'lucide-react';
+import { useId, useLayoutEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
 import type { ScanState } from './library';
@@ -74,6 +75,32 @@ export function PageHeader({ id, section, title, children }: { id: string; secti
 
 export function SectionHeader({ id, title }: { id?: string; title: string }) {
   return <h2 id={id} className="m-0 text-lg font-semibold tracking-tight">{title}</h2>;
+}
+
+export function Modal({ title, onClose, children, className = '' }: {
+  title: string; onClose: () => void; children: ReactNode; className?: string;
+}) {
+  const id = useId();
+  const dialog = useRef<HTMLDialogElement>(null);
+
+  useLayoutEffect(() => {
+    const element = dialog.current;
+    const previous = document.activeElement;
+    element?.showModal();
+    return () => {
+      element?.close();
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, []);
+
+  return <dialog ref={dialog} aria-labelledby={id} onCancel={event => { event.preventDefault(); onClose(); }}
+    className={`m-auto w-[min(36rem,calc(100%-2rem))] max-h-[calc(100dvh-2rem)] overflow-auto rounded-xl border border-line bg-panel p-4 text-ink backdrop:bg-black/70 sm:p-5 ${className}`}>
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <SectionHeader id={id} title={title} />
+      <Button variant="ghost" icon={X} aria-label="Close dialog" onClick={onClose} autoFocus />
+    </div>
+    {children}
+  </dialog>;
 }
 
 export function SegmentedControl<Value extends string>({ label, value, options, onChange }: {

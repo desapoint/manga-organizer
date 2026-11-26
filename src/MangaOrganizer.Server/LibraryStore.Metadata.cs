@@ -10,8 +10,10 @@ internal sealed record SeriesMetadata(string Title, string Kind, string? Alterna
     public string? ProviderUrl => ProviderId is { } id ? MetadataAgent.ListingUrl(id) : null;
 }
 internal sealed record SeriesChapter(string? Volume, string Chapter);
+internal sealed record LibraryChapter(string? Volume, string Chapter, string? ContentId, int ReadableFiles);
+internal sealed record SeriesReading(string ContentId, string RelativePath, int? PageIndex, int? PageCount, bool HasFinishedFile);
 internal sealed record SeriesDetails(SeriesMetadata? Metadata, int AvailableChapters, int ReadChapters, IReadOnlyList<string> Volumes,
-    IReadOnlyList<SeriesChapter> Chapters);
+    IReadOnlyList<LibraryChapter> Chapters, SeriesReading? Reading);
 
 internal sealed partial class LibraryStore
 {
@@ -50,18 +52,28 @@ internal sealed partial class LibraryStore
 
         var metadata = ReadMetadata(command);
         command.Parameters.AddWithValue("$owner", owner);
-        command.CommandText = "SELECT coverage.volume, coverage.chapter, MAX(COALESCE(p.completed, 0)) FROM (" + GroupCoverage + """
+        command.CommandText = """
+            WITH readable AS (
+                SELECT DISTINCT f.content_id FROM library_file f JOIN library_root r ON r.id = f.root_id
+                WHERE f.root_id = $root AND f.series_key = $series AND r.state <> 'unavailable'
+                  AND f.content_id IS NOT NULL AND f.extension IN ('cbz', 'zip', 'cbr', 'rar')
+            )
+            SELECT coverage.volume, coverage.chapter, MAX(COALESCE(p.completed, 0)), COUNT(readable.content_id), MIN(readable.content_id)
+            FROM (
+            """ + " " + GroupCoverage + """
             ) coverage LEFT JOIN reading_progress p ON p.owner_id = $owner AND p.content_id = coverage.content_id
+            LEFT JOIN readable ON readable.content_id = coverage.content_id
             GROUP BY coverage.volume, coverage.chapter;
             """;
-        var chapters = new List<SeriesChapter>();
+        var chapters = new List<LibraryChapter>();
         var readChapters = 0;
         using (var rows = command.ExecuteReader())
         {
             while (rows.Read())
             {
                 var volume = rows.GetString(0);
-                chapters.Add(new(volume.Length == 0 ? null : volume, rows.GetString(1)));
+                var count = rows.GetInt32(3);
+                chapters.Add(new(volume.Length == 0 ? null : volume, rows.GetString(1), count == 1 ? rows.GetString(4) : null, count));
                 if (rows.GetBoolean(2)) readChapters++;
             }
         }
@@ -76,7 +88,40 @@ internal sealed partial class LibraryStore
         }
 
         return new(metadata, chapters.Count, readChapters, volumes.OrderBy(Numeric).Take(500).ToArray(),
-            chapters.OrderBy(chapter => Numeric(chapter.Volume)).ThenBy(chapter => Numeric(chapter.Chapter)).Take(500).ToArray());
+            chapters.OrderBy(chapter => Numeric(chapter.Volume)).ThenBy(chapter => Numeric(chapter.Chapter)).Take(500).ToArray(),
+            ReadSeriesReading(command));
+    }
+
+    private static SeriesReading? ReadSeriesReading(SqliteCommand command)
+    {
+        command.CommandText = """
+            SELECT f.content_id, f.relative_path, f.series_title, p.page_index, p.page_count, COALESCE(p.completed, 0)
+            FROM library_file f JOIN library_root r ON r.id = f.root_id
+            LEFT JOIN reading_progress p ON p.owner_id = $owner AND p.content_id = f.content_id
+            WHERE f.root_id = $root AND f.series_key = $series AND r.state <> 'unavailable'
+              AND f.content_id IS NOT NULL AND f.extension IN ('cbz', 'zip', 'cbr', 'rar')
+            ORDER BY p.updated_at DESC, f.relative_path;
+            """;
+        using var rows = command.ExecuteReader();
+        SeriesReading? first = null;
+        CoverOrder firstOrder = default;
+        var finishedFile = false;
+        while (rows.Read())
+        {
+            if (rows.GetBoolean(5))
+            {
+                finishedFile = true;
+                continue;
+            }
+            var path = rows.GetString(1);
+            if (!rows.IsDBNull(3)) return new(rows.GetString(0), path, rows.GetInt32(3), rows.GetInt32(4), finishedFile);
+            var order = CoverOrder.ForFile(path, ReadText(rows, 2));
+            if (first is not null && order.CompareTo(firstOrder) >= 0) continue;
+            firstOrder = order;
+            first = new(rows.GetString(0), path, null, null, false);
+        }
+
+        return first is null ? null : first with { HasFinishedFile = finishedFile };
     }
 
     public SeriesMetadata? SaveMetadata(Guid root, string seriesKey, SeriesMetadata metadata)
@@ -135,8 +180,11 @@ internal sealed partial class LibraryStore
         if (!rows.Read()) return null;
 
         var details = ReadText(rows, 8) is { } stored ? JsonSerializer.Deserialize<AniListDetails>(stored) : null;
-        return new(rows.GetString(0), rows.GetString(1), ReadText(rows, 2), ReadText(rows, 3), ReadText(rows, 4),
-            ReadInt(rows, 5), ReadInt(rows, 6), ReadInt(rows, 7), details);
+        var providerId = ReadInt(rows, 7);
+        var summary = ReadText(rows, 3);
+        return new(rows.GetString(0), rows.GetString(1), ReadText(rows, 2),
+            providerId.HasValue ? MetadataAgent.PlainDescription(summary) : summary, ReadText(rows, 4),
+            ReadInt(rows, 5), ReadInt(rows, 6), providerId, details);
     }
 
     public bool SaveCoverage(Guid root, string seriesKey, string contentId, string volume, IReadOnlyList<string> chapters)
