@@ -6,6 +6,7 @@ internal sealed record ReleaseTags(string? Language, string Color, string Censor
 internal sealed record VersionFile(Guid RootId, string FileId, string ContentId, string RelativePath, string Reason, ReleaseTags Tags);
 internal sealed record VersionSeries(Guid RootId, string SeriesKey, string Title, long ReleaseCount);
 internal sealed record StoredRelease(string ContentId, string RelativePath, ReleaseTags Tags);
+internal sealed record SelectedRelease(string FileId, string ContentId, string RelativePath, ReleaseTags Tags);
 internal sealed record VersionFilters(string Search, string? Language, string? Color, string? Censorship, string? Edition, string? Group, bool? Reviewed);
 
 internal sealed partial class LibraryStore
@@ -114,6 +115,67 @@ internal sealed partial class LibraryStore
         if (ReadStoredRelease(command) is not { } current || current.ContentId != contentId || current.Tags.Revision != tags.Revision)
             return false;
 
+        WriteReleaseTags(database, transaction, contentId, tags);
+        transaction.Commit();
+        return true;
+    }
+
+    public IReadOnlyList<SelectedRelease>? ReadReleaseTagsBatch(Guid root, IReadOnlyList<string> fileIds)
+    {
+        using var database = OpenDatabase();
+        using var transaction = database.BeginTransaction(deferred: true);
+        using var command = database.CreateCommand();
+        command.Transaction = transaction;
+        BindReleaseLocation(command, root, "");
+        var files = new List<SelectedRelease>(fileIds.Count);
+        foreach (var fileId in fileIds)
+        {
+            command.Parameters["$file"].Value = fileId;
+            if (ReadStoredRelease(command) is not { } release)
+                return null;
+            files.Add(new(fileId, release.ContentId, release.RelativePath, release.Tags));
+        }
+        return files;
+    }
+
+    public bool SaveReleaseTagsBatch(Guid root, IReadOnlyList<ReleaseTagTarget> targets, string field, string? value)
+    {
+        using var database = OpenDatabase();
+        using var transaction = database.BeginTransaction(deferred: false);
+        using var command = database.CreateCommand();
+        command.Transaction = transaction;
+        BindReleaseLocation(command, root, "");
+        var tagsByContent = new Dictionary<string, ReleaseTags>();
+        foreach (var target in targets)
+        {
+            command.Parameters["$file"].Value = target.FileId;
+            if (ReadStoredRelease(command) is not { } current || current.ContentId != target.ContentId || current.RelativePath != target.RelativePath
+                || current.Tags.Revision != target.Revision)
+                return false;
+            tagsByContent.TryAdd(current.ContentId, current.Tags);
+        }
+
+        foreach (var (contentId, current) in tagsByContent)
+        {
+            var updated = field switch
+            {
+                "language" => current with { Language = value?.ToLowerInvariant() },
+                "color" => current with { Color = value ?? "unknown" },
+                "censorship" => current with { Censorship = value ?? "unknown" },
+                "edition" => current with { Edition = value },
+                "group" => current with { Group = value },
+                _ => throw new ArgumentOutOfRangeException(nameof(field)),
+            };
+            WriteReleaseTags(database, transaction, contentId, updated);
+        }
+        transaction.Commit();
+        return true;
+    }
+
+    private static void WriteReleaseTags(SqliteConnection database, SqliteTransaction transaction, string contentId, ReleaseTags tags)
+    {
+        using var command = database.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO release_tag(content_id, language, color, censorship, edition_name, group_name, revision, updated_at)
             VALUES ($content, $language, $color, $censorship, $edition, $group, 1, $now)
@@ -122,11 +184,9 @@ internal sealed partial class LibraryStore
                 revision = release_tag.revision + 1, updated_at = excluded.updated_at;
             """;
         BindTagValues(command, tags.Language, tags.Color, tags.Censorship, tags.Edition, tags.Group);
-        command.Parameters.AddWithValue("$content", current.ContentId);
+        command.Parameters.AddWithValue("$content", contentId);
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);
         command.ExecuteNonQuery();
-        transaction.Commit();
-        return true;
     }
 
     private static StoredRelease? ReadStoredRelease(SqliteCommand command)

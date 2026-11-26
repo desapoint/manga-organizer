@@ -4,7 +4,8 @@ import type { FormEvent } from 'react';
 import { PageControls, useInventoryPage } from './CatalogInventory';
 import { duplicateToolsHref, versionsToolsHref } from './library';
 import type { LibraryRoot, SeriesLocation } from './library';
-import { censorshipOptions, colorOptions, EditReleaseTags, ReleaseTagSummary } from './ReleaseTagsEditor';
+import { censorshipOptions, colorOptions, EditReleaseTags, ReleaseSelectionActions, ReleaseTagSummary, SelectReleaseCheckbox,
+  useReleaseSelection } from './ReleaseTagsEditor';
 import type { ReleaseTags } from './ReleaseTagsEditor';
 import { Select } from './Select';
 import { ActionLink, Button, SearchField } from './ui';
@@ -86,14 +87,21 @@ function SeriesList({ params, version, roots, onSignedOut }: Omit<ToolProps, 'on
 
 function ReleaseList({ params, series, version, onSignedOut, onChanged }: ToolProps & { params: URLSearchParams; series: SeriesLocation }) {
   const query = useInventoryPage<VersionFile>(`/api/versions/${series.rootId}/series/${series.seriesKey}`, version, onSignedOut, params);
+  const selection = useReleaseSelection(String(query.offset), query.page?.items.map(file => file.fileId) ?? []);
   return <>
     <ListStatus query={query} empty="No alternate releases in this series match these filters." />
+    {!!query.page?.items.length && <ReleaseSelectionActions selection={selection} rootId={series.rootId}
+      onSignedOut={onSignedOut} onSaved={onChanged} />}
     {!!query.page?.items.length && <ul aria-label="Alternate releases" role="list" className="m-0 grid list-none gap-2 p-0">
       {query.page.items.map(file => <li key={file.fileId} className="surface flex min-w-0 flex-wrap items-center justify-between gap-2 p-3">
-        <div className="min-w-0">
-          <code className="wrap-anywhere">{file.relativePath}</code>
-          <p className="m-0 text-sm text-muted">{file.reason === 'span' ? 'Same indexed chapter span' : 'Same numbered volume · Chapter coverage uncertain'}</p>
-          <ReleaseTagSummary tags={file.tags} />
+        <div className="flex min-w-0 items-center gap-2">
+          {selection.enabled && <SelectReleaseCheckbox path={file.relativePath} checked={selection.selected.includes(file.fileId)}
+            onChange={() => selection.toggle(file.fileId)} />}
+          <div className="min-w-0">
+            <code className="wrap-anywhere">{file.relativePath}</code>
+            <p className="m-0 text-sm text-muted">{file.reason === 'span' ? 'Same indexed chapter span' : 'Same numbered volume · Chapter coverage uncertain'}</p>
+            <ReleaseTagSummary tags={file.tags} />
+          </div>
         </div>
         <div className="action-row">
           <EditReleaseTags rootId={file.rootId} fileId={file.fileId} onSignedOut={onSignedOut} onSaved={onChanged} />
