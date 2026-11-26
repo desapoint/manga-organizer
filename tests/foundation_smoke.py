@@ -310,7 +310,15 @@ def verify_series_groups(owner, root_id, path):
     fixtures += [f"{series_title} v53 [Group A] [Ongoing].cbz", "Northbound [Ongoing]/Vol.02/001.cbz",
                  "Northbound [Ongoing]/Ch. 1.5.cbz", "Northbound [Ongoing]/Northbound 03.cbz",
                  "[Group B] Northbound Chapter 04.cbz", "Incoming/001.cbz", "Incoming/002.cbz",
-                 "Different Title 2.cbz", "Different Title 3.cbz"]
+                 "Different Title 2.cbz", "Different Title 3.cbz", "Different Title 2 (2022).cbz"]
+    numbered_releases = {
+        "A Kiss with a Cat": [f"A Kiss with a Cat v{n:02} ({2022 if n < 5 else 2023}) (Digital) (1r0n).cbz"
+                             for n in range(1, 6)],
+        "Akumetsu": [f"Akumetsu - Tome {n:02} [CBR] [Scan DP] [FR] [1500x1200].cbr" for n in range(1, 8)],
+        "Undead Unluck": [f"Undead Unluck {n} (2022) (Digital) (1r0n).cbz" for n in range(107, 119)],
+    }
+    for releases in numbered_releases.values():
+        fixtures.extend(releases)
     for relative in fixtures:
         file = path / relative
         file.parent.mkdir(parents=True, exist_ok=True)
@@ -319,12 +327,18 @@ def verify_series_groups(owner, root_id, path):
     assert owner.scan(root_id)["fileCount"] == len(fixtures) + 1
     groups = owner.series(root_id)
     by_title = {group["title"]: group for group in groups["items"]}
-    assert groups["total"] == len(by_title) == 7
+    for title, releases in numbered_releases.items():
+        group = by_title[title]
+        assert group["fileCount"] == len(releases)
+        files = owner.files(root_id, f"?{urlencode({'seriesKey': group['key']})}")
+        assert {row["relativePath"] for row in files["items"]} == set(releases)
+    assert groups["total"] == len(by_title) == 11
     assert by_title[series_title]["fileCount"] == 53
     assert by_title["Northbound"]["fileCount"] == 4
     assert by_title["Incoming/001.cbz"]["fileCount"] == by_title["Incoming/002.cbz"]["fileCount"] == 1
     assert by_title["Different Title 2"]["key"] != by_title["Different Title 3"]["key"]
-    assert owner.series(root_id, "?limit=1") == {"total": 7, "items": groups["items"][:1]}
+    assert by_title["Different Title 2 (2022)"]["fileCount"] == 1
+    assert owner.series(root_id, "?limit=1") == {"total": 11, "items": groups["items"][:1]}
     query = urlencode({"seriesKey": by_title[series_title]["key"], "limit": 50})
     first = owner.files(root_id, f"?{query}")
     second = owner.files(root_id, f"?{query}&offset=50")
