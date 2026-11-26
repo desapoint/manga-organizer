@@ -294,7 +294,10 @@ def verify_series_groups(owner, root_id, path):
     fixtures = [f"{series_title}/{series_title} v{volume:02}.cbz" for volume in range(1, 53)]
     fixtures += [f"{series_title} v53 [Group A] [Ongoing].cbz", "Northbound [Ongoing]/Vol.02/001.cbz",
                  "Northbound [Ongoing]/Ch. 1.5.cbz", "Northbound [Ongoing]/Northbound 03.cbz",
-                 "[Group B] Northbound Chapter 04.cbz", "Incoming/001.cbz", "Incoming/002.cbz",
+                 "[Group B] Northbound Chapter 04.cbz", "Northbound/Tome 03/Ch. 15.5 — A chapter title/001.cbz",
+                 "Northbound/[Group B] Ch. 16 - 1984 (2022) (Digital).cbz",
+                 "Incoming/001.cbz", "Incoming/002.cbz", "Incoming/Ch.004 - Unknown story.cbz",
+                 "Chapters/Ch.004 - Unknown story.cbz", "Undead Unluck/Another Series v01.cbz",
                  "Different Title 2.cbz", "Different Title 3.cbz", "Different Title 2 (2022).cbz"]
     numbered_releases = {
         "A Kiss with a Cat": [f"A Kiss with a Cat v{n:02} ({2022 if n < 5 else 2023}) (Digital) (1r0n).cbz"
@@ -302,6 +305,15 @@ def verify_series_groups(owner, root_id, path):
         "Akumetsu": [f"Akumetsu - Tome {n:02} [CBR] [Scan DP] [FR] [1500x1200].cbr" for n in range(1, 8)],
         "Undead Unluck": [f"Undead Unluck {n} (2022) (Digital) (1r0n).cbz" for n in range(107, 119)],
     }
+    chapter_titles = [
+        (1, "Undead and Unluck"), (4, "Comment utiliser mon unluck"), (5, "Tu es qui, toi"),
+        (6, "Tu n'as pas du tout changé"), (7, "Le changement, c'est maintenant"),
+        (8, "Aimes-tu ma façon de changer"), (9, "Unis par nos ennemis"), (10, "C'est le costume que je souhaite"),
+    ]
+    numbered_releases["Undead Unluck"].extend(
+        f"Undead Unluck/Vol.{1 if chapter < 8 else 2:02} Ch.{chapter:04} - {title} (fr) [Unexpected Team].cbz"
+        for chapter, title in chapter_titles
+    )
     for releases in numbered_releases.values():
         fixtures.extend(releases)
     for relative in fixtures:
@@ -317,13 +329,16 @@ def verify_series_groups(owner, root_id, path):
         assert group["fileCount"] == len(releases)
         files = owner.files(root_id, f"?{urlencode({'seriesKey': group['key']})}")
         assert {row["relativePath"] for row in files["items"]} == set(releases)
-    assert groups["total"] == len(by_title) == 11
+    assert groups["total"] == len(by_title) == 14
     assert by_title[series_title]["fileCount"] == 53
-    assert by_title["Northbound"]["fileCount"] == 4
+    assert by_title["Northbound"]["fileCount"] == 6
     assert by_title["Incoming/001.cbz"]["fileCount"] == by_title["Incoming/002.cbz"]["fileCount"] == 1
+    assert by_title["Incoming/Ch.004 - Unknown story.cbz"]["fileCount"] == 1
+    assert by_title["Chapters/Ch.004 - Unknown story.cbz"]["fileCount"] == 1
+    assert by_title["Another Series"]["fileCount"] == 1
     assert by_title["Different Title 2"]["key"] != by_title["Different Title 3"]["key"]
     assert by_title["Different Title 2 (2022)"]["fileCount"] == 1
-    assert owner.series(root_id, "?limit=1") == {"total": 11, "items": groups["items"][:1]}
+    assert owner.series(root_id, "?limit=1") == {"total": 14, "items": groups["items"][:1]}
     query = urlencode({"seriesKey": by_title[series_title]["key"], "limit": 50})
     first = owner.files(root_id, f"?{query}")
     second = owner.files(root_id, f"?{query}&offset=50")
