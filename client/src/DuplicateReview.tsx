@@ -117,7 +117,7 @@ export function DuplicateReview({ rootId, fileId, version, onSignedOut, onClose,
           <FileSummary file={comparison.candidate} heading={fileLabels.candidate} version={version} />
         </section>
         <ChapterComparison key={comparison.candidate.fileId} shared={comparison.shared} sourceOnly={comparison.sourceOnly}
-          candidateOnly={comparison.candidateOnly} labels={fileLabels} />
+          candidateOnly={comparison.candidateOnly} labels={fileLabels} unresolved={comparison.kind === 'possible-overlap'} />
         <section className="flex items-start gap-3 rounded-xl border border-line bg-panel p-3.5 sm:p-4" aria-label="Duplicate assessment">
           <StatusIcon aria-hidden="true" className={`mt-0.5 size-5 shrink-0 ${comparison.canQuarantine ? 'text-positive' : 'text-warning'}`} />
           <div className="min-w-0">
