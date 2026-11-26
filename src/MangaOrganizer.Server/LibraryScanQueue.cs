@@ -14,17 +14,18 @@ internal sealed class LibraryScanQueue(LibraryStore store, ILogger<LibraryScanQu
         SingleReader = true,
     });
 
-    public bool TryQueue(LibraryRoot root)
+    public ScanSnapshot? Queue(LibraryRoot root)
     {
-        if (!store.TryQueue(root.Id)) return false;
+        if (!store.TryQueue(root.Id)) return null;
 
         var scan = new ScanProgress();
+        var queued = scan.Snapshot();
         active[root.Id] = scan;
-        if (requests.Writer.TryWrite(new(root, scan))) return true;
+        if (requests.Writer.TryWrite(new(root, scan))) return queued;
 
         active.TryRemove(new KeyValuePair<Guid, ScanProgress>(root.Id, scan));
         store.SetState(root.Id, "interrupted");
-        return false;
+        return null;
     }
 
     public ScanSnapshot? Status(Guid rootId) => active.TryGetValue(rootId, out var progress) ? progress.Snapshot() : null;

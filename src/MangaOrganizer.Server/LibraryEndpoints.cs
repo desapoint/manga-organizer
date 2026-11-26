@@ -80,7 +80,7 @@ internal static class LibraryEndpoints
             {
                 return Results.NotFound();
             }
-            return scans.TryQueue(root) ? Results.Accepted() : Results.Conflict();
+            return scans.Queue(root) is { } queued ? Results.Accepted(value: queued) : Results.Conflict();
         });
     }
 
