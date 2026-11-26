@@ -1,6 +1,6 @@
 import { BookOpen, ChevronRight, Library, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { ROOTS_URL } from './library';
+import { formatSize, ROOTS_URL } from './library';
 import { Select } from './Select';
 import { Button, SearchField, SectionHeader, SegmentedControl } from './ui';
 
@@ -85,13 +85,6 @@ function InventoryError({ children, retry }: { children: string; retry: () => vo
       <span role="alert">{children}</span> <Button variant="secondary" onClick={retry}>Retry</Button>
     </div>
   );
-}
-
-function formatSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KiB`;
-  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
-  return `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
 }
 
 function FileRow({ file, onInspect }: { file: CatalogEntry; onInspect?: Inspect }) {

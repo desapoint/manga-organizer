@@ -27,11 +27,13 @@ internal sealed partial class LibraryStore
         return CoverArt.Read(path, source);
     }
 
-    private static void StageCovers(SqliteConnection database, string root, CancellationToken cancellationToken)
+    private static void StageCovers(SqliteConnection database, string root, ScanProgress scan, CancellationToken cancellationToken)
     {
         using var transaction = database.BeginTransaction(deferred: true);
         using var query = database.CreateCommand();
         query.Transaction = transaction;
+        query.CommandText = "SELECT COUNT(DISTINCT series_key) FROM scan_file;";
+        scan.BeginCovers((long)query.ExecuteScalar()!);
         query.CommandText = """
             WITH directories AS (
                 SELECT directory, COUNT(DISTINCT series_key) = 1 AS unambiguous FROM scan_file GROUP BY directory
@@ -85,6 +87,7 @@ internal sealed partial class LibraryStore
             var source = directories.Select(directory => CoverArt.FindSidecar(root, directory)).FirstOrDefault(source => source is not null)
                 ?? archives.Select(archive => CoverArt.FindFirstPage(root, archive.RelativePath, archive.Size, archive.ModifiedAt, cancellationToken))
                     .FirstOrDefault(source => source is not null);
+            scan.CheckedCover(source is not null);
             if (source is null) return;
 
             key.Value = currentKey;

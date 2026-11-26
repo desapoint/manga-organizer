@@ -282,6 +282,7 @@ def verify_folder_settings(owner, media):
     assert owner.files(shared["id"])["items"] == [incoming]
     verify_series_groups(owner, shared["id"], media / "intake")
     verify_cover_art(owner, shared["id"], media / "intake")
+    verify_live_scan(owner, shared["id"], media / "intake")
     owner.request(f"{LIBRARY_ROOTS}/{archive['id']}", 204, method="DELETE", token=owner.csrf())
     assert (media / "archive" / "Volume.epub").exists()
     assert (media / "intake" / "Unmatched.cbz").exists()
@@ -354,6 +355,32 @@ def verify_cover_art(owner, root_id, path):
     all_series = owner.series(root_id, "?sort=files")["items"]
     assert all_series[0]["fileCount"] == 53 and any(not grouped["hasCover"] for grouped in all_series)
     owner.request(f"{LIBRARY_ROOTS}/{root_id}/series?sort=unknown", 400)
+
+
+def verify_live_scan(owner, root_id, path):
+    probe = path / "Scan progress fixture.pdf"
+    with probe.open("wb") as stream:
+        stream.truncate(160 * 1024 * 1024)
+
+    owner.request(f"{LIBRARY_ROOTS}/{root_id}/scan", 202, method="POST", token=owner.csrf())
+    snapshots = []
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        root = next(root for root in owner.roots() if root["id"] == root_id)
+        if root["state"] not in {"queued", "scanning"}:
+            break
+        if root["scanProgress"] is not None:
+            snapshots.append(root["scanProgress"])
+        time.sleep(0.01)
+    assert root["state"] == "complete" and root["scanProgress"] is None
+    assert snapshots, "Scan completed without an observable live progress snapshot"
+    for snapshot in snapshots:
+        assert 0 <= snapshot["verifiedFiles"] <= snapshot["processedFiles"] <= snapshot["discoveredFiles"]
+        assert 0 <= snapshot["bytesRead"] <= snapshot["totalBytes"]
+        assert 0 <= snapshot["coversFound"] <= snapshot["seriesChecked"] <= snapshot["seriesTotal"]
+    assert any(snapshot["phase"] in {"discovering", "hashing", "covers", "publishing"} for snapshot in snapshots)
+    probe.unlink()
+    owner.scan(root_id)
 
 
 def scan_library(owner, media):

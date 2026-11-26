@@ -3,10 +3,11 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getCsrfToken } from './api';
 import { CatalogInventory } from './CatalogInventory';
-import { ROOTS_URL, scanIsActive, scanLabels } from './library';
+import { ROOTS_URL, scanIsActive } from './library';
 import type { FolderRole, LibraryRoot } from './library';
 import { LibrarySettings } from './LibrarySettings';
 import { Overview } from './Overview';
+import { ScanStatus } from './ScanStatus';
 import { Select } from './Select';
 import { ActionLink, Button, PageHeader } from './ui';
 
@@ -46,7 +47,7 @@ export function Catalog({ view, title, section, onSignedOut, children }: {
         if (request.signal.aborted) return;
         setRoots(available);
         setRootsError('');
-        timer = window.setTimeout(loadRoots, available.some(scanIsActive) ? 900 : 4500);
+        timer = window.setTimeout(loadRoots, available.some(scanIsActive) ? 500 : 4500);
       } catch {
         if (request.signal.aborted) return;
         setRootsError('Could not load library folders. Retrying…');
@@ -108,7 +109,7 @@ export function Catalog({ view, title, section, onSignedOut, children }: {
                 }} />
               <Button icon={ScanSearch} onClick={startScan} disabled={scanPending || scanIsActive(selected)}>Scan folder</Button>
             </div>
-            <p className="scan-state" role="status">{scanLabels[selected.state]}</p>
+            <ScanStatus root={selected} />
             <div className="catalog-summary">
               <span>{selected.fileCount.toLocaleString()} {selected.fileCount === 1 ? 'file' : 'files'}</span>
               {selected.lastScannedAt && <span>Last indexed {new Date(selected.lastScannedAt).toLocaleString()}</span>}

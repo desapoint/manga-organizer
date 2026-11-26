@@ -14,6 +14,8 @@ Rescan a folder after upgrading to assign content IDs to its existing entries. R
 
 Scans run one at a time. The server skips symbolic links and Windows reparse points, and publishes a successful full inventory as one database transaction. An unavailable root, failed scan or interrupted scan preserves the prior inventory. If an inventory with files suddenly scans empty, the WebUI reports it for review and keeps the prior entries. The next successful scan with files replaces those entries. Mounted media can remain read-only in Docker. See the [configuration instructions](../README.md#configure-the-read-only-library).
 
+During a scan, the WebUI shows files discovered, bytes read while verifying hashes, groups checked for covers and the publishing stage. Both views of a dual-purpose folder observe the same progress. The last published inventory remains available until the new scan completes.
+
 ## Import intake and association
 
 An import intake folder is inventoried in its own WebUI view. The owner approved automatic movement from intake to a managed library once the file has an unambiguous metadata and volume or chapter association, or an owner supplies the association manually. Resolve the work, edition, intended library and applicable volume or chapter before moving a file. Ambiguous matches, changed sources, unavailable storage and destination conflicts keep the intake file in place.

@@ -4,7 +4,8 @@ namespace MangaOrganizer.Server;
 
 internal sealed record LibraryRoot(Guid Id, string Path);
 internal sealed record LibraryRootStatus(Guid Id, string Path, string State, long FileCount,
-    DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks, string? Name, string Kind, bool HasCovers);
+    DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks, string? Name, string Kind, bool HasCovers,
+    ScanSnapshot? ScanProgress = null);
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt,
     string? ContentId, string? Sha256, long? IndexedLocations);
 internal sealed record CatalogPage<T>(long Total, IReadOnlyList<T> Items);
@@ -130,7 +131,7 @@ internal sealed partial class LibraryStore
         command.ExecuteNonQuery();
     }
 
-    public void Refresh(LibraryRoot root, CancellationToken cancellationToken)
+    public void Refresh(LibraryRoot root, ScanProgress scan, CancellationToken cancellationToken)
     {
         using var database = OpenDatabase();
         using var command = database.CreateCommand();
@@ -140,10 +141,13 @@ internal sealed partial class LibraryStore
                 extension TEXT NOT NULL,
                 size INTEGER NOT NULL,
                 modified_at TEXT NOT NULL,
-                sha256 BLOB,
                 series_key TEXT NOT NULL,
                 series_title TEXT,
                 directory TEXT NOT NULL
+            );
+            CREATE TEMP TABLE scan_hash (
+                relative_path TEXT PRIMARY KEY,
+                sha256 BLOB
             );
             CREATE TEMP TABLE scan_cover (
                 series_key TEXT PRIMARY KEY,
@@ -156,10 +160,16 @@ internal sealed partial class LibraryStore
             """;
         command.ExecuteNonQuery();
 
-        var (count, skippedLinks) = StageFiles(database, root.Path, cancellationToken);
-        if (count > 0) StageCovers(database, root.Path, cancellationToken);
+        scan.StartPhase("discovering");
+        var (count, skippedLinks) = StageFiles(database, root.Path, scan, cancellationToken);
+        if (count > 0)
+        {
+            StageHashes(database, root.Path, scan, cancellationToken);
+            StageCovers(database, root.Path, scan, cancellationToken);
+        }
         LibraryScanner.RequireRoot(root.Path);
         cancellationToken.ThrowIfCancellationRequested();
+        scan.StartPhase("publishing");
 
         using var transaction = database.BeginTransaction();
         command.Transaction = transaction;
@@ -174,11 +184,12 @@ internal sealed partial class LibraryStore
         {
             command.CommandText = """
                 INSERT INTO library_content(sha256)
-                    SELECT DISTINCT sha256 FROM scan_file WHERE sha256 IS NOT NULL
+                    SELECT DISTINCT sha256 FROM scan_hash WHERE sha256 IS NOT NULL
                     ON CONFLICT(sha256) DO NOTHING;
                 INSERT INTO library_file(root_id, relative_path, extension, size, modified_at, content_id, series_key, series_title)
                     SELECT $id, s.relative_path, s.extension, s.size, s.modified_at, c.id, s.series_key, s.series_title
-                    FROM scan_file s LEFT JOIN library_content c ON c.sha256 = s.sha256 WHERE 1
+                    FROM scan_file s LEFT JOIN scan_hash h ON h.relative_path = s.relative_path
+                    LEFT JOIN library_content c ON c.sha256 = h.sha256 WHERE 1
                     ON CONFLICT(root_id, relative_path) DO UPDATE SET
                         extension = excluded.extension, size = excluded.size, modified_at = excluded.modified_at,
                         content_id = excluded.content_id, series_key = excluded.series_key, series_title = excluded.series_title;
@@ -198,18 +209,18 @@ internal sealed partial class LibraryStore
         transaction.Commit();
     }
 
-    private static (long Count, long SkippedLinks) StageFiles(SqliteConnection database, string path, CancellationToken cancellationToken)
+    private static (long Count, long SkippedLinks) StageFiles(SqliteConnection database, string path, ScanProgress scan,
+        CancellationToken cancellationToken)
     {
         // Build the inventory in a temporary table without holding the published catalog's write lock.
         using var transaction = database.BeginTransaction(deferred: true);
         using var insert = database.CreateCommand();
         insert.Transaction = transaction;
-        insert.CommandText = "INSERT INTO scan_file VALUES ($path, $extension, $size, $modified, $sha256, $seriesKey, $seriesTitle, $directory);";
+        insert.CommandText = "INSERT INTO scan_file VALUES ($path, $extension, $size, $modified, $seriesKey, $seriesTitle, $directory);";
         var relativePath = insert.Parameters.Add("$path", SqliteType.Text);
         var extension = insert.Parameters.Add("$extension", SqliteType.Text);
         var size = insert.Parameters.Add("$size", SqliteType.Integer);
         var modified = insert.Parameters.Add("$modified", SqliteType.Text);
-        var sha256 = insert.Parameters.Add("$sha256", SqliteType.Blob);
         var seriesKey = insert.Parameters.Add("$seriesKey", SqliteType.Text);
         var seriesTitle = insert.Parameters.Add("$seriesTitle", SqliteType.Text);
         var directory = insert.Parameters.Add("$directory", SqliteType.Text);
@@ -222,13 +233,13 @@ internal sealed partial class LibraryStore
             extension.Value = file.Extension;
             size.Value = file.Size;
             modified.Value = file.ModifiedAt;
-            sha256.Value = (object?)file.Sha256 ?? DBNull.Value;
             var title = SeriesSuggestions.CandidateTitle(file.RelativePath, path);
             seriesKey.Value = SeriesSuggestions.Key(file.RelativePath, title);
             seriesTitle.Value = (object?)title ?? DBNull.Value;
             directory.Value = file.RelativePath[..Math.Max(file.RelativePath.LastIndexOf('/'), 0)];
             insert.ExecuteNonQuery();
             count++;
+            scan.Discovered(file.Size);
         }, cancellationToken);
         transaction.Commit();
         return (count, skippedLinks);
