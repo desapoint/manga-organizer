@@ -1,10 +1,11 @@
-import { ArrowLeft, ChevronRight, Files, NotebookPen, ScanSearch } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Files, FolderCog, NotebookPen, ScanSearch } from 'lucide-react';
 import { useState } from 'react';
 import { PageControls, useInventoryPage } from './CatalogInventory';
 import { DuplicateReview } from './DuplicateReview';
-import { duplicateToolsHref, ROOTS_URL, seriesHref } from './library';
+import { duplicateToolsHref, organizeToolsHref, ROOTS_URL, seriesHref } from './library';
 import type { LibraryRoot, SeriesLocation, toolsLocation } from './library';
 import { MetadataQueue } from './MetadataQueue';
+import { OrganizeTools } from './OrganizeTools';
 import { Select } from './Select';
 import { ActionLink, Button, PageHeader, SearchField, SectionHeader, SegmentedControl } from './ui';
 
@@ -29,6 +30,7 @@ export function ToolsHub({ route, roots, version, onSignedOut, onChanged }: Inve
   const [kind, setKind] = useState<typeof kindOptions[number]['value']>('all');
   const [search, setSearch] = useState('');
   const series = route.module === 'duplicates' ? route.series : null;
+  const name = { home: 'Tools', metadata: 'Associations and metadata', duplicates: 'Duplicates', organize: 'Organize' }[route.module];
   const query: Record<string, string> = { search: search.trim() };
   if (kind !== 'all') query.kind = kind;
   if (root) query.root = root;
@@ -36,11 +38,14 @@ export function ToolsHub({ route, roots, version, onSignedOut, onChanged }: Inve
     {route.module !== 'home' && <ActionLink variant="ghost" icon={ArrowLeft}
       href={series ? duplicateToolsHref() : '#tools'} className="justify-self-start">{series ? 'Back to duplicates' : 'Back to Tools'}</ActionLink>}
     <PageHeader id="tools-heading" section={route.module === 'home' ? 'Management' : 'Tools'}
-      title={route.module === 'home' ? 'Tools' : route.module === 'metadata' ? 'Associations and metadata' : 'Duplicates'} />
+      title={name} />
     {route.module === 'home' ? <div className="action-row">
       <ActionLink variant="secondary" icon={Files} href={duplicateToolsHref()}>Duplicates</ActionLink>
       <ActionLink variant="secondary" icon={NotebookPen} href="#tools/metadata">Associations and metadata</ActionLink>
+      <ActionLink variant="secondary" icon={FolderCog} href={organizeToolsHref()}>Organize</ActionLink>
     </div> : route.module === 'metadata' ? <MetadataQueue roots={roots} version={version} onSignedOut={onSignedOut} /> :
+      route.module === 'organize' ? <OrganizeTools rootId={route.rootId} seriesKey={route.seriesKey} roots={roots} version={version}
+        onSignedOut={onSignedOut} onChanged={onChanged} /> :
       series ? <DuplicateWorkbench key={series.rootId + series.seriesKey} series={series} fileId={route.fileId} kind={query.kind} version={version}
         onSignedOut={onSignedOut} onChanged={onChanged} /> :
         <>

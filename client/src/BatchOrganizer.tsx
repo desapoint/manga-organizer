@@ -22,21 +22,21 @@ function suggestedPath(file: BatchFile) {
   return folder && name && folder !== '.' && folder !== '..' ? folder + '/' + name : file.relativePath;
 }
 
-export function BatchOrganizer({ source, targets, version, onSignedOut, onChanged }: {
-  source: LibraryRoot; targets: LibraryRoot[]; version: string; onSignedOut: () => void; onChanged: () => void;
+export function BatchOrganizer({ source, targets, version, onSignedOut, onChanged, seriesKey }: {
+  source: LibraryRoot; targets: LibraryRoot[]; version: string; onSignedOut: () => void; onChanged: () => void; seriesKey?: string;
 }) {
   const [opened, setOpened] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   return <>
     <Button icon={ListChecks} variant="secondary" className="justify-self-start" onClick={() => { setOpened(true); setDirty(false); }}>Organize files</Button>
-    {opened && <BatchDialog source={source} targets={targets} version={version} onSignedOut={onSignedOut}
+    {opened && <BatchDialog source={source} targets={targets} version={version} onSignedOut={onSignedOut} seriesKey={seriesKey}
       onChanged={() => setDirty(true)} onClose={() => { setOpened(false); if (dirty) onChanged(); }} />}
   </>;
 }
 
-function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose }: {
-  source: LibraryRoot; targets: LibraryRoot[]; version: string; onSignedOut: () => void; onChanged: () => void; onClose: () => void;
+function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose, seriesKey }: {
+  source: LibraryRoot; targets: LibraryRoot[]; version: string; onSignedOut: () => void; onChanged: () => void; onClose: () => void; seriesKey?: string;
 }) {
   const [search, setSearch] = useState('');
   const [targetRoot, setTargetRoot] = useState(targets[0]?.id ?? '');
@@ -47,7 +47,8 @@ function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose
   const [results, setResults] = useState<Result[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const files = useInventoryPage<BatchFile>(ROOTS_URL + '/' + source.id + '/files', version, onSignedOut, { search });
+  const files = useInventoryPage<BatchFile>(ROOTS_URL + '/' + source.id + '/files', version, onSignedOut,
+    seriesKey ? { search, seriesKey } : { search });
 
   async function preview() {
     setBusy(true);
@@ -83,7 +84,7 @@ function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose
     }
   }
 
-  return <Modal title="Organize intake files" wide onClose={() => { if (!busy) onClose(); }}>
+  return <Modal title="Organize selected files" wide onClose={() => { if (!busy) onClose(); }}>
     <div className="grid gap-4">
       {error && <p role="alert" className="m-0 text-danger">{error}</p>}
       {plans ? <>
@@ -116,15 +117,15 @@ function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose
         </div>
       </> : <>
         <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
-          <SearchField aria-label="Find intake files" placeholder="Find intake files" maxLength={160} value={search}
+          <SearchField aria-label="Find batch files" placeholder="Find batch files" maxLength={160} value={search}
             onChange={event => { setSearch(event.target.value); files.setOffset(0); }} />
           <Select label="Destination library" value={targetRoot} onChange={setTargetRoot} options={targets.map(root => ({ value: root.id, label: root.name || root.path }))} />
         </div>
         <label className="flex items-center gap-2"><input type="checkbox" checked={keepBoth} onChange={event => setKeepBoth(event.target.checked)} />
           Keep both on a destination conflict</label>
         {files.error && <div className="action-row"><p role="alert">Could not load files.</p><Button variant="secondary" onClick={files.retry}>Retry</Button></div>}
-        {!files.page && !files.error && <p role="status">Loading intake files…</p>}
-        <ul role="list" className="m-0 grid list-none divide-y divide-line p-0" aria-label="Intake files to organize">
+        {!files.page && !files.error && <p role="status">Loading files…</p>}
+        <ul role="list" className="m-0 grid list-none divide-y divide-line p-0" aria-label="Batch files to organize">
           {files.page?.items.map(file => <li key={file.id} className="flex items-center gap-2 py-1">
             <FileCover rootId={source.id} fileId={file.id} available={file.hasCover} seriesCoverKey={file.seriesCoverKey}
               revision={version} className="h-12 w-8 shrink-0 rounded" />
@@ -136,7 +137,7 @@ function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose
             </label>
           </li>)}
         </ul>
-        {files.page && <PageControls label="Intake file pages" offset={files.offset} count={files.page.items.length}
+        {files.page && <PageControls label="Batch file pages" offset={files.offset} count={files.page.items.length}
           total={files.page.total} onChange={files.setOffset} />}
         {choices.length > 0 && <section aria-label="Selected destinations" className="grid gap-3">
           {choices.map((item, index) => <label className="grid gap-1" key={item.file.id}>

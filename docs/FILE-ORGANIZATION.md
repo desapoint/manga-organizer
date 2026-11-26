@@ -34,7 +34,7 @@ The server revalidates the file digest and prepares a verified recovery copy bef
 
 Choose **Keep both when the destination exists** to preview an unused name ending in `[Variant 1]` or the next available number. Choose **Copy folder covers** to include artwork from a source folder that contains one indexed series. The preview lists each cover's destination. Distinct artwork uses `cover-1`, `cover-2`, and later numbers when the destination already has artwork. Originals stay in the source folder, and copied covers stay at the destination after restoring the manga file.
 
-Use **File operation history** in Library settings to inspect results and explicitly restore an original path. Restores recheck content and protect occupied paths. An interrupted operation is marked for review at restart. Docker mounts must be writable for the folders you opt into management. [Installation](INSTALL.md)
+Use **File operation history** in Tools → Organize to inspect results and explicitly restore an original path. Restores recheck content and protect occupied paths. An interrupted operation is marked for review at restart. Docker mounts must be writable for the folders you opt into management. [Installation](INSTALL.md)
 
 ## 1. Organization workflow
 
