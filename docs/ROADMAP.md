@@ -34,7 +34,7 @@ Track the responsive series layout, More info dialog, library coverage and chapt
 
 - [ ] Add opt-in automatic series matching with high-confidence criteria, provenance and manual review for ambiguous results. Keep confirmed matches and local overrides stable across scans.
 - [ ] Support multiple metadata providers with per-server provider priority and per-series overrides. Record the source of imported metadata and let owners choose which provider to use when results conflict.
-- [ ] Let owners select preferred metadata and title languages for each series. Track publication origin and the languages of local releases independently.
+- [ ] Let owners set preferred title and metadata languages, plus preferred languages for reading local releases. Support per-series overrides and keep publication origin distinct from release language.
 - [ ] Support multiple alternate titles with language labels, use them in local search, and let owners choose the display title and which alternates appear in series details.
 
 ## Decisions
