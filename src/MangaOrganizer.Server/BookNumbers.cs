@@ -41,7 +41,7 @@ internal readonly partial record struct BookNumbers(string? Volume, string? Chap
         var match = pattern.Match(value);
         if (!match.Success) return null;
         var remainder = value.AsSpan(match.Index + match.Length).TrimStart();
-        if (!useRangeStart && !remainder.IsEmpty && remainder[0] is '-' or '–')
+        if (!useRangeStart && !remainder.IsEmpty && remainder[0] is '-' or '–' or '—')
         {
             var end = remainder[1..].TrimStart();
             if (!end.IsEmpty && char.IsAsciiDigit(end[0])) return null;
