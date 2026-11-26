@@ -1,4 +1,4 @@
-import { Archive, ShieldCheck } from 'lucide-react';
+import { Archive, ChevronDown, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ChapterComparison } from './ChapterComparison';
 import type { Chapter } from './ChapterComparison';
@@ -7,7 +7,7 @@ import type { Operation } from './FileOperations';
 import { formatSize } from './library';
 import { Select } from './Select';
 import { FileCover } from './SeriesCover';
-import { Button, Modal, SectionHeader } from './ui';
+import { Button, Modal } from './ui';
 
 type ComparedFile = { rootId: string; fileId: string; relativePath: string; fullPath: string; format: string; size: number;
   sha256: string; volume: string | null; chapters: Chapter[]; hasCover: boolean; seriesCoverKey: string | null };
@@ -22,25 +22,26 @@ const labels: Record<Comparison['kind'], string> = {
   overlap: 'Partial chapter overlap', 'possible-overlap': 'Possible overlap', alternate: 'Alternate release',
 };
 
-function FileEvidence({ file, heading, marker, version }: { file: ComparedFile; heading: string; marker: string; version: string }) {
-  return <section className="grid min-w-0 content-start gap-3 rounded-xl border border-line bg-inset p-3" aria-label={heading}>
-    <SectionHeader title={`${marker} · ${heading}`} />
-    <div className="flex min-w-0 items-start gap-3">
-      <div className="w-12 shrink-0 sm:w-16">
-        <FileCover rootId={file.rootId} fileId={file.fileId} available={file.hasCover} seriesCoverKey={file.seriesCoverKey}
-          revision={version} className="aspect-[2/3] rounded-md" />
-      </div>
-      <div className="grid min-w-0 flex-1 gap-1 [overflow-wrap:anywhere]">
-        <strong>{file.relativePath.split('/').at(-1)}</strong>
-        <span className="text-sm text-muted">{file.format.toUpperCase()} · {formatSize(file.size)}{file.volume && ` · Vol. ${file.volume}`}</span>
-        <span className="text-xs text-muted">{file.chapters.length ? `${file.chapters.length} indexed ${file.chapters.length === 1 ? 'chapter' : 'chapters'}` : 'Chapter coverage unknown'}</span>
-      </div>
+function FileSummary({ file, heading, version }: { file: ComparedFile; heading: string; version: string }) {
+  return <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+    <div className="w-12 shrink-0 sm:w-16">
+      <FileCover rootId={file.rootId} fileId={file.fileId} available={file.hasCover} seriesCoverKey={file.seriesCoverKey}
+        revision={version} className="aspect-[2/3] rounded-md" />
     </div>
-    <dl className="m-0 min-w-0 text-xs [overflow-wrap:anywhere]">
-      <dt className="font-semibold">Path</dt><dd className="m-0"><code>{file.fullPath}</code></dd>
-      <dt className="mt-2 font-semibold">SHA-256</dt><dd className="m-0"><code>{file.sha256}</code></dd>
-    </dl>
-  </section>;
+    <div className="grid min-w-0 gap-1.5 wrap-anywhere">
+      <span className="text-[0.6875rem] font-semibold tracking-wide text-muted uppercase">{heading}</span>
+      <strong className="text-base leading-tight tracking-tight sm:text-lg">{file.relativePath.split('/').at(-1)}</strong>
+      <span className="text-xs text-muted">{file.format.toUpperCase()} · {formatSize(file.size)}{file.volume && ` · Vol. ${file.volume}`}</span>
+      <span className="text-xs text-muted">{file.chapters.length ? `${file.chapters.length} indexed ${file.chapters.length === 1 ? 'chapter' : 'chapters'}` : 'Chapter coverage unknown'}</span>
+    </div>
+  </div>;
+}
+
+function FileEvidence({ file, heading }: { file: ComparedFile; heading: string }) {
+  return <dl aria-label={heading} className="m-0 min-w-0 text-xs wrap-anywhere">
+    <dt className="mb-1 font-semibold">{heading} path</dt><dd className="m-0 text-muted"><code>{file.fullPath}</code></dd>
+    <dt className="mt-2 mb-1 font-semibold">SHA-256</dt><dd className="m-0 text-muted"><code>{file.sha256}</code></dd>
+  </dl>;
 }
 
 export function DuplicateReview({ rootId, fileId, version, onSignedOut, onClose, onChanged }: {
@@ -55,6 +56,7 @@ export function DuplicateReview({ rootId, fileId, version, onSignedOut, onClose,
   const [done, setDone] = useState(false);
   const comparison = review?.comparisons.find(item => item.candidate.fileId === chosen) ?? review?.comparisons[0];
   const fileLabels = { source: plan ? 'Move to quarantine' : 'Selected file', candidate: plan ? 'Keep in library' : 'Comparison file' };
+  const StatusIcon = comparison?.canQuarantine ? ShieldCheck : ShieldAlert;
 
   useEffect(() => {
     const request = new AbortController();
@@ -101,8 +103,8 @@ export function DuplicateReview({ rootId, fileId, version, onSignedOut, onClose,
     if (done) onChanged();
   }
 
-  return <Modal title="Compare duplicate releases" wide onClose={close}>
-    <div className="grid gap-4">
+  return <Modal title="Compare duplicate releases" wide onClose={close} className="bg-canvas">
+    <div className="grid min-w-0 gap-4">
       {!review && !error && <p role="status" className="m-0">Checking indexed copies and chapter ranges…</p>}
       {error && <p role="alert" className="m-0 text-danger">{error}</p>}
       {review && !comparison && <p className="m-0 text-muted">The catalog found no exact copies or overlapping chapter labels for this file.</p>}
@@ -110,21 +112,33 @@ export function DuplicateReview({ rootId, fileId, version, onSignedOut, onClose,
         {review.comparisons.length > 1 && !plan && !done && <Select label="Compare with" value={comparison.candidate.fileId}
           options={review.comparisons.map(item => ({ value: item.candidate.fileId, label: item.candidate.relativePath, description: labels[item.kind] }))}
           onChange={id => { setChosen(id); setError(''); }} disabled={busy} />}
-        <section className="grid min-w-0 gap-3 rounded-xl border border-line p-3" aria-label="Chapter comparison">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <strong>{labels[comparison.kind]}</strong>
-            <span className={comparison.canQuarantine ? 'text-sm text-positive' : 'text-sm text-warning'}>
-              {comparison.canQuarantine ? 'Eligible for reviewed quarantine' : 'Files protected from quarantine'}
-            </span>
-          </div>
-          <ChapterComparison key={comparison.candidate.fileId} shared={comparison.shared} sourceOnly={comparison.sourceOnly}
-            candidateOnly={comparison.candidateOnly} labels={fileLabels} />
-          <p className="m-0 text-sm text-muted">{comparison.reason}</p>
+        <section className="grid min-w-0 gap-4 rounded-xl border border-line bg-linear-to-br from-elevated to-panel p-3.5 sm:grid-cols-2 sm:gap-6 sm:p-5" aria-label="Files in comparison">
+          <FileSummary file={review.source} heading={fileLabels.source} version={version} />
+          <FileSummary file={comparison.candidate} heading={fileLabels.candidate} version={version} />
         </section>
-        <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-          <FileEvidence file={review.source} heading={fileLabels.source} marker="A" version={version} />
-          <FileEvidence file={comparison.candidate} heading={fileLabels.candidate} marker="B" version={version} />
-        </div>
+        <ChapterComparison key={comparison.candidate.fileId} shared={comparison.shared} sourceOnly={comparison.sourceOnly}
+          candidateOnly={comparison.candidateOnly} labels={fileLabels} />
+        <section className="flex items-start gap-3 rounded-xl border border-line bg-panel p-3.5 sm:p-4" aria-label="Duplicate assessment">
+          <StatusIcon aria-hidden="true" className={`mt-0.5 size-5 shrink-0 ${comparison.canQuarantine ? 'text-positive' : 'text-warning'}`} />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+              <strong className="text-sm">{labels[comparison.kind]}</strong>
+              <span className={`text-xs ${comparison.canQuarantine ? 'text-positive' : 'text-warning'}`}>
+                {comparison.canQuarantine ? 'Eligible for reviewed quarantine' : 'Files protected from quarantine'}
+              </span>
+            </div>
+            <p className="m-0 mt-1 text-sm text-muted">{comparison.reason}</p>
+          </div>
+        </section>
+        <details className="group min-w-0 rounded-xl border border-line bg-panel px-3.5 sm:px-4">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+            Paths and SHA-256 hashes <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted group-open:rotate-180" />
+          </summary>
+          <div className="grid gap-3 border-t border-line py-3 sm:grid-cols-2 sm:gap-5">
+            <FileEvidence file={review.source} heading={fileLabels.source} />
+            <FileEvidence file={comparison.candidate} heading={fileLabels.candidate} />
+          </div>
+        </details>
         {plan && !done && <section className="grid gap-3 rounded-xl border border-warning/45 bg-warning/10 p-3" aria-label="Confirm quarantine">
           <div><strong>Quarantine destination</strong><p className="m-0"><code>{plan.target}</code></p></div>
           <label className="flex items-center gap-2"><input type="checkbox" checked={acknowledged} disabled={busy}
