@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getCsrfToken } from './api';
 import { CatalogInventory, SeriesPage } from './CatalogInventory';
+import { Collections } from './Collections';
 import { FileOperationHistory } from './FileOperations';
 import { ROOTS_URL, scanIsActive } from './library';
 import type { FolderRole, LibraryRoot, SeriesLocation } from './library';
@@ -12,7 +13,7 @@ import { ScanStatus } from './ScanStatus';
 import { Select } from './Select';
 import { ActionLink, Button, PageHeader } from './ui';
 
-export type CatalogView = FolderRole | 'settings' | 'overview';
+export type CatalogView = FolderRole | 'settings' | 'overview' | 'collections';
 
 export function Catalog({ view, title, section, onSignedOut, series, children }: {
   view: CatalogView; title: string; section: string; onSignedOut: () => void; series?: SeriesLocation | null; children?: ReactNode;
@@ -96,6 +97,7 @@ export function Catalog({ view, title, section, onSignedOut, series, children }:
       {rootsError && <p role="alert" className="error">{rootsError}</p>}
       {!roots && !rootsError && <p role="status">Loading library folders…</p>}
       {view === 'overview' && roots && <Overview roots={roots} onSignedOut={onSignedOut} />}
+      {view === 'collections' && <Collections version={inventoryVersion ?? ''} onSignedOut={onSignedOut} />}
       {view === 'settings' && roots && (
         <>
           <LibrarySettings folders={roots} onSignedOut={onSignedOut} onChange={() => setRefresh(value => value + 1)} />

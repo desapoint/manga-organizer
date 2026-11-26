@@ -9,6 +9,7 @@ internal static class LibraryEndpoints
     {
         var library = api.MapGroup("/library/roots").RequireAuthorization();
         library.MapSeriesMetadata();
+        api.MapCollections();
         library.MapGet("", (LibraryStore store, LibraryScanQueue scans) => Results.Ok(store.ReadRoots()
             .Select(root => root.State is "queued" or "scanning" ? root with { ScanProgress = scans.Status(root.Id) } : root)));
         api.MapGet("/library/folders", (string? path) => FolderBrowser.Browse(path, dataDirectory)).RequireAuthorization();
@@ -46,18 +47,23 @@ internal static class LibraryEndpoints
             return Results.Ok(store.ReadFiles(id, offset ?? 0, limit ?? 50, seriesKey?.ToLowerInvariant(), search?.Trim() ?? ""));
         });
 
-        library.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, string? search, string? sort, bool? coverOnly, string? seriesKey, LibraryStore store) =>
+        library.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, string? search, string? sort, bool? coverOnly, string? seriesKey, LibraryStore store, HttpContext context) =>
         {
             if (!store.TryGetRoot(id, out _))
             {
                 return Results.NotFound();
             }
 
-            return IsValidPage(offset, limit) && search is not { Length: > 160 } && sort is null or "title" or "recent" or "files" &&
+            var query = context.Request.Query;
+            var filters = SeriesFilters.FromInput(search, coverOnly == true, query["includeTag"], query["excludeTag"]);
+            return IsValidPage(offset, limit) && filters is not null && sort is null or "title" or "recent" or "files" &&
                 (seriesKey is null || IsSeriesKey(seriesKey))
-                ? Results.Ok(store.ReadSeries(id, offset ?? 0, limit ?? 50, search?.Trim() ?? "", sort, coverOnly == true, seriesKey?.ToLowerInvariant()))
+                ? Results.Ok(store.ReadSeries(id, offset ?? 0, limit ?? 50, filters, sort, seriesKey?.ToLowerInvariant()))
                 : Results.BadRequest();
         });
+
+        library.MapGet("/{id:guid}/tags", (Guid id, LibraryStore store) =>
+            store.TryGetRoot(id, out _) ? Results.Ok(store.ReadSeriesTags(id)) : Results.NotFound());
 
         library.MapGet("/{id:guid}/series/{seriesKey}/cover", (Guid id, string seriesKey, LibraryStore store, HttpContext context) =>
             IsSeriesKey(seriesKey) ? CoverResult(context, store.ReadCover(id, seriesKey.ToLowerInvariant())) : Results.NotFound());
@@ -83,7 +89,7 @@ internal static class LibraryEndpoints
         });
     }
 
-    private static bool IsValidPage(int? offset, int? limit) => offset is not < 0 && limit is not (< 1 or > 100);
+    internal static bool IsValidPage(int? offset, int? limit) => offset is not < 0 && limit is not (< 1 or > 100);
     internal static bool IsSeriesKey(string value) => value.Length == 64 && value.All(char.IsAsciiHexDigit);
 
     private static IResult CoverResult(HttpContext context, byte[]? cover)
