@@ -59,15 +59,12 @@ internal static class LibraryEndpoints
         });
 
         library.MapGet("/{id:guid}/series/{seriesKey}/cover", (Guid id, string seriesKey, LibraryStore store, HttpContext context) =>
+            IsSeriesKey(seriesKey) ? CoverResult(context, store.ReadCover(id, seriesKey.ToLowerInvariant())) : Results.NotFound());
+
+        library.MapGet("/{id:guid}/files/{fileId}/cover", (Guid id, string fileId, LibraryStore store, HttpContext context) =>
         {
-            if (!IsSeriesKey(seriesKey)) return Results.NotFound();
-
-            var cover = store.ReadCover(id, seriesKey.ToLowerInvariant());
-            if (cover is null) return Results.NotFound();
-
-            context.Response.Headers.CacheControl = "private, max-age=120";
-            context.Response.Headers.XContentTypeOptions = "nosniff";
-            return Results.File(cover.Bytes, cover.MediaType);
+            if (fileId.Length != 32 || !fileId.All(char.IsAsciiHexDigit)) return Results.NotFound();
+            return CoverResult(context, store.ReadFileCover(id, fileId.ToLowerInvariant()));
         });
 
         library.MapPost("/{id:guid}/scan", async (Guid id, LibraryStore store, LibraryScanQueue scans,
@@ -87,6 +84,14 @@ internal static class LibraryEndpoints
 
     private static bool IsValidPage(int? offset, int? limit) => offset is not < 0 && limit is not (< 1 or > 100);
     internal static bool IsSeriesKey(string value) => value.Length == 64 && value.All(char.IsAsciiHexDigit);
+
+    private static IResult CoverResult(HttpContext context, byte[]? cover)
+    {
+        if (cover is null) return Results.NotFound();
+        context.Response.Headers.CacheControl = "private, max-age=120";
+        context.Response.Headers.XContentTypeOptions = "nosniff";
+        return Results.File(cover, CoverCache.MediaType);
+    }
 
     private static async Task<IResult> SaveFolder(Guid? id, LibraryFolderChange change, LibraryStore store,
         HttpContext context, IAntiforgery antiforgery)

@@ -6,7 +6,7 @@ import { formatSize, ROOTS_URL } from './library';
 import type { LibraryRoot } from './library';
 import { Select } from './Select';
 import { SeriesInfo } from './SeriesInfo';
-import { SeriesCover } from './SeriesCover';
+import { FileCover, SeriesCover } from './SeriesCover';
 import { ActionLink, Button, SearchField, SectionHeader, SegmentedControl } from './ui';
 
 const PAGE_SIZE = 50;
@@ -22,6 +22,7 @@ type CatalogEntry = {
   indexedLocations: number | null;
   volume: string | null;
   chapter: string | null;
+  hasCover: boolean;
 };
 
 type Series = { key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean };
@@ -96,9 +97,10 @@ function InventoryError({ children, retry }: { children: string; retry: () => vo
   );
 }
 
-function FileRow({ file, onInspect, coverageUrl, onSaved, onSignedOut, managedFolders, rootId, onMoved }: {
+function FileRow({ file, rootId, version, onInspect, coverageUrl, onSaved, onSignedOut, managedFolders, onMoved }:
+  Pick<InventoryProps, 'rootId' | 'version'> & {
   file: CatalogEntry; onInspect?: Inspect; coverageUrl?: string; onSaved: () => void; onSignedOut: () => void;
-  managedFolders: LibraryRoot[]; rootId: string; onMoved: () => void;
+  managedFolders: LibraryRoot[]; onMoved: () => void;
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
   const [showMove, setShowMove] = useState(false);
@@ -107,17 +109,20 @@ function FileRow({ file, onInspect, coverageUrl, onSaved, onSignedOut, managedFo
   const readable = file.contentId && (file.extension === 'cbz' || file.extension === 'zip');
   return (
     <li>
-      <span className="file-path" title={file.relativePath}>
-        {onInspect ? <button type="button" className="min-h-11 cursor-pointer rounded-sm border-0 bg-transparent p-0 text-start
-          text-inherit wrap-anywhere hover:text-accent-readable hover:underline desktop:min-h-0"
-          onClick={() => onInspect({ kind: 'file', file })}>{name}</button> : name}
-        {separator >= 0 && <small>{file.relativePath.slice(0, separator)}</small>}
-        {(file.volume || file.chapter) && <small>{file.volume && `Vol. ${file.volume}`}{file.volume && file.chapter && ' · '}
-          {file.chapter && `Ch. ${file.chapter}`}</small>}
-        {file.indexedLocations === null && <small>Content identity unavailable</small>}
-        {file.indexedLocations !== null && file.indexedLocations > 1 && (
-          <small>Same bytes at {file.indexedLocations.toLocaleString()} indexed locations</small>
-        )}
+      <span className="flex min-w-0 items-center gap-3">
+        {file.hasCover && <FileCover rootId={rootId} fileId={file.id} revision={version} className="h-12 w-8 shrink-0 rounded-sm" />}
+        <span className="file-path" title={file.relativePath}>
+          {onInspect ? <button type="button" className="min-h-11 cursor-pointer rounded-sm border-0 bg-transparent p-0 text-start
+            text-inherit wrap-anywhere hover:text-accent-readable hover:underline desktop:min-h-0"
+            onClick={() => onInspect({ kind: 'file', file })}>{name}</button> : name}
+          {separator >= 0 && <small>{file.relativePath.slice(0, separator)}</small>}
+          {(file.volume || file.chapter) && <small>{file.volume && `Vol. ${file.volume}`}{file.volume && file.chapter && ' · '}
+            {file.chapter && `Ch. ${file.chapter}`}</small>}
+          {file.indexedLocations === null && <small>Content identity unavailable</small>}
+          {file.indexedLocations !== null && file.indexedLocations > 1 && (
+            <small>Same bytes at {file.indexedLocations.toLocaleString()} indexed locations</small>
+          )}
+        </span>
       </span>
       <span className="file-format">{file.extension.toUpperCase()}</span>
       <span>{formatSize(file.size)}</span>
@@ -154,8 +159,9 @@ function FileInventory({ rootId, seriesKey, version, onSignedOut, onDataChanged,
         <div className={seriesKey ? 'min-w-0 rounded-b-xl border-t border-line bg-inset' : 'surface'}>
           <div className="catalog-columns" aria-hidden="true"><span>File</span><span>Type</span><span>Size</span><span>Modified</span></div>
           <ul className="catalog-files" role="list" aria-label={label}>
-            {page.items.map(file => <FileRow key={file.id} file={file} coverageUrl={coverageUrl} onInspect={onInspect}
-              onSaved={onDataChanged} onSignedOut={onSignedOut} managedFolders={managedFolders} rootId={rootId} onMoved={onMoved} />)}
+            {page.items.map(file => <FileRow key={file.id} file={file} rootId={rootId} version={version}
+              coverageUrl={coverageUrl} onInspect={onInspect} onSaved={onDataChanged} onSignedOut={onSignedOut}
+              managedFolders={managedFolders} onMoved={onMoved} />)}
           </ul>
           {page.total > PAGE_SIZE && (
             <div className="border-t border-line p-3">

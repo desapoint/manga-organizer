@@ -2,10 +2,18 @@ import { BookOpen } from 'lucide-react';
 import { useState } from 'react';
 import { ROOTS_URL } from './library';
 
-export function SeriesCover({ rootId, seriesKey, available, revision, className }: {
-  rootId: string; seriesKey: string; available: boolean; revision: string; className?: string;
-}) {
-  const url = `${ROOTS_URL}/${rootId}/series/${seriesKey}/cover?revision=${encodeURIComponent(revision)}`;
+type CoverProps = { rootId: string; revision: string; className?: string };
+
+export function SeriesCover({ seriesKey, available, ...props }: CoverProps & { seriesKey: string; available: boolean }) {
+  return <Cover {...props} path={`series/${seriesKey}`} available={available} />;
+}
+
+export function FileCover({ fileId, ...props }: CoverProps & { fileId: string }) {
+  return <Cover {...props} path={`files/${fileId}`} available />;
+}
+
+function Cover({ rootId, path, available, revision, className }: CoverProps & { path: string; available: boolean }) {
+  const url = `${ROOTS_URL}/${rootId}/${path}/cover?revision=${encodeURIComponent(revision)}`;
   const [failed, setFailed] = useState('');
   return (
     <span className={`grid place-items-center overflow-hidden bg-nav-active text-nav-icon ${className ?? ''}`}>

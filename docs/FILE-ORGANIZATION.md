@@ -18,6 +18,8 @@ During a scan, the WebUI shows files discovered, bytes read while verifying hash
 
 ## Import intake and association
 
+When a reviewed move would collide with an existing release, allow the owner to keep both using a numbered destination visible in the preview. Preserve each chapter or language variant as a separate file. Allow a reviewed move to bring along source folder artwork, retaining distinct destination cover images with names such as `cover-1.jpg` and `cover-2.jpg`. The planned paths and content must be revalidated at confirmation.
+
 An import intake folder is inventoried in its own WebUI view. The owner approved automatic movement from intake to a managed library once the file has an unambiguous metadata and volume or chapter association, or an owner supplies the association manually. Resolve the work, edition, intended library and applicable volume or chapter before moving a file. Ambiguous matches, changed sources, unavailable storage and destination conflicts keep the intake file in place.
 
 The reader must allow eligible files to open from intake or a library when their format is supported, including files with no metadata association. File movement uses the existing verified backup and restore, storage qualification, no-overwrite, revalidation and journal requirements. The current intake inventory provides discovery and configuration. The association and managed movement workflow is scheduled with the organizer's metadata and import operations. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [Reader formats](REMOTE-READING.md#reader-formats)
