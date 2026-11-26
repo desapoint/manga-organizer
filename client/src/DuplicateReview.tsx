@@ -1,6 +1,7 @@
 import { Files, ScanSearch } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChapterComparison } from './ChapterComparison';
+import { CoverageMark } from './CoverageMark';
 import { DuplicateBatch } from './DuplicateBatch';
 import { byteGroups, chapterCoverage, coverageLabels, fileColors, fileKind, fileName, isBundle } from './duplicateCoverage';
 import type { Chapter, CoverageFile, CoverageState } from './duplicateCoverage';
@@ -124,7 +125,7 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
       onBlur={() => setHoveredFile('')} onClick={() => inspectFile(file, jumpToInspector)}
       style={highlighted === file.fileId ? { borderColor: colors.get(file.fileId) } : undefined}
       className="flex min-h-11 min-w-0 cursor-pointer items-start gap-2 rounded-md border border-line bg-panel px-2.5 py-2 text-left">
-      <span aria-hidden="true" style={{ backgroundColor: colors.get(file.fileId) }} className="mt-1.5 size-2.5 shrink-0 rounded-xs" />
+      <CoverageMark file={file} color={colors.get(file.fileId)} />
       <span className="min-w-0 wrap-anywhere"><strong className="block text-xs">{fileName(file)}</strong>
         <span className="text-xs text-muted">{fileKind(file)}{file.chapters.length > 0 && ` · ${file.chapters.length} ${file.chapters.length === 1 ? 'chapter' : 'chapters'}`}</span></span>
     </button>;
