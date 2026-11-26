@@ -1,5 +1,5 @@
 import { Files, ScanSearch } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChapterComparison } from './ChapterComparison';
 import { DuplicateBatch } from './DuplicateBatch';
 import { byteGroups, chapterCoverage, coverageLabels, fileColors, fileKind, fileName, isBundle } from './duplicateCoverage';
@@ -45,6 +45,7 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
   const [batchFile, setBatchFile] = useState<CoverageFile | null>(null);
   const [fileLimit, setFileLimit] = useState(30);
   const [groupLimit, setGroupLimit] = useState(15);
+  const inspector = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const request = new AbortController();
@@ -94,9 +95,17 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
   const allFileCount = review.files.length;
   const rate = chapters.length ? counts.matching / chapters.length : 0;
 
-  function inspectFile(file: CoverageFile, lock: boolean) {
+  function showInspector() {
+    requestAnimationFrame(() => {
+      inspector.current?.focus({ preventScroll: true });
+      inspector.current?.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  function inspectFile(file: CoverageFile, jumpToInspector: boolean) {
     setSelectedFile(file.fileId);
-    setLockedFile(value => lock && value !== file.fileId ? file.fileId : '');
+    setLockedFile(value => value !== file.fileId ? file.fileId : '');
+    if (jumpToInspector) showInspector();
   }
 
   function refresh() {
@@ -107,12 +116,12 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
     onChanged();
   }
 
-  function fileButton(file: CoverageFile) {
+  function fileButton(file: CoverageFile, jumpToInspector = false) {
     return <button key={file.fileId} type="button" aria-pressed={highlighted === file.fileId && lockedFile === file.fileId}
       onPointerEnter={event => { if (event.pointerType !== 'touch') setHoveredFile(file.fileId); }}
       onPointerLeave={() => setHoveredFile('')}
       onFocus={event => { if (event.currentTarget.matches(':focus-visible')) setHoveredFile(file.fileId); }}
-      onBlur={() => setHoveredFile('')} onClick={() => inspectFile(file, true)}
+      onBlur={() => setHoveredFile('')} onClick={() => inspectFile(file, jumpToInspector)}
       style={highlighted === file.fileId ? { borderColor: colors.get(file.fileId) } : undefined}
       className="flex min-h-11 min-w-0 cursor-pointer items-start gap-2 rounded-md border border-line bg-panel px-2.5 py-2 text-left">
       <span aria-hidden="true" style={{ backgroundColor: colors.get(file.fileId) }} className="mt-1.5 size-2.5 shrink-0 rounded-xs" />
@@ -152,14 +161,19 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
               { value: 'desc', label: 'Newest first' }]} onChange={setOrder} />
           </div>
           {visible.length ? <ChapterComparison chapters={visible} colors={colors} selected={selectedChapter} highlighted={highlighted}
-            onSelect={key => { setSelectedChapter(value => value === key ? '' : key); setSelectedFile(''); setLockedFile(''); }} /> :
+            onSelect={key => {
+              setSelectedChapter(selectedChapter === key ? '' : key);
+              setSelectedFile('');
+              setLockedFile('');
+              if (selectedChapter !== key && !window.matchMedia('(min-width: 50rem)').matches) showInspector();
+            }} /> :
             <p className="m-0 text-sm text-muted">{chapters.length ? 'No chapters match the current filters.' : 'No chapter coverage is indexed. The files are listed below.'}</p>}
         </div>
-        <aside aria-label="Chapter and file review" className="grid min-w-0 gap-3 rounded-lg border border-line bg-inset p-3 desktop:sticky desktop:top-3">
+        <aside ref={inspector} tabIndex={-1} aria-label="Chapter and file review" className="grid min-w-0 scroll-mt-5 gap-3 rounded-lg border border-line bg-inset p-3 desktop:sticky desktop:top-3">
           <h3 className="m-0 text-sm font-semibold">{active ? `Chapter ${active.chapter}${active.volume ? ` · Vol. ${active.volume}` : ''}` : 'File review'}</h3>
           {active ? <>
             <p className="m-0 text-xs text-muted">{coverageLabels[active.state]} · {active.files.length} {active.files.length === 1 ? 'file' : 'files'}</p>
-            <div className="grid gap-1.5">{active.files.map(fileButton)}</div>
+            <div className="grid gap-1.5">{active.files.map(file => fileButton(file))}</div>
           </> : !inspected && <p className="m-0 text-sm text-muted">Select a chapter to review its files, or select a file from the inventory.</p>}
           {inspected && <div className="grid min-w-0 gap-2 rounded-md border border-line bg-panel p-2.5">
             <div className="flex min-w-0 items-start gap-2">
@@ -186,14 +200,14 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
         <p className="m-0 text-xs text-muted">Indexed hashes group locations. Quarantine review checks physical identity and whole-file coverage.</p>
         {visibleGroups.slice(0, groupLimit).map(group => <details key={group[0].fileId} className="rounded-lg border border-line px-2.5">
           <summary className="min-h-11 cursor-pointer py-2 text-sm wrap-anywhere">{fileName(group[0])} · {group.length} paths</summary>
-          <div className="grid gap-1.5 pb-2">{group.map(fileButton)}</div>
+          <div className="grid gap-1.5 pb-2">{group.map(file => fileButton(file, true))}</div>
         </details>)}
         {!visibleGroups.length && <p className="m-0 text-sm text-muted">No matching indexed byte groups in this view.</p>}
         {visibleGroups.length > groupLimit && <Button variant="secondary" className="justify-self-start" onClick={() => setGroupLimit(value => value + 15)}>Show more groups</Button>}
       </section>
       <section aria-label="Files in comparison" className="grid min-w-0 gap-3 rounded-xl border border-line bg-panel p-3.5 sm:p-4">
         <SectionHeader title={fileId ? 'Files in comparison' : 'All series files'} />
-        <div className="grid gap-1.5">{fileResults.slice(0, fileLimit).map(fileButton)}</div>
+        <div className="grid gap-1.5">{fileResults.slice(0, fileLimit).map(file => fileButton(file, true))}</div>
         {!fileResults.length && <p className="m-0 text-sm text-muted">No files match the search.</p>}
         {fileResults.length > fileLimit && <Button variant="secondary" icon={Files} className="justify-self-start" onClick={() => setFileLimit(value => value + 30)}>Show more files</Button>}
       </section>
