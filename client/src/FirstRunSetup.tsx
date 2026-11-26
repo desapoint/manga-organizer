@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { FolderField } from './FolderField';
+import { Button } from './ui';
 
 export type SetupStatus = { libraryConfigured: boolean };
 
@@ -73,7 +74,7 @@ export function FirstRunSetup({ libraryConfigured }: SetupStatus) {
   }
 
   return (
-    <section className="panel" aria-labelledby="setup-heading">
+    <section className="surface auth-panel" aria-labelledby="setup-heading">
       <h1 id="setup-heading">Set up your server</h1>
       {!token && <p>Open the one-time setup link shown in the Manga Organizer server window.</p>}
       {token && (phase === 'editing' || phase === 'saving') && (
@@ -86,14 +87,14 @@ export function FirstRunSetup({ libraryConfigured }: SetupStatus) {
           {!libraryConfigured && <FolderField id="setup-library" label="Library folder (optional)" value={libraryPath}
             onChange={setLibraryPath} setupToken={token} />}
           {error && <p role="alert" className="error">{error}</p>}
-          <button disabled={phase === 'saving'}>{phase === 'saving' ? 'Saving…' : 'Finish setup'}</button>
+          <Button type="submit" disabled={phase === 'saving'}>{phase === 'saving' ? 'Saving…' : 'Finish setup'}</Button>
         </form>
       )}
       {phase === 'starting' && <p role="status">Starting your server…</p>}
       {phase === 'waiting' && (
         <>
           <p role="status">Setup was saved. Check the server window if startup takes longer than expected.</p>
-          <button type="button" onClick={waitForServer}>Check again</button>
+          <Button onClick={waitForServer}>Check again</Button>
         </>
       )}
     </section>

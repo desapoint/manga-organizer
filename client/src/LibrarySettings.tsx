@@ -1,7 +1,9 @@
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { getCsrfToken } from './api';
 import { FolderField } from './FolderField';
+import { Button } from './ui';
 
 export type FolderKind = 'library' | 'import';
 export type ConfiguredFolder = { id: string; path: string; name: string | null; kind: FolderKind };
@@ -59,21 +61,21 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
                 {folder.name && <code>{folder.path}</code>}
                 <span>{folder.kind === 'import' ? 'Import folder' : 'Read-only library'}</span>
               </div>
-              <div className="folder-actions">
-                <button type="button" className="secondary" disabled={busy} aria-label={`Edit ${folder.name || folder.path}`}
-                  onClick={() => { setError(''); setDraft({ ...folder, name: folder.name ?? '' }); }}>Edit</button>
-                <button type="button" className="secondary" disabled={busy} aria-label={`Remove ${folder.name || folder.path}`}
-                  onClick={() => void changeFolder('DELETE', folder.id)}>Remove</button>
+              <div className="action-row">
+                <Button variant="secondary" disabled={busy} aria-label={`Edit ${folder.name || folder.path}`}
+                  onClick={() => { setError(''); setDraft({ ...folder, name: folder.name ?? '' }); }}>Edit</Button>
+                <Button variant="secondary" disabled={busy} aria-label={`Remove ${folder.name || folder.path}`}
+                  onClick={() => void changeFolder('DELETE', folder.id)}>Remove</Button>
               </div>
             </li>
           ))}
         </ul>
       )}
       {error && <p role="alert" className="error">{error}</p>}
-      {!draft && <button type="button" disabled={busy} onClick={() => {
+      {!draft && <Button icon={Plus} disabled={busy} onClick={() => {
         setError('');
         setDraft({ path: '', name: '', kind: 'library' });
-      }}>Add folder</button>}
+      }}>Add folder</Button>}
       {draft && (
         <form className="settings-form" key={draft.id ?? 'new'} onSubmit={save}>
           <h2>{draft.id ? 'Edit folder' : 'Add folder'}</h2>
@@ -86,9 +88,9 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
           <input id="folder-name" value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} />
           <FolderField id="settings-folder" label="Folder location" required value={draft.path}
             onChange={path => setDraft({ ...draft, path })} />
-          <div className="folder-actions">
-            <button disabled={busy}>{busy ? 'Saving…' : 'Save folder'}</button>
-            <button type="button" className="secondary" disabled={busy} onClick={() => setDraft(null)}>Cancel</button>
+          <div className="action-row">
+            <Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save folder'}</Button>
+            <Button variant="secondary" disabled={busy} onClick={() => setDraft(null)}>Cancel</Button>
           </div>
         </form>
       )}

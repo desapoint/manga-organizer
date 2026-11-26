@@ -8,6 +8,8 @@ Server-hosted reading and cross-device progress are required. One Windows or Lin
 
 Use docs/IMPLEMENTATION-DECISIONS.md and docs/FEATURE-SELECTION.csv for the approved scope. Check the owner notes when a row groups several capabilities. Deferred features require a later owner decision.
 
+WebUI changes must follow the shared design system. Use Tailwind CSS and its theme tokens for styling, Lucide for UI icons, and reusable React components for repeated controls and layouts. Give shared components semantic markup, named style variants, composable content, and native props where applicable. Keep visible navigation labels, keyboard focus and responsive layouts. See the WebUI section in docs/ARCHITECTURE.md.
+
 File organization and deduplication are core features (F69/F70), not optional reader extras. Read-only discovery first; never remove a file based on title, size, weak fingerprint or similar-looking pages. Protect hardlinks, alternate editions, progress and unique chapter/page coverage. No automatic permanent deletion without explicit owner policy; preview/revalidate/journal/restore all approved mutations. See docs/FILE-ORGANIZATION.md for requirements and acceptance gates.
 
 Audit completion is explicitly requested. Consult docs/source-audit/COMPLETION-LEDGER.md and PASS3.md. Close module behavior, release/license and runtime gates with recorded evidence. Foundation smoke tests verify the development build and retain the target qualification gates.

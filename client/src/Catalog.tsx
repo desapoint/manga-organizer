@@ -1,7 +1,9 @@
+import { FolderCog, ScanSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCsrfToken } from './api';
 import { LibrarySettings, ROOTS_URL } from './LibrarySettings';
 import type { ConfiguredFolder, FolderKind } from './LibrarySettings';
+import { ActionLink, Button } from './ui';
 
 export type CatalogView = FolderKind | 'settings';
 
@@ -44,7 +46,7 @@ function formatSize(bytes: number) {
   return `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
 }
 
-export function Catalog({ view, onSignedOut }: { view: CatalogView; onSignedOut: () => void }) {
+export function Catalog({ view, title, onSignedOut }: { view: CatalogView; title: string; onSignedOut: () => void }) {
   const [roots, setRoots] = useState<Root[] | null>(null);
   const [selectedId, setSelectedId] = useState('');
   const [offset, setOffset] = useState(0);
@@ -139,20 +141,20 @@ export function Catalog({ view, onSignedOut }: { view: CatalogView; onSignedOut:
 
   return (
     <section className="workspace-page" aria-labelledby="catalog-heading">
-      <h1 id="catalog-heading">{view === 'settings' ? 'Library settings' : view === 'import' ? 'Import intake' : 'Library catalog'}</h1>
+      <h1 id="catalog-heading">{title}</h1>
       {rootsError && <p role="alert" className="error">{rootsError}</p>}
       {!roots && !rootsError && <p role="status">Loading library folders…</p>}
       {view === 'settings' && roots && <LibrarySettings folders={roots} onSignedOut={onSignedOut}
         onChange={() => setRefresh(value => value + 1)} />}
       {visibleRoots?.length === 0 && view !== 'settings' && (
-        <div className="catalog-surface">
+        <div className="surface catalog-surface">
           <p>{view === 'import' ? 'Add an intake folder to see files awaiting association.' : 'Add a folder on the server to start building your catalog.'}</p>
-          <a className="action-link" href="#settings">Manage folders</a>
+          <ActionLink icon={FolderCog} href="#settings">Manage folders</ActionLink>
         </div>
       )}
       {selected && (
         <>
-          <div className="catalog-surface">
+          <div className="surface catalog-surface">
             <div className="catalog-controls">
               <label>
                 {view === 'import' ? 'Import folder' : 'Library folder'}
@@ -164,7 +166,7 @@ export function Catalog({ view, onSignedOut }: { view: CatalogView; onSignedOut:
                   {visibleRoots?.map(root => <option key={root.id} value={root.id}>{root.name || root.path}</option>)}
                 </select>
               </label>
-              <button type="button" onClick={startScan} disabled={scanPending || scanIsActive(selected)}>Scan folder</button>
+              <Button icon={ScanSearch} onClick={startScan} disabled={scanPending || scanIsActive(selected)}>Scan folder</Button>
             </div>
             <p className="scan-state" role="status">{SCAN_LABELS[selected.state]}</p>
             <div className="catalog-summary">
@@ -176,13 +178,13 @@ export function Catalog({ view, onSignedOut }: { view: CatalogView; onSignedOut:
           {scanError && <p role="alert" className="error">{scanError}</p>}
           {filesError && (
             <p role="alert" className="error">
-              {filesError} <button type="button" className="secondary" onClick={() => setRefresh(value => value + 1)}>Retry</button>
+              {filesError} <Button variant="secondary" onClick={() => setRefresh(value => value + 1)}>Retry</Button>
             </p>
           )}
           {!page && !filesError && <p role="status">Loading inventory…</p>}
           {page && page.total > 0 && (
             <>
-              <div className="catalog-inventory">
+              <div className="surface">
                 <div className="catalog-columns" aria-hidden="true"><span>File</span><span>Type</span><span>Size</span><span>Modified</span></div>
                 <ul className="catalog-files" aria-label="Catalog files">
                   {page.items.map(file => (
@@ -203,9 +205,9 @@ export function Catalog({ view, onSignedOut }: { view: CatalogView; onSignedOut:
               </div>
               {page.total > PAGE_SIZE && (
                 <nav className="pagination" aria-label="Inventory pages">
-                  <button type="button" className="secondary" disabled={offset === 0} onClick={() => setOffset(offset - PAGE_SIZE)}>Previous</button>
+                  <Button variant="secondary" disabled={offset === 0} onClick={() => setOffset(offset - PAGE_SIZE)}>Previous</Button>
                   <span>{offset + 1}–{offset + page.items.length} of {page.total.toLocaleString()}</span>
-                  <button type="button" className="secondary" disabled={offset + PAGE_SIZE >= page.total} onClick={() => setOffset(offset + PAGE_SIZE)}>Next</button>
+                  <Button variant="secondary" disabled={offset + PAGE_SIZE >= page.total} onClick={() => setOffset(offset + PAGE_SIZE)}>Next</Button>
                 </nav>
               )}
             </>

@@ -5,6 +5,7 @@ import { getCsrfToken } from './api';
 import { Workspace } from './Workspace';
 import { FirstRunSetup } from './FirstRunSetup';
 import type { SetupStatus } from './FirstRunSetup';
+import { AuthLayout, Button } from './ui';
 import './styles.css';
 
 type Server = { id: string };
@@ -90,10 +91,9 @@ function App() {
 
   if (typeof connection === 'object' && 'libraryConfigured' in connection) {
     return (
-      <main className="auth-layout">
-        <header className="brand">Manga Organizer</header>
+      <AuthLayout>
         <FirstRunSetup libraryConfigured={connection.libraryConfigured} />
-      </main>
+      </AuthLayout>
     );
   }
 
@@ -103,27 +103,26 @@ function App() {
   }
 
   return (
-    <main className="auth-layout">
-      <header className="brand">Manga Organizer</header>
-      <section className="panel" aria-labelledby="server-heading">
+    <AuthLayout>
+      <section className="surface auth-panel" aria-labelledby="server-heading">
         <h1 id="server-heading">Primary server</h1>
         {connection === 'checking' && <p role="status">Checking connection…</p>}
         {connection === 'unavailable' && (
           <>
             <p role="alert">The server is unavailable.</p>
-            <button type="button" onClick={() => window.location.reload()}>Try again</button>
+            <Button onClick={() => window.location.reload()}>Try again</Button>
           </>
         )}
         {connection === 'signed-out' && (
           <form onSubmit={signIn}>
             <label htmlFor="password">Owner password</label>
             <input id="password" name="password" type="password" autoComplete="current-password" required maxLength={256} />
-            <button disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+            <Button type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</Button>
           </form>
         )}
         {error && <p role="alert" className="error">{error}</p>}
       </section>
-    </main>
+    </AuthLayout>
   );
 }
 

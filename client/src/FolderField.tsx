@@ -1,4 +1,6 @@
+import { ChevronRight, FolderClosed, FolderOpen, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Button } from './ui';
 
 type Folder = { name: string; path: string };
 type Locations = {
@@ -76,10 +78,11 @@ export function FolderField({ id, label, value, onChange, required, setupToken }
 
   function folderLinks(items: Folder[]) {
     return (
-      <ul className="folder-links">
+      <ul className="folder-links" role="list">
         {items.map(folder => (
           <li key={folder.path}>
-            <button type="button" className="secondary" title={folder.path} onClick={() => openLocation(folder.path)}>{folder.name}</button>
+            <Button variant="secondary" align="start" icon={FolderClosed} className="w-full text-start wrap-anywhere" title={folder.path}
+              onClick={() => openLocation(folder.path)}>{folder.name}</Button>
           </li>
         ))}
       </ul>
@@ -92,33 +95,35 @@ export function FolderField({ id, label, value, onChange, required, setupToken }
       <div className="folder-field">
         <input id={id} name="libraryPath" value={value} onChange={event => onChange(event.target.value)}
           autoComplete="off" spellCheck={false} required={required} aria-describedby={`${id}-help`} />
-        <button type="button" className="secondary" aria-expanded={browsing} onClick={() => {
+        <Button variant="secondary" icon={browsing ? X : FolderOpen} aria-expanded={browsing} onClick={() => {
           if (!browsing) openLocation(value.trim() || null);
           setBrowsing(!browsing);
-        }}>{browsing ? 'Close browser' : 'Browse server'}</button>
+        }}>{browsing ? 'Close browser' : 'Browse server'}</Button>
       </div>
       <span className="field-help" id={`${id}-help`}>Choose a folder on the server or enter its full path.</span>
       {browsing && (
         <section className="folder-browser" aria-label="Server folders">
-          <div className="folder-browser-controls">
-            <button type="button" className="secondary" disabled={path === null} onClick={() => openLocation(null)}>Disks</button>
-            {locations?.path && <button type="button" className="secondary" onClick={() => openLocation(locations.parent)}>Up</button>}
+          <div className="action-row">
+            <Button variant="secondary" disabled={path === null} onClick={() => openLocation(null)}>Disks</Button>
+            {locations?.path && <Button variant="secondary" onClick={() => openLocation(locations.parent)}>Up</Button>}
             {value.trim() && value.trim() !== path && (
-              <button type="button" className="secondary" onClick={() => openLocation(value.trim())}>Open entered path</button>
+              <Button variant="secondary" onClick={() => openLocation(value.trim())}>Open entered path</Button>
             )}
-            {locations?.path && <button type="button" className="folder-select" disabled={!locations.selectable} onClick={() => {
+            {locations?.path && <Button className="ms-auto" disabled={!locations.selectable} onClick={() => {
               if (locations.path) onChange(locations.path);
               setBrowsing(false);
-            }}>Use this folder</button>}
+            }}>Use this folder</Button>}
           </div>
           {locations?.path && (
             <nav className="folder-breadcrumbs" aria-label="Folder path">
               <ol>
                 {locations.breadcrumbs.map((folder, index) => (
                   <li key={folder.path}>
+                    {index > 0 && <ChevronRight className="mx-0.5 size-3 shrink-0 text-muted" aria-hidden="true" />}
                     {index === locations.breadcrumbs.length - 1
-                      ? <span aria-current="location" title={folder.path}>{folder.name}</span>
-                      : <button type="button" title={folder.path} onClick={() => openLocation(folder.path)}>{folder.name}</button>}
+                      ? <span className="px-1.5 py-1" aria-current="location" title={folder.path}>{folder.name}</span>
+                      : <Button variant="ghost" size="compact" className="text-start" title={folder.path}
+                        onClick={() => openLocation(folder.path)}>{folder.name}</Button>}
                   </li>
                 ))}
               </ol>

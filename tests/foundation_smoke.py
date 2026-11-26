@@ -371,6 +371,9 @@ def smoke(start, media):
         assert "<title>Manga Organizer</title>" in html
         (script,) = re.findall(r'<script[^>]+src="([^"]+)"', html)
         assert first.request(script, 200)
+        (stylesheet,) = re.findall(r'<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"', html)
+        assert first.request(stylesheet, 200)
+        assert first.headers.get_content_type() == "text/css"
         first.request("/api/server", 401)
         first.request(LIBRARY_ROOTS, 401)
         first.request("/api/library/folders", 401)
