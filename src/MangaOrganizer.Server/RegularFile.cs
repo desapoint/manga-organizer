@@ -3,6 +3,8 @@ using Microsoft.Win32.SafeHandles;
 
 namespace MangaOrganizer.Server;
 
+internal sealed record PhysicalFile(ulong Device, ulong Index, uint Links);
+
 internal static class RegularFile
 {
     private const FileAttributes NonRegularAttributes = FileAttributes.Directory | FileAttributes.ReparsePoint | FileAttributes.Device;
@@ -31,6 +33,21 @@ internal static class RegularFile
             return null;
         }
     }
+
+    public static PhysicalFile? Identity(FileInfo file, long size, DateTime modifiedAt) =>
+        Read(file, size, modifiedAt, handle =>
+        {
+            if (OperatingSystem.IsLinux())
+            {
+                return ReadLinuxStat(handle.DangerousGetHandle().ToInt32(), "", 0x1000, out var stat) && (stat.Mask & 4) != 0
+                    ? new PhysicalFile(((ulong)stat.DeviceMajor << 32) | stat.DeviceMinor, stat.Inode, stat.LinkCount) : null;
+            }
+            if (OperatingSystem.IsWindows() && GetFileInformationByHandle(handle, out var info))
+            {
+                return new PhysicalFile(info.Volume, ((ulong)info.IndexHigh << 32) | info.IndexLow, info.LinkCount);
+            }
+            return null;
+        });
 
     private static T? ReadWindows<T>(string path, DateTime modifiedAt, Func<SafeFileHandle, T?> read) where T : class
     {
@@ -90,7 +107,7 @@ internal static class RegularFile
 
     private static bool ReadLinuxStat(int descriptor, string path, int flags, out LinuxFileStat stat)
     {
-        const uint requested = 0x3C1; // Type, modification time, change time, inode and size.
+        const uint requested = 0x3C5; // Type, modification time, change time, inode and size.
         return StatLinux(descriptor, path, flags, requested, out stat) == 0 &&
             (stat.Mask & requested) == requested && (stat.Mode & 0xF000) == 0x8000;
     }
@@ -100,6 +117,7 @@ internal static class RegularFile
     private struct LinuxFileStat
     {
         [FieldOffset(0)] public uint Mask;
+        [FieldOffset(16)] public uint LinkCount;
         [FieldOffset(28)] public ushort Mode;
         [FieldOffset(32)] public ulong Inode;
         [FieldOffset(40)] public long Size;
@@ -115,6 +133,25 @@ internal static class RegularFile
             ChangeSeconds == other.ChangeSeconds && ChangeNanoseconds == other.ChangeNanoseconds &&
             ModifiedSeconds == other.ModifiedSeconds && ModifiedNanoseconds == other.ModifiedNanoseconds;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WindowsFileInformation
+    {
+        public uint Attributes;
+        public System.Runtime.InteropServices.ComTypes.FILETIME CreationTime;
+        public System.Runtime.InteropServices.ComTypes.FILETIME AccessTime;
+        public System.Runtime.InteropServices.ComTypes.FILETIME WriteTime;
+        public uint Volume;
+        public uint SizeHigh;
+        public uint SizeLow;
+        public uint LinkCount;
+        public uint IndexHigh;
+        public uint IndexLow;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetFileInformationByHandle(SafeFileHandle handle, out WindowsFileInformation information);
 
     [DllImport("libc", EntryPoint = "open")]
     private static extern int OpenLinux([MarshalAs(UnmanagedType.LPUTF8Str)] string path, int flags);

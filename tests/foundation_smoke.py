@@ -1168,6 +1168,8 @@ def verify_managed_files(start, media, *, shared_permissions=False, data_directo
         second_source.unlink()
         owner.scan(primary["id"])
 
+        review_duplicates(owner, primary["id"], original.parent)
+
         changed = preview("Changed.cbz")
         old = original.stat()
         modified = b"!" + original_bytes[1:]
@@ -1206,6 +1208,64 @@ def verify_managed_files(start, media, *, shared_permissions=False, data_directo
         result = json.loads(owner.request(f"{operations}/{interrupted['id']}/restore", 200, method="POST", token=owner.csrf()))
         assert result["state"] == "restored" and original.read_bytes() == original_bytes
         assert blocked_target.read_bytes() == b"A file created independently before recovery"
+
+
+def review_duplicates(owner, root, directory):
+    volume = directory / "Safety Fixture Vol.01 Ch.1-3.cbz"
+    chapter = directory / "Safety Fixture Vol.01 Ch.1.cbz"
+    copy = directory / "Safety Fixture Vol.01 Ch.1-3 [Variant 1].cbz"
+    alias = directory / "Safety Fixture Vol.01 Ch.1 [Variant 1].cbz"
+    for index, path in enumerate((volume, chapter)):
+        with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
+            archive.writestr("1.png", synthetic_png(125, index + 5, 35))
+    copy.write_bytes(volume.read_bytes())
+    os.link(chapter, alias)
+    owner.scan(root)
+    files = {item["relativePath"]: item for item in owner.files(root)["items"]}
+    operations = "/api/file-operations"
+
+    def compare(path):
+        return json.loads(owner.request(f"{operations}/duplicates/{root}/{files[path.name]['id']}", 200))["comparisons"]
+
+    def quarantine(source, retain, status):
+        return json.loads(owner.request(operations + "/quarantine-preview", status, method="POST", token=owner.csrf(), body={
+            "rootId": root, "sourceFile": files[source.name]["id"], "keepFile": files[retain.name]["id"],
+        }))
+
+    comparisons = {item["candidate"]["relativePath"]: item for item in compare(volume)}
+    overlap = comparisons[chapter.name]
+    assert overlap["kind"] == "overlap" and not overlap["canQuarantine"]
+    assert [item["chapter"] for item in overlap["shared"]] == ["1"]
+    assert [item["chapter"] for item in overlap["sourceOnly"]] == ["2", "3"]
+    assert comparisons[copy.name]["canQuarantine"]
+    assert any(item["kind"] == "hardlink" and not item["canQuarantine"] for item in compare(chapter))
+    quarantine(volume, chapter, 409)
+    quarantine(chapter, volume, 409)
+    quarantine(chapter, alias, 409)
+    preview = quarantine(copy, volume, 200)
+    backup_source = volume.read_bytes()
+    before = volume.stat()
+    volume.write_bytes(b"!" + backup_source[1:])
+    os.utime(volume, ns=(before.st_atime_ns, before.st_mtime_ns))
+    owner.request(f"{operations}/{preview['id']}/apply", 409, method="POST", token=owner.csrf())
+    assert copy.read_bytes() == backup_source
+    volume.write_bytes(backup_source)
+    owner.scan(root)
+    confirmed = quarantine(copy, volume, 200)
+    url = f"{operations}/{confirmed['id']}"
+    result = json.loads(owner.request(url + "/apply", 200, method="POST", token=owner.csrf()))
+    assert result["kind"] == "quarantine" and result["state"] == "completed"
+    assert not copy.exists() and volume.read_bytes() == backup_source
+    assert Path(result["target"]).name.endswith(".recovery")
+    assert copy.name not in {item["relativePath"] for item in owner.files(root)["items"]}
+    owner.scan(root)
+    assert owner.files(root, "?search=recovery")["total"] == 0
+    owner.request(url + "/restore", 200, method="POST", token=owner.csrf())
+    assert copy.read_bytes() == volume.read_bytes() == backup_source
+
+    for path in (volume, chapter, copy, alias):
+        path.unlink()
+    owner.scan(root)
 
 
 if __name__ == "__main__":

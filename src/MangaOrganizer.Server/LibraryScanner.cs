@@ -92,6 +92,7 @@ internal static class LibraryScanner
             var options = new EnumerationOptions { AttributesToSkip = 0, IgnoreInaccessible = false };
             foreach (var entry in directory.EnumerateFileSystemInfos("*", options))
             {
+                if (entry is DirectoryInfo && entry.Name.Equals(ManagedFileOperations.QuarantineDirectory, StringComparison.OrdinalIgnoreCase)) continue;
                 cancellationToken.ThrowIfCancellationRequested();
                 if ((entry.Attributes & FileAttributes.ReparsePoint) != 0)
                 {

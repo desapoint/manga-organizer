@@ -8,7 +8,7 @@ import { Select } from './Select';
 import { Button, SectionHeader } from './ui';
 
 const url = '/api/file-operations';
-export type Operation = { id: string; state: 'planned' | 'applying' | 'completed' | 'restoring' | 'restored' | 'review';
+export type Operation = { id: string; kind: 'move' | 'quarantine'; state: 'planned' | 'applying' | 'completed' | 'restoring' | 'restored' | 'review';
   source: string; target: string; size: number; sha256: string; recovery: string | null; message: string | null;
   covers: { source: string; target: string; published: boolean }[] };
 
@@ -157,7 +157,7 @@ export function FileOperationHistory({ onSignedOut, onChanged }: { onSignedOut: 
       {history?.length === 0 && <p className="m-0 text-sm text-muted">Reviewed file changes appear here.</p>}
       {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
       {history?.map(operation => <details className="rounded-lg border border-line bg-inset px-3" key={operation.id}>
-        <summary className="min-h-11 cursor-pointer py-2.5 font-medium wrap-anywhere">{stateLabel[operation.state]} · {operation.target}</summary>
+        <summary className="min-h-11 cursor-pointer py-2.5 font-medium wrap-anywhere">{stateLabel[operation.state]} · {operation.kind === 'quarantine' ? 'Quarantine · ' : ''}{operation.target}</summary>
         <div className="grid gap-3 pb-3">
           <OperationDetails operation={operation} />
           {(operation.state === 'completed' || operation.state === 'review') && (confirmation === operation.id ? <div className="action-row">

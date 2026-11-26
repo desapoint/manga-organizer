@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ChapterCoverage } from './ChapterCoverage';
 import { CollectionForm, emptyFilters, SeriesCollectionMembership, TagRulesFields, useTagNames } from './CollectionControls';
 import type { TagRules } from './CollectionControls';
+import { DuplicateReview } from './DuplicateReview';
 import { FileMove } from './FileOperations';
 import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataEditor, SeriesInfo, useSeriesDetails } from './SeriesInfo';
@@ -110,6 +111,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
   const [showMove, setShowMove] = useState(false);
+  const [showDuplicates, setShowDuplicates] = useState(false);
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
   const readable = file.contentId && ['cbz', 'zip', 'cbr', 'rar'].includes(file.extension);
@@ -137,6 +139,11 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
       {readable && <div className="col-span-full">
         <ActionLink variant="ghost" icon={BookOpen} href={onInspect ? `#read/${file.contentId}/intake` :
           seriesKey ? seriesReaderHref(file.contentId!, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>
+      </div>}
+      {file.contentId && <div className="col-span-full">
+        <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare duplicates</Button>
+        {showDuplicates && <DuplicateReview rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
+          onClose={() => setShowDuplicates(false)} onChanged={onMoved} />}
       </div>}
       {coverageUrl && file.contentId && <details className="col-span-full" onToggle={event => setShowCoverage(event.currentTarget.open)}>
         <summary className="min-h-9 cursor-pointer py-2 text-sm text-accent-readable">Set chapter coverage</summary>

@@ -7,14 +7,15 @@ internal sealed record ManagedFile(string Id, string RelativePath, string Conten
     string? SeriesTitle, string? Volume, string? Chapter);
 internal sealed record FileOperation(Guid Id, string State, Guid SourceRoot, Guid TargetRoot, string SourceBase, string TargetBase,
     string SourcePath, string TargetPath, string FileId, string ContentId, long Size, byte[] Sha256, string SeriesKey,
-    string? SeriesTitle, string? Volume, string? Chapter, string? Message, FileOperationCover[] Covers);
+    string? SeriesTitle, string? Volume, string? Chapter, string? Message, FileOperationCover[] Covers,
+    string? QuarantineKeepFile = null, string? QuarantineKeepPath = null);
 internal sealed record FileOperationCover(string SourcePath, string TargetPath, long Size, byte[] Sha256, bool Published = false);
 
 internal sealed partial class LibraryStore
 {
     private const string OperationColumns = """
         id, state, source_root, target_root, source_base, target_base, source_path, target_path,
-        file_id, content_id, size, sha256, series_key, series_title, volume_hint, chapter_hint, message, cover_plan
+        file_id, content_id, size, sha256, series_key, series_title, volume_hint, chapter_hint, message, cover_plan, quarantine_keep_file, quarantine_keep_path
         """;
 
     public ManagedFile? ReadManagedFile(Guid root, string fileId)
@@ -92,9 +93,9 @@ internal sealed partial class LibraryStore
         using var command = database.CreateCommand();
         command.CommandText = """
             INSERT INTO file_operation(id, state, source_root, target_root, source_base, target_base, source_path,
-                target_path, file_id, content_id, size, sha256, series_key, series_title, volume_hint, chapter_hint, created_at, updated_at, cover_plan)
+                target_path, file_id, content_id, size, sha256, series_key, series_title, volume_hint, chapter_hint, created_at, updated_at, cover_plan, quarantine_keep_file, quarantine_keep_path)
             VALUES($id, 'planned', $sourceRoot, $targetRoot, $sourceBase, $targetBase, $sourcePath,
-                $targetPath, $file, $content, $size, $sha256, $series, $title, $volume, $chapter, $now, $now, $covers);
+                $targetPath, $file, $content, $size, $sha256, $series, $title, $volume, $chapter, $now, $now, $covers, $keepFile, $keepPath);
             """;
         command.Parameters.AddWithValue("$id", operation.Id);
         command.Parameters.AddWithValue("$sourceRoot", operation.SourceRoot);
@@ -110,6 +111,8 @@ internal sealed partial class LibraryStore
         AddSeriesParameters(command, operation);
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);
         command.Parameters.AddWithValue("$covers", JsonSerializer.Serialize(operation.Covers));
+        command.Parameters.AddWithValue("$keepFile", (object?)operation.QuarantineKeepFile ?? DBNull.Value);
+        command.Parameters.AddWithValue("$keepPath", (object?)operation.QuarantineKeepPath ?? DBNull.Value);
         command.ExecuteNonQuery();
     }
 
@@ -230,7 +233,8 @@ internal sealed partial class LibraryStore
         var path = restore ? operation.SourcePath : operation.TargetPath;
         using var database = OpenCoverDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
-        var sidecar = CacheManagedCovers(operation, restore, modified, database, transaction);
+        var publishToCatalog = restore || operation.QuarantineKeepFile is null;
+        var sidecar = publishToCatalog ? CacheManagedCovers(operation, restore, modified, database, transaction) : null;
         using var command = database.CreateCommand();
         command.Transaction = transaction;
         command.Parameters.AddWithValue("$id", operation.Id);
@@ -246,24 +250,27 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$message", retainTarget ? "The destination was retained for inspection." : DBNull.Value);
         command.Parameters.AddWithValue("$targetPath", operation.TargetPath);
         command.Parameters.AddWithValue("$sourcePath", operation.SourcePath);
-        command.CommandText = """
-            DELETE FROM library_file WHERE root_id = $root AND relative_path = $path AND id <> $file;
-            """;
-        command.ExecuteNonQuery();
-        command.CommandText = """
-            UPDATE library_file SET root_id = $root, relative_path = $path, modified_at = $modified
-            WHERE id = $file AND content_id = $content;
-            """;
-        if (command.ExecuteNonQuery() == 0)
+        if (publishToCatalog)
         {
-            AddSeriesParameters(command, operation);
-            command.Parameters.AddWithValue("$extension", Path.GetExtension(path)[1..].ToLowerInvariant());
-            command.Parameters.AddWithValue("$size", operation.Size);
             command.CommandText = """
-                INSERT INTO library_file(root_id, relative_path, extension, size, modified_at, content_id, series_key, series_title, volume_hint, chapter_hint)
-                VALUES($root, $path, $extension, $size, $modified, $content, $series, $title, $volume, $chapter);
+                DELETE FROM library_file WHERE root_id = $root AND relative_path = $path AND id <> $file;
                 """;
             command.ExecuteNonQuery();
+            command.CommandText = """
+                UPDATE library_file SET root_id = $root, relative_path = $path, modified_at = $modified
+                WHERE id = $file AND content_id = $content;
+                """;
+            if (command.ExecuteNonQuery() == 0)
+            {
+                AddSeriesParameters(command, operation);
+                command.Parameters.AddWithValue("$extension", Path.GetExtension(path)[1..].ToLowerInvariant());
+                command.Parameters.AddWithValue("$size", operation.Size);
+                command.CommandText = """
+                    INSERT INTO library_file(root_id, relative_path, extension, size, modified_at, content_id, series_key, series_title, volume_hint, chapter_hint)
+                    VALUES($root, $path, $extension, $size, $modified, $content, $series, $title, $volume, $chapter);
+                    """;
+                command.ExecuteNonQuery();
+            }
         }
         if (restore ? !retainTarget : true)
         {
@@ -294,7 +301,7 @@ internal sealed partial class LibraryStore
     private static FileOperation ReadOperation(SqliteDataReader rows) => new(rows.GetGuid(0), rows.GetString(1), rows.GetGuid(2),
         rows.GetGuid(3), rows.GetString(4), rows.GetString(5), rows.GetString(6), rows.GetString(7), rows.GetString(8), rows.GetString(9),
         rows.GetInt64(10), rows.GetFieldValue<byte[]>(11), rows.GetString(12), ReadText(rows, 13), ReadText(rows, 14),
-        ReadText(rows, 15), ReadText(rows, 16), JsonSerializer.Deserialize<FileOperationCover[]>(rows.GetString(17)) ?? []);
+        ReadText(rows, 15), ReadText(rows, 16), JsonSerializer.Deserialize<FileOperationCover[]>(rows.GetString(17)) ?? [], ReadText(rows, 18), ReadText(rows, 19));
 
     private static void AddSeriesParameters(SqliteCommand command, FileOperation operation)
     {

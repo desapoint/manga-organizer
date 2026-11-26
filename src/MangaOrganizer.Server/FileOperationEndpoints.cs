@@ -9,6 +9,7 @@ internal static class FileOperationEndpoints
     {
         var operations = api.MapGroup("/file-operations").RequireAuthorization();
         operations.MapBatchFileOperations();
+        operations.MapDuplicateReview();
         operations.MapGet("", (ManagedFileOperations manager) => Results.Ok(manager.History()));
         operations.MapPost("/preview", async (FileOperationRequest request, ManagedFileOperations manager, HttpContext context, IAntiforgery antiforgery) =>
         {
