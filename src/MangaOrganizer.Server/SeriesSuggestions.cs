@@ -7,6 +7,7 @@ namespace MangaOrganizer.Server;
 internal static partial class SeriesSuggestions
 {
     private const RegexOptions MatchOptions = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
+    private const string MarkedNumber = @"(?:volume|vol|v|tome|chapter|chap|ch|c)[\s._-]*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?";
     private static readonly HashSet<string> GenericFolders = new(StringComparer.Ordinal)
     {
         "archive", "books", "chapters", "comics", "downloads", "import", "imports", "incoming",
@@ -19,7 +20,7 @@ internal static partial class SeriesSuggestions
         var fileName = Path.GetFileNameWithoutExtension(parts[^1]);
         var title = ParseTitle(fileName);
         var folder = FindSeriesFolder(parts, rootPath);
-        if (title.Length == 0 || NumberOnly().IsMatch(title))
+        if (title.Length == 0 || IsReleaseLabel(title))
         {
             return folder;
         }
@@ -61,8 +62,10 @@ internal static partial class SeriesSuggestions
     {
         var title = ParseTitle(folder);
         var normalized = Normalize(title);
-        return normalized.Length == 0 || GenericFolders.Contains(normalized) || NumberOnly().IsMatch(title) ? null : title;
+        return normalized.Length == 0 || GenericFolders.Contains(normalized) || IsReleaseLabel(title) ? null : title;
     }
+
+    private static bool IsReleaseLabel(string title) => NumberOnly().IsMatch(title) || NumberedSubtitle().IsMatch(title);
 
     private static string Clean(string title) => ReleasePrefix().Replace(TrailingTags().Replace(title.Trim(), ""), "").Trim();
 
@@ -108,8 +111,11 @@ internal static partial class SeriesSuggestions
     private static string Normalize(string title) => WordSeparator().Replace(title.Normalize(NormalizationForm.FormKC), " ")
         .Trim().ToLowerInvariant();
 
-    [GeneratedRegex(@"(?:^|[\s._-]+)(?:volume|vol|v|tome|chapter|chap|ch|c)[\s._-]*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?$", MatchOptions)]
+    [GeneratedRegex(@"(?:^|[\s._-]+)" + MarkedNumber + "$", MatchOptions)]
     private static partial Regex ChapterOrVolumeSuffix();
+
+    [GeneratedRegex("^" + MarkedNumber + @"(?:[\s._-]+" + MarkedNumber + @")*\s+[-–—]\s+\S", MatchOptions)]
+    private static partial Regex NumberedSubtitle();
 
     [GeneratedRegex(@"(?:\s*(?:\((?<tag>[^()\[\]]+)\)|\[(?<tag>[^()\[\]]+)\]))+$", MatchOptions)]
     private static partial Regex ReleaseAnnotations();
