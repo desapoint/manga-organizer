@@ -5,7 +5,7 @@ import { getCsrfToken } from './api';
 import { formatSize } from './library';
 import type { LibraryRoot } from './library';
 import { Select } from './Select';
-import { Button, SectionHeader } from './ui';
+import { Button, Modal, SectionHeader } from './ui';
 
 const url = '/api/file-operations';
 export type Operation = { id: string; kind: 'move' | 'quarantine'; state: 'planned' | 'applying' | 'completed' | 'restoring' | 'restored' | 'review';
@@ -50,8 +50,8 @@ function OperationDetails({ operation }: { operation: Operation }) {
   );
 }
 
-export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, onApplied }: {
-  rootId: string; fileId: string; relativePath: string; folders: LibraryRoot[]; onSignedOut: () => void; onApplied: () => void;
+export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, onApplying, onApplied }: {
+  rootId: string; fileId: string; relativePath: string; folders: LibraryRoot[]; onSignedOut: () => void; onApplying: (busy: boolean) => void; onApplied: () => void;
 }) {
   const [targetRoot, setTargetRoot] = useState(rootId);
   const [targetPath, setTargetPath] = useState(relativePath);
@@ -77,6 +77,7 @@ export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, o
   async function apply() {
     if (!plan) return;
     setBusy(true);
+    onApplying(true);
     setError('');
     try {
       if (await postFileOperation('/' + plan.id + '/apply', onSignedOut)) onApplied();
@@ -85,6 +86,7 @@ export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, o
       setPlan(null);
     } finally {
       setBusy(false);
+      onApplying(false);
     }
   }
 
@@ -118,7 +120,7 @@ export function FileOperationHistory({ onSignedOut, onChanged }: { onSignedOut: 
   const [history, setHistory] = useState<Operation[] | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
-  const [confirmation, setConfirmation] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<Operation | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -155,21 +157,28 @@ export function FileOperationHistory({ onSignedOut, onChanged }: { onSignedOut: 
       <SectionHeader id="file-operations-heading" title="File operation history" />
       {!history && !error && <p role="status" className="m-0 text-muted">Loading file operations…</p>}
       {history?.length === 0 && <p className="m-0 text-sm text-muted">Reviewed file changes appear here.</p>}
-      {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
+      {error && !confirmation && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
       {history?.map(operation => <details className="rounded-lg border border-line bg-inset px-3" key={operation.id}>
         <summary className="min-h-11 cursor-pointer py-2.5 font-medium wrap-anywhere">{stateLabel[operation.state]} · {operation.kind === 'quarantine' ? 'Quarantine · ' : ''}{operation.target}</summary>
         <div className="grid gap-3 pb-3">
           <OperationDetails operation={operation} />
-          {(operation.state === 'completed' || operation.state === 'review') && (confirmation === operation.id ? <div className="action-row">
-            <Button icon={History} disabled={busy !== null} onClick={() => void restore(operation.id)}>
+          {(operation.state === 'completed' || operation.state === 'review') &&
+            <Button variant="secondary" icon={History} className="justify-self-start"
+              onClick={() => { setError(''); setConfirmation(operation); }}>Restore original path</Button>}
+        </div>
+      </details>)}
+      {confirmation && <Modal title="Restore original path" onClose={() => { if (!busy) setConfirmation(null); }}>
+        <div className="grid gap-3">
+          <OperationDetails operation={confirmation} />
+          {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
+          <div className="action-row">
+            <Button icon={History} disabled={busy !== null} onClick={() => void restore(confirmation.id)}>
               {busy ? 'Restoring…' : 'Confirm restoration'}
             </Button>
             <Button variant="secondary" disabled={busy !== null} onClick={() => setConfirmation(null)}>Cancel</Button>
-          </div> : <Button variant="secondary" icon={History} className="justify-self-start" onClick={() => setConfirmation(operation.id)}>
-            Restore original path
-          </Button>)}
+          </div>
         </div>
-      </details>)}
+      </Modal>}
     </section>
   );
 }

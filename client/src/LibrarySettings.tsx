@@ -7,7 +7,7 @@ import { ROOTS_URL } from './library';
 import type { FolderKind, LibraryRoot } from './library';
 import { Select } from './Select';
 import type { SelectOption } from './Select';
-import { Button, ScanBadge, SectionHeader } from './ui';
+import { Button, Modal, ScanBadge, SectionHeader } from './ui';
 
 type FolderDraft = { id?: string; path: string; name: string; kind: FolderKind; managed: boolean };
 
@@ -29,6 +29,7 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
   onSignedOut: () => void;
 }) {
   const [draft, setDraft] = useState<FolderDraft | null>(null);
+  const [remove, setRemove] = useState<LibraryRoot | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -48,6 +49,7 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
         return;
       }
       setDraft(null);
+      setRemove(null);
       onChange();
     } catch {
       setError('Could not update the folder. Try again.');
@@ -65,12 +67,12 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
     <section className="surface grid gap-4 p-4 sm:p-5" aria-labelledby="library-folders-heading">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SectionHeader id="library-folders-heading" title="Library folders" />
-        {!draft && <Button icon={Plus} disabled={busy} onClick={() => {
+        <Button icon={Plus} disabled={busy} onClick={() => {
           setError('');
           setDraft({ path: '', name: '', kind: 'library', managed: false });
-        }}>Add folder</Button>}
+        }}>Add folder</Button>
       </div>
-      {folders.length === 0 && !draft && <p className="m-0 text-sm text-muted">Add a server folder to start indexing your collection.</p>}
+      {folders.length === 0 && <p className="m-0 text-sm text-muted">Add a server folder to start indexing your collection.</p>}
       {folders.length > 0 && (
         <ul className="settings-folders" role="list" aria-label="Configured folders">
           {folders.map(folder => (
@@ -85,16 +87,14 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
                 <Button variant="secondary" disabled={busy} aria-label={`Edit ${folder.name || folder.path}`}
                   onClick={() => { setError(''); setDraft({ ...folder, name: folder.name ?? '' }); }}>Edit</Button>
                 <Button variant="secondary" disabled={busy} aria-label={`Remove ${folder.name || folder.path}`}
-                  onClick={() => void changeFolder('DELETE', folder.id)}>Remove</Button>
+                  onClick={() => { setError(''); setRemove(folder); }}>Remove</Button>
               </div>
             </li>
           ))}
         </ul>
       )}
-      {error && <p role="alert" className="error">{error}</p>}
-      {draft && (
-        <form className="settings-form" key={draft.id ?? 'new'} onSubmit={save}>
-          <h2>{draft.id ? 'Edit folder' : 'Add folder'}</h2>
+      {draft && <Modal title={draft.id ? 'Edit folder' : 'Add folder'} wide onClose={() => { if (!busy) setDraft(null); }}>
+        <form key={draft.id ?? 'new'} onSubmit={save}>
           <Select label="Use folder for" value={draft.kind} options={folderOptions} disabled={busy}
             onChange={kind => setDraft({ ...draft, kind })} />
           <label htmlFor="folder-name">Display name (optional)</label>
@@ -106,12 +106,21 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
               onChange={event => setDraft({ ...draft, managed: event.target.checked })} />
             Allow reviewed file moves and renames
           </label>
+          {error && <p role="alert" className="error">{error}</p>}
           <div className="action-row">
             <Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save folder'}</Button>
             <Button variant="secondary" disabled={busy} onClick={() => setDraft(null)}>Cancel</Button>
           </div>
         </form>
-      )}
+      </Modal>}
+      {remove && <Modal title="Remove folder from the library" onClose={() => { if (!busy) setRemove(null); }}>
+        <p>The server stops indexing <code>{remove.path}</code>. Its files stay on disk.</p>
+        {error && <p role="alert" className="error">{error}</p>}
+        <div className="action-row">
+          <Button variant="secondary" disabled={busy} onClick={() => void changeFolder('DELETE', remove.id)}>Remove folder</Button>
+          <Button variant="ghost" disabled={busy} onClick={() => setRemove(null)}>Cancel</Button>
+        </div>
+      </Modal>}
     </section>
   );
 }
