@@ -113,7 +113,8 @@ internal static class LibraryEndpoints
 
     internal static bool IsValidPage(int? offset, int? limit) => offset is not < 0 && limit is not (< 1 or > 100);
     internal static bool IsSeriesKey(string value) => value.Length == 64 && value.All(char.IsAsciiHexDigit);
-    private static bool IsCatalogView(string? view) => view is null or "all" or "library" or "attention" or "association" or "series" or "metadata" or "cover";
+    private static bool IsCatalogView(string? view) =>
+        view is null or "all" or "library" or "attention" or "unassociated" or "association" or "series" or "metadata" or "cover";
 
     private static IResult CoverResult(HttpContext context, byte[]? cover)
     {

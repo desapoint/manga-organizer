@@ -50,7 +50,7 @@ export function ToolsHub({ route, roots, version, onSignedOut, onChanged }: Inve
       <ActionLink variant="secondary" icon={NotebookPen} href="#tools/metadata">Associations and metadata</ActionLink>
       <ActionLink variant="secondary" icon={FolderCog} href={organizeToolsHref()}>Organize</ActionLink>
       <ActionLink variant="secondary" icon={Settings2} href="#tools/maintenance">Maintenance</ActionLink>
-    </div> : route.module === 'metadata' ? <MetadataQueue roots={roots} version={version} onSignedOut={onSignedOut} /> :
+    </div> : route.module === 'metadata' ? <MetadataQueue roots={roots} version={version} onSignedOut={onSignedOut} onChanged={onChanged} /> :
       route.module === 'organize' ? <OrganizeTools rootId={route.rootId} seriesKey={route.seriesKey} roots={roots} version={version}
         onSignedOut={onSignedOut} onChanged={onChanged} /> :
       route.module === 'maintenance' ? <MaintenanceTools roots={roots} onSignedOut={onSignedOut} onChanged={onChanged} /> :

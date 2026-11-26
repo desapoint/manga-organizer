@@ -31,6 +31,7 @@ internal sealed partial class LibraryStore
     {
         "library" => " " + LibraryVisibility,
         "attention" => " AND (NOT (" + ConfirmedSeries + ") OR (" + MissingMetadata + ") OR (" + MissingCover + "))",
+        "unassociated" => " AND f.content_id IS NOT NULL AND NOT (" + ConfirmedSeries + ")",
         "association" => " AND f.series_title IS NOT NULL AND NOT (" + ConfirmedSeries + ")",
         "series" => " AND f.series_title IS NULL AND NOT (" + ConfirmedSeries + ")",
         "metadata" => " AND (" + MissingMetadata + ")",

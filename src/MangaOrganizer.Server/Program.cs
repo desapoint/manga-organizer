@@ -135,6 +135,7 @@ api.MapFileOperations();
 api.MapMetadataQueue();
 api.MapMaintenance();
 api.MapVersions();
+api.MapFileAssociations();
 
 api.MapDelete("/session", async (HttpContext context, IAntiforgery antiforgery) =>
 {
