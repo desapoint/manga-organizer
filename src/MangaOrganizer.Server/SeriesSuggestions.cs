@@ -17,7 +17,7 @@ internal static partial class SeriesSuggestions
     {
         var parts = relativePath.Split('/');
         var fileName = Path.GetFileNameWithoutExtension(parts[^1]);
-        var title = RemoveNumberSuffix(Clean(fileName));
+        var title = ParseTitle(fileName);
         var folder = FindSeriesFolder(parts, rootPath);
         if (title.Length == 0 || NumberOnly().IsMatch(title))
         {
@@ -59,12 +59,41 @@ internal static partial class SeriesSuggestions
 
     private static string? SeriesFolderTitle(string folder)
     {
-        var title = RemoveNumberSuffix(Clean(folder));
+        var title = ParseTitle(folder);
         var normalized = Normalize(title);
         return normalized.Length == 0 || GenericFolders.Contains(normalized) || NumberOnly().IsMatch(title) ? null : title;
     }
 
     private static string Clean(string title) => ReleasePrefix().Replace(TrailingTags().Replace(title.Trim(), ""), "").Trim();
+
+    private static string ParseTitle(string name)
+    {
+        var title = name.Trim();
+        var annotations = ReleaseAnnotations().Match(title);
+        if (annotations.Success)
+        {
+            var tags = annotations.Groups["tag"].Captures;
+            var hasReleaseTag = tags.Any(tag => KnownReleaseTag().IsMatch(tag.Value));
+            var hasYear = tags.Any(tag => ReleaseYear().IsMatch(tag.Value));
+            if (hasReleaseTag || (hasYear && tags.Count == 1))
+            {
+                var stem = Clean(title[..annotations.Index]);
+                var explicitTitle = RemoveNumberSuffix(stem);
+                if (explicitTitle.Length != stem.Length)
+                {
+                    return explicitTitle;
+                }
+
+                // A title can end in a number. Require both a year and a release tag before treating a bare number as a chapter.
+                if (hasYear && hasReleaseTag && BareNumberSuffix().Match(stem) is { Success: true } number)
+                {
+                    return stem[..number.Index];
+                }
+            }
+        }
+
+        return RemoveNumberSuffix(Clean(title));
+    }
 
     private static string RemoveNumberSuffix(string title)
     {
@@ -79,8 +108,17 @@ internal static partial class SeriesSuggestions
     private static string Normalize(string title) => WordSeparator().Replace(title.Normalize(NormalizationForm.FormKC), " ")
         .Trim().ToLowerInvariant();
 
-    [GeneratedRegex(@"(?:^|[\s._-]+)(?:volume|vol|v|chapter|chap|ch|c)[\s._-]*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?$", MatchOptions)]
+    [GeneratedRegex(@"(?:^|[\s._-]+)(?:volume|vol|v|tome|chapter|chap|ch|c)[\s._-]*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?$", MatchOptions)]
     private static partial Regex ChapterOrVolumeSuffix();
+
+    [GeneratedRegex(@"(?:\s*(?:\((?<tag>[^()\[\]]+)\)|\[(?<tag>[^()\[\]]+)\]))+$", MatchOptions)]
+    private static partial Regex ReleaseAnnotations();
+
+    [GeneratedRegex(@"^\s*(?:digital|cb[rz7]|zip|rar|7z|(?:group|scans?|scanlations?|fansubs?)\b.*|\d{3,5}\s*[x×]\s*\d{3,5})\s*$", MatchOptions)]
+    private static partial Regex KnownReleaseTag();
+
+    [GeneratedRegex(@"^\s*(?:18|19|20|21)[0-9]{2}\s*$", RegexOptions.CultureInvariant)]
+    private static partial Regex ReleaseYear();
 
     [GeneratedRegex(@"^[\s._-]*#?\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?[\s._-]*$", MatchOptions)]
     private static partial Regex NumberOnly();
