@@ -17,7 +17,7 @@ type ToolProps = { roots: LibraryRoot[] | null; version: string; onSignedOut: ()
 type Proposal = { match: Metadata & { providerId: number }; matchingTitle: string | null };
 type QueueRow = {
   rootId: string; seriesKey: string; title: string; hasCover: boolean; queued: boolean; revision: string | null;
-  candidates: Proposal[] | null; message: string | null; conflictingMetadata: boolean;
+  candidates: Proposal[] | null; message: string | null; conflictingMetadata: boolean; pagePriority: boolean;
 };
 
 export function MetadataQueue(props: ToolProps) {
@@ -77,7 +77,7 @@ function SuggestionPage({ root, search, version, roots, onSignedOut, onChanged }
   const { page, error, offset, setOffset, retry } = useInventoryPage<QueueRow>(endpoint, `${version}:${revision}`,
     onSignedOut, root ? { root, search } : { search });
   const queued = !!page?.items.some(item => item.queued && !item.conflictingMetadata);
-  const refreshable = page?.items.filter(item => !item.conflictingMetadata && !item.queued) ?? [];
+  const refreshable = page?.items.filter(item => !item.conflictingMetadata && !item.pagePriority) ?? [];
   const reload = () => setRevision(value => value + 1);
   useEffect(() => {
     if (!queued) return;
@@ -91,7 +91,7 @@ function SuggestionPage({ root, search, version, roots, onSignedOut, onChanged }
     setNotice('');
     try {
       const result = await post<{ queued: number }>(endpoint + '/refresh',
-        { items: refreshable.map(({ rootId, seriesKey }) => ({ rootId, seriesKey })) }, onSignedOut);
+        { items: refreshable.map(({ rootId, seriesKey, queued }) => ({ rootId, seriesKey, alreadyQueued: queued })) }, onSignedOut);
       if (result) {
         setNotice(result.queued === 0 ? 'This page is already up to date or queued.' : `Queued ${result.queued} series for lookup.`);
         reload();
@@ -152,7 +152,8 @@ function SuggestionRow({ item, version, folder, onSignedOut, onSaved }: {
   }
 
   const display = item.conflictingMetadata ? 'Existing metadata assignments conflict. Review them manually.' :
-    item.message ?? (item.queued ? 'AniList lookup queued.' : item.candidates?.length === 0 ? 'No AniList matches found.' :
+    item.message ?? (item.queued ? item.pagePriority ? 'AniList lookup prioritized from this page.' : 'AniList lookup queued.' :
+      item.candidates?.length === 0 ? 'No AniList matches found.' :
       item.candidates ? suggestion ? 'One exact title match' : 'Choose a candidate or search manually.' : 'No AniList lookup yet.');
 
   return <li className="surface grid min-w-0 gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] sm:items-start sm:p-4">

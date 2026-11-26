@@ -38,7 +38,10 @@ internal sealed partial class MetadataAgent : IDisposable
         """;
     private readonly HttpClient client;
     private readonly Uri endpoint;
-    private long rateLimitUntil;
+    private static readonly TimeSpan MinimumRequestSpacing = TimeSpan.FromSeconds(3);
+    private readonly SemaphoreSlim requestGate = new(1);
+    private DateTimeOffset rateLimitUntil;
+    private DateTimeOffset nextRequestAt;
 
     public MetadataAgent(string? localEndpoint)
     {
@@ -75,15 +78,36 @@ internal sealed partial class MetadataAgent : IDisposable
         return data?.Media is { } media ? ToMatch(media) : null;
     }
 
-    public void Dispose() => client.Dispose();
+    public void Dispose()
+    {
+        client.Dispose();
+        requestGate.Dispose();
+    }
 
     public static string ListingUrl(int id) => $"https://anilist.co/manga/{id}";
 
     private async Task<MetadataData?> Request(string query, object variables, CancellationToken cancellationToken)
     {
-        var blockedUntil = new DateTimeOffset(Interlocked.Read(ref rateLimitUntil), TimeSpan.Zero);
-        if (blockedUntil > DateTimeOffset.UtcNow)
-            throw RateLimited(blockedUntil);
+        await requestGate.WaitAsync(cancellationToken);
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            if (rateLimitUntil > now)
+                throw RateLimited(rateLimitUntil);
+            var wait = nextRequestAt - now;
+            if (wait > TimeSpan.Zero)
+                await Task.Delay(wait, cancellationToken);
+            nextRequestAt = DateTimeOffset.UtcNow + MinimumRequestSpacing;
+            return await SendRequest(query, variables, cancellationToken);
+        }
+        finally
+        {
+            requestGate.Release();
+        }
+    }
+
+    private async Task<MetadataData?> SendRequest(string query, object variables, CancellationToken cancellationToken)
+    {
         try
         {
             using var content = new ByteArrayContent(JsonSerializer.SerializeToUtf8Bytes(new { query, variables }));
@@ -95,7 +119,7 @@ internal sealed partial class MetadataAgent : IDisposable
                 var retry = response.Headers.RetryAfter;
                 var resume = retry?.Date ?? now.Add(retry?.Delta ?? TimeSpan.FromSeconds(60));
                 if (resume <= now) resume = now.AddSeconds(3);
-                Interlocked.Exchange(ref rateLimitUntil, resume.UtcTicks);
+                rateLimitUntil = resume;
                 throw RateLimited(resume);
             }
             if (!response.IsSuccessStatusCode)
