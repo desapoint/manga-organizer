@@ -1,3 +1,6 @@
+using System.Buffers;
+using System.Security.Cryptography;
+
 namespace MangaOrganizer.Server;
 
 internal static class MediaFiles
@@ -16,4 +19,24 @@ internal static class MediaFiles
             using var stream = new FileStream(handle, FileAccess.Read);
             return stream.Length == size ? read(stream) : null;
         });
+
+    public static byte[] Hash(Stream stream, CancellationToken cancellationToken)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
+        try
+        {
+            int read;
+            while ((read = stream.Read(buffer)) > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                hash.AppendData(buffer.AsSpan(0, read));
+            }
+            return hash.GetHashAndReset();
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
 }

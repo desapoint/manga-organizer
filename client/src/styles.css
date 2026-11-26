@@ -32,6 +32,10 @@
   --color-nav-active: color-mix(in srgb, var(--color-accent) 15%, var(--color-sidebar));
   --color-nav-line: color-mix(in srgb, var(--color-accent) 43%, var(--color-sidebar));
   --color-nav-icon: var(--color-accent-readable);
+  --color-reader-canvas: #09090d;
+  --color-reader-panel: #141319;
+  --color-reader-ink: #f6f3fa;
+  --color-reader-muted: #a6a2b6;
 }
 
 @layer base {
@@ -92,6 +96,18 @@
 }
 
 @layer components {
+  .reader-shell {
+    color-scheme: dark;
+    --color-ink: var(--color-reader-ink);
+    --color-muted: var(--color-reader-muted);
+    --color-secondary: #e2dbee;
+    --color-control: #756b86;
+    --color-line: #302d39;
+    --color-nav-hover: #24222c;
+    --color-accent-readable: var(--color-accent);
+    --color-danger: #ff7d92;
+    --color-warning: #f4c478;
+  }
   .surface { @apply min-w-0 rounded-xl border border-line bg-panel; }
   .auth-panel { @apply rounded-2xl; padding: clamp(1.25rem, 5vw, 2.25rem); }
   .error { @apply mt-4 text-danger; }

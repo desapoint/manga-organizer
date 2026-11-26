@@ -23,6 +23,10 @@ Files in the library and import intake are eligible for reading when their forma
 
 ## Progress validation
 
+The WebUI MVP reads CBZ and image ZIP in a right-to-left page layout. The server verifies archive bytes and bounds archive entries and page sizes. Files can open from Library or Import intake while metadata is unresolved. Resume entries use the verified content ID, so a rescan after a rename or move can find the same position.
+
+The MVP saves page position automatically as pages load. Finishing a file is a separate action. For series counters, a finished file counts its verified or explicitly numbered chapters once. Reopening an archive whose bytes changed creates a separate reading identity once scanned.
+
 The server validates the authenticated account, chapter or edition, content version and page or position before accepting an update. Store progress against a stable logical chapter and a page anchor so a rename, move or verified equivalent repack preserves the resume point. If the content changes and the position cannot be mapped safely, retain the previous anchor for review.
 
 Use server-issued revisions and idempotent update IDs as the initial synchronization design. A retry records an event once, and a stale update after reconnect cannot silently replace a newer accepted position. A deliberate backward move on the current revision remains valid. Keep resume position and completion as separate state. The exact conflict UI, download-for-offline support and progress from device-only content before it is linked to a server edition remain separate design choices. [Reader data contracts](source-audit/READER-DATA-CONTRACTS.md)

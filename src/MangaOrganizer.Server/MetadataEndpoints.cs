@@ -12,9 +12,12 @@ internal static class MetadataEndpoints
     public static void MapSeriesMetadata(this RouteGroupBuilder library)
     {
         var series = library.MapGroup("/{root:guid}/series/{seriesKey}");
-        series.MapGet("/details", (Guid root, string seriesKey, LibraryStore store) =>
-            LibraryEndpoints.IsSeriesKey(seriesKey) && store.ReadSeriesDetails(root, seriesKey.ToLowerInvariant()) is { } details
-                ? Results.Ok(details) : Results.NotFound());
+        series.MapGet("/details", (Guid root, string seriesKey, LibraryStore store, HttpContext context) =>
+        {
+            if (!ReaderEndpoints.TryOwner(context, out var owner)) return Results.Unauthorized();
+            return LibraryEndpoints.IsSeriesKey(seriesKey) && store.ReadSeriesDetails(root, seriesKey.ToLowerInvariant(), owner) is { } details
+                ? Results.Ok(details) : Results.NotFound();
+        });
         series.MapGet("/coverage", (Guid root, string seriesKey, string? contentId, LibraryStore store) =>
             LibraryEndpoints.IsSeriesKey(seriesKey) && IsContentId(contentId) &&
                 store.ReadCoverage(root, seriesKey.ToLowerInvariant(), contentId!.ToLowerInvariant()) is { } coverage

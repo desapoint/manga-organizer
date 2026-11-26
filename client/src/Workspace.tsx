@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Appearance } from './appearance';
 import { Catalog } from './Catalog';
 import type { CatalogView } from './Catalog';
+import { Reader } from './Reader';
 import { Brand, Button, SectionHeader, SegmentedControl } from './ui';
 
 type Destination = { id: CatalogView; href: string; label: string; title: string; section: string; icon: LucideIcon };
@@ -18,8 +19,8 @@ const destinations = [
 const sidebarSections = ['Library', 'Management', 'System'] as const;
 const settings = destinations[3];
 
-function currentDestination() {
-  return destinations.find(item => item.href === window.location.hash) ?? destinations[0];
+function currentDestination(hash: string) {
+  return destinations.find(item => item.href === hash) ?? destinations[0];
 }
 
 function NavigationItem({ destination: { href, label, icon: Icon }, current, mobile, compact }: {
@@ -125,17 +126,23 @@ export function Workspace({ serverId, signingOut, error, onSignOut, onSignedOut,
   appearance: Appearance;
   onAppearanceChange: (appearance: Appearance) => void;
 }) {
-  const [view, setView] = useState(currentDestination);
+  const [hash, setHash] = useState(() => window.location.hash);
   const [compact, setCompact] = useState(false);
+  const view = currentDestination(hash);
 
   useEffect(() => {
     const handleNavigation = () => {
-      setView(currentDestination());
+      setHash(window.location.hash);
       window.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', handleNavigation);
     return () => window.removeEventListener('hashchange', handleNavigation);
   }, []);
+
+  const reader = /^#read\/([a-f0-9]{32})(\/intake)?$/i.exec(hash);
+  if (reader?.[1]) {
+    return <Reader key={reader[1]} contentId={reader[1]} backToIntake={!!reader[2]} onSignedOut={onSignedOut} />;
+  }
 
   return (
     <div className={`min-h-svh desktop:grid ${compact ? 'desktop:grid-cols-[4.5rem_minmax(0,1fr)]' : 'desktop:grid-cols-[14.5rem_minmax(0,1fr)]'}`}>

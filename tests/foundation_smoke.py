@@ -204,6 +204,8 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE reading_progress_event;
+            DROP TABLE reading_progress;
             DROP TABLE content_chapter;
             DROP TABLE content_metadata;
             DROP TABLE series_metadata_binding;
@@ -469,6 +471,56 @@ def verify_external_metadata(executable, fixture, media):
             server.join(timeout=5)
 
 
+def verify_reader(owner, peer, root_id, path):
+    series = owner.series(root_id, "?search=eclipse")["items"][0]
+    details = f"{LIBRARY_ROOTS}/{root_id}/series/{series['key']}"
+    (archive,) = owner.files(root_id, "?" + urlencode({"seriesKey": series["key"]}))["items"]
+    identity = archive["contentId"]
+    book_url = f"/api/reader/{identity}"
+    Browser(owner.url).request(book_url, 401)
+    Browser(owner.url).request(f"{book_url}/pages/0", 401)
+    book = json.loads(owner.request(book_url, 200))
+    assert book["pageCount"] == 2 and book["progress"]["revision"] == 0
+    assert owner.request(f"{book_url}/pages/0", 200) == synthetic_png(32, 160, 122)
+    assert owner.request(f"{book_url}/pages/1", 200) == synthetic_png(221, 42, 70)
+    owner.request(f"{book_url}/pages/2", 404)
+    owner.request("/api/reader/resume", 204)
+
+    local = {"title": "Éclipse", "kind": "manga", "totalChapters": 4}
+    owner.request(f"{details}/metadata", 200, method="PUT", body=local, token=owner.csrf())
+    owner.request(f"{details}/coverage", 204, method="PUT", token=owner.csrf(),
+                  body={"contentId": identity, "volume": "1", "chapters": ["1", "2"]})
+    first_update = {"updateId": str(uuid4()), "baseRevision": 0, "pageIndex": 1}
+    owner.request(f"{book_url}/progress", 400, method="PUT", body=first_update)
+    result = json.loads(owner.request(f"{book_url}/progress", 200, method="PUT", token=owner.csrf(), body=first_update))
+    assert result == {"pageIndex": 1, "revision": 1, "completed": False}
+    assert json.loads(peer.request(book_url, 200))["progress"] == result
+    assert json.loads(peer.request("/api/reader/resume", 200))["contentId"] == identity
+    assert json.loads(owner.request(f"{book_url}/progress", 200, method="PUT", token=owner.csrf(), body=first_update)) == result
+    conflict = dict(first_update, updateId=str(uuid4()), pageIndex=0)
+    assert json.loads(peer.request(f"{book_url}/progress", 409, method="PUT", token=peer.csrf(), body=conflict)) == result
+    back = {"updateId": str(uuid4()), "baseRevision": 1, "pageIndex": 0}
+    assert json.loads(peer.request(f"{book_url}/progress", 200, method="PUT", token=peer.csrf(), body=back))["pageIndex"] == 0
+    finish = {"updateId": str(uuid4()), "baseRevision": 2, "pageIndex": 1, "completed": True}
+    result = json.loads(peer.request(f"{book_url}/progress", 200, method="PUT", token=peer.csrf(), body=finish))
+    assert result["completed"] and result["revision"] == 3
+    assert json.loads(owner.request(f"{details}/details", 200))["readChapters"] == 2
+    owner.request("/api/reader/resume", 204)
+
+    source = path / archive["relativePath"]
+    moved = source.with_name("Relocated volume.cbz")
+    source.rename(moved)
+    owner.scan(root_id)
+    assert json.loads(owner.request(book_url, 200))["progress"] == result
+    with ZipFile(moved, "w") as replacement:
+        replacement.writestr("1.png", synthetic_png(1, 2, 3))
+    owner.scan(root_id)
+    owner.request(book_url, 422)
+    (new_file,) = owner.files(root_id, "?search=Relocated+volume")["items"]
+    new_book = json.loads(owner.request("/api/reader/" + new_file["contentId"], 200))
+    assert new_book["progress"]["revision"] == 0 and new_file["contentId"] != identity
+
+
 def scan_library(owner, media):
     primary, archive = owner.roots()
     assert primary["state"] == archive["state"] == "idle"
@@ -603,6 +655,8 @@ def smoke(start, media):
         scan_library(first, media)
         verify_file_identity(first, media)
         roots = verify_folder_settings(first, media)
+        verify_reader(first, second, roots[-1]["id"], media / "intake")
+        roots = first.roots()
         inventory = first.files(roots[0]["id"], "?limit=100")
         series = first.series(roots[-1]["id"])
         assert second.roots() == roots
@@ -666,4 +720,4 @@ if __name__ == "__main__":
                 smoke(lambda password: start_container(target.image, volume, media, password), media)
             finally:
                 subprocess.run(["docker", "volume", "rm", volume], check=True, stdout=subprocess.DEVNULL)
-    print("Passed WebUI assets, authentication, CSRF, dual-purpose folders, series groups, cover art, file identity, and restart persistence")
+    print("Passed WebUI assets, authentication, CSRF, library scans, cover art, metadata, reader handoff, and restart persistence")

@@ -6,7 +6,8 @@ namespace MangaOrganizer.Server;
 internal sealed record SeriesMetadata(string Title, string Kind, string? AlternateTitle, string? Summary, string? Status,
     int? TotalChapters, int? TotalVolumes, int? ProviderId);
 internal sealed record SeriesChapter(string? Volume, string Chapter);
-internal sealed record SeriesDetails(SeriesMetadata? Metadata, int AvailableChapters, IReadOnlyList<string> Volumes, IReadOnlyList<SeriesChapter> Chapters);
+internal sealed record SeriesDetails(SeriesMetadata? Metadata, int AvailableChapters, int ReadChapters, IReadOnlyList<string> Volumes,
+    IReadOnlyList<SeriesChapter> Chapters);
 
 internal sealed partial class LibraryStore
 {
@@ -36,7 +37,7 @@ internal sealed partial class LibraryStore
         command.ExecuteNonQuery();
     }
 
-    public SeriesDetails? ReadSeriesDetails(Guid root, string seriesKey)
+    public SeriesDetails? ReadSeriesDetails(Guid root, string seriesKey, Guid owner)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: true);
@@ -57,14 +58,20 @@ internal sealed partial class LibraryStore
             }
         }
 
-        command.CommandText = "SELECT DISTINCT volume, chapter FROM (" + GroupCoverage + ");";
+        command.Parameters.AddWithValue("$owner", owner);
+        command.CommandText = "SELECT coverage.volume, coverage.chapter, MAX(COALESCE(p.completed, 0)) FROM (" + GroupCoverage + """
+            ) coverage LEFT JOIN reading_progress p ON p.owner_id = $owner AND p.content_id = coverage.content_id
+            GROUP BY coverage.volume, coverage.chapter;
+            """;
         var chapters = new List<SeriesChapter>();
+        var readChapters = 0;
         using (var rows = command.ExecuteReader())
         {
             while (rows.Read())
             {
                 var volume = rows.GetString(0);
                 chapters.Add(new(volume.Length == 0 ? null : volume, rows.GetString(1)));
+                if (rows.GetBoolean(2)) readChapters++;
             }
         }
 
@@ -77,7 +84,7 @@ internal sealed partial class LibraryStore
             while (rows.Read()) volumes.Add(rows.GetString(0));
         }
 
-        return new(metadata, chapters.Count, volumes.OrderBy(Numeric).Take(500).ToArray(),
+        return new(metadata, chapters.Count, readChapters, volumes.OrderBy(Numeric).Take(500).ToArray(),
             chapters.OrderBy(chapter => Numeric(chapter.Volume)).ThenBy(chapter => Numeric(chapter.Chapter)).Take(500).ToArray());
     }
 

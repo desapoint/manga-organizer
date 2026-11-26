@@ -21,6 +21,7 @@ type Metadata = {
 type Details = {
   metadata: Metadata | null;
   availableChapters: number;
+  readChapters: number;
   volumes: string[];
   chapters: { volume: string | null; chapter: string }[];
 };
@@ -172,6 +173,13 @@ export function SeriesInfo({ rootId, seriesKey, title, version, onSignedOut, onC
             {metadata?.totalChapters ? ' of ' + metadata.totalChapters.toLocaleString() : ' · total unknown'}</span>
           {metadata?.totalChapters && <progress className="h-2 w-full max-w-80 accent-accent" aria-label="Available chapters"
             value={Math.min(details.availableChapters, metadata.totalChapters)} max={metadata.totalChapters} />}
+        </div>
+        <div className="grid gap-1 text-sm">
+          <strong>Read chapters</strong>
+          <span className="text-muted">{details.readChapters.toLocaleString()}
+            {metadata?.totalChapters ? ' of ' + metadata.totalChapters.toLocaleString() : ' · total unknown'}</span>
+          {metadata?.totalChapters && <progress className="h-2 w-full max-w-80 accent-accent" aria-label="Read chapters"
+            value={Math.min(details.readChapters, metadata.totalChapters)} max={metadata.totalChapters} />}
         </div>
         {(details.volumes.length > 0 || details.chapters.length > 0) && <details>
           <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Volumes and chapters</summary>

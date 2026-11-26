@@ -4,7 +4,8 @@ import { ChapterCoverage } from './ChapterCoverage';
 import { formatSize, ROOTS_URL } from './library';
 import { Select } from './Select';
 import { SeriesInfo } from './SeriesInfo';
-import { Button, SearchField, SectionHeader, SegmentedControl } from './ui';
+import { SeriesCover } from './SeriesCover';
+import { ActionLink, Button, SearchField, SectionHeader, SegmentedControl } from './ui';
 
 const PAGE_SIZE = 50;
 
@@ -99,6 +100,7 @@ function FileRow({ file, onInspect, coverageUrl, onSaved, onSignedOut }: {
   const [showCoverage, setShowCoverage] = useState(false);
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
+  const readable = file.contentId && (file.extension === 'cbz' || file.extension === 'zip');
   return (
     <li>
       <span className="file-path" title={file.relativePath}>
@@ -116,6 +118,9 @@ function FileRow({ file, onInspect, coverageUrl, onSaved, onSignedOut }: {
       <span className="file-format">{file.extension.toUpperCase()}</span>
       <span>{formatSize(file.size)}</span>
       <time dateTime={file.modifiedAt}>{new Date(file.modifiedAt).toLocaleDateString()}</time>
+      {readable && <div className="col-span-full">
+        <ActionLink variant="ghost" icon={BookOpen} href={`#read/${file.contentId}${onInspect ? '/intake' : ''}`}>Read file</ActionLink>
+      </div>}
       {coverageUrl && file.contentId && <details className="col-span-full" onToggle={event => setShowCoverage(event.currentTarget.open)}>
         <summary className="min-h-9 cursor-pointer py-2 text-sm text-accent-readable">Set chapter coverage</summary>
         {showCoverage && <ChapterCoverage url={coverageUrl} contentId={file.contentId} volumeHint={file.volume}
@@ -154,18 +159,6 @@ function FileInventory({ rootId, seriesKey, version, onSignedOut, onDataChanged,
   );
 }
 
-function CoverImage({ series, rootId, revision, className }: { series: Series; rootId: string; revision: string; className?: string }) {
-  const url = `${ROOTS_URL}/${rootId}/series/${series.key}/cover?revision=${encodeURIComponent(revision)}`;
-  const [failed, setFailed] = useState('');
-  return (
-    <span className={`grid place-items-center overflow-hidden bg-nav-active text-nav-icon ${className ?? ''}`}>
-      {series.hasCover && failed !== url ? <img src={url} alt="" loading="lazy" decoding="async" onError={() => setFailed(url)}
-        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.025] motion-reduce:transform-none" /> :
-        <BookOpen className="size-6" aria-hidden="true" />}
-    </span>
-  );
-}
-
 function SeriesRow({ series, onInspect, coverVersion, ...inventory }: InventoryActions & { series: Series; onInspect?: Inspect; coverVersion: string }) {
   const [open, setOpen] = useState(false);
 
@@ -178,7 +171,8 @@ function SeriesRow({ series, onInspect, coverVersion, ...inventory }: InventoryA
       }}>
         <summary className="grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl p-3
           hover:bg-nav-hover sm:gap-3 sm:px-4 [&::-webkit-details-marker]:hidden">
-          {series.hasCover ? <CoverImage series={series} rootId={inventory.rootId} revision={coverVersion} className="h-14 w-10 rounded-md" /> :
+          {series.hasCover ? <SeriesCover seriesKey={series.key} available={series.hasCover} rootId={inventory.rootId}
+            revision={coverVersion} className="h-14 w-10 rounded-md" /> :
             <span className="grid size-8 place-items-center rounded-lg bg-nav-active text-nav-icon"><Library className="size-4" aria-hidden="true" /></span>}
           <span className="wrap-anywhere">
             <span className="block font-semibold">{series.title}</span>
@@ -217,7 +211,8 @@ function CoverGrid({ series, coverVersion, ...inventory }: InventoryActions & { 
                 trigger.current = event.currentTarget;
                 setSelectedKey(selectedKey === item.key ? '' : item.key);
               }}>
-              <CoverImage series={item} rootId={inventory.rootId} revision={coverVersion} className="aspect-[2/3] rounded-lg" />
+              <SeriesCover seriesKey={item.key} available={item.hasCover} rootId={inventory.rootId} revision={coverVersion}
+                className="aspect-[2/3] rounded-lg" />
               <span className="line-clamp-2 min-h-10 px-1 text-sm font-semibold wrap-anywhere" title={item.title}>{item.title}</span>
               <span className="px-1 pb-1 text-xs text-muted">{item.fileCount.toLocaleString()} {item.fileCount === 1 ? 'file' : 'files'}</span>
             </button>
