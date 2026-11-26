@@ -1,7 +1,9 @@
 import { BookOpen, ChevronRight, Library, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { ChapterCoverage } from './ChapterCoverage';
 import { formatSize, ROOTS_URL } from './library';
 import { Select } from './Select';
+import { SeriesInfo } from './SeriesInfo';
 import { Button, SearchField, SectionHeader, SegmentedControl } from './ui';
 
 const PAGE_SIZE = 50;
@@ -12,13 +14,17 @@ type CatalogEntry = {
   extension: string;
   size: number;
   modifiedAt: string;
+  contentId: string | null;
   sha256: string | null;
   indexedLocations: number | null;
+  volume: string | null;
+  chapter: string | null;
 };
 
-type Series = { key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean };
+type Series = { key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean };
 type Page<T> = { total: number; items: T[] };
 type InventoryProps = { rootId: string; version: string; onSignedOut: () => void };
+type InventoryActions = InventoryProps & { onDataChanged: () => void };
 type Inspection = { kind: 'series'; series: Series } | { kind: 'file'; file: CatalogEntry };
 type Inspect = (item: Inspection) => void;
 type InventoryView = 'covers' | 'series' | 'files';
@@ -87,7 +93,10 @@ function InventoryError({ children, retry }: { children: string; retry: () => vo
   );
 }
 
-function FileRow({ file, onInspect }: { file: CatalogEntry; onInspect?: Inspect }) {
+function FileRow({ file, onInspect, coverageUrl, onSaved, onSignedOut }: {
+  file: CatalogEntry; onInspect?: Inspect; coverageUrl?: string; onSaved: () => void; onSignedOut: () => void;
+}) {
+  const [showCoverage, setShowCoverage] = useState(false);
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
   return (
@@ -97,6 +106,8 @@ function FileRow({ file, onInspect }: { file: CatalogEntry; onInspect?: Inspect 
           text-inherit wrap-anywhere hover:text-accent-readable hover:underline desktop:min-h-0"
           onClick={() => onInspect({ kind: 'file', file })}>{name}</button> : name}
         {separator >= 0 && <small>{file.relativePath.slice(0, separator)}</small>}
+        {(file.volume || file.chapter) && <small>{file.volume && `Vol. ${file.volume}`}{file.volume && file.chapter && ' · '}
+          {file.chapter && `Ch. ${file.chapter}`}</small>}
         {file.indexedLocations === null && <small>Content identity unavailable</small>}
         {file.indexedLocations !== null && file.indexedLocations > 1 && (
           <small>Same bytes at {file.indexedLocations.toLocaleString()} indexed locations</small>
@@ -105,24 +116,32 @@ function FileRow({ file, onInspect }: { file: CatalogEntry; onInspect?: Inspect 
       <span className="file-format">{file.extension.toUpperCase()}</span>
       <span>{formatSize(file.size)}</span>
       <time dateTime={file.modifiedAt}>{new Date(file.modifiedAt).toLocaleDateString()}</time>
+      {coverageUrl && file.contentId && <details className="col-span-full" onToggle={event => setShowCoverage(event.currentTarget.open)}>
+        <summary className="min-h-9 cursor-pointer py-2 text-sm text-accent-readable">Set chapter coverage</summary>
+        {showCoverage && <ChapterCoverage url={coverageUrl} contentId={file.contentId} volumeHint={file.volume}
+          chapterHint={file.chapter} onSaved={onSaved} onSignedOut={onSignedOut} />}
+      </details>}
     </li>
   );
 }
 
-function FileInventory({ rootId, seriesKey, version, onSignedOut, onInspect }: InventoryProps & { seriesKey?: string; onInspect?: Inspect }) {
+function FileInventory({ rootId, seriesKey, version, onSignedOut, onDataChanged, onInspect, search = '' }:
+  InventoryActions & { seriesKey?: string; onInspect?: Inspect; search?: string }) {
   const { page, offset, setOffset, error, retry } = useInventoryPage<CatalogEntry>(`${ROOTS_URL}/${rootId}/files`, version, onSignedOut,
-    seriesKey ? { seriesKey } : undefined);
+    seriesKey ? { seriesKey, search } : { search });
   const label = seriesKey ? 'Series files' : 'Catalog files';
+  const coverageUrl = seriesKey ? `${ROOTS_URL}/${rootId}/series/${seriesKey}/coverage` : undefined;
   return (
     <>
       {error && <div className="px-4 pb-3"><InventoryError retry={retry}>Could not load files.</InventoryError></div>}
       {!page && !error && <p className="px-4" role="status">Loading files…</p>}
-      {page?.total === 0 && <p className="px-4">No files in the current inventory.</p>}
+      {page?.total === 0 && <p className="px-4">{search ? 'No files match this search.' : 'No files in the current inventory.'}</p>}
       {page && page.total > 0 && (
         <div className={seriesKey ? 'min-w-0 rounded-b-xl border-t border-line bg-inset' : 'surface'}>
           <div className="catalog-columns" aria-hidden="true"><span>File</span><span>Type</span><span>Size</span><span>Modified</span></div>
           <ul className="catalog-files" role="list" aria-label={label}>
-            {page.items.map(file => <FileRow key={file.id} file={file} onInspect={onInspect} />)}
+            {page.items.map(file => <FileRow key={file.id} file={file} coverageUrl={coverageUrl} onInspect={onInspect}
+              onSaved={onDataChanged} onSignedOut={onSignedOut} />)}
           </ul>
           {page.total > PAGE_SIZE && (
             <div className="border-t border-line p-3">
@@ -147,7 +166,7 @@ function CoverImage({ series, rootId, revision, className }: { series: Series; r
   );
 }
 
-function SeriesRow({ series, onInspect, coverVersion, ...inventory }: InventoryProps & { series: Series; onInspect?: Inspect; coverVersion: string }) {
+function SeriesRow({ series, onInspect, coverVersion, ...inventory }: InventoryActions & { series: Series; onInspect?: Inspect; coverVersion: string }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -167,13 +186,17 @@ function SeriesRow({ series, onInspect, coverVersion, ...inventory }: InventoryP
           </span>
           <ChevronRight className="size-4 text-muted group-open:rotate-90" aria-hidden="true" />
         </summary>
-        {open && <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} />}
+        {open && <>
+          <SeriesInfo rootId={inventory.rootId} seriesKey={series.key} title={series.title} version={inventory.version}
+            onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut} />
+          <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} />
+        </>}
       </details>
     </li>
   );
 }
 
-function CoverGrid({ series, coverVersion, ...inventory }: InventoryProps & { series: Series[]; coverVersion: string }) {
+function CoverGrid({ series, coverVersion, ...inventory }: InventoryActions & { series: Series[]; coverVersion: string }) {
   const [selectedKey, setSelectedKey] = useState('');
   const selected = series.find(item => item.key === selectedKey);
   const detail = useRef<HTMLElement>(null);
@@ -207,6 +230,8 @@ function CoverGrid({ series, coverVersion, ...inventory }: InventoryProps & { se
             <SectionHeader id="cover-files-heading" title={selected.title} />
             <Button variant="secondary" onClick={() => { setSelectedKey(''); trigger.current?.focus(); }}>Back to covers</Button>
           </div>
+          <SeriesInfo key={selected.key} rootId={inventory.rootId} seriesKey={selected.key} title={selected.title} version={inventory.version}
+            onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut} />
           <FileInventory key={selected.key} {...inventory} seriesKey={selected.key} />
         </section>}
       </div>
@@ -214,7 +239,7 @@ function CoverGrid({ series, coverVersion, ...inventory }: InventoryProps & { se
   );
 }
 
-function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, search, sort, coverOnly, ...inventory }: InventoryProps & {
+function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, search, sort, coverOnly, ...inventory }: InventoryActions & {
   scanComplete: boolean; onInspect?: Inspect; coverVersion: string; coverGrid: boolean; search: string; sort: SeriesSort; coverOnly: boolean;
 }) {
   const { rootId, version, onSignedOut } = inventory;
@@ -255,7 +280,8 @@ function IntakeInspector({ item, rootPath, onClose }: { item: Inspection | null;
         </div>
         {item?.kind === 'series' && (
           <div>
-            <dt className="text-warning">{item.series.suggested ? 'Suggested series' : 'Series unresolved'}</dt>
+            <dt className={item.series.hasMetadata ? 'text-positive' : 'text-warning'}>
+              {item.series.hasMetadata ? 'Series metadata' : item.series.suggested ? 'Suggested series' : 'Series unresolved'}</dt>
             <dd className="font-semibold">{item.series.title}</dd>
           </div>
         )}
@@ -281,6 +307,8 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SeriesSort>('title');
   const [coverOnly, setCoverOnly] = useState(false);
+  const [catalogRevision, setCatalogRevision] = useState(0);
+  const catalog = { ...inventory, version: `${inventory.version}:${catalogRevision}`, onDataChanged: () => setCatalogRevision(value => value + 1) };
   const onInspect = intake ? setItem : undefined;
   const coverView = hasCovers && !intake;
   const view = selectedView && (selectedView !== 'covers' || coverView) ? selectedView : coverView ? 'covers' : 'series';
@@ -301,17 +329,20 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
         <SegmentedControl label="Inventory view" value={view} options={options}
           onChange={view => { setView(view); setItem(null); }} />
       </div>
-      {view !== 'files' && <div className="flex flex-wrap items-end gap-3">
-        <SearchField className="flex-[1_1_13rem]" placeholder="Search series" aria-label="Search series" maxLength={160}
+      <div className="flex flex-wrap items-end gap-3">
+        <SearchField className="flex-[1_1_13rem]" placeholder={view === 'files' ? 'Search files' : 'Search series'}
+          aria-label={view === 'files' ? 'Search files' : 'Search series'} maxLength={160}
           value={search} onChange={event => setSearch(event.target.value)} />
-        <Select label="Sort series" value={sort} options={sortOptions} onChange={setSort} className="w-46 max-w-full" />
-        {hasCovers && <Select label="Artwork" value={coverOnly ? 'only' : 'all'} className="w-40 max-w-full"
-          options={[{ value: 'all', label: 'All series' }, { value: 'only', label: 'With cover' }]} onChange={option => setCoverOnly(option === 'only')} />}
-      </div>}
+        {view !== 'files' && <>
+          <Select label="Sort series" value={sort} options={sortOptions} onChange={setSort} className="w-46 max-w-full" />
+          {hasCovers && <Select label="Artwork" value={coverOnly ? 'only' : 'all'} className="w-40 max-w-full"
+            options={[{ value: 'all', label: 'All series' }, { value: 'only', label: 'With cover' }]} onChange={option => setCoverOnly(option === 'only')} />}
+        </>}
+      </div>
       <div className={intake ? 'grid min-w-0 items-start gap-4 min-[72rem]:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]' : undefined}>
         <div className="grid min-w-0 gap-3">
-          {view === 'files' ? <FileInventory {...inventory} onInspect={onInspect} /> :
-            <GroupedInventory key={`${view}:${query}:${sort}:${coverOnly}`} {...inventory} scanComplete={scanComplete} onInspect={onInspect}
+          {view === 'files' ? <FileInventory key={query} {...catalog} onInspect={onInspect} search={query} /> :
+            <GroupedInventory key={`${view}:${query}:${sort}:${coverOnly}`} {...catalog} scanComplete={scanComplete} onInspect={onInspect}
               coverVersion={coverVersion} coverGrid={view === 'covers'} search={query} sort={sort} coverOnly={coverOnly && hasCovers} />}
         </div>
         {intake && <IntakeInspector rootPath={rootPath} item={item} onClose={() => setItem(null)} />}

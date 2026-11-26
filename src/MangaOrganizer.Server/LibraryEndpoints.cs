@@ -8,6 +8,7 @@ internal static class LibraryEndpoints
     public static void MapLibrary(this RouteGroupBuilder api, string dataDirectory)
     {
         var library = api.MapGroup("/library/roots").RequireAuthorization();
+        library.MapSeriesMetadata();
         library.MapGet("", (LibraryStore store, LibraryScanQueue scans) => Results.Ok(store.ReadRoots()
             .Select(root => root.State is "queued" or "scanning" ? root with { ScanProgress = scans.Status(root.Id) } : root)));
         api.MapGet("/library/folders", (string? path) => FolderBrowser.Browse(path, dataDirectory)).RequireAuthorization();
@@ -32,17 +33,17 @@ internal static class LibraryEndpoints
             }
         });
 
-        library.MapGet("/{id:guid}/files", (Guid id, int? offset, int? limit, string? seriesKey, LibraryStore store) =>
+        library.MapGet("/{id:guid}/files", (Guid id, int? offset, int? limit, string? seriesKey, string? search, LibraryStore store) =>
         {
             if (!store.TryGetRoot(id, out _))
             {
                 return Results.NotFound();
             }
-            if (!IsValidPage(offset, limit) || (seriesKey is not null && !IsSeriesKey(seriesKey)))
+            if (!IsValidPage(offset, limit) || (seriesKey is not null && !IsSeriesKey(seriesKey)) || search is { Length: > 160 })
             {
                 return Results.BadRequest();
             }
-            return Results.Ok(store.ReadFiles(id, offset ?? 0, limit ?? 50, seriesKey?.ToLowerInvariant()));
+            return Results.Ok(store.ReadFiles(id, offset ?? 0, limit ?? 50, seriesKey?.ToLowerInvariant(), search?.Trim() ?? ""));
         });
 
         library.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, string? search, string? sort, bool? coverOnly, LibraryStore store) =>
@@ -85,7 +86,7 @@ internal static class LibraryEndpoints
     }
 
     private static bool IsValidPage(int? offset, int? limit) => offset is not < 0 && limit is not (< 1 or > 100);
-    private static bool IsSeriesKey(string value) => value.Length == 64 && value.All(char.IsAsciiHexDigit);
+    internal static bool IsSeriesKey(string value) => value.Length == 64 && value.All(char.IsAsciiHexDigit);
 
     private static async Task<IResult> SaveFolder(Guid? id, LibraryFolderChange change, LibraryStore store,
         HttpContext context, IAntiforgery antiforgery)
