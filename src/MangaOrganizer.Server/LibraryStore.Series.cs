@@ -33,7 +33,7 @@ internal sealed partial class LibraryStore
         command.ExecuteNonQuery();
     }
 
-    public CatalogPage<CatalogSeries> ReadSeries(Guid id, int offset, int limit, string search, string? sort, bool coverOnly)
+    public CatalogPage<CatalogSeries> ReadSeries(Guid id, int offset, int limit, string search, string? sort, bool coverOnly, string? seriesKey = null)
     {
         using var database = OpenDatabase();
         database.CreateFunction<string, string, bool>("title_contains", (title, query) =>
@@ -47,12 +47,13 @@ internal sealed partial class LibraryStore
                 SELECT f.series_key, MIN(COALESCE(f.series_title, f.relative_path)) AS title, COUNT(*) AS file_count,
                     MAX(f.series_title IS NOT NULL) AS suggested, MAX(f.modified_at) AS latest,
                     EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = $id AND cover.series_key = f.series_key) AS has_cover
-                FROM library_file f WHERE f.root_id = $id GROUP BY f.series_key
+                FROM library_file f WHERE f.root_id = $id AND ($seriesKey IS NULL OR f.series_key = $seriesKey) GROUP BY f.series_key
             )
             """;
         const string filter = " FROM folder_series WHERE ($coverOnly = 0 OR has_cover) AND ($search = '' OR title_contains(title, $search))";
         command.CommandText = seriesQuery + " SELECT COUNT(*)" + filter;
         command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$seriesKey", (object?)seriesKey ?? DBNull.Value);
         command.Parameters.AddWithValue("$search", search);
         command.Parameters.AddWithValue("$coverOnly", coverOnly);
         var total = (long)command.ExecuteScalar()!;

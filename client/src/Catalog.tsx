@@ -2,9 +2,9 @@ import { FolderCog, ScanSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getCsrfToken } from './api';
-import { CatalogInventory } from './CatalogInventory';
+import { CatalogInventory, SeriesPage } from './CatalogInventory';
 import { ROOTS_URL, scanIsActive, scanLabels } from './library';
-import type { FolderRole, LibraryRoot } from './library';
+import type { FolderRole, LibraryRoot, SeriesLocation } from './library';
 import { LibrarySettings } from './LibrarySettings';
 import { Overview } from './Overview';
 import { Select } from './Select';
@@ -12,8 +12,8 @@ import { ActionLink, Button, PageHeader } from './ui';
 
 export type CatalogView = FolderRole | 'settings' | 'overview';
 
-export function Catalog({ view, title, section, onSignedOut, children }: {
-  view: CatalogView; title: string; section: string; onSignedOut: () => void; children?: ReactNode;
+export function Catalog({ view, title, section, onSignedOut, series, children }: {
+  view: CatalogView; title: string; section: string; onSignedOut: () => void; series?: SeriesLocation | null; children?: ReactNode;
 }) {
   const [roots, setRoots] = useState<LibraryRoot[] | null>(null);
   const [selectedId, setSelectedId] = useState('');
@@ -77,6 +77,11 @@ export function Catalog({ view, title, section, onSignedOut, children }: {
     } finally {
       setScanPending(false);
     }
+  }
+
+  if (series) {
+    return <SeriesPage key={`${series.rootId}/${series.seriesKey}`} {...series} onSignedOut={onSignedOut}
+      version={`${inventoryVersion}:${refresh}`} coverVersion={roots?.find(root => root.id === series.rootId)?.lastScannedAt ?? ''} />;
   }
 
   return (
