@@ -31,17 +31,29 @@ internal static class LibraryEndpoints
             }
         });
 
-        library.MapGet("/{id:guid}/files", (Guid id, int? offset, int? limit, LibraryStore store) =>
+        library.MapGet("/{id:guid}/files", (Guid id, int? offset, int? limit, string? seriesKey, LibraryStore store) =>
         {
             if (!store.TryGetRoot(id, out _))
             {
                 return Results.NotFound();
             }
-            if (offset is < 0 || limit is < 1 or > 100)
+            if (!IsValidPage(offset, limit) || (seriesKey is not null && (seriesKey.Length != 64 || !seriesKey.All(char.IsAsciiHexDigit))))
             {
                 return Results.BadRequest();
             }
-            return Results.Ok(store.ReadFiles(id, offset ?? 0, limit ?? 50));
+            return Results.Ok(store.ReadFiles(id, offset ?? 0, limit ?? 50, seriesKey?.ToLowerInvariant()));
+        });
+
+        library.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, LibraryStore store) =>
+        {
+            if (!store.TryGetRoot(id, out _))
+            {
+                return Results.NotFound();
+            }
+
+            return IsValidPage(offset, limit)
+                ? Results.Ok(store.ReadSeries(id, offset ?? 0, limit ?? 50))
+                : Results.BadRequest();
         });
 
         library.MapPost("/{id:guid}/scan", async (Guid id, LibraryStore store, LibraryScanQueue scans,
@@ -58,6 +70,8 @@ internal static class LibraryEndpoints
             return scans.TryQueue(root) ? Results.Accepted() : Results.Conflict();
         });
     }
+
+    private static bool IsValidPage(int? offset, int? limit) => offset is not < 0 && limit is not (< 1 or > 100);
 
     private static async Task<IResult> SaveFolder(Guid? id, LibraryFolderChange change, LibraryStore store,
         HttpContext context, IAntiforgery antiforgery)

@@ -1,6 +1,6 @@
-import { ChevronRight, FolderClosed, FolderOpen, X } from 'lucide-react';
+import { ArrowUp, Check, ChevronRight, FolderClosed, FolderOpen, HardDrive, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button } from './ui';
+import { Button, SearchField } from './ui';
 
 type Folder = { name: string; path: string };
 type Locations = {
@@ -104,12 +104,12 @@ export function FolderField({ id, label, value, onChange, required, setupToken }
       {browsing && (
         <section className="folder-browser" aria-label="Server folders">
           <div className="action-row">
-            <Button variant="secondary" disabled={path === null} onClick={() => openLocation(null)}>Disks</Button>
-            {locations?.path && <Button variant="secondary" onClick={() => openLocation(locations.parent)}>Up</Button>}
+            <Button variant="secondary" icon={HardDrive} disabled={path === null} onClick={() => openLocation(null)}>Disks</Button>
+            {locations?.path && <Button variant="secondary" icon={ArrowUp} onClick={() => openLocation(locations.parent)}>Up</Button>}
             {value.trim() && value.trim() !== path && (
               <Button variant="secondary" onClick={() => openLocation(value.trim())}>Open entered path</Button>
             )}
-            {locations?.path && <Button className="ms-auto" disabled={!locations.selectable} onClick={() => {
+            {locations?.path && <Button className="ms-auto" icon={Check} disabled={!locations.selectable} onClick={() => {
               if (locations.path) onChange(locations.path);
               setBrowsing(false);
             }}>Use this folder</Button>}
@@ -142,7 +142,7 @@ export function FolderField({ id, label, value, onChange, required, setupToken }
             <>
               <h3>{path ? 'Subfolders' : 'Disks and mounts'}</h3>
               {locations.folders.length > 1 && (
-                <input className="folder-filter" type="search" aria-label="Filter folders" placeholder="Filter folders"
+                <SearchField className="mb-3" aria-label="Filter folders" placeholder="Filter folders"
                   value={filter} onChange={event => setFilter(event.target.value)} />
               )}
               {folders.length ? folderLinks(folders) : <p>{search ? 'No folders match this filter.' : 'No folders found here.'}</p>}

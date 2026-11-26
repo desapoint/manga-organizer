@@ -6,7 +6,7 @@ The approved scope adds basic catalog corrections, exact duplicate review and re
 
 ## Read-only catalog
 
-The signed-in owner can manage multiple library and import folders in **Library settings**. The server folder browser shows useful suggestions, disks, mounts and child folders. Settings are stored in SQLite and apply without a restart. A starting folder from first launch or the existing environment configuration is migrated into SQLite when folder settings are initialized. Removing a configured folder removes it from the active catalog while preserving the files.
+The signed-in owner can choose library, import intake, or both for each folder in **Library settings**. A dual-purpose folder appears in both views and shares a single scan, inventory and root ID. Storage permissions for managed changes remain a separate decision. Settings are stored in SQLite and apply without a restart. A starting folder from first launch or the existing environment configuration starts in the library. Removing a configured folder removes it from the active catalog while preserving the files.
 
 The owner can start an inventory scan and browse the results in the WebUI. The scan records relative paths, filename extensions, sizes and modification times for CBZ, CBR, CB7, ZIP, RAR, 7z, PDF and EPUB files. Each scan reads supported regular files to calculate a full SHA-256 digest. The catalog stores one content ID per digest and keeps each indexed path separately across libraries and intake. [Catalog identity](CATALOG-ASSOCIATION.md#paths-hashes-and-associations)
 

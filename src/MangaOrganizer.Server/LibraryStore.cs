@@ -7,7 +7,7 @@ internal sealed record LibraryRootStatus(Guid Id, string Path, string State, lon
     DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks, string? Name, string Kind);
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt,
     string? ContentId, string? Sha256, long? IndexedLocations);
-internal sealed record CatalogPage(long Total, IReadOnlyList<CatalogEntry> Items);
+internal sealed record CatalogPage<T>(long Total, IReadOnlyList<T> Items);
 
 internal sealed partial class LibraryStore
 {
@@ -44,12 +44,6 @@ internal sealed partial class LibraryStore
                 content_id TEXT REFERENCES library_content(id),
                 UNIQUE(root_id, relative_path)
             );
-            CREATE TABLE IF NOT EXISTS library_folder (
-                root_id TEXT NOT NULL PRIMARY KEY REFERENCES library_root(id),
-                path TEXT NOT NULL,
-                name TEXT,
-                kind TEXT NOT NULL CHECK (kind IN ('library', 'import'))
-            );
             CREATE TABLE IF NOT EXISTS library_settings (
                 singleton INTEGER PRIMARY KEY CHECK (singleton = 1)
             );
@@ -65,6 +59,8 @@ internal sealed partial class LibraryStore
         }
         command.CommandText = "CREATE INDEX IF NOT EXISTS library_file_content ON library_file(content_id, root_id);";
         command.ExecuteNonQuery();
+        InitializeFolders(command);
+        InitializeSeries(database, command);
 
         command.CommandText = "INSERT OR IGNORE INTO library_settings(singleton) VALUES (1);";
         if (command.ExecuteNonQuery() == 1)
@@ -109,15 +105,22 @@ internal sealed partial class LibraryStore
         return result;
     }
 
-    public CatalogPage ReadFiles(Guid id, int offset, int limit)
+    public CatalogPage<CatalogEntry> ReadFiles(Guid id, int offset, int limit, string? seriesKey = null)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: true);
         using var command = database.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "SELECT file_count FROM library_root WHERE id = $id;";
+        command.CommandText = seriesKey is null
+            ? "SELECT file_count FROM library_root WHERE id = $id;"
+            : "SELECT COUNT(*) FROM library_file WHERE root_id = $id AND series_key = $seriesKey;";
         command.Parameters.AddWithValue("$id", id);
+        if (seriesKey is not null)
+        {
+            command.Parameters.AddWithValue("$seriesKey", seriesKey);
+        }
         var total = (long)command.ExecuteScalar()!;
+        var seriesFilter = seriesKey is null ? "" : "AND f.series_key = $seriesKey";
         command.CommandText = """
             SELECT f.id, f.relative_path, f.extension, f.size, f.modified_at, c.id, lower(hex(c.sha256)),
                 CASE WHEN c.id IS NOT NULL THEN (
@@ -126,8 +129,8 @@ internal sealed partial class LibraryStore
                     WHERE location.content_id = c.id
                 ) END
             FROM library_file f LEFT JOIN library_content c ON c.id = f.content_id
-            WHERE f.root_id = $id ORDER BY f.relative_path LIMIT $limit OFFSET $offset;
-            """;
+            WHERE f.root_id = $id
+            """ + " " + seriesFilter + " ORDER BY f.relative_path LIMIT $limit OFFSET $offset;";
         command.Parameters.AddWithValue("$limit", limit);
         command.Parameters.AddWithValue("$offset", offset);
         var items = new List<CatalogEntry>(limit);
@@ -175,7 +178,9 @@ internal sealed partial class LibraryStore
                 extension TEXT NOT NULL,
                 size INTEGER NOT NULL,
                 modified_at TEXT NOT NULL,
-                sha256 BLOB
+                sha256 BLOB,
+                series_key TEXT NOT NULL,
+                series_title TEXT
             );
             """;
         command.ExecuteNonQuery();
@@ -199,12 +204,12 @@ internal sealed partial class LibraryStore
                 INSERT INTO library_content(sha256)
                     SELECT DISTINCT sha256 FROM scan_file WHERE sha256 IS NOT NULL
                     ON CONFLICT(sha256) DO NOTHING;
-                INSERT INTO library_file(root_id, relative_path, extension, size, modified_at, content_id)
-                    SELECT $id, s.relative_path, s.extension, s.size, s.modified_at, c.id
+                INSERT INTO library_file(root_id, relative_path, extension, size, modified_at, content_id, series_key, series_title)
+                    SELECT $id, s.relative_path, s.extension, s.size, s.modified_at, c.id, s.series_key, s.series_title
                     FROM scan_file s LEFT JOIN library_content c ON c.sha256 = s.sha256 WHERE 1
                     ON CONFLICT(root_id, relative_path) DO UPDATE SET
                         extension = excluded.extension, size = excluded.size, modified_at = excluded.modified_at,
-                        content_id = excluded.content_id;
+                        content_id = excluded.content_id, series_key = excluded.series_key, series_title = excluded.series_title;
                 DELETE FROM library_file WHERE root_id = $id AND relative_path NOT IN (SELECT relative_path FROM scan_file);
                 UPDATE library_root SET state = 'complete', file_count = $count,
                     last_scanned_at = $now, skipped_links = $skipped WHERE id = $id;
@@ -224,12 +229,14 @@ internal sealed partial class LibraryStore
         using var transaction = database.BeginTransaction(deferred: true);
         using var insert = database.CreateCommand();
         insert.Transaction = transaction;
-        insert.CommandText = "INSERT INTO scan_file VALUES ($path, $extension, $size, $modified, $sha256);";
+        insert.CommandText = "INSERT INTO scan_file VALUES ($path, $extension, $size, $modified, $sha256, $seriesKey, $seriesTitle);";
         var relativePath = insert.Parameters.Add("$path", SqliteType.Text);
         var extension = insert.Parameters.Add("$extension", SqliteType.Text);
         var size = insert.Parameters.Add("$size", SqliteType.Integer);
         var modified = insert.Parameters.Add("$modified", SqliteType.Text);
         var sha256 = insert.Parameters.Add("$sha256", SqliteType.Blob);
+        var seriesKey = insert.Parameters.Add("$seriesKey", SqliteType.Text);
+        var seriesTitle = insert.Parameters.Add("$seriesTitle", SqliteType.Text);
         insert.Prepare();
 
         long count = 0;
@@ -240,6 +247,9 @@ internal sealed partial class LibraryStore
             size.Value = file.Size;
             modified.Value = file.ModifiedAt;
             sha256.Value = (object?)file.Sha256 ?? DBNull.Value;
+            var title = SeriesSuggestions.CandidateTitle(file.RelativePath, path);
+            seriesKey.Value = SeriesSuggestions.Key(file.RelativePath, title);
+            seriesTitle.Value = (object?)title ?? DBNull.Value;
             insert.ExecuteNonQuery();
             count++;
         }, cancellationToken);

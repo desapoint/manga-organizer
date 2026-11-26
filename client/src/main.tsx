@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
+import { useAppearance } from './appearance';
 import { getCsrfToken } from './api';
 import { Workspace } from './Workspace';
 import { FirstRunSetup } from './FirstRunSetup';
 import type { SetupStatus } from './FirstRunSetup';
-import { AuthLayout, Button } from './ui';
+import { AuthLayout, Button, PageHeader } from './ui';
 import './styles.css';
 
 type Server = { id: string };
@@ -34,6 +35,7 @@ async function changeSession(method: 'POST' | 'DELETE', password?: string) {
 }
 
 function App() {
+  const { appearance, setAppearance } = useAppearance();
   const [connection, setConnection] = useState<Connection>('checking');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -99,13 +101,13 @@ function App() {
 
   if (typeof connection === 'object') {
     return <Workspace serverId={connection.id} signingOut={busy} error={error}
-      onSignOut={signOut} onSignedOut={returnToSignIn} />;
+      onSignOut={signOut} onSignedOut={returnToSignIn} appearance={appearance} onAppearanceChange={setAppearance} />;
   }
 
   return (
     <AuthLayout>
       <section className="surface auth-panel" aria-labelledby="server-heading">
-        <h1 id="server-heading">Primary server</h1>
+        <PageHeader id="server-heading" section="Server access" title="Primary server" />
         {connection === 'checking' && <p role="status">Checking connection…</p>}
         {connection === 'unavailable' && (
           <>
@@ -114,7 +116,7 @@ function App() {
           </>
         )}
         {connection === 'signed-out' && (
-          <form onSubmit={signIn}>
+          <form className="mt-4" onSubmit={signIn}>
             <label htmlFor="password">Owner password</label>
             <input id="password" name="password" type="password" autoComplete="current-password" required maxLength={256} />
             <Button type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</Button>

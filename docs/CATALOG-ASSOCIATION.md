@@ -4,6 +4,8 @@ These are owner-selected requirements for the organizer and reader. Apply the wo
 
 ## Group files into series
 
+Library and import inventories show path-based series candidates as expandable groups. Grouping happens before pagination. A group can be suggested even when its chapter or volume coverage is unresolved. The inventory retains paths and content IDs so the owner can inspect the original entries.
+
 - Use the containing folder as the series candidate when filenames contain only chapter numbers, volume numbers, ranges or numbering. Parse decimal chapters and parts without losing precision. A folder name like `Volume 02` inherits a series candidate from its parent. A generic intake folder with files from several series leaves ambiguous entries for review.
 - Look for the same or a closely matching title across folders. For title comparison, normalize case, spacing and punctuation and parse recognized release group tags and status words such as `ongoing`. Retain the original names and parsed provenance. Preserve meaningful numbers, subtitles, edition and language evidence.
 - Show the proposed group, original paths, title evidence and available covers. Let the owner link the group to a series together. Series assignment can be saved while individual chapter coverage remains unresolved. Conflicting edition evidence or multiple plausible series stays in review.

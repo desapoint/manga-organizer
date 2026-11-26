@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { FolderField } from './FolderField';
-import { Button } from './ui';
+import { Button, PageHeader } from './ui';
 
 export type SetupStatus = { libraryConfigured: boolean };
 
@@ -75,10 +75,10 @@ export function FirstRunSetup({ libraryConfigured }: SetupStatus) {
 
   return (
     <section className="surface auth-panel" aria-labelledby="setup-heading">
-      <h1 id="setup-heading">Set up your server</h1>
+      <PageHeader id="setup-heading" section="First launch" title="Set up your server" />
       {!token && <p>Open the one-time setup link shown in the Manga Organizer server window.</p>}
       {token && (phase === 'editing' || phase === 'saving') && (
-        <form onSubmit={completeSetup}>
+        <form className="mt-4" onSubmit={completeSetup}>
           <label htmlFor="setup-password">Owner password</label>
           <input id="setup-password" name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={256} aria-describedby="setup-password-help" />
           <span className="field-help" id="setup-password-help">Use 12–256 characters. You’ll use this password to sign in.</span>

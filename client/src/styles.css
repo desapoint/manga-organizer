@@ -3,28 +3,35 @@
 @import "tailwindcss/utilities.css" layer(utilities) source(none);
 @source ".";
 
-@theme {
+@theme static {
   --breakpoint-desktop: 50rem;
-  --color-canvas: #101218;
-  --color-sidebar: #151722;
-  --color-panel: #1b1e2a;
-  --color-field: #11131c;
-  --color-inset: #141620;
-  --color-line: #34394b;
-  --color-control: #62597a;
-  --color-ink: #f0edf7;
-  --color-secondary: #e4d8ff;
-  --color-label: #d3ccdf;
-  --color-muted: #b9b3c8;
+  --color-canvas: #101015;
+  --color-sidebar: #141319;
+  --color-panel: #1b1a22;
+  --color-elevated: #24222c;
+  --color-field: #15141b;
+  --color-inset: #17161e;
+  --color-line: #302d39;
+  --color-control: #756b86;
+  --color-ink: #f6f3fa;
+  --color-secondary: #e2dbee;
+  --color-label: #d9d3e3;
+  --color-muted: #a6a2b6;
   --color-detail: #c7c1d3;
-  --color-accent: #c5b1ff;
-  --color-accent-hover: #dacbff;
-  --color-accent-ink: #20143c;
-  --color-danger: #ffb6c4;
-  --color-nav-hover: #232536;
-  --color-nav-active: #2d2645;
-  --color-nav-line: #524470;
-  --color-nav-icon: #bba9ea;
+  --color-violet: #bda5fa;
+  --color-mint: #96e2c5;
+  --color-coral: #ffa5a2;
+  --color-accent: var(--color-violet);
+  --color-accent-hover: color-mix(in srgb, var(--color-accent), white 20%);
+  --color-accent-readable: var(--color-accent);
+  --color-accent-ink: #231733;
+  --color-danger: #ff7d92;
+  --color-warning: #f4c478;
+  --color-positive: #96e2c5;
+  --color-nav-hover: var(--color-elevated);
+  --color-nav-active: color-mix(in srgb, var(--color-accent) 15%, var(--color-sidebar));
+  --color-nav-line: color-mix(in srgb, var(--color-accent) 43%, var(--color-sidebar));
+  --color-nav-icon: var(--color-accent-readable);
 }
 
 @layer base {
@@ -33,6 +40,30 @@
     font-family: system-ui, sans-serif;
     line-height: 1.5;
     color-scheme: dark;
+  }
+
+  :root[data-accent='mint'] { --color-accent: var(--color-mint); }
+  :root[data-accent='coral'] { --color-accent: var(--color-coral); }
+
+  :root[data-theme='paper'] {
+    color-scheme: light;
+    --color-canvas: #f8f3ea;
+    --color-sidebar: #f0e8da;
+    --color-panel: #fffaf2;
+    --color-elevated: #eae1d4;
+    --color-field: #f6efe4;
+    --color-inset: #f7f0e6;
+    --color-line: #d7cbbf;
+    --color-control: #8d7e91;
+    --color-ink: #25212a;
+    --color-secondary: #432f49;
+    --color-label: #4e4355;
+    --color-muted: #655b6a;
+    --color-detail: #514757;
+    --color-accent-readable: color-mix(in srgb, var(--color-accent) 24%, #371f3f);
+    --color-danger: #a72b44;
+    --color-warning: #80540b;
+    --color-positive: #22674c;
   }
 
   * { box-sizing: border-box; }
@@ -54,7 +85,7 @@
   }
   button { font-family: inherit; }
 
-  :focus-visible { @apply outline-2 outline-offset-3 outline-accent-hover; }
+  :focus-visible { @apply outline-2 outline-offset-3 outline-accent-readable; }
 
   dl { margin: 0 0 1.5rem; }
   dd { @apply mt-1 mb-0 wrap-anywhere; margin-inline-start: 0; }
@@ -62,32 +93,31 @@
 
 @layer components {
   .surface { @apply min-w-0 rounded-xl border border-line bg-panel; }
-  .auth-panel { padding: clamp(1.25rem, 5vw, 2rem); }
+  .auth-panel { @apply rounded-2xl; padding: clamp(1.25rem, 5vw, 2.25rem); }
   .error { @apply mt-4 text-danger; }
   .field-help { @apply text-sm text-muted; }
 
-  .workspace-page { @apply grid min-w-0 gap-4; }
-  .workspace-page > h1 { margin: 0 0 .35rem; font-size: clamp(1.7rem, 3vw, 2.6rem); }
+  .workspace-page { @apply grid min-w-0 gap-6; }
   .workspace-page > p { margin: .15rem 0; }
   .catalog-surface { padding: clamp(.85rem, 2vw, 1.25rem); }
   .catalog-surface > p:first-child { margin-top: 0; }
 
-  .action-row { @apply flex flex-wrap gap-2; }
-  .folder-field { @apply flex flex-wrap gap-2; }
+  .action-row, .folder-field { @apply flex flex-wrap items-center gap-2; }
   .folder-field input { flex: 1 1 12rem; }
-  .folder-browser, .settings-form { @apply min-w-0 rounded-lg border border-line p-3.5; }
+  .folder-browser, .settings-form { @apply min-w-0 rounded-xl border border-line bg-panel p-4; }
+  .folder-browser { @apply bg-elevated; }
   .folder-browser h3 { @apply mt-3 mb-2 text-base; }
   .folder-breadcrumbs { @apply mt-3 rounded-md bg-inset px-2.5 py-2; }
   .folder-breadcrumbs ol { @apply m-0 flex list-none flex-wrap items-center gap-0.5 p-0; }
   .folder-breadcrumbs li { @apply flex max-w-full items-center wrap-anywhere; }
   .folder-location { @apply mt-1 block wrap-anywhere text-muted; }
-  .folder-filter { @apply mb-2.5 w-full; }
-  .folder-links, .settings-folders { @apply mt-0 mb-3 list-none p-0; }
+  .folder-links { @apply mt-0 mb-3 list-none p-0; }
+  .settings-folders { @apply m-0 grid list-none divide-y divide-line rounded-xl border border-line bg-inset p-0; }
   .folder-links {
     @apply grid max-h-68 gap-1.5 overflow-auto;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
   }
-  .settings-folders li { @apply flex flex-wrap justify-between gap-2.5 border-b border-line py-3; }
+  .settings-folders li { @apply flex flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-4; }
   .folder-description { @apply grid gap-0.5 wrap-anywhere; }
   .folder-description span { @apply text-sm text-muted; }
   .settings-form h2 { @apply m-0 text-xl; }
@@ -95,8 +125,6 @@
   .catalog-controls, .catalog-summary, .pagination { @apply flex items-center gap-x-4 gap-y-3; }
   .pagination { @apply justify-between text-sm; }
   .catalog-controls { @apply flex-wrap items-end; }
-  .catalog-controls label { @apply grid min-w-0 gap-1.5; flex: 1 1 13rem; }
-  .catalog-controls select { @apply w-full; }
   .scan-state { @apply mt-3.5 mb-1; }
   .catalog-summary { @apply flex-wrap text-sm text-muted; }
   .catalog-files { @apply m-0 list-none p-0; }
@@ -108,13 +136,10 @@
   .catalog-files li:last-child { @apply border-b-0; }
   .catalog-files .file-path { @apply wrap-anywhere text-ink; }
   .catalog-files .file-path small { @apply mt-1 block text-muted; }
-  .file-format { @apply font-semibold text-accent; }
-  .server-details { @apply mt-6 text-sm text-detail; }
-  .server-details summary { @apply cursor-pointer; }
-  .server-details dl { @apply mt-2; }
+  .file-format { @apply font-semibold text-accent-readable; }
 
   @media (width < 50rem) {
-    html { scroll-padding-top: calc(8.5rem + env(safe-area-inset-top)); }
+    html { scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
   }
 
   @media (max-width: 36rem) {

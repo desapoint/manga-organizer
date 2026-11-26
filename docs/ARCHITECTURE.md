@@ -31,7 +31,10 @@ Use stable work, edition, volume and chapter identities with exact decimal and p
 - Use Tailwind CSS for new and updated WebUI styles. Define shared colors and breakpoints in the Tailwind theme. Keep layout utilities with the component they style and centralize shared rules.
 - Use Lucide for interface icons. Keep visible labels on navigation items, hide decorative icons from assistive technology and give icon-only controls an accessible name.
 - Reuse React components for repeated controls and layouts. Extend them with named style variants, optional icons, native element props and composable content as needed. Keep semantic elements, visible keyboard focus and responsive behavior across variants.
+- Use the shared accessible select for dropdowns. Keep action buttons at their intrinsic size and wrap action groups when horizontal space is limited.
 - Use one set of destinations for the desktop sidebar and the compact phone navigation. A future Android app shares the destinations, labels, matching review and reader interaction patterns. Both clients use the primary server's library identities and progress state. [Client responsibilities](REMOTE-READING.md#server-and-client-responsibilities)
+
+Use the INK//SHELF palette, shared shell, and screen patterns for the functional WebUI and upcoming reader. [UI design](UI-DESIGN.md)
 
 ## File organization and duplicate management (required)
 

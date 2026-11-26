@@ -9,11 +9,40 @@ internal sealed class LibraryFolderBusyException() : Exception("Wait for the fol
 
 internal sealed partial class LibraryStore
 {
+    private const string CreateFolderTable = """
+        CREATE TABLE IF NOT EXISTS library_folder (
+            root_id TEXT NOT NULL PRIMARY KEY REFERENCES library_root(id),
+            path TEXT NOT NULL,
+            name TEXT,
+            kind TEXT NOT NULL CHECK (kind IN ('library', 'import', 'both'))
+        );
+        """;
+
+    private static void InitializeFolders(SqliteCommand command)
+    {
+        command.CommandText = "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'library_folder';";
+        var schema = command.ExecuteScalar() as string;
+        if (schema is null)
+        {
+            command.CommandText = CreateFolderTable;
+            command.ExecuteNonQuery();
+        }
+        else if (!schema.Contains("'both'", StringComparison.Ordinal))
+        {
+            command.CommandText = "ALTER TABLE library_folder RENAME TO legacy_library_folder;" + CreateFolderTable + """
+                INSERT INTO library_folder(root_id, path, name, kind)
+                    SELECT root_id, path, name, kind FROM legacy_library_folder ORDER BY rowid;
+                DROP TABLE legacy_library_folder;
+                """;
+            command.ExecuteNonQuery();
+        }
+    }
+
     public LibraryFolder? SaveFolder(Guid? id, LibraryFolderChange change)
     {
-        if (change.Kind is not ("library" or "import"))
+        if (change.Kind is not ("library" or "import" or "both"))
         {
-            throw new ArgumentException("Choose a library folder or an import folder.");
+            throw new ArgumentException("Choose library, import intake, or both.");
         }
 
         var name = string.IsNullOrWhiteSpace(change.Name) ? null : change.Name.Trim();

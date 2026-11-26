@@ -3,17 +3,28 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { getCsrfToken } from './api';
 import { FolderField } from './FolderField';
-import { Button } from './ui';
-
-export type FolderKind = 'library' | 'import';
-export type ConfiguredFolder = { id: string; path: string; name: string | null; kind: FolderKind };
+import { ROOTS_URL } from './library';
+import type { FolderKind, LibraryRoot } from './library';
+import { Select } from './Select';
+import type { SelectOption } from './Select';
+import { Button, ScanBadge, SectionHeader } from './ui';
 
 type FolderDraft = { id?: string; path: string; name: string; kind: FolderKind };
 
-export const ROOTS_URL = '/api/library/roots';
+const folderKinds = {
+  library: 'Library only',
+  import: 'Import intake only',
+  both: 'Library and import intake',
+} satisfies Record<FolderKind, string>;
+
+const folderOptions: SelectOption<FolderKind>[] = [
+  { value: 'library', label: folderKinds.library },
+  { value: 'import', label: folderKinds.import },
+  { value: 'both', label: folderKinds.both, description: 'One scan and inventory shared by both views.' },
+];
 
 export function LibrarySettings({ folders, onChange, onSignedOut }: {
-  folders: ConfiguredFolder[];
+  folders: LibraryRoot[];
   onChange: () => void;
   onSignedOut: () => void;
 }) {
@@ -51,15 +62,23 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
   }
 
   return (
-    <div className="library-settings">
+    <section className="surface grid gap-4 p-4 sm:p-5" aria-labelledby="library-folders-heading">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SectionHeader id="library-folders-heading" title="Library folders" />
+        {!draft && <Button icon={Plus} disabled={busy} onClick={() => {
+          setError('');
+          setDraft({ path: '', name: '', kind: 'library' });
+        }}>Add folder</Button>}
+      </div>
+      {folders.length === 0 && !draft && <p className="m-0 text-sm text-muted">Add a server folder to start indexing your collection.</p>}
       {folders.length > 0 && (
-        <ul className="settings-folders" aria-label="Configured folders">
+        <ul className="settings-folders" role="list" aria-label="Configured folders">
           {folders.map(folder => (
             <li key={folder.id}>
               <div className="folder-description">
                 <strong>{folder.name || folder.path}</strong>
                 {folder.name && <code>{folder.path}</code>}
-                <span>{folder.kind === 'import' ? 'Import folder' : 'Read-only library'}</span>
+                <div className="action-row text-sm text-muted">{folderKinds[folder.kind]} <ScanBadge state={folder.state} /></div>
               </div>
               <div className="action-row">
                 <Button variant="secondary" disabled={busy} aria-label={`Edit ${folder.name || folder.path}`}
@@ -72,18 +91,11 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
         </ul>
       )}
       {error && <p role="alert" className="error">{error}</p>}
-      {!draft && <Button icon={Plus} disabled={busy} onClick={() => {
-        setError('');
-        setDraft({ path: '', name: '', kind: 'library' });
-      }}>Add folder</Button>}
       {draft && (
         <form className="settings-form" key={draft.id ?? 'new'} onSubmit={save}>
           <h2>{draft.id ? 'Edit folder' : 'Add folder'}</h2>
-          <label htmlFor="folder-kind">Use folder for</label>
-          <select id="folder-kind" value={draft.kind} onChange={event => setDraft({ ...draft, kind: event.target.value as FolderKind })}>
-            <option value="library">Read-only library</option>
-            <option value="import">Import intake</option>
-          </select>
+          <Select label="Use folder for" value={draft.kind} options={folderOptions} disabled={busy}
+            onChange={kind => setDraft({ ...draft, kind })} />
           <label htmlFor="folder-name">Display name (optional)</label>
           <input id="folder-name" value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} />
           <FolderField id="settings-folder" label="Folder location" required value={draft.path}
@@ -94,6 +106,6 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
           </div>
         </form>
       )}
-    </div>
+    </section>
   );
 }
