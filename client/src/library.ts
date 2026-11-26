@@ -39,6 +39,7 @@ export type LibraryRoot = {
   lastScannedAt: string | null;
   skippedLinks: number;
   hasCovers: boolean;
+  managed: boolean;
   scanProgress: ScanSnapshot | null;
 };
 

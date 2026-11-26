@@ -1,6 +1,8 @@
 import { ArrowLeft, BookOpen, ChevronRight, Library, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ChapterCoverage } from './ChapterCoverage';
+import { FileMove } from './FileOperations';
+import type { LibraryRoot } from './library';
 import { SeriesInfo } from './SeriesInfo';
 import { FileCover, SeriesCover } from './SeriesCover';
 import { formatSize, ROOTS_URL, seriesHref } from './library';
@@ -27,7 +29,7 @@ type CatalogEntry = {
 type Series = { key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean };
 type Page<T> = { total: number; items: T[] };
 type InventoryProps = { rootId: string; version: string; onSignedOut: () => void };
-type InventoryActions = InventoryProps & { onDataChanged: () => void };
+type InventoryActions = InventoryProps & { onDataChanged: () => void; managedFolders: LibraryRoot[]; onMoved: () => void };
 type Inspection = { kind: 'series'; series: Series } | { kind: 'file'; file: CatalogEntry };
 type Inspect = (item: Inspection) => void;
 type InventoryView = 'covers' | 'series' | 'files';
@@ -96,10 +98,13 @@ function InventoryError({ children, retry }: { children: string; retry: () => vo
   );
 }
 
-function FileRow({ file, rootId, version, onInspect, coverageUrl, onSaved, onSignedOut }: Pick<InventoryProps, 'rootId' | 'version'> & {
+function FileRow({ file, rootId, version, onInspect, coverageUrl, onSaved, onSignedOut, managedFolders, onMoved }:
+  Pick<InventoryProps, 'rootId' | 'version'> & {
   file: CatalogEntry; onInspect?: Inspect; coverageUrl?: string; onSaved: () => void; onSignedOut: () => void;
+  managedFolders: LibraryRoot[]; onMoved: () => void;
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
+  const [showMove, setShowMove] = useState(false);
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
   const readable = file.contentId && ['cbz', 'zip', 'cbr', 'rar'].includes(file.extension);
@@ -132,11 +137,16 @@ function FileRow({ file, rootId, version, onInspect, coverageUrl, onSaved, onSig
         {showCoverage && <ChapterCoverage url={coverageUrl} contentId={file.contentId} volumeHint={file.volume}
           chapterHint={file.chapter} onSaved={onSaved} onSignedOut={onSignedOut} />}
       </details>}
+      {managedFolders.length > 0 && file.contentId && <details className="col-span-full" open={showMove} onToggle={event => setShowMove(event.currentTarget.open)}>
+        <summary className="min-h-9 cursor-pointer py-2 text-sm text-accent-readable">Move or rename</summary>
+        {showMove && <FileMove rootId={rootId} fileId={file.id} relativePath={file.relativePath} folders={managedFolders}
+          onSignedOut={onSignedOut} onApplied={() => { setShowMove(false); onMoved(); }} />}
+      </details>}
     </li>
   );
 }
 
-function FileInventory({ rootId, seriesKey, version, onSignedOut, onDataChanged, onInspect, search = '' }:
+function FileInventory({ rootId, seriesKey, version, onSignedOut, onDataChanged, managedFolders, onMoved, onInspect, search = '' }:
   InventoryActions & { seriesKey?: string; onInspect?: Inspect; search?: string }) {
   const { page, offset, setOffset, error, retry } = useInventoryPage<CatalogEntry>(`${ROOTS_URL}/${rootId}/files`, version, onSignedOut,
     seriesKey ? { seriesKey, search } : { search });
@@ -152,8 +162,8 @@ function FileInventory({ rootId, seriesKey, version, onSignedOut, onDataChanged,
           <div className="catalog-columns" aria-hidden="true"><span>File</span><span>Type</span><span>Size</span><span>Modified</span></div>
           <ul className="catalog-files" role="list" aria-label={label}>
             {page.items.map(file => <FileRow key={file.id} file={file} rootId={rootId} version={version}
-              coverageUrl={coverageUrl} onInspect={onInspect}
-              onSaved={onDataChanged} onSignedOut={onSignedOut} />)}
+              coverageUrl={coverageUrl} onInspect={onInspect} onSaved={onDataChanged} onSignedOut={onSignedOut}
+              managedFolders={managedFolders} onMoved={onMoved} />)}
           </ul>
           {page.total > PAGE_SIZE && (
             <div className="border-t border-line p-3">
@@ -214,9 +224,16 @@ function CoverGrid({ series, rootId, coverVersion }: { series: Series[]; rootId:
   );
 }
 
-export function SeriesPage({ seriesKey, coverVersion, ...inventory }: InventoryProps & { seriesKey: string; coverVersion: string }) {
+export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventoryChanged, ...inventory }: InventoryProps & {
+  seriesKey: string; coverVersion: string; managedFolders: LibraryRoot[]; onInventoryChanged: () => void;
+}) {
   const [revision, setRevision] = useState(0);
-  const catalog = { ...inventory, version: `${inventory.version}:${revision}`, onDataChanged: () => setRevision(value => value + 1) };
+  const [moved, setMoved] = useState(false);
+  const catalog = { ...inventory, version: `${inventory.version}:${revision}`, managedFolders,
+    onDataChanged: () => setRevision(value => value + 1), onMoved: () => {
+      setMoved(true);
+      onInventoryChanged();
+    } };
   const { rootId, version, onSignedOut } = catalog;
   const { page, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut, { seriesKey });
   const series = page?.items[0];
@@ -234,6 +251,7 @@ export function SeriesPage({ seriesKey, coverVersion, ...inventory }: InventoryP
       {error && <InventoryError retry={retry}>Could not load this series.</InventoryError>}
       {!error && !page && <p role="status">Loading series…</p>}
       {page && !series && <p>This series is no longer in the selected library folder.</p>}
+      {moved && <p role="status" className="m-0 text-sm text-positive">File change completed. See File operation history in Settings for recovery.</p>}
       {series && <SeriesInfo rootId={rootId} seriesKey={seriesKey} title={series.title} version={version}
         onChange={catalog.onDataChanged} onSignedOut={onSignedOut} />}
       {series && <section className="grid gap-3" aria-labelledby="series-files-heading">
@@ -304,8 +322,9 @@ function IntakeInspector({ item, rootPath, onClose }: { item: Inspection | null;
   );
 }
 
-export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, coverVersion, ...inventory }:
-  InventoryProps & { scanComplete: boolean; intake: boolean; rootPath: string; hasCovers: boolean; coverVersion: string }) {
+export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, coverVersion, managedFolders, onInventoryChanged, ...inventory }:
+  InventoryProps & { scanComplete: boolean; intake: boolean; rootPath: string; hasCovers: boolean; coverVersion: string;
+    managedFolders: LibraryRoot[]; onInventoryChanged: () => void }) {
   const [selectedView, setView] = useState<InventoryView | null>(null);
   const [item, setItem] = useState<Inspection | null>(null);
   const [search, setSearch] = useState('');
@@ -313,7 +332,12 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
   const [sort, setSort] = useState<SeriesSort>('title');
   const [coverOnly, setCoverOnly] = useState(false);
   const [catalogRevision, setCatalogRevision] = useState(0);
-  const catalog = { ...inventory, version: `${inventory.version}:${catalogRevision}`, onDataChanged: () => setCatalogRevision(value => value + 1) };
+  const [notice, setNotice] = useState('');
+  const catalog = { ...inventory, version: `${inventory.version}:${catalogRevision}`, managedFolders,
+    onDataChanged: () => setCatalogRevision(value => value + 1), onMoved: () => {
+      setNotice('File change completed. A verified recovery copy is in Settings under File operation history.');
+      onInventoryChanged();
+    } };
   const onInspect = intake ? setItem : undefined;
   const coverView = hasCovers && !intake;
   const view = selectedView && (selectedView !== 'covers' || coverView) ? selectedView : coverView ? 'covers' : 'series';
@@ -334,6 +358,7 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
         <SegmentedControl label="Inventory view" value={view} options={options}
           onChange={view => { setView(view); setItem(null); }} />
       </div>
+      {notice && <p role="status" className="m-0 text-sm text-positive">{notice}</p>}
       <div className="flex flex-wrap items-end gap-3">
         <SearchField className="flex-[1_1_13rem]" placeholder={view === 'files' ? 'Search files' : 'Search series'}
           aria-label={view === 'files' ? 'Search files' : 'Search series'} maxLength={160}

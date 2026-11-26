@@ -9,7 +9,7 @@ import { Select } from './Select';
 import type { SelectOption } from './Select';
 import { Button, ScanBadge, SectionHeader } from './ui';
 
-type FolderDraft = { id?: string; path: string; name: string; kind: FolderKind };
+type FolderDraft = { id?: string; path: string; name: string; kind: FolderKind; managed: boolean };
 
 const folderKinds = {
   library: 'Library only',
@@ -67,7 +67,7 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
         <SectionHeader id="library-folders-heading" title="Library folders" />
         {!draft && <Button icon={Plus} disabled={busy} onClick={() => {
           setError('');
-          setDraft({ path: '', name: '', kind: 'library' });
+          setDraft({ path: '', name: '', kind: 'library', managed: false });
         }}>Add folder</Button>}
       </div>
       {folders.length === 0 && !draft && <p className="m-0 text-sm text-muted">Add a server folder to start indexing your collection.</p>}
@@ -78,7 +78,8 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
               <div className="folder-description">
                 <strong>{folder.name || folder.path}</strong>
                 {folder.name && <code>{folder.path}</code>}
-                <div className="action-row text-sm text-muted">{folderKinds[folder.kind]} <ScanBadge state={folder.state} /></div>
+                <div className="action-row text-sm text-muted">{folderKinds[folder.kind]} · {folder.managed ? 'Managed' : 'Read-only'}
+                  <ScanBadge state={folder.state} /></div>
               </div>
               <div className="action-row">
                 <Button variant="secondary" disabled={busy} aria-label={`Edit ${folder.name || folder.path}`}
@@ -100,6 +101,11 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
           <input id="folder-name" value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} />
           <FolderField id="settings-folder" label="Folder location" required value={draft.path}
             onChange={path => setDraft({ ...draft, path })} />
+          <label className="flex min-h-11 items-center gap-2">
+            <input type="checkbox" className="size-4 min-h-0 shrink-0 p-0 accent-accent" checked={draft.managed}
+              onChange={event => setDraft({ ...draft, managed: event.target.checked })} />
+            Allow reviewed file moves and renames
+          </label>
           <div className="action-row">
             <Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save folder'}</Button>
             <Button variant="secondary" disabled={busy} onClick={() => setDraft(null)}>Cancel</Button>

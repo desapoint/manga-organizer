@@ -120,11 +120,11 @@ def start_app(executable, data_dir, media, password, *, expect_setup=False, meta
 
 
 @contextmanager
-def start_container(image, volume, media, password):
+def start_container(image, volume, media, password, *, readonly=True):
     name = f"manga-smoke-{uuid4().hex}"
     command = ["docker", "run", "--detach", "--name", name, "-p", "127.0.0.1::8787",
                "--mount", f"type=volume,source={volume},target=/config",
-               "--mount", f"type=bind,source={media},target=/media,readonly",
+               "--mount", f"type=bind,source={media},target=/media" + (",readonly" if readonly else ""),
                "--env", "MANGA_ORGANIZER_LIBRARY_ROOTS__0=/media/primary",
                "--env", "MANGA_ORGANIZER_LIBRARY_ROOTS__1=/media/archive"]
     env = os.environ.copy()
@@ -899,6 +899,182 @@ def create_media_fixture(media):
         (primary / "linked-file.epub").symlink_to("../archive/Volume.epub")
 
 
+def create_managed_fixture(media):
+    for path in (media, media / "primary", media / "archive"):
+        path.mkdir()
+        path.chmod(0o777)
+    with ZipFile(media / "primary" / "Chapter 1.cbz", "w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr("pages/1.png", synthetic_png(32, 160, 122))
+
+
+def verify_managed_files(start, media, *, shared_permissions=False, data_directory=None):
+    password = uuid4().hex
+    original = media / "primary" / "Chapter 1.cbz"
+    original_bytes = original.read_bytes()
+    target = media / "archive" / "Sorted" / "Moved.cbz"
+    if shared_permissions:
+        target.parent.mkdir()
+        target.parent.chmod(0o777)
+    operations = "/api/file-operations"
+    with start(password) as url:
+        wait_for_server(url)
+        owner = Browser(url)
+        owner.request(operations, 401)
+        owner.sign_in(password)
+        primary, archive = owner.roots()
+        owner.scan(primary["id"])
+        (item,) = owner.files(primary["id"])["items"]
+        (series,) = owner.series(primary["id"])["items"]
+        original_cover = f"{LIBRARY_ROOTS}/{primary['id']}/series/{series['key']}/cover"
+        moved_cover = f"{LIBRARY_ROOTS}/{archive['id']}/series/{series['key']}/cover"
+        cover_bytes = owner.request(original_cover, 200)
+        plan = {"sourceRoot": primary["id"], "fileId": item["id"], "targetRoot": archive["id"], "targetPath": "Sorted/Moved.cbz"}
+        owner.request(f"{operations}/preview", 409, method="POST", token=owner.csrf(), body=plan)
+        for root in (primary, archive):
+            options = {"path": root["path"], "kind": "both", "name": root["name"], "managed": True}
+            saved = json.loads(owner.request(f"{LIBRARY_ROOTS}/{root['id']}", 200, method="PUT", token=owner.csrf(), body=options))
+            assert saved["managed"] and saved["id"] == root["id"]
+
+        def preview(path, destination=archive["id"], expected=200, **options):
+            return json.loads(owner.request(f"{operations}/preview", expected, method="POST", token=owner.csrf(),
+                                            body=dict(plan, targetPath=path, targetRoot=destination, **options)))
+
+        preview("../Escaped.cbz", expected=409)
+        collision = preview("Occupied.cbz")
+        occupied = media / "archive" / "Occupied.cbz"
+        occupied.write_bytes(b"Existing copy protected")
+        owner.request(f"{operations}/{collision['id']}/apply", 409, method="POST", token=owner.csrf())
+        assert occupied.read_bytes() == b"Existing copy protected" and original.read_bytes() == original_bytes
+
+        move = preview("Sorted/Moved.cbz")
+        assert move["state"] == "planned" and not target.exists() and target.parent.exists() == shared_permissions
+        operation = f"{operations}/{move['id']}"
+        owner.request(f"{operation}/apply", 400, method="POST")
+        completed = json.loads(owner.request(f"{operation}/apply", 200, method="POST", token=owner.csrf()))
+        assert completed["state"] == "completed" and completed["recovery"]
+        assert not original.exists() and target.read_bytes() == original_bytes
+        assert owner.files(primary["id"])["total"] == 0
+        (moved,) = owner.files(archive["id"])["items"]
+        assert moved["id"] == item["id"] and moved["contentId"] == item["contentId"]
+        assert owner.request(moved_cover, 200) == cover_bytes
+        assert json.loads(owner.request(f"{operation}/apply", 200, method="POST", token=owner.csrf())) == completed
+
+    with start(None) as url:
+        wait_for_server(url)
+        owner = Browser(url)
+        owner.sign_in(password)
+        history = json.loads(owner.request(operations, 200))
+        assert any(entry["id"] == move["id"] and entry["state"] == "completed" for entry in history)
+        restored = json.loads(owner.request(f"{operation}/restore", 200, method="POST", token=owner.csrf()))
+        assert restored["state"] == "restored" and not target.exists() and original.read_bytes() == original_bytes
+        (restored_file,) = owner.files(primary["id"])["items"]
+        assert restored_file["id"] == item["id"] and restored_file["contentId"] == item["contentId"]
+        assert owner.request(original_cover, 200) == cover_bytes
+
+        case_change = preview("chapter 1.cbz", destination=primary["id"])
+        case_url = f"{operations}/{case_change['id']}"
+        owner.request(f"{case_url}/apply", 200, method="POST", token=owner.csrf())
+        assert "chapter 1.cbz" in {file.name for file in original.parent.iterdir()}
+        owner.request(f"{case_url}/restore", 200, method="POST", token=owner.csrf())
+        assert original.name in {file.name for file in original.parent.iterdir()}
+
+        variants = media / "archive" / "primary"
+        variants.mkdir()
+        variants.chmod(0o777)
+        later_chapter = variants / "Chapter 10.cbz"
+        with ZipFile(later_chapter, "w", compression=ZIP_DEFLATED) as later:
+            later.writestr("pages/1.png", synthetic_png(212, 123, 197, 15, 26))
+        owner.scan(archive["id"])
+        assert webp_dimensions(owner.request(moved_cover, 200)) == (15, 26)
+        earliest = preview("primary/Chapter 1.cbz")
+        earliest_operation = f"{operations}/{earliest['id']}"
+        owner.request(f"{earliest_operation}/apply", 200, method="POST", token=owner.csrf())
+        assert owner.request(moved_cover, 200) == cover_bytes
+        owner.request(f"{earliest_operation}/restore", 200, method="POST", token=owner.csrf())
+        assert webp_dimensions(owner.request(moved_cover, 200)) == (15, 26)
+        later_chapter.unlink()
+        owner.scan(archive["id"])
+
+        # Distinct same-chapter editions and their folder images can share a final directory.
+        existing_release = variants / "Chapter 1.cbz"
+        with ZipFile(existing_release, "w", compression=ZIP_DEFLATED) as translated:
+            translated.writestr("pages/1.png", synthetic_png(218, 102, 65))
+        existing_bytes = existing_release.read_bytes()
+        existing_cover = synthetic_png(61, 110, 184, 15, 21)
+        (variants / "cover.png").write_bytes(existing_cover)
+        source_covers = [synthetic_png(140, 91, 72, 18, 23), synthetic_png(85, 190, 126, 23, 34)]
+        for name, cover in zip(("cover.png", "cover-1.png"), source_covers):
+            (original.parent / name).write_bytes(cover)
+
+        variant_path = "primary/Chapter 1.cbz"
+        preview(variant_path, expected=409)
+        plan_with_covers = preview(variant_path, keepBoth=True, copyFolderCovers=True)
+        assert Path(plan_with_covers["target"]).name == "Chapter 1 [Variant 1].cbz"
+        assert [Path(cover["target"]).name for cover in plan_with_covers["covers"]] == ["cover-1.png", "cover-2.png"]
+        assert not any(cover["published"] for cover in plan_with_covers["covers"])
+        blocked_cover = variants / "cover-1.png"
+        blocked_cover.write_bytes(b"An independent file created after preview")
+        owner.request(f"{operations}/{plan_with_covers['id']}/apply", 409, method="POST", token=owner.csrf())
+        assert original.read_bytes() == original_bytes and blocked_cover.read_bytes() == b"An independent file created after preview"
+        blocked_cover.unlink()
+
+        plan_with_covers = preview(variant_path, keepBoth=True, copyFolderCovers=True)
+        variant_operation = f"{operations}/{plan_with_covers['id']}"
+        result = json.loads(owner.request(f"{variant_operation}/apply", 200, method="POST", token=owner.csrf()))
+        assert result["state"] == "completed" and all(cover["published"] for cover in result["covers"])
+        assert existing_release.read_bytes() == existing_bytes
+        assert (variants / "Chapter 1 [Variant 1].cbz").read_bytes() == original_bytes
+        assert (variants / "cover.png").read_bytes() == existing_cover
+        assert [(variants / f"cover-{index}.png").read_bytes() for index in (1, 2)] == source_covers
+        assert [(original.parent / name).read_bytes() for name in ("cover.png", "cover-1.png")] == source_covers
+        owner.scan(archive["id"])
+        (variant_group,) = [group for group in owner.series(archive["id"])["items"] if group["key"] == series["key"]]
+        assert variant_group["fileCount"] == 2
+        assert webp_dimensions(owner.request(moved_cover, 200)) == (15, 21)
+        restored_variant = json.loads(owner.request(f"{variant_operation}/restore", 200, method="POST", token=owner.csrf()))
+        assert restored_variant["state"] == "restored" and original.read_bytes() == original_bytes
+        assert [(variants / f"cover-{index}.png").read_bytes() for index in (1, 2)] == source_covers
+
+        changed = preview("Changed.cbz")
+        old = original.stat()
+        modified = b"!" + original_bytes[1:]
+        replacement = original.with_suffix(".replacement")
+        replacement.write_bytes(modified)
+        os.utime(replacement, ns=(old.st_atime_ns, old.st_mtime_ns))
+        replacement.replace(original)
+        owner.request(f"{operations}/{changed['id']}/apply", 409, method="POST", token=owner.csrf())
+        assert original.read_bytes() == modified and not (media / "archive" / "Changed.cbz").exists()
+        review = next(operation for operation in json.loads(owner.request(operations, 200)) if operation["id"] == changed["id"])
+        assert review["state"] == "review" and review["recovery"] is None
+
+        if data_directory is None:
+            return
+
+        original.write_bytes(original_bytes)
+        interrupted = preview("Interrupted.cbz")
+
+    # Mimic an interruption after verification and parking, before the catalog commit.
+    interrupted_id = UUID(interrupted["id"]).hex
+    backup = data_directory / "file-recovery" / f"{interrupted_id}.backup"
+    backup.write_bytes(original_bytes)
+    original.rename(original.with_name(f".manga-organizer-{interrupted_id}-original.recovery"))
+    blocked_target = media / "archive" / "Interrupted.cbz"
+    blocked_target.write_bytes(b"A file created independently before recovery")
+    with closing(sqlite3.connect(data_directory / "organizer.sqlite")) as database, database:
+        changed_rows = database.execute("UPDATE file_operation SET state = 'applying' WHERE lower(id) = ?", (interrupted["id"],))
+        assert changed_rows.rowcount == 1
+
+    with start(None) as url:
+        wait_for_server(url)
+        owner = Browser(url)
+        owner.sign_in(password)
+        history = json.loads(owner.request(operations, 200))
+        assert any(entry["id"] == interrupted["id"] and entry["state"] == "review" for entry in history)
+        result = json.loads(owner.request(f"{operations}/{interrupted['id']}/restore", 200, method="POST", token=owner.csrf()))
+        assert result["state"] == "restored" and original.read_bytes() == original_bytes
+        assert blocked_target.read_bytes() == b"A file created independently before recovery"
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -908,12 +1084,17 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory() as fixture:
         media = Path(fixture) / "media"
         create_media_fixture(media)
+        managed_media = Path(fixture) / "managed-media"
+        create_managed_fixture(managed_media)
         if target.app:
             executable = str(target.app.resolve())
             verify_web_setup(executable, Path(fixture), media)
             verify_external_metadata(executable, Path(fixture), media)
             data_dir = Path(fixture) / "data"
             smoke(lambda password: start_app(executable, data_dir, media, password), media)
+            managed_data = Path(fixture) / "managed-data"
+            verify_managed_files(lambda password: start_app(executable, managed_data, managed_media, password), managed_media,
+                                 data_directory=managed_data)
         else:
             volume = f"manga-smoke-{uuid4().hex}"
             subprocess.run(["docker", "volume", "create", volume], check=True, stdout=subprocess.DEVNULL)
@@ -921,4 +1102,11 @@ if __name__ == "__main__":
                 smoke(lambda password: start_container(target.image, volume, media, password), media)
             finally:
                 subprocess.run(["docker", "volume", "rm", volume], check=True, stdout=subprocess.DEVNULL)
-    print("Passed WebUI assets, authentication, CSRF, library scans, cover art, metadata, reader handoff, and restart persistence")
+            managed_volume = f"manga-managed-{uuid4().hex}"
+            subprocess.run(["docker", "volume", "create", managed_volume], check=True, stdout=subprocess.DEVNULL)
+            try:
+                verify_managed_files(lambda password: start_container(target.image, managed_volume, managed_media, password, readonly=False),
+                                     managed_media, shared_permissions=True)
+            finally:
+                subprocess.run(["docker", "volume", "rm", managed_volume], check=True, stdout=subprocess.DEVNULL)
+    print("Passed WebUI assets, authentication, CSRF, scans, covers, metadata, reader handoff, and reviewed file operations")
