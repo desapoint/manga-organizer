@@ -3,14 +3,14 @@ import { useState } from 'react';
 import { PageControls, useInventoryPage } from './CatalogInventory';
 import { postFileOperation } from './FileOperations';
 import type { Operation } from './FileOperations';
-import { ROOTS_URL } from './library';
+import { canTransferTo, intakeTargetFor, ROOTS_URL } from './library';
 import type { LibraryRoot } from './library';
 import { Select } from './Select';
 import { FileCover } from './SeriesCover';
-import { Button, Modal, SearchField } from './ui';
+import { ActionLink, Button, Modal, SearchField } from './ui';
 
 type BatchFile = { id: string; contentId: string | null; relativePath: string; seriesTitle: string | null; hasSeriesMetadata: boolean;
-  volume: string | null; chapter: string | null; hasCover: boolean; seriesCoverKey: string | null };
+  volume: string | null; chapter: string | null; hasCover: boolean; seriesCoverKey: string | null; associationConfirmed: boolean };
 type Choice = { file: BatchFile; target: string };
 type Preview = { index: number; plan: Operation | null; error: string | null };
 type Result = { id: string; result: Operation | null; error: string | null };
@@ -22,22 +22,41 @@ function suggestedPath(file: BatchFile) {
   return folder && name && folder !== '.' && folder !== '..' ? folder + '/' + name : file.relativePath;
 }
 
-export function BatchOrganizer({ source, targets, version, onSignedOut, onChanged, seriesKey }: {
-  source: LibraryRoot; targets: LibraryRoot[]; version: string; onSignedOut: () => void; onChanged: () => void; seriesKey?: string;
-}) {
+type BatchContext = {
+  source: LibraryRoot; version: string; onSignedOut: () => void; onChanged: () => void; seriesKey?: string;
+};
+
+export function IntakeTransfer({ folders, ...context }: BatchContext & { folders: LibraryRoot[] }) {
+  const target = intakeTargetFor(context.source, folders);
+  if (!target) return <div className="action-row">
+    <span className="text-sm text-muted">Choose a target library for reviewed transfers.</span>
+    <ActionLink variant="ghost" href="#settings">Folder settings</ActionLink>
+  </div>;
+  if (target.id === context.source.id)
+    return <p className="m-0 text-sm text-muted">Target library · This folder. Confirmed files appear in Library in place.</p>;
+  return <div className="action-row">
+    <span className="text-sm text-muted">Target library · {target.name || target.path}</span>
+    {canTransferTo(context.source, target) ? <BatchOrganizer {...context} targets={[target]} intakeTransfer /> :
+      <span className="text-sm text-muted">Transfers require two available folders with managed access.</span>}
+  </div>;
+}
+
+export function BatchOrganizer({ source, targets, version, onSignedOut, onChanged, seriesKey, intakeTransfer = false }:
+  BatchContext & { targets: LibraryRoot[]; intakeTransfer?: boolean }) {
   const [opened, setOpened] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   return <>
-    <Button icon={ListChecks} variant="secondary" className="justify-self-start" onClick={() => { setOpened(true); setDirty(false); }}>Organize files</Button>
+    <Button icon={ListChecks} variant="secondary" className="justify-self-start" onClick={() => { setOpened(true); setDirty(false); }}>
+      {intakeTransfer ? 'Review intake transfer' : 'Organize files'}</Button>
     {opened && <BatchDialog source={source} targets={targets} version={version} onSignedOut={onSignedOut} seriesKey={seriesKey}
+      intakeTransfer={intakeTransfer}
       onChanged={() => setDirty(true)} onClose={() => { setOpened(false); if (dirty) onChanged(); }} />}
   </>;
 }
 
-function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose, seriesKey }: {
-  source: LibraryRoot; targets: LibraryRoot[]; version: string; onSignedOut: () => void; onChanged: () => void; onClose: () => void; seriesKey?: string;
-}) {
+function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose, seriesKey, intakeTransfer }:
+  BatchContext & { targets: LibraryRoot[]; onClose: () => void; intakeTransfer: boolean }) {
   const [search, setSearch] = useState('');
   const [targetRoot, setTargetRoot] = useState(targets[0]?.id ?? '');
   const [keepBoth, setKeepBoth] = useState(false);
@@ -55,7 +74,7 @@ function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose
     setError('');
     try {
       const plans = await postFileOperation<Preview[]>('/batch-preview', onSignedOut, { items: choices.map(item => ({
-        sourceRoot: source.id, fileId: item.file.id, targetRoot, targetPath: item.target, keepBoth,
+        sourceRoot: source.id, fileId: item.file.id, targetRoot, targetPath: item.target, keepBoth, intakeTransfer,
       })) });
       if (!plans) return;
       setPlans(plans);
@@ -84,7 +103,7 @@ function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose
     }
   }
 
-  return <Modal title="Organize selected files" wide onClose={() => { if (!busy) onClose(); }}>
+  return <Modal title={intakeTransfer ? 'Review intake transfer' : 'Organize selected files'} wide onClose={() => { if (!busy) onClose(); }}>
     <div className="grid gap-4">
       {error && <p role="alert" className="m-0 text-danger">{error}</p>}
       {plans ? <>
@@ -119,7 +138,9 @@ function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose
         <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
           <SearchField aria-label="Find batch files" placeholder="Find batch files" maxLength={160} value={search}
             onChange={event => { setSearch(event.target.value); files.setOffset(0); }} />
-          <Select label="Destination library" value={targetRoot} onChange={setTargetRoot} options={targets.map(root => ({ value: root.id, label: root.name || root.path }))} />
+          {intakeTransfer ? <p className="m-0 text-sm">Target library · {targets[0]?.name || targets[0]?.path}</p> :
+            <Select label="Destination library" value={targetRoot} onChange={setTargetRoot}
+              options={targets.map(root => ({ value: root.id, label: root.name || root.path }))} />}
         </div>
         <label className="flex items-center gap-2"><input type="checkbox" checked={keepBoth} onChange={event => setKeepBoth(event.target.checked)} />
           Keep both on a destination conflict</label>
@@ -131,9 +152,11 @@ function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose
               revision={version} className="h-12 w-8 shrink-0 rounded" />
             <label className="flex min-h-11 items-center gap-2 wrap-anywhere">
               <input type="checkbox" checked={choices.some(choice => choice.file.id === file.id)}
-                disabled={!file.contentId || choices.length >= 50 && !choices.some(choice => choice.file.id === file.id)}
+                disabled={!file.contentId || intakeTransfer && !file.associationConfirmed ||
+                  choices.length >= 50 && !choices.some(choice => choice.file.id === file.id)}
                 onChange={event => setChoices(current => event.target.checked ? [...current, { file, target: suggestedPath(file) }] : current.filter(choice => choice.file.id !== file.id))} />
-              <code>{file.relativePath}</code>
+              <span><code>{file.relativePath}</code>
+                {intakeTransfer && !file.associationConfirmed && <small className="block text-muted">Confirm series and metadata first</small>}</span>
             </label>
           </li>)}
         </ul>

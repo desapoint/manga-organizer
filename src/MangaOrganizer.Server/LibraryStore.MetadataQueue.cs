@@ -144,7 +144,7 @@ internal sealed partial class LibraryStore
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
         using var command = GroupCommand(database, transaction, root, series);
-        if (!GroupExists(command) || ReadMetadata(command) is not null) return null;
+        if (!GroupExists(command) || GroupHasActiveIntakeTransfer(command) || ReadMetadata(command) is not null) return null;
         command.CommandText = """
             SELECT 1 FROM library_file f JOIN content_metadata cm ON cm.content_id = f.content_id
             WHERE f.root_id = $root AND f.series_key = $series LIMIT 1;

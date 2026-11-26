@@ -2,9 +2,10 @@ import { FolderCog, ScanSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getCsrfToken } from './api';
+import { IntakeTransfer } from './BatchOrganizer';
 import { CatalogInventory, SeriesPage } from './CatalogInventory';
 import { Collections } from './Collections';
-import { organizeToolsHref, ROOTS_URL, scanIsActive } from './library';
+import { canTransferTo, intakeTargetFor, organizeToolsHref, ROOTS_URL, scanIsActive } from './library';
 import type { FolderRole, LibraryRoot, SeriesLocation, toolsLocation } from './library';
 import { LibrarySettings } from './LibrarySettings';
 import { Overview } from './Overview';
@@ -93,6 +94,7 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
   if (tools) return <ToolsHub route={tools} roots={roots} version={`${inventoryVersion}:${refresh}`} onSignedOut={onSignedOut}
     onChanged={() => setRefresh(value => value + 1)} />;
 
+  const intakeTarget = view === 'import' && selected && roots ? intakeTargetFor(selected, roots) : undefined;
   return (
     <section className="workspace-page" aria-labelledby="catalog-heading">
       <PageHeader id="catalog-heading" section={section} title={title} />
@@ -131,11 +133,16 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
             </div>
           </div>
           {scanError && <p role="alert" className="error">{scanError}</p>}
-          {view === 'import' && <ActionLink variant="secondary" href={organizeToolsHref(selected.id)} className="justify-self-start">Organize intake in Tools</ActionLink>}
+          {view === 'import' && roots && <>
+            <IntakeTransfer source={selected} folders={roots} version={`${inventoryVersion}:${refresh}`}
+              onSignedOut={onSignedOut} onChanged={() => setRefresh(value => value + 1)} />
+            <ActionLink variant="secondary" href={organizeToolsHref(selected.id)} className="justify-self-start">Organize intake in Tools</ActionLink>
+          </>}
           <CatalogInventory key={`${view}:${selected.id}`} rootId={selected.id} version={`${inventoryVersion}:${refresh}`}
             onSignedOut={onSignedOut} scanComplete={selected.state === 'complete'} intake={view === 'import'} rootPath={selected.path}
             hasCovers={selected.hasCovers} coverVersion={`${selected.lastScannedAt ?? ''}:${refresh}`}
-            managedFolders={selected.managed ? roots?.filter(root => root.managed) ?? [] : []}
+            managedFolders={selected.managed && view === 'import' ? [selected] : []}
+            intakeTarget={canTransferTo(selected, intakeTarget) ? intakeTarget : undefined}
             onInventoryChanged={() => setRefresh(value => value + 1)} />
         </>
       )}

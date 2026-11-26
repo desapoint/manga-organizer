@@ -41,7 +41,17 @@ export type LibraryRoot = {
   hasCovers: boolean;
   managed: boolean;
   scanProgress: ScanSnapshot | null;
+  intakeTargetId: string | null;
 };
+
+export function intakeTargetFor(source: LibraryRoot, folders: LibraryRoot[]) {
+  return folders.find(folder => folder.id === source.intakeTargetId && folder.kind !== 'import');
+}
+
+export function canTransferTo(source: LibraryRoot, target: LibraryRoot | undefined): target is LibraryRoot {
+  return !!target && source.id !== target.id && source.managed && target.managed &&
+    !scanIsActive(source) && !scanIsActive(target) && source.state !== 'unavailable' && target.state !== 'unavailable';
+}
 
 export function scanIsActive(root: LibraryRoot) {
   return root.state === 'queued' || root.state === 'scanning';

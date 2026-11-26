@@ -162,7 +162,7 @@ internal sealed partial class LibraryStore
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
         using var command = GroupCommand(database, transaction, root, seriesKey);
-        if (!GroupExists(command, published)) return null;
+        if (!GroupExists(command, published) || GroupHasActiveIntakeTransfer(command)) return null;
 
         var saved = WriteMetadata(command, metadata, attachFiles: !published);
         transaction.Commit();

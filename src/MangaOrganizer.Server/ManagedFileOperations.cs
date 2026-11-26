@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace MangaOrganizer.Server;
 
 internal sealed record FileOperationRequest(Guid SourceRoot, string? FileId, Guid TargetRoot, string? TargetPath,
-    bool KeepBoth = false, bool CopyFolderCovers = false);
+    bool KeepBoth = false, bool CopyFolderCovers = false, bool IntakeTransfer = false);
 internal sealed record FileOperationCoverView(string Source, string Target, bool Published);
 internal sealed record FileOperationView(Guid Id, string State, string Source, string Target, long Size, string Sha256,
     string? Recovery, string? Message, IReadOnlyList<FileOperationCoverView> Covers, string Kind);
@@ -37,10 +37,22 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
             throw new FileOperationException("Enable managed access for both folders and scan the source file first.");
         }
 
+        if (request.IntakeTransfer)
+        {
+            if (request.SourceRoot == request.TargetRoot)
+                throw new FileOperationException("Confirmed files in this folder appear in Library without a transfer.");
+            if (!store.CanPreviewIntakeTransfer(request.SourceRoot, request.TargetRoot, file.Id, file.ContentId))
+                throw new FileOperationException("Confirm the file's series and metadata, then check the saved intake target and folder availability.");
+        }
+        else if (request.SourceRoot != request.TargetRoot && store.RequiresIntakeTransfer(request.SourceRoot))
+        {
+            throw new FileOperationException("Move files from this intake folder with a reviewed transfer to its saved target.");
+        }
+
         var targetPath = NormalizeTargetPath(request.TargetPath, file.RelativePath);
         var operation = new FileOperation(Guid.NewGuid(), "planned", request.SourceRoot, request.TargetRoot,
             sourceRoot, targetRoot, file.RelativePath, targetPath, file.Id, file.ContentId, file.Size, file.Sha256,
-            file.SeriesKey, file.SeriesTitle, file.Volume, file.Chapter, null, []);
+            file.SeriesKey, file.SeriesTitle, file.Volume, file.Chapter, null, [], IntakeTransfer: request.IntakeTransfer);
         ValidateRoots(operation);
         var source = Source(operation);
         var target = Target(operation);
@@ -83,6 +95,8 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
             if (operation.State == (restore ? "restored" : "completed")) return View(operation);
             if (!store.BeginFileOperation(id, restore))
             {
+                if (!restore && operation.IntakeTransfer)
+                    throw new FileOperationException("The intake association, saved target, or folder status changed. Create a new transfer preview.");
                 throw new FileOperationException("The folders or operation changed, or a scan is still running.");
             }
 

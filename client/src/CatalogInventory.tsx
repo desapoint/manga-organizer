@@ -39,7 +39,7 @@ type CatalogEntry = {
 export type Series = { rootId: string; key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean };
 type Page<T> = { total: number; items: T[] };
 type InventoryProps = { rootId: string; version: string; onSignedOut: () => void };
-type FileManagement = { onDataChanged: () => void; managedFolders: LibraryRoot[]; onMoved: () => void };
+type FileManagement = { onDataChanged: () => void; managedFolders: LibraryRoot[]; intakeTarget?: LibraryRoot; onMoved: () => void };
 type InventoryActions = InventoryProps & FileManagement;
 type Inspection = { kind: 'series'; series: Series } | { kind: 'file'; file: CatalogEntry };
 type Inspect = (item: Inspection) => void;
@@ -159,13 +159,14 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   file: CatalogEntry; seriesKey?: string; onInspect?: Inspect; onSignedOut: () => void; management?: FileManagement;
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
-  const [showMove, setShowMove] = useState(false);
+  const [move, setMove] = useState<'organize' | 'transfer' | null>(null);
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [moving, setMoving] = useState(false);
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
   const readable = file.contentId && isReadableArchive(file.extension);
   const coverageUrl = management && `${ROOTS_URL}/${rootId}/series/${file.seriesKey}/coverage`;
+  const transferTarget = file.associationConfirmed ? management?.intakeTarget : undefined;
   return (
     <li>
       <span className="flex min-w-0 items-center gap-3">
@@ -195,7 +196,8 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
         {management && !file.associationConfirmed && <FileAssociationAction file={file} rootId={rootId}
           onChange={management.onDataChanged} onSignedOut={onSignedOut} />}
         {coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>Set chapter coverage</Button>}
-        {!!management?.managedFolders.length && <Button variant="ghost" onClick={() => setShowMove(true)}>Move or rename</Button>}
+        {transferTarget && <Button variant="secondary" onClick={() => setMove('transfer')}>Transfer to library</Button>}
+        {!!management?.managedFolders.length && <Button variant="ghost" onClick={() => setMove('organize')}>Move or rename</Button>}
         {showDuplicates && management && <DuplicateReviewDialog rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
           onClose={() => setShowDuplicates(false)} onChanged={management.onMoved} />}
         {showCoverage && coverageUrl && management && <Modal title="Set chapter coverage" onClose={() => setShowCoverage(false)}>
@@ -203,9 +205,11 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
           <ChapterCoverage url={coverageUrl} contentId={file.contentId} volumeHint={file.volume}
             chapterHint={file.chapter} onSaved={management.onDataChanged} onSignedOut={onSignedOut} />
         </Modal>}
-        {showMove && management && <Modal title="Move or rename file" wide onClose={() => { if (!moving) setShowMove(false); }}>
+        {move && management && (move === 'organize' || transferTarget) && <Modal
+          title={move === 'transfer' ? 'Review intake transfer' : 'Move or rename file'} wide onClose={() => { if (!moving) setMove(null); }}>
           <FileMove rootId={rootId} fileId={file.id} relativePath={file.relativePath} folders={management.managedFolders}
-            onSignedOut={onSignedOut} onApplying={setMoving} onApplied={() => { setShowMove(false); management.onMoved(); }} />
+            intakeTarget={move === 'transfer' ? transferTarget : undefined}
+            onSignedOut={onSignedOut} onApplying={setMoving} onApplied={() => { setMove(null); management.onMoved(); }} />
         </Modal>}
       </div>}
     </li>
@@ -478,9 +482,9 @@ function IntakeInspector({ item, rootPath, onClose }: { item: Inspection | null;
   );
 }
 
-export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, coverVersion, managedFolders, onInventoryChanged, ...inventory }:
+export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, coverVersion, managedFolders, intakeTarget, onInventoryChanged, ...inventory }:
   InventoryProps & { scanComplete: boolean; intake: boolean; rootPath: string; hasCovers: boolean; coverVersion: string;
-    managedFolders: LibraryRoot[]; onInventoryChanged: () => void }) {
+    managedFolders: LibraryRoot[]; intakeTarget?: LibraryRoot; onInventoryChanged: () => void }) {
   const [selectedView, setView] = useState<InventoryView | null>(null);
   const [intakeView, setIntakeView] = useState<typeof intakeViews[number]['value']>('attention');
   const [item, setItem] = useState<Inspection | null>(null);
@@ -495,7 +499,7 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
   const activeRules = rules.includeTags.length + rules.excludeTags.length;
   const [catalogRevision, setCatalogRevision] = useState(0);
   const [notice, setNotice] = useState('');
-  const catalog = { ...inventory, version: `${inventory.version}:${catalogRevision}`, managedFolders,
+  const catalog = { ...inventory, version: `${inventory.version}:${catalogRevision}`, managedFolders, intakeTarget,
     onDataChanged: () => {
       setCatalogRevision(value => value + 1);
       setItem(null);

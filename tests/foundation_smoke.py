@@ -206,6 +206,7 @@ def verify_web_setup(executable, fixture, media):
         database.executescript("""
             DROP TABLE schema_migration;
             DROP TABLE metadata_suggestion;
+            DROP TABLE library_intake_target;
             DROP TABLE edition_volume_release;
             DROP TABLE edition_volume_manifest;
             DROP TABLE preferred_chapter_release;
@@ -1155,6 +1156,85 @@ def create_managed_fixture(media):
         archive.writestr("pages/1.png", synthetic_png(32, 160, 122))
 
 
+def verify_routed_intake(owner, media, source, target):
+    source_id, target_id = source["id"], target["id"]
+    route = f"{LIBRARY_ROOTS}/{source_id}/intake-target"
+    operations = "/api/file-operations"
+    ready = media / "primary" / "Routed Release Vol.01.pdf"
+    pending = media / "primary" / "Waiting Release Vol.01.pdf"
+    destination = media / "archive" / ready.name
+    ready.write_bytes(b"Confirmed routed fixture")
+    pending.write_bytes(b"Unconfirmed routed fixture")
+    owner.scan(source_id)
+    indexed = {file["relativePath"]: file for file in owner.files(source_id)["items"]}
+    ready_plan = {
+        "sourceRoot": source_id, "targetRoot": target_id, "intakeTransfer": True,
+        "fileId": indexed[ready.name]["id"], "targetPath": ready.name,
+    }
+    pending_plan = {**ready_plan, "fileId": indexed[pending.name]["id"], "targetPath": pending.name}
+    owner.request(route, 400, method="PUT", body={"targetRoot": target_id})
+    owner.request(route, 400, method="PUT", token=owner.csrf(), body={"targetRoot": str(uuid4())})
+
+    def set_target(target_root):
+        owner.request(route, 204, method="PUT", token=owner.csrf(), body={"targetRoot": target_root})
+
+    def preview(body, expected=200):
+        return json.loads(owner.request(f"{operations}/preview", expected, method="POST", token=owner.csrf(), body=body))
+
+    key = indexed[ready.name]["seriesKey"]
+    owner.request(f"{LIBRARY_ROOTS}/{source_id}/series/{key}/metadata", 200, method="PUT", token=owner.csrf(),
+                  body={"title": "Routed Release", "kind": "manga"})
+    preview(ready_plan, 409)
+    set_target(target_id)
+    preview(pending_plan, 409)
+    mixed = json.loads(owner.request(f"{operations}/batch-preview", 200, method="POST", token=owner.csrf(),
+                                     body={"items": [ready_plan, pending_plan]}))
+    assert mixed[0]["plan"]["target"].endswith(ready.name) and mixed[1]["plan"] is None
+    assert ready.exists() and pending.exists() and not destination.exists()
+    stale_id = mixed[0]["plan"]["id"]
+
+    set_target(source_id)
+    preview({**ready_plan, "targetRoot": source_id, "targetPath": "No transfer.pdf"}, 409)
+    owner.request(f"{operations}/{stale_id}/apply", 409, method="POST", token=owner.csrf())
+    assert ready.exists() and not destination.exists()
+    assert owner.files(source_id, "?view=library&search=Routed+Release")["total"] == 1
+    set_target(target_id)
+
+    offline = media / "temporarily-offline"
+    destination.parent.rename(offline)
+    try:
+        owner.scan(target_id, "unavailable")
+        preview(ready_plan, 409)
+    finally:
+        offline.rename(destination.parent)
+    owner.scan(target_id)
+
+    destination.write_bytes(b"Pre-existing protected destination")
+    preview(ready_plan, 409)
+    destination.unlink()
+    accepted = preview(ready_plan)
+    operation = f"{operations}/{accepted['id']}"
+    applied = json.loads(owner.request(f"{operation}/apply", 200, method="POST", token=owner.csrf()))
+    assert applied["state"] == "completed" and applied["recovery"]
+    assert not ready.exists() and destination.read_bytes() == b"Confirmed routed fixture" and pending.exists()
+    assert owner.files(target_id, "?view=library&search=Routed+Release")["total"] == 1
+    set_target(source_id)
+    owner.request(f"{operation}/restore", 200, method="POST", token=owner.csrf())
+    assert ready.read_bytes() == b"Confirmed routed fixture" and not destination.exists()
+
+    set_target(target_id)
+    owner.request(f"{LIBRARY_ROOTS}/{target_id}", 204, method="DELETE", token=owner.csrf())
+    assert next(folder for folder in owner.roots() if folder["id"] == source_id)["intakeTargetId"] is None
+    preview(ready_plan, 409)
+    target_settings = {"path": target["path"], "name": target["name"], "kind": "both", "managed": True}
+    readded = json.loads(owner.request(LIBRARY_ROOTS, 200, method="POST", token=owner.csrf(), body=target_settings))
+    assert readded["id"] == target_id
+    set_target(target_id)
+    ready.unlink()
+    pending.unlink()
+    owner.scan(source_id)
+
+
 def verify_managed_files(start, media, *, shared_permissions=False, data_directory=None):
     password = uuid4().hex
     original = media / "primary" / "Chapter 1.cbz"
@@ -1182,6 +1262,8 @@ def verify_managed_files(start, media, *, shared_permissions=False, data_directo
             options = {"path": root["path"], "kind": "both", "name": root["name"], "managed": True}
             saved = json.loads(owner.request(f"{LIBRARY_ROOTS}/{root['id']}", 200, method="PUT", token=owner.csrf(), body=options))
             assert saved["managed"] and saved["id"] == root["id"]
+
+        verify_routed_intake(owner, media, primary, archive)
 
         def preview(path, destination=archive["id"], expected=200, **options):
             return json.loads(owner.request(f"{operations}/preview", expected, method="POST", token=owner.csrf(),
@@ -1211,6 +1293,7 @@ def verify_managed_files(start, media, *, shared_permissions=False, data_directo
         wait_for_server(url)
         owner = Browser(url)
         owner.sign_in(password)
+        assert next(root for root in owner.roots() if root["id"] == primary["id"])["intakeTargetId"] == archive["id"]
         history = json.loads(owner.request(operations, 200))
         assert any(entry["id"] == move["id"] and entry["state"] == "completed" for entry in history)
         restored = json.loads(owner.request(f"{operation}/restore", 200, method="POST", token=owner.csrf()))

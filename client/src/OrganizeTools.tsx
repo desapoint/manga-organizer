@@ -1,10 +1,10 @@
 import { FolderCog } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { BatchOrganizer } from './BatchOrganizer';
+import { BatchOrganizer, IntakeTransfer } from './BatchOrganizer';
 import { FileInventory, useInventoryPage } from './CatalogInventory';
 import { EditionCoverage } from './EditionCoverage';
 import { FileOperationHistory } from './FileOperations';
-import { organizeToolsHref, ROOTS_URL, seriesHref } from './library';
+import { canTransferTo, intakeTargetFor, organizeToolsHref, ROOTS_URL, seriesHref } from './library';
 import type { LibraryRoot } from './library';
 import { Select } from './Select';
 import { ActionLink, SearchField, SectionHeader } from './ui';
@@ -42,14 +42,16 @@ function OrganizeInventory({ source, seriesKey, folders, version, onSignedOut, o
   const [revision, setRevision] = useState(0);
   const [notice, setNotice] = useState('');
   const rootId = source.id;
-  const managedFolders = source.managed ? folders.filter(folder => folder.managed) : [];
+  const managedFolders = source.managed ? folders.filter(folder => folder.managed && (source.kind !== 'import' || folder.id === source.id)) : [];
   const destinations = managedFolders.filter(folder => folder.kind !== 'import');
+  const intakeTarget = source.kind === 'library' ? undefined : intakeTargetFor(source, folders);
   const seriesUrl = `${ROOTS_URL}/${rootId}/series`;
   const { page } = useInventoryPage<{ title: string }>(seriesKey ? seriesUrl : '', version, onSignedOut, seriesKey ? { seriesKey } : undefined);
   const currentVersion = `${version}:${revision}`;
   const folder = { rootId, version: currentVersion, onSignedOut };
   const management = {
     managedFolders,
+    intakeTarget: canTransferTo(source, intakeTarget) ? intakeTarget : undefined,
     onDataChanged: () => setRevision(value => value + 1),
     onMoved: () => {
       setNotice('File changes recorded in File operation history.');
@@ -76,6 +78,8 @@ function OrganizeInventory({ source, seriesKey, folders, version, onSignedOut, o
       {destinations.length > 0 && <BatchOrganizer source={source} targets={destinations} version={currentVersion}
         onSignedOut={onSignedOut} onChanged={management.onMoved} seriesKey={seriesKey} />}
     </div>
+    {source.kind !== 'library' && <IntakeTransfer source={source} folders={folders} version={currentVersion}
+      onSignedOut={onSignedOut} onChanged={management.onMoved} seriesKey={seriesKey} />}
     {notice && <p role="status" className="m-0 text-sm text-positive">{notice}</p>}
     {seriesKey && <EditionCoverage url={`${seriesUrl}/${seriesKey}`} version={currentVersion}
       onSignedOut={onSignedOut} onChange={management.onDataChanged} />}
