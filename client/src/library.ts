@@ -92,10 +92,16 @@ export function organizeToolsHref(rootId?: string, seriesKey?: string) {
   return '#tools/organize' + (rootId ? `/${rootId}` : '') + (seriesKey ? `/${seriesKey}` : '');
 }
 
+export function versionsToolsHref(series?: SeriesLocation) {
+  return '#tools/versions' + (series ? `/${series.rootId}/${series.seriesKey}` : '');
+}
+
 export function toolsLocation(hash: string) {
   if (hash === '#tools') return { module: 'home' as const };
   if (hash === '#tools/metadata') return { module: 'metadata' as const };
   if (hash === '#tools/maintenance') return { module: 'maintenance' as const };
+  const versions = /^#tools\/versions(?:\/([a-f0-9-]{36})\/([a-f0-9]{64}))?$/i.exec(hash);
+  if (versions) return { module: 'versions' as const, series: versions[1] && versions[2] ? { rootId: versions[1], seriesKey: versions[2] } : null };
   const organize = /^#tools\/organize(?:\/([a-f0-9-]{36})(?:\/([a-f0-9]{64}))?)?$/i.exec(hash);
   if (organize) return { module: 'organize' as const, rootId: organize[1], seriesKey: organize[2] };
   const match = /^#tools\/duplicates(?:\/([a-f0-9-]{36})\/([a-f0-9]{64})(?:\/([a-f0-9]{32}))?)?$/i.exec(hash);
