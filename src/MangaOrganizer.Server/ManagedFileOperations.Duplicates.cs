@@ -1,7 +1,7 @@
 namespace MangaOrganizer.Server;
 
 internal sealed record DuplicateFileView(Guid RootId, string FileId, string RelativePath, string FullPath, string Format,
-    long Size, string Sha256, string? Volume, IReadOnlyList<SeriesChapter> Chapters, bool HasCover, string? SeriesCoverKey);
+    long Size, string Sha256, string? Volume, bool VolumeArchive, IReadOnlyList<SeriesChapter> Chapters, bool HasCover, string? SeriesCoverKey);
 internal sealed record DuplicateComparison(DuplicateFileView Candidate, string Kind, bool CanQuarantine, string Reason,
     IReadOnlyList<SeriesChapter> Shared, IReadOnlyList<SeriesChapter> SourceOnly, IReadOnlyList<SeriesChapter> CandidateOnly);
 internal sealed record DuplicateReview(DuplicateFileView Source, IReadOnlyList<DuplicateComparison> Comparisons);
@@ -123,5 +123,5 @@ internal sealed partial class ManagedFileOperations
 
     private static DuplicateFileView FileView(DuplicateFile file) => new(file.RootId, file.FileId, file.RelativePath,
         Path.Combine(file.RootPath, file.RelativePath), file.Format, file.Size, Convert.ToHexStringLower(file.Sha256),
-        file.VolumeHint, file.Coverage, file.HasCover, file.SeriesCoverKey);
+        file.VolumeHint, file.VolumeHint is not null && file.ChapterHint is null, file.Coverage, file.HasCover, file.SeriesCoverKey);
 }

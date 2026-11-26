@@ -1229,20 +1229,23 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     operations = "/api/file-operations"
 
     def compare(path):
-        return json.loads(owner.request(f"{operations}/duplicates/{root}/{files[path.name]['id']}", 200))["comparisons"]
+        return json.loads(owner.request(f"{operations}/duplicates/{root}/{files[path.name]['id']}", 200))
 
     def quarantine(source, retain, status):
         return json.loads(owner.request(operations + "/quarantine-preview", status, method="POST", token=owner.csrf(), body={
             "rootId": root, "sourceFile": files[source.name]["id"], "keepFile": files[retain.name]["id"],
         }))
 
-    comparisons = {item["candidate"]["relativePath"]: item for item in compare(volume)}
+    review = compare(volume)
+    assert review["source"]["volumeArchive"]
+    comparisons = {item["candidate"]["relativePath"]: item for item in review["comparisons"]}
     overlap = comparisons[chapter.name]
     assert overlap["kind"] == "overlap" and not overlap["canQuarantine"]
+    assert not overlap["candidate"]["volumeArchive"]
     assert [item["chapter"] for item in overlap["shared"]] == ["1"]
     assert [item["chapter"] for item in overlap["sourceOnly"]] == ["2", "3"]
     assert comparisons[copy.name]["canQuarantine"]
-    assert any(item["kind"] == "hardlink" and not item["canQuarantine"] for item in compare(chapter))
+    assert any(item["kind"] == "hardlink" and not item["canQuarantine"] for item in compare(chapter)["comparisons"])
     quarantine(volume, chapter, 409)
     quarantine(chapter, volume, 409)
     quarantine(chapter, alias, 409)
