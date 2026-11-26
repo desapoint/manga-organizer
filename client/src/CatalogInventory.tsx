@@ -6,7 +6,7 @@ import type { TagRules } from './CollectionControls';
 import { DuplicateReview } from './DuplicateReview';
 import { FileMove } from './FileOperations';
 import type { LibraryRoot } from './library';
-import { MetadataDescription, MetadataEditor, SeriesInfo, useSeriesDetails } from './SeriesInfo';
+import { MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
 import { EditionCoverage, SeriesChapterList } from './EditionCoverage';
 import { FileCover, SeriesCover } from './SeriesCover';
 import { formatSize, ROOTS_URL, seriesHref, seriesReaderHref } from './library';
@@ -112,6 +112,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
   const [showCoverage, setShowCoverage] = useState(false);
   const [showMove, setShowMove] = useState(false);
   const [showDuplicates, setShowDuplicates] = useState(false);
+  const [moving, setMoving] = useState(false);
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
   const readable = file.contentId && ['cbz', 'zip', 'cbr', 'rar'].includes(file.extension);
@@ -136,25 +137,24 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
       <span className="file-format">{file.extension.toUpperCase()}</span>
       <span>{formatSize(file.size)}</span>
       <time dateTime={file.modifiedAt}>{new Date(file.modifiedAt).toLocaleDateString()}</time>
-      {readable && <div className="col-span-full">
-        <ActionLink variant="ghost" icon={BookOpen} href={onInspect ? `#read/${file.contentId}/intake` :
-          seriesKey ? seriesReaderHref(file.contentId!, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>
-      </div>}
-      {file.contentId && <div className="col-span-full">
+      {file.contentId && <div className="action-row col-span-full">
+        {readable && <ActionLink variant="ghost" icon={BookOpen} href={onInspect ? `#read/${file.contentId}/intake` :
+          seriesKey ? seriesReaderHref(file.contentId, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>}
         <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare duplicates</Button>
+        {coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>Set chapter coverage</Button>}
+        {managedFolders.length > 0 && <Button variant="ghost" onClick={() => setShowMove(true)}>Move or rename</Button>}
         {showDuplicates && <DuplicateReview rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
           onClose={() => setShowDuplicates(false)} onChanged={onMoved} />}
+        {showCoverage && coverageUrl && <Modal title="Set chapter coverage" onClose={() => setShowCoverage(false)}>
+          <p className="m-0 mb-3 text-sm"><code>{file.relativePath}</code></p>
+          <ChapterCoverage url={coverageUrl} contentId={file.contentId} volumeHint={file.volume}
+            chapterHint={file.chapter} onSaved={onSaved} onSignedOut={onSignedOut} />
+        </Modal>}
+        {showMove && <Modal title="Move or rename file" wide onClose={() => { if (!moving) setShowMove(false); }}>
+          <FileMove rootId={rootId} fileId={file.id} relativePath={file.relativePath} folders={managedFolders}
+            onSignedOut={onSignedOut} onApplying={setMoving} onApplied={() => { setShowMove(false); onMoved(); }} />
+        </Modal>}
       </div>}
-      {coverageUrl && file.contentId && <details className="col-span-full" onToggle={event => setShowCoverage(event.currentTarget.open)}>
-        <summary className="min-h-9 cursor-pointer py-2 text-sm text-accent-readable">Set chapter coverage</summary>
-        {showCoverage && <ChapterCoverage url={coverageUrl} contentId={file.contentId} volumeHint={file.volume}
-          chapterHint={file.chapter} onSaved={onSaved} onSignedOut={onSignedOut} />}
-      </details>}
-      {managedFolders.length > 0 && file.contentId && <details className="col-span-full" open={showMove} onToggle={event => setShowMove(event.currentTarget.open)}>
-        <summary className="min-h-9 cursor-pointer py-2 text-sm text-accent-readable">Move or rename</summary>
-        {showMove && <FileMove rootId={rootId} fileId={file.id} relativePath={file.relativePath} folders={managedFolders}
-          onSignedOut={onSignedOut} onApplied={() => { setShowMove(false); onMoved(); }} />}
-      </details>}
     </li>
   );
 }
@@ -288,6 +288,8 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
               {reading.pageIndex !== null ? 'Continue reading' : reading.hasFinishedFile ? 'Read next file' : 'Start reading'}
             </ActionLink>}
             <Button variant="secondary" icon={Info} onClick={() => setDialog('info')}>More info</Button>
+            <MetadataDialogAction rootId={rootId} seriesKey={seriesKey} title={title} metadata={metadata}
+              onChange={catalog.onDataChanged} onSignedOut={onSignedOut} />
           </div>}
           {reading?.pageIndex != null && <p className="m-0 text-sm text-muted wrap-anywhere">
             Page {reading.pageIndex + 1} of {reading.pageCount} · {reading.relativePath.split('/').at(-1)}</p>}
@@ -322,13 +324,6 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
             </li>)}
           </ul> : <p className="m-0 p-4 text-sm text-muted">No indexed volumes for this series.</p>)}
         </div>
-      </section>}
-      {series && <section className="surface p-4" aria-label="Manage series metadata">
-        <details>
-          <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Manage metadata</summary>
-          <MetadataEditor rootId={rootId} seriesKey={seriesKey} title={title} metadata={metadata}
-            onChange={catalog.onDataChanged} onSignedOut={onSignedOut} />
-        </details>
       </section>}
       {series && <SeriesCollectionMembership rootId={rootId} seriesKey={seriesKey} onSignedOut={onSignedOut} />}
       {dialog === 'info' && <Modal title="More info" onClose={() => setDialog(null)}>
@@ -467,11 +462,12 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
           <TagRulesFields tags={tags} rules={rules} onChange={setRules} />
         </div>
       </details>}
-      {!intake && view !== 'files' && (activeRules > 0 || query || coverOnly) && <div className="grid gap-3">
-        {!saveFilters ? <Button variant="secondary" className="justify-self-start" onClick={() => setSaveFilters(true)}>Save filters as collection</Button> :
-          <CollectionForm preset={{ ...rules, search: query, coverOnly: coverOnly && hasCovers }} tags={tags} onSignedOut={inventory.onSignedOut}
-            onCancel={() => setSaveFilters(false)} onSaved={collection => { setSaveFilters(false); setNotice(`Created collection “${collection.name}”.`); }} />}
-      </div>}
+      {!intake && view !== 'files' && (activeRules > 0 || query || coverOnly) &&
+        <Button variant="secondary" className="justify-self-start" onClick={() => setSaveFilters(true)}>Save filters as collection</Button>}
+      {saveFilters && <Modal title="Save filters as collection" onClose={() => setSaveFilters(false)}>
+        <CollectionForm preset={{ ...rules, search: query, coverOnly: coverOnly && hasCovers }} tags={tags} onSignedOut={inventory.onSignedOut}
+          onCancel={() => setSaveFilters(false)} onSaved={collection => { setSaveFilters(false); setNotice(`Created collection “${collection.name}”.`); }} />
+      </Modal>}
       <div className={intake ? 'grid min-w-0 items-start gap-4 min-[72rem]:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]' : undefined}>
         <div className="grid min-w-0 gap-3">
           {view === 'files' ? <FileInventory key={query} {...catalog} onInspect={onInspect} search={query} /> :

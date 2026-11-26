@@ -5,7 +5,7 @@ import type { Series } from './CatalogInventory';
 import { COLLECTIONS_URL, CollectionForm, collectionRequest, useTagNames } from './CollectionControls';
 import type { Collection } from './CollectionControls';
 import { Select } from './Select';
-import { Button, Modal, SectionHeader } from './ui';
+import { Button, Modal } from './ui';
 
 function CollectionSeries({ collection, version, onSignedOut }: {
   collection: Collection; version: string; onSignedOut: () => void;
@@ -81,13 +81,12 @@ export function Collections({ version, onSignedOut }: { version: string; onSigne
       <Button variant="secondary" onClick={() => setRevision(value => value + 1)}>Retry</Button></div>}
     {!collections && !loadingError && <p role="status">Loading collections…</p>}
     {collections?.length === 0 && !editor && <p className="m-0 text-sm text-muted">Create a manual collection or one based on filters.</p>}
-    {editor && <section className="surface grid gap-3 p-4" aria-label={editor === 'new' ? 'Create collection' : 'Edit collection'}>
-      <SectionHeader title={editor === 'new' ? 'Create collection' : 'Edit collection'} />
+    {editor && <Modal title={editor === 'new' ? 'Create collection' : 'Edit collection'} onClose={() => setEditor(null)}>
       {tags.error && <p role="alert" className="m-0 text-danger">Could not load saved tags.</p>}
       <CollectionForm key={editor + (editor === 'edit' ? selected?.id : '')} initial={editor === 'edit' ? selected : undefined}
         tags={tags.tags} onCancel={() => setEditor(null)} onSaved={saved} onSignedOut={onSignedOut} />
-    </section>}
-    {selected && !editor && <section className="surface grid gap-4 p-4" aria-label="Collection results">
+    </Modal>}
+    {selected && <section className="surface grid gap-4 p-4" aria-label="Collection results">
       <Select label="Collection" value={selected.id} options={(collections ?? []).map(item => ({
         value: item.id, label: item.name, description: item.filters ? 'Dynamic filters' : 'Manual',
       }))} onChange={setSelectedId} className="max-w-md" />

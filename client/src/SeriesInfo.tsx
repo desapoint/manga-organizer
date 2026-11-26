@@ -5,7 +5,7 @@ import { getCsrfToken } from './api';
 import { ROOTS_URL } from './library';
 import { Select } from './Select';
 import { CoverImage } from './SeriesCover';
-import { ActionLink, Button, SearchField, SectionHeader } from './ui';
+import { ActionLink, Button, Modal, SearchField, SectionHeader } from './ui';
 
 type BookKind = 'manga' | 'doujin';
 export type Metadata = {
@@ -140,9 +140,19 @@ export function useSeriesDetails({ rootId, seriesKey, version, onSignedOut }: Om
   return { details, error };
 }
 
-export function MetadataEditor({ rootId, seriesKey, title, metadata, onSignedOut, onChange }: Omit<SeriesContext, 'version'> & {
-  metadata: Metadata | null; onChange: () => void;
-}) {
+type EditorProps = Omit<SeriesContext, 'version'> & { metadata: Metadata | null; onChange: () => void };
+
+export function MetadataDialogAction(props: EditorProps) {
+  const [open, setOpen] = useState(false);
+  return <>
+    <Button variant="secondary" className="justify-self-start" onClick={() => setOpen(true)}>Manage metadata</Button>
+    {open && <Modal title="Manage series metadata" wide onClose={() => setOpen(false)}>
+      <MetadataEditor {...props} />
+    </Modal>}
+  </>;
+}
+
+function MetadataEditor({ rootId, seriesKey, title, metadata, onSignedOut, onChange }: EditorProps) {
   const url = ROOTS_URL + '/' + rootId + '/series/' + seriesKey;
   const [query, setQuery] = useState(title);
   const [matches, setMatches] = useState<Metadata[] | null>(null);
@@ -277,6 +287,6 @@ export function SeriesInfo({ onChange, ...context }: SeriesContext & { onChange:
           ...details.chapters.map(({ volume, chapter }) => `${volume ? `Vol. ${volume} · ` : ''}Ch. ${chapter}`)]} />
       </details>}
     </>}
-    <MetadataEditor {...context} metadata={metadata} onChange={onChange} />
+    <MetadataDialogAction {...context} metadata={metadata} onChange={onChange} />
   </section>;
 }

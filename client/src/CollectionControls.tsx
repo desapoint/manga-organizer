@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { getCsrfToken } from './api';
 import { Select } from './Select';
-import { Button, SearchField } from './ui';
+import { Button, Modal, SearchField } from './ui';
 
 export const COLLECTIONS_URL = '/api/library/collections';
 export type TagRules = { includeTags: string[]; excludeTags: string[] };
@@ -156,8 +156,9 @@ export function SeriesCollectionMembership({ rootId, seriesKey, onSignedOut }: {
     }
   }
 
-  return <details className="surface p-4" onToggle={event => setOpen(event.currentTarget.open)}>
-    <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Manage collections</summary>
+  return <>
+    <Button variant="secondary" className="justify-self-start" onClick={() => setOpen(true)}>Manage collections</Button>
+    {open && <Modal title="Manage collections" onClose={() => { if (!busy) setOpen(false); }}>
     {error && <p role="alert" className="m-0 text-danger">{error}</p>}
     {!collections && !error && <p role="status">Loading collections…</p>}
     {collections?.length === 0 && <p className="m-0 text-sm text-muted">Create a manual collection in <a href="#collections">Collections</a> to add this series.</p>}
@@ -165,5 +166,6 @@ export function SeriesCollectionMembership({ rootId, seriesKey, onSignedOut }: {
       <input type="checkbox" disabled={busy} checked={collection.containsSeries}
         onChange={event => void change(collection, event.target.checked)} />{collection.name}
     </label>)}
-  </details>;
+    </Modal>}
+  </>;
 }
