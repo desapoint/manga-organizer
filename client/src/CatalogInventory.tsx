@@ -1,13 +1,13 @@
-import { BookOpen, ChevronRight, Library, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, BookOpen, ChevronRight, Library, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { ChapterCoverage } from './ChapterCoverage';
 import { FileMove } from './FileOperations';
-import { formatSize, ROOTS_URL } from './library';
 import type { LibraryRoot } from './library';
-import { Select } from './Select';
 import { SeriesInfo } from './SeriesInfo';
 import { FileCover, SeriesCover } from './SeriesCover';
-import { ActionLink, Button, SearchField, SectionHeader, SegmentedControl } from './ui';
+import { formatSize, ROOTS_URL, seriesHref } from './library';
+import { Select } from './Select';
+import { ActionLink, Button, PageHeader, SearchField, SectionHeader, SegmentedControl } from './ui';
 
 const PAGE_SIZE = 50;
 
@@ -23,6 +23,7 @@ type CatalogEntry = {
   volume: string | null;
   chapter: string | null;
   hasCover: boolean;
+  seriesCoverKey: string | null;
 };
 
 type Series = { key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean };
@@ -106,11 +107,12 @@ function FileRow({ file, rootId, version, onInspect, coverageUrl, onSaved, onSig
   const [showMove, setShowMove] = useState(false);
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
-  const readable = file.contentId && (file.extension === 'cbz' || file.extension === 'zip');
+  const readable = file.contentId && ['cbz', 'zip', 'cbr', 'rar'].includes(file.extension);
   return (
     <li>
       <span className="flex min-w-0 items-center gap-3">
-        {file.hasCover && <FileCover rootId={rootId} fileId={file.id} revision={version} className="h-12 w-8 shrink-0 rounded-sm" />}
+        <FileCover rootId={rootId} fileId={file.id} available={file.hasCover} seriesCoverKey={file.seriesCoverKey} revision={version}
+          className="h-12 w-8 shrink-0 rounded-sm" />
         <span className="file-path" title={file.relativePath}>
           {onInspect ? <button type="button" className="min-h-11 cursor-pointer rounded-sm border-0 bg-transparent p-0 text-start
             text-inherit wrap-anywhere hover:text-accent-readable hover:underline desktop:min-h-0"
@@ -176,76 +178,87 @@ function FileInventory({ rootId, seriesKey, version, onSignedOut, onDataChanged,
 
 function SeriesRow({ series, onInspect, coverVersion, ...inventory }: InventoryActions & { series: Series; onInspect?: Inspect; coverVersion: string }) {
   const [open, setOpen] = useState(false);
+  const rowClass = 'grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl p-3 hover:bg-nav-hover sm:gap-3 sm:px-4';
+  const contents = <>
+    {series.hasCover ? <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available={series.hasCover} revision={coverVersion} className="h-14 w-10 rounded-md" /> :
+      <span className="grid size-8 place-items-center rounded-lg bg-nav-active text-nav-icon"><Library className="size-4" aria-hidden="true" /></span>}
+    <span className="wrap-anywhere">
+      <span className="block font-semibold">{series.title}</span>
+      <span className="block text-sm text-muted">{series.fileCount.toLocaleString()} {series.fileCount === 1 ? 'file' : 'files'}</span>
+    </span>
+    <ChevronRight className="size-4 text-muted group-open:rotate-90" aria-hidden="true" />
+  </>;
 
   return (
     <li className="surface">
-      <details className="group" onToggle={event => {
+      {onInspect ? <details className="group" onToggle={event => {
         const expanded = event.currentTarget.open;
         setOpen(expanded);
-        if (expanded) onInspect?.({ kind: 'series', series });
+        if (expanded) onInspect({ kind: 'series', series });
       }}>
-        <summary className="grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl p-3
-          hover:bg-nav-hover sm:gap-3 sm:px-4 [&::-webkit-details-marker]:hidden">
-          {series.hasCover ? <SeriesCover seriesKey={series.key} available={series.hasCover} rootId={inventory.rootId}
-            revision={coverVersion} className="h-14 w-10 rounded-md" /> :
-            <span className="grid size-8 place-items-center rounded-lg bg-nav-active text-nav-icon"><Library className="size-4" aria-hidden="true" /></span>}
-          <span className="wrap-anywhere">
-            <span className="block font-semibold">{series.title}</span>
-            <span className="block text-sm text-muted">{series.fileCount.toLocaleString()} {series.fileCount === 1 ? 'file' : 'files'}</span>
-          </span>
-          <ChevronRight className="size-4 text-muted group-open:rotate-90" aria-hidden="true" />
-        </summary>
+        <summary className={`${rowClass} [&::-webkit-details-marker]:hidden`}>{contents}</summary>
         {open && <>
           <SeriesInfo rootId={inventory.rootId} seriesKey={series.key} title={series.title} version={inventory.version}
             onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut} />
           <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} />
         </>}
-      </details>
+      </details> : <a className={`${rowClass} text-ink no-underline`} href={seriesHref(inventory.rootId, series.key)}>{contents}</a>}
     </li>
   );
 }
 
-function CoverGrid({ series, coverVersion, ...inventory }: InventoryActions & { series: Series[]; coverVersion: string }) {
-  const [selectedKey, setSelectedKey] = useState('');
-  const selected = series.find(item => item.key === selectedKey);
-  const detail = useRef<HTMLElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (selectedKey) detail.current?.focus();
-  }, [selectedKey]);
-
+function CoverGrid({ series, rootId, coverVersion }: { series: Series[]; rootId: string; coverVersion: string }) {
   return (
-    <>
-      <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(100%,8rem),1fr))] gap-4 p-0 sm:gap-5" role="list" aria-label="Series covers">
-        {series.map(item => (
-          <li key={item.key} className="min-w-0">
-            <button type="button" aria-expanded={selectedKey === item.key} aria-controls="cover-files"
-              className="group grid w-full cursor-pointer gap-2 rounded-xl border border-transparent bg-transparent p-1 text-start text-ink
-                hover:bg-panel aria-expanded:border-nav-line aria-expanded:bg-panel" onClick={event => {
-                trigger.current = event.currentTarget;
-                setSelectedKey(selectedKey === item.key ? '' : item.key);
-              }}>
-              <SeriesCover seriesKey={item.key} available={item.hasCover} rootId={inventory.rootId} revision={coverVersion}
-                className="aspect-[2/3] rounded-lg" />
-              <span className="line-clamp-2 min-h-10 px-1 text-sm font-semibold wrap-anywhere" title={item.title}>{item.title}</span>
-              <span className="px-1 pb-1 text-xs text-muted">{item.fileCount.toLocaleString()} {item.fileCount === 1 ? 'file' : 'files'}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div id="cover-files">
-        {selected && <section ref={detail} tabIndex={-1} className="grid scroll-mt-4 gap-3 rounded-xl" aria-labelledby="cover-files-heading">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <SectionHeader id="cover-files-heading" title={selected.title} />
-            <Button variant="secondary" onClick={() => { setSelectedKey(''); trigger.current?.focus(); }}>Back to covers</Button>
-          </div>
-          <SeriesInfo key={selected.key} rootId={inventory.rootId} seriesKey={selected.key} title={selected.title} version={inventory.version}
-            onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut} />
-          <FileInventory key={selected.key} {...inventory} seriesKey={selected.key} />
-        </section>}
+    <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(100%,8rem),1fr))] gap-4 p-0 sm:gap-5" role="list" aria-label="Series covers">
+      {series.map(item => (
+        <li key={item.key} className="min-w-0">
+          <a href={seriesHref(rootId, item.key)} className="group grid gap-2 rounded-xl border border-transparent p-1 text-start text-ink no-underline hover:bg-panel">
+            <SeriesCover rootId={rootId} seriesKey={item.key} available={item.hasCover} revision={coverVersion}
+              className="aspect-[2/3] rounded-lg" />
+            <span className="line-clamp-2 min-h-10 px-1 text-sm font-semibold wrap-anywhere" title={item.title}>{item.title}</span>
+            <span className="px-1 pb-1 text-xs text-muted">{item.fileCount.toLocaleString()} {item.fileCount === 1 ? 'file' : 'files'}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventoryChanged, ...inventory }: InventoryProps & {
+  seriesKey: string; coverVersion: string; managedFolders: LibraryRoot[]; onInventoryChanged: () => void;
+}) {
+  const [revision, setRevision] = useState(0);
+  const [moved, setMoved] = useState(false);
+  const catalog = { ...inventory, version: `${inventory.version}:${revision}`, managedFolders,
+    onDataChanged: () => setRevision(value => value + 1), onMoved: () => {
+      setMoved(true);
+      onInventoryChanged();
+    } };
+  const { rootId, version, onSignedOut } = catalog;
+  const { page, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut, { seriesKey });
+  const series = page?.items[0];
+  return (
+    <section className="workspace-page" aria-labelledby="series-heading">
+      <ActionLink href="#library" variant="ghost" icon={ArrowLeft} className="justify-self-start">Back to library</ActionLink>
+      <div className="flex min-w-0 flex-wrap items-end gap-4 sm:gap-6">
+        {series?.hasCover && <SeriesCover rootId={rootId} seriesKey={seriesKey} available={series.hasCover} revision={coverVersion}
+          className="aspect-[2/3] w-24 shrink-0 rounded-xl sm:w-36" />}
+        <div className="min-w-0 flex-1">
+          <PageHeader id="series-heading" section="Library" title={series?.title ?? 'Series'} />
+          {series && <p className="text-sm text-muted">{series.fileCount.toLocaleString()} {series.fileCount === 1 ? 'file' : 'files'}</p>}
+        </div>
       </div>
-    </>
+      {error && <InventoryError retry={retry}>Could not load this series.</InventoryError>}
+      {!error && !page && <p role="status">Loading series…</p>}
+      {page && !series && <p>This series is no longer in the selected library folder.</p>}
+      {moved && <p role="status" className="m-0 text-sm text-positive">File change completed. See File operation history in Settings for recovery.</p>}
+      {series && <SeriesInfo rootId={rootId} seriesKey={seriesKey} title={series.title} version={version}
+        onChange={catalog.onDataChanged} onSignedOut={onSignedOut} />}
+      {series && <section className="grid gap-3" aria-labelledby="series-files-heading">
+        <SectionHeader id="series-files-heading" title="Files" />
+        <FileInventory {...catalog} seriesKey={seriesKey} />
+      </section>}
+    </section>
   );
 }
 
@@ -263,7 +276,7 @@ function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, se
       {page?.total === 0 && (search || coverOnly ? <p>No series match these filters.</p> : scanComplete && <p>No supported files found.</p>)}
       {page && page.total > 0 && (
         <>
-          {coverGrid ? <CoverGrid series={page.items} coverVersion={coverVersion} {...inventory} /> : (
+          {coverGrid ? <CoverGrid series={page.items} rootId={rootId} coverVersion={coverVersion} /> : (
             <ul className="m-0 grid list-none gap-2 p-0" role="list" aria-label="Series groups">
               {page.items.map(series => <SeriesRow key={series.key} series={series} onInspect={onInspect} coverVersion={coverVersion} {...inventory} />)}
             </ul>

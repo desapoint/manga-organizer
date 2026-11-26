@@ -20,7 +20,7 @@ internal sealed partial class LibraryStore
             SELECT r.id, f.series_key, folder.path, f.relative_path, f.size, f.modified_at, c.sha256
             FROM library_file f JOIN library_content c ON c.id = f.content_id
             JOIN library_folder folder ON folder.root_id = f.root_id JOIN library_root r ON r.id = f.root_id
-            WHERE c.id = $id AND f.extension IN ('cbz', 'zip')
+            WHERE c.id = $id AND f.extension IN ('cbz', 'zip', 'cbr', 'rar')
             ORDER BY r.state = 'complete' DESC, r.last_scanned_at DESC, f.relative_path;
             """;
         command.Parameters.AddWithValue("$id", contentId);
@@ -88,7 +88,7 @@ internal sealed partial class LibraryStore
             FROM reading_progress p JOIN library_file f ON f.content_id = p.content_id
             JOIN library_folder folder ON folder.root_id = f.root_id JOIN library_root r ON r.id = f.root_id
             LEFT JOIN content_metadata cm ON cm.content_id = f.content_id LEFT JOIN series_metadata m ON m.id = cm.metadata_id
-            WHERE p.owner_id = $owner AND p.completed = 0 AND f.extension IN ('cbz', 'zip') AND r.state <> 'unavailable'
+            WHERE p.owner_id = $owner AND p.completed = 0 AND f.extension IN ('cbz', 'zip', 'cbr', 'rar') AND r.state <> 'unavailable'
             ORDER BY p.updated_at DESC, r.state = 'complete' DESC, f.relative_path LIMIT 1;
             """;
         command.Parameters.AddWithValue("$owner", owner);

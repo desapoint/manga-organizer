@@ -33,7 +33,7 @@ internal sealed partial class LibraryStore
         command.ExecuteNonQuery();
     }
 
-    public CatalogPage<CatalogSeries> ReadSeries(Guid id, int offset, int limit, string search, string? sort, bool coverOnly)
+    public CatalogPage<CatalogSeries> ReadSeries(Guid id, int offset, int limit, string search, string? sort, bool coverOnly, string? seriesKey = null)
     {
         using var database = OpenDatabase();
         RegisterTitleSearch(database);
@@ -47,7 +47,7 @@ internal sealed partial class LibraryStore
                     EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = $id AND cover.series_key = f.series_key) AS has_cover,
                     CASE WHEN COUNT(DISTINCT cm.metadata_id) = 1 THEN MIN(cm.metadata_id) END AS linked_metadata
                 FROM library_file f LEFT JOIN content_metadata cm ON cm.content_id = f.content_id
-                WHERE f.root_id = $id GROUP BY f.series_key
+                WHERE f.root_id = $id AND ($seriesKey IS NULL OR f.series_key = $seriesKey) GROUP BY f.series_key
             ), folder_series AS (
                 SELECT g.series_key, COALESCE(m.title, g.path_title) AS title, g.path_title, m.alternate_title, g.file_count,
                     g.suggested AND m.id IS NULL AS suggested, g.latest, g.has_cover, m.id IS NOT NULL AS has_metadata
@@ -61,6 +61,7 @@ internal sealed partial class LibraryStore
             """;
         command.CommandText = seriesQuery + " SELECT COUNT(*)" + filter;
         command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$seriesKey", (object?)seriesKey ?? DBNull.Value);
         command.Parameters.AddWithValue("$search", search);
         command.Parameters.AddWithValue("$coverOnly", coverOnly);
         var total = (long)command.ExecuteScalar()!;

@@ -5,6 +5,7 @@ import type { Appearance } from './appearance';
 import { Catalog } from './Catalog';
 import type { CatalogView } from './Catalog';
 import { Reader } from './Reader';
+import { seriesLocation } from './library';
 import { Brand, Button, SectionHeader, SegmentedControl } from './ui';
 
 type Destination = { id: CatalogView; href: string; label: string; title: string; section: string; icon: LucideIcon };
@@ -20,6 +21,7 @@ const sidebarSections = ['Library', 'Management', 'System'] as const;
 const settings = destinations[3];
 
 function currentDestination(hash: string) {
+  if (seriesLocation(hash)) return destinations[1];
   return destinations.find(item => item.href === hash) ?? destinations[0];
 }
 
@@ -129,6 +131,7 @@ export function Workspace({ serverId, signingOut, error, onSignOut, onSignedOut,
   const [hash, setHash] = useState(() => window.location.hash);
   const [compact, setCompact] = useState(false);
   const view = currentDestination(hash);
+  const series = seriesLocation(hash);
 
   useEffect(() => {
     const handleNavigation = () => {
@@ -177,7 +180,7 @@ export function Workspace({ serverId, signingOut, error, onSignOut, onSignedOut,
       <main className="min-w-0 px-[clamp(1rem,3vw,3rem)] pt-[clamp(1.5rem,4vw,3rem)]
         pb-[calc(6rem+env(safe-area-inset-bottom))] wrap-anywhere desktop:pb-10">
         {error && <p role="alert" className="error">{error}</p>}
-        <Catalog view={view.id} title={view.title} section={view.section} onSignedOut={onSignedOut}>
+        <Catalog view={view.id} title={view.title} section={view.section} onSignedOut={onSignedOut} series={series}>
           {view.id === 'settings' && <SettingsDetails appearance={appearance} onAppearanceChange={onAppearanceChange} serverId={serverId} />}
         </Catalog>
       </main>

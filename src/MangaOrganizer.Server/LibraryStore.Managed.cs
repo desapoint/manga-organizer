@@ -153,7 +153,7 @@ internal sealed partial class LibraryStore
         command.ExecuteNonQuery();
     }
 
-    private CoverSource? FindManagedCover(FileOperation operation, bool restore, DateTimeOffset modified,
+    private CoverSource? CacheManagedCovers(FileOperation operation, bool restore, DateTimeOffset modified,
         SqliteConnection database, SqliteTransaction transaction)
     {
         var id = restore ? operation.SourceRoot : operation.TargetRoot;
@@ -161,17 +161,67 @@ internal sealed partial class LibraryStore
         var path = restore ? operation.SourcePath : operation.TargetPath;
         var cache = new CoverCache(database, transaction);
         var directory = path[..Math.Max(0, path.LastIndexOf('/'))];
-        if (!HasOtherSeriesInFolder(database, transaction, id, path, operation.SeriesKey) &&
-            CoverArt.FindSidecars(root, directory, cache).FirstOrDefault() is { } sidecar)
+        if (ArchivePages.Supports(Path.GetExtension(path)[1..].ToLowerInvariant()) &&
+            cache.FindArchive(operation.Sha256, path, operation.Size, modified) is null &&
+            CoverArt.FindArchiveCover(cache, root, path, operation.Size, modified, CancellationToken.None) is { } archive)
         {
-            return sidecar;
+            cache.RememberArchive(operation.Sha256, archive);
         }
-        if (!ArchivePages.Supports(Path.GetExtension(path)[1..].ToLowerInvariant())) return null;
-        var cover = cache.FindArchive(operation.Sha256, path, operation.Size, modified);
-        if (cover is not null) return cover;
-        cover = CoverArt.FindArchiveCover(cache, root, path, operation.Size, modified, CancellationToken.None);
-        if (cover is not null) cache.RememberArchive(operation.Sha256, cover);
-        return cover;
+
+        return HasOtherSeriesInFolder(database, transaction, id, path, operation.SeriesKey)
+            ? null : CoverArt.FindSidecars(root, directory, cache).FirstOrDefault();
+    }
+
+    private static void RefreshManagedArchiveCover(SqliteConnection database, SqliteTransaction transaction, Guid root, string series)
+    {
+        using var query = database.CreateCommand();
+        query.Transaction = transaction;
+        query.CommandText = """
+            SELECT f.relative_path, f.size, f.modified_at, f.series_title, a.entry, a.image_sha
+            FROM library_file f JOIN library_content c ON c.id = f.content_id
+            JOIN artwork.archive_cover a ON a.archive_sha = c.sha256
+            JOIN artwork.image i ON i.sha256 = a.image_sha
+            WHERE f.root_id = $root AND f.series_key = $series AND NOT EXISTS (
+                SELECT 1 FROM library_series_cover x WHERE x.root_id = $root AND x.series_key = $series AND x.archive_entry IS NULL)
+            ORDER BY f.relative_path;
+            """;
+        query.Parameters.AddWithValue("$root", root);
+        query.Parameters.AddWithValue("$series", series);
+        CoverSource? cover = null;
+        CoverOrder bestOrder = default;
+        using (var rows = query.ExecuteReader())
+        {
+            while (rows.Read())
+            {
+                var path = rows.GetString(0);
+                var order = CoverOrder.ForFile(path, ReadText(rows, 3));
+                if (cover is not null && order.CompareTo(bestOrder) >= 0) continue;
+                bestOrder = order;
+                cover = new(path, rows.GetInt64(1), rows.GetDateTimeOffset(2), rows.GetString(4), rows.GetFieldValue<byte[]>(5));
+            }
+        }
+        if (cover is not null) UpsertManagedCover(database, transaction, root, series, cover);
+    }
+
+    private static void UpsertManagedCover(SqliteConnection database, SqliteTransaction transaction, Guid root, string series, CoverSource cover)
+    {
+        using var command = database.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            INSERT INTO library_series_cover(root_id, series_key, relative_path, size, modified_at, archive_entry, sha256)
+            VALUES($root, $series, $path, $size, $modified, $entry, $hash)
+            ON CONFLICT(root_id, series_key) DO UPDATE SET relative_path = excluded.relative_path, size = excluded.size,
+                modified_at = excluded.modified_at, archive_entry = excluded.archive_entry, sha256 = excluded.sha256
+            WHERE library_series_cover.archive_entry IS NOT NULL;
+            """;
+        command.Parameters.AddWithValue("$root", root);
+        command.Parameters.AddWithValue("$series", series);
+        command.Parameters.AddWithValue("$path", cover.RelativePath);
+        command.Parameters.AddWithValue("$size", cover.Size);
+        command.Parameters.AddWithValue("$modified", cover.ModifiedAt);
+        command.Parameters.AddWithValue("$entry", (object?)cover.ArchiveEntry ?? DBNull.Value);
+        command.Parameters.AddWithValue("$hash", cover.Sha256);
+        command.ExecuteNonQuery();
     }
 
     public void FinishFileOperation(FileOperation operation, bool restore, DateTimeOffset modified, bool retainTarget)
@@ -180,7 +230,7 @@ internal sealed partial class LibraryStore
         var path = restore ? operation.SourcePath : operation.TargetPath;
         using var database = OpenCoverDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
-        var cover = FindManagedCover(operation, restore, modified, database, transaction);
+        var sidecar = CacheManagedCovers(operation, restore, modified, database, transaction);
         using var command = database.CreateCommand();
         command.Transaction = transaction;
         command.Parameters.AddWithValue("$id", operation.Id);
@@ -232,22 +282,11 @@ internal sealed partial class LibraryStore
             UPDATE file_operation SET state = $state, message = $message, updated_at = $now WHERE id = $id;
             """;
         command.ExecuteNonQuery();
-        if (cover is not null)
+        if (sidecar is not null) UpsertManagedCover(database, transaction, root, operation.SeriesKey, sidecar);
+        RefreshManagedArchiveCover(database, transaction, operation.SourceRoot, operation.SeriesKey);
+        if (operation.SourceRoot != operation.TargetRoot)
         {
-            command.Parameters.AddWithValue("$coverSeries", operation.SeriesKey);
-            command.Parameters.AddWithValue("$coverPath", cover.RelativePath);
-            command.Parameters.AddWithValue("$coverSize", cover.Size);
-            command.Parameters.AddWithValue("$coverModified", cover.ModifiedAt);
-            command.Parameters.AddWithValue("$coverEntry", (object?)cover.ArchiveEntry ?? DBNull.Value);
-            command.Parameters.AddWithValue("$coverHash", cover.Sha256);
-            command.CommandText = """
-                INSERT INTO library_series_cover(root_id, series_key, relative_path, size, modified_at, archive_entry, sha256)
-                VALUES($root, $coverSeries, $coverPath, $coverSize, $coverModified, $coverEntry, $coverHash)
-                ON CONFLICT(root_id, series_key) DO UPDATE SET relative_path = excluded.relative_path, size = excluded.size,
-                    modified_at = excluded.modified_at, archive_entry = excluded.archive_entry, sha256 = excluded.sha256
-                WHERE library_series_cover.archive_entry IS NOT NULL AND excluded.archive_entry IS NULL;
-                """;
-            command.ExecuteNonQuery();
+            RefreshManagedArchiveCover(database, transaction, operation.TargetRoot, operation.SeriesKey);
         }
         transaction.Commit();
     }

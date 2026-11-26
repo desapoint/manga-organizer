@@ -7,7 +7,8 @@ namespace MangaOrganizer.Server;
 internal static partial class SeriesSuggestions
 {
     private const RegexOptions MatchOptions = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
-    private const string MarkedNumber = @"(?:volume|vol|v|tome|chapter|chap|ch|c)[\s._-]*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?";
+    private const string MarkedNumber = "(?:" + BookNumbers.VolumeMarker + "|" + BookNumbers.ChapterMarker +
+        @"|pages?|pg|p)[\s._-]*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?";
     private static readonly HashSet<string> GenericFolders = new(StringComparer.Ordinal)
     {
         "archive", "books", "chapters", "comics", "downloads", "import", "imports", "incoming",
@@ -45,6 +46,18 @@ internal static partial class SeriesSuggestions
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(input)));
     }
 
+    public static string? BareChapter(string relativePath, string? seriesTitle)
+    {
+        if (seriesTitle is null) return null;
+        var stem = Path.GetFileNameWithoutExtension(relativePath.Split('/')[^1]);
+        var title = ReleaseStatusSuffix().Replace(ReleasePrefix().Replace(stem.Trim(), ""), "");
+        var annotations = ReleaseAnnotations().Match(title);
+        if (annotations.Success) title = title[..annotations.Index];
+        title = TrimReleaseTags(title);
+        var number = BareNumberSuffix().Match(title);
+        return number.Success && Normalize(title[..number.Index]) == Normalize(seriesTitle) ? number.Groups["chapter"].Value : null;
+    }
+
     private static string? FindSeriesFolder(string[] parts, string rootPath)
     {
         for (var index = parts.Length - 2; index >= 0; index--)
@@ -71,8 +84,13 @@ internal static partial class SeriesSuggestions
     {
         var title = ReleasePrefix().Replace(name.Trim(), "");
         if (NumberedSubtitle().IsMatch(title)) return "";
+        if (NumberedRelease().Match(title) is { Success: true } releaseNumber)
+        {
+            return RemoveNumberSuffix(TrimReleaseTags(releaseNumber.Groups["title"].Value));
+        }
 
-        var annotations = ReleaseAnnotations().Match(title);
+        var release = ReleaseStatusSuffix().Replace(title, "");
+        var annotations = ReleaseAnnotations().Match(release);
         if (annotations.Success)
         {
             var tags = annotations.Groups["tag"].Captures;
@@ -80,7 +98,7 @@ internal static partial class SeriesSuggestions
             var hasYear = tags.Any(tag => ReleaseYear().IsMatch(tag.Value));
             if (hasReleaseTag || (hasYear && tags.Count == 1))
             {
-                var stem = TrimReleaseTags(title[..annotations.Index]);
+                var stem = TrimReleaseTags(release[..annotations.Index]);
                 var explicitTitle = RemoveNumberSuffix(stem);
                 if (explicitTitle.Length != stem.Length)
                 {
@@ -117,6 +135,10 @@ internal static partial class SeriesSuggestions
     [GeneratedRegex("^" + MarkedNumber + @"(?:[\s._-]+" + MarkedNumber + @")*\s+[-–—]\s+\S", MatchOptions)]
     private static partial Regex NumberedSubtitle();
 
+    [GeneratedRegex(@"^(?<title>(?:\[[^\[\]]*\]|\([^()]*\)|[^\[\]()])+?)[\s._–—-]+" + MarkedNumber +
+        @"(?=$|[\s._–—\[(\-])", MatchOptions)]
+    private static partial Regex NumberedRelease();
+
     [GeneratedRegex(@"(?:\s*(?:\((?<tag>[^()\[\]]+)\)|\[(?<tag>[^()\[\]]+)\]))+$", MatchOptions)]
     private static partial Regex ReleaseAnnotations();
 
@@ -129,8 +151,11 @@ internal static partial class SeriesSuggestions
     [GeneratedRegex(@"^[\s._-]*#?\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?[\s._-]*$", MatchOptions)]
     private static partial Regex NumberOnly();
 
-    [GeneratedRegex(@"[\s._-]+\d+(?:\.\d+)?$", MatchOptions)]
+    [GeneratedRegex(@"[\s._-]+(?<chapter>\d+(?:\.\d+)?)$", MatchOptions)]
     private static partial Regex BareNumberSuffix();
+
+    [GeneratedRegex(@"(?<=[\])])[\s._-]+(?:fin|end|final|completed)$", MatchOptions)]
+    private static partial Regex ReleaseStatusSuffix();
 
     [GeneratedRegex(@"(?:\s*(?:[\[(](?:ongoing|completed|hiatus)[\])]|\[Variant [0-9]+\]|\[Group\b[^\]]*\]|\[[^\]]*\b(?:scans?|scanlations?|fansubs?)\b[^\]]*\])|[\s._-]+ongoing)+$", MatchOptions)]
     private static partial Regex TrailingTags();

@@ -77,7 +77,7 @@ internal sealed class BookReader(LibraryStore store) : IDisposable
         {
             return MediaFiles.Read(file, source.Size, source.ModifiedAt, read);
         }
-        catch (Exception error) when (error is InvalidDataException or NotSupportedException)
+        catch (Exception error) when (ArchivePages.IsUnreadable(error))
         {
             return null;
         }
