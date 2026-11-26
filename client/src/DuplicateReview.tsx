@@ -1,159 +1,204 @@
-import { Archive, ChevronDown, ShieldAlert, ShieldCheck } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Files, ScanSearch } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChapterComparison } from './ChapterComparison';
-import type { Chapter } from './ChapterComparison';
-import { postFileOperation } from './FileOperations';
-import type { Operation } from './FileOperations';
+import { DuplicateBatch } from './DuplicateBatch';
+import { byteGroups, chapterCoverage, coverageLabels, fileColors, fileKind, fileName, isBundle } from './duplicateCoverage';
+import type { Chapter, CoverageFile, CoverageState } from './duplicateCoverage';
 import { formatSize } from './library';
 import { Select } from './Select';
 import { FileCover } from './SeriesCover';
-import { Button, Modal } from './ui';
+import { Button, Modal, SearchField, SectionHeader } from './ui';
 
-type ComparedFile = { rootId: string; fileId: string; relativePath: string; fullPath: string; format: string; size: number;
-  sha256: string; volume: string | null; volumeArchive: boolean; chapters: Chapter[]; hasCover: boolean; seriesCoverKey: string | null };
-type Comparison = {
-  candidate: ComparedFile; kind: 'exact' | 'hardlink' | 'identity-unknown' | 'overlap' | 'possible-overlap' | 'alternate';
-  canQuarantine: boolean; reason: string; shared: Chapter[]; sourceOnly: Chapter[]; candidateOnly: Chapter[];
-};
-type Review = { source: ComparedFile; comparisons: Comparison[] };
-
-const labels: Record<Comparison['kind'], string> = {
-  exact: 'Exact bytes', hardlink: 'Hardlink alias', 'identity-unknown': 'Physical identity unknown',
-  overlap: 'Partial chapter overlap', 'possible-overlap': 'Possible overlap', alternate: 'Alternate release',
+type Review = { files: CoverageFile[]; expected: Chapter[]; canReviewQuarantine: boolean };
+type Compared = { candidate: CoverageFile; kind: string; reason: string };
+type FileScope = { source: CoverageFile; comparisons: Compared[]; canReviewQuarantine: boolean };
+type ReviewProps = {
+  rootId: string; seriesKey?: string; fileId?: string; version: string; onSignedOut: () => void; onChanged: () => void;
 };
 
-function FileSummary({ file, heading, version }: { file: ComparedFile; heading: string; version: string }) {
-  return <div className="flex min-w-0 items-start gap-3 sm:gap-4">
-    <div className="w-12 shrink-0 sm:w-16">
-      <FileCover rootId={file.rootId} fileId={file.fileId} available={file.hasCover} seriesCoverKey={file.seriesCoverKey}
-        revision={version} className="aspect-[2/3] rounded-md" />
-    </div>
-    <div className="grid min-w-0 gap-1.5 wrap-anywhere">
-      <span className="text-[0.6875rem] font-semibold tracking-wide text-muted uppercase">{heading}</span>
-      <strong className="text-base leading-tight tracking-tight sm:text-lg">{file.relativePath.split('/').at(-1)}</strong>
-      <span className="text-xs text-muted">{file.format.toUpperCase()} · {formatSize(file.size)}{file.volume && ` · Vol. ${file.volume}`}</span>
-      <span className="text-xs text-muted">{file.chapters.length ? `${file.chapters.length} indexed ${file.chapters.length === 1 ? 'chapter' : 'chapters'}` : 'Chapter coverage unknown'}</span>
-    </div>
-  </div>;
+const percentage = new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 });
+const display = {
+  matching: { track: 'bg-positive', text: 'text-positive' },
+  multiple: { track: 'bg-violet', text: 'text-accent-readable' },
+  single: { track: 'bg-control', text: 'text-ink' },
+  missing: { track: 'bg-danger/65', text: 'text-danger' },
+};
+const states = Object.keys(coverageLabels) as CoverageState[];
+const filters = [{ value: 'all', label: 'All chapters' }, ...states.map(value => ({ value, label: coverageLabels[value] }))];
+
+export function DuplicateReviewDialog(props: ReviewProps & { onClose: () => void }) {
+  return <Modal title="Compare this file" wide onClose={props.onClose}><DuplicateReview {...props} /></Modal>;
 }
 
-function FileEvidence({ file, heading }: { file: ComparedFile; heading: string }) {
-  return <dl aria-label={heading} className="m-0 min-w-0 text-xs wrap-anywhere">
-    <dt className="mb-1 font-semibold">{heading} path</dt><dd className="m-0 text-muted"><code>{file.fullPath}</code></dd>
-    <dt className="mt-2 mb-1 font-semibold">SHA-256</dt><dd className="m-0 text-muted"><code>{file.sha256}</code></dd>
-  </dl>;
-}
-
-export function DuplicateReview({ rootId, fileId, version, onSignedOut, onClose, onChanged }: {
-  rootId: string; fileId: string; version: string; onSignedOut: () => void; onClose: () => void; onChanged: () => void;
-}) {
+export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOut, onChanged }: ReviewProps) {
   const [review, setReview] = useState<Review | null>(null);
+  const [comparisons, setComparisons] = useState<Compared[]>([]);
   const [error, setError] = useState('');
-  const [chosen, setChosen] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [acknowledged, setAcknowledged] = useState(false);
-  const [plan, setPlan] = useState<Operation | null>(null);
-  const [done, setDone] = useState(false);
-  const comparison = review?.comparisons.find(item => item.candidate.fileId === chosen) ?? review?.comparisons[0];
-  const fileLabels = { source: plan ? 'Move to quarantine' : 'Selected file', candidate: plan ? 'Keep in library' : 'Comparison file' };
-  const StatusIcon = comparison?.canQuarantine ? ShieldCheck : ShieldAlert;
+  const [retry, setRetry] = useState(0);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [order, setOrder] = useState('asc');
+  const [selectedChapter, setSelectedChapter] = useState('');
+  const [selectedFile, setSelectedFile] = useState(fileId ?? '');
+  const [hoveredFile, setHoveredFile] = useState('');
+  const [lockedFile, setLockedFile] = useState('');
+  const [batchFile, setBatchFile] = useState<CoverageFile | null>(null);
+  const [fileLimit, setFileLimit] = useState(30);
+  const [groupLimit, setGroupLimit] = useState(15);
 
   useEffect(() => {
     const request = new AbortController();
+    const suffix = fileId ? fileId : 'series/' + seriesKey;
     void (async () => {
-      const response = await fetch(`/api/file-operations/duplicates/${rootId}/${fileId}`, { signal: request.signal });
+      const response = await fetch(`/api/file-operations/duplicates/${rootId}/${suffix}`, { signal: request.signal });
       if (response.status === 401) return onSignedOut();
       if (!response.ok) throw new Error();
-      const reviewed = await response.json() as Review;
-      if (!request.signal.aborted) setReview(reviewed);
-    })().catch(() => { if (!request.signal.aborted) setError('Could not load duplicate evidence.'); });
+      if (fileId) {
+        const scope = await response.json() as FileScope;
+        if (request.signal.aborted) return;
+        setComparisons(scope.comparisons);
+        setReview({ files: [scope.source, ...scope.comparisons.map(item => item.candidate)], expected: [],
+          canReviewQuarantine: scope.canReviewQuarantine });
+      } else {
+        const scope = await response.json() as Review;
+        if (request.signal.aborted) return;
+        setReview(scope);
+        setComparisons([]);
+      }
+      setError('');
+    })().catch(() => { if (!request.signal.aborted) setError('Could not load duplicate coverage.'); });
     return () => request.abort();
-  }, [rootId, fileId, onSignedOut, version]);
+  }, [fileId, onSignedOut, retry, rootId, seriesKey, version]);
 
-  async function preview(keepFile: string) {
-    setBusy(true);
-    setError('');
-    try {
-      setPlan(await postFileOperation('/quarantine-preview', onSignedOut, { rootId, sourceFile: fileId, keepFile }));
-      setAcknowledged(false);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not verify a quarantine plan.');
-    } finally {
-      setBusy(false);
-    }
+  const chapters = useMemo(() => review ? chapterCoverage(review.files, review.expected) : [], [review]);
+  const colors = useMemo(() => review ? fileColors(review.files) : new Map<string, string>(), [review]);
+  const groups = useMemo(() => review ? byteGroups(review.files) : [], [review]);
+  if (!review) return error ? <div className="action-row p-4">
+    <p role="alert" className="m-0 text-danger">{error}</p><Button variant="secondary" onClick={() => setRetry(value => value + 1)}>Retry</Button>
+  </div> : <p role="status" className="m-0 p-4">Loading duplicate coverage…</p>;
+
+  const active = chapters.find(chapter => chapter.key === selectedChapter);
+  const focus = review.files.find(file => file.fileId === fileId);
+  const inspected = review.files.find(file => file.fileId === selectedFile);
+  const comparison = comparisons.find(item => item.candidate.fileId === selectedFile);
+  const highlighted = hoveredFile || lockedFile;
+  const counts = { matching: 0, multiple: 0, single: 0, missing: 0 };
+  for (const chapter of chapters) counts[chapter.state]++;
+  const normalized = query.trim().toLocaleLowerCase();
+  const visible = chapters.filter(chapter => (filter === 'all' || filter === chapter.state) && (!normalized ||
+    chapter.chapter.includes(normalized) || chapter.files.some(file => file.fullPath.toLocaleLowerCase().includes(normalized))));
+  if (order === 'desc') visible.reverse();
+  const fileResults = review.files.filter(file => !normalized || file.fullPath.toLocaleLowerCase().includes(normalized) ||
+    file.chapters.some(chapter => chapter.chapter.includes(normalized)));
+  const visibleGroups = groups.filter(group => group.some(file => fileResults.includes(file)));
+  const allFileCount = review.files.length;
+  const rate = chapters.length ? counts.matching / chapters.length : 0;
+
+  function inspectFile(file: CoverageFile, lock: boolean) {
+    setSelectedFile(file.fileId);
+    setLockedFile(value => lock && value !== file.fileId ? file.fileId : '');
   }
 
-  async function apply() {
-    if (!plan || !acknowledged || !comparison?.canQuarantine) return;
-    setBusy(true);
-    setError('');
-    try {
-      if (await postFileOperation('/' + plan.id + '/apply', onSignedOut)) setDone(true);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not confirm the move. Check file operation history.');
-      setPlan(null);
-    } finally {
-      setBusy(false);
-    }
+  function refresh() {
+    setSelectedFile(fileId ?? '');
+    setLockedFile('');
+    setHoveredFile('');
+    setRetry(value => value + 1);
+    onChanged();
   }
 
-  function close() {
-    if (busy) return;
-    onClose();
-    if (done) onChanged();
+  function fileButton(file: CoverageFile) {
+    return <button key={file.fileId} type="button" aria-pressed={highlighted === file.fileId && lockedFile === file.fileId}
+      onPointerEnter={event => { if (event.pointerType !== 'touch') setHoveredFile(file.fileId); }}
+      onPointerLeave={() => setHoveredFile('')}
+      onFocus={event => { if (event.currentTarget.matches(':focus-visible')) setHoveredFile(file.fileId); }}
+      onBlur={() => setHoveredFile('')} onClick={() => inspectFile(file, true)}
+      style={highlighted === file.fileId ? { borderColor: colors.get(file.fileId) } : undefined}
+      className="flex min-h-11 min-w-0 cursor-pointer items-start gap-2 rounded-md border border-line bg-panel px-2.5 py-2 text-left">
+      <span aria-hidden="true" style={{ backgroundColor: colors.get(file.fileId) }} className="mt-1.5 size-2.5 shrink-0 rounded-xs" />
+      <span className="min-w-0 wrap-anywhere"><strong className="block text-xs">{fileName(file)}</strong>
+        <span className="text-xs text-muted">{fileKind(file)}{file.chapters.length > 0 && ` · ${file.chapters.length} ${file.chapters.length === 1 ? 'chapter' : 'chapters'}`}</span></span>
+    </button>;
   }
 
-  return <Modal title="Compare duplicate releases" wide onClose={close} className="bg-canvas">
-    <div className="grid min-w-0 gap-4">
-      {!review && !error && <p role="status" className="m-0">Checking indexed copies and chapter ranges…</p>}
-      {error && <p role="alert" className="m-0 text-danger">{error}</p>}
-      {review && !comparison && <p className="m-0 text-muted">The catalog found no exact copies or overlapping chapter labels for this file.</p>}
-      {review && comparison && <>
-        {review.comparisons.length > 1 && !plan && !done && <Select label="Compare with" value={comparison.candidate.fileId}
-          options={review.comparisons.map(item => ({ value: item.candidate.fileId, label: item.candidate.relativePath, description: labels[item.kind] }))}
-          onChange={id => { setChosen(id); setError(''); }} disabled={busy} />}
-        <section className="grid min-w-0 gap-4 rounded-xl border border-line bg-linear-to-br from-elevated to-panel p-3.5 sm:grid-cols-2 sm:gap-6 sm:p-5" aria-label="Files in comparison">
-          <FileSummary file={review.source} heading={fileLabels.source} version={version} />
-          <FileSummary file={comparison.candidate} heading={fileLabels.candidate} version={version} />
-        </section>
-        <ChapterComparison key={comparison.candidate.fileId} shared={comparison.shared} sourceOnly={comparison.sourceOnly}
-          candidateOnly={comparison.candidateOnly} labels={fileLabels} unresolved={comparison.kind === 'possible-overlap'}
-          files={{ source: review.source, candidate: comparison.candidate }} />
-        <section className="flex items-start gap-3 rounded-xl border border-line bg-panel p-3.5 sm:p-4" aria-label="Duplicate assessment">
-          <StatusIcon aria-hidden="true" className={`mt-0.5 size-5 shrink-0 ${comparison.canQuarantine ? 'text-positive' : 'text-warning'}`} />
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-              <strong className="text-sm">{labels[comparison.kind]}</strong>
-              <span className={`text-xs ${comparison.canQuarantine ? 'text-positive' : 'text-warning'}`}>
-                {comparison.canQuarantine ? 'Eligible for reviewed quarantine' : 'Files protected from quarantine'}
-              </span>
-            </div>
-            <p className="m-0 mt-1 text-sm text-muted">{comparison.reason}</p>
-          </div>
-        </section>
-        <details className="group min-w-0 rounded-xl border border-line bg-panel px-3.5 sm:px-4">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-            Paths and SHA-256 hashes <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted group-open:rotate-180" />
-          </summary>
-          <div className="grid gap-3 border-t border-line py-3 sm:grid-cols-2 sm:gap-5">
-            <FileEvidence file={review.source} heading={fileLabels.source} />
-            <FileEvidence file={comparison.candidate} heading={fileLabels.candidate} />
-          </div>
-        </details>
-        {plan && !done && <section className="grid gap-3 rounded-xl border border-warning/45 bg-warning/10 p-3" aria-label="Confirm quarantine">
-          <div><strong>Quarantine destination</strong><p className="m-0"><code>{plan.target}</code></p></div>
-          <label className="flex items-center gap-2"><input type="checkbox" checked={acknowledged} disabled={busy}
-            onChange={event => setAcknowledged(event.target.checked)} />I reviewed both files and the chapter coverage.</label>
-          <div className="action-row">
-            <Button icon={Archive} onClick={() => void apply()} disabled={busy || !acknowledged}>Confirm quarantine</Button>
-            <Button variant="secondary" onClick={() => setPlan(null)} disabled={busy}>Back to comparison</Button>
-          </div>
-        </section>}
-        {done ? <p role="status" className="m-0 text-positive">Moved into quarantine. Restore it from File operation history.</p> :
-          !plan && comparison.canQuarantine &&
-            <Button icon={ShieldCheck} disabled={busy} className="justify-self-start"
-              onClick={() => void preview(comparison.candidate.fileId)}>Preview quarantine</Button>}
+  return <div className="grid min-w-0 gap-4 bg-canvas p-3 sm:p-4">
+    {error && <p role="alert" className="m-0 text-danger">{error}</p>}
+    <section aria-label="Chapter duplicate coverage" className="grid min-w-0 gap-4 rounded-xl border border-line bg-panel p-3.5 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div><span className="text-[0.6875rem] font-medium tracking-wide text-muted uppercase">{fileId ? 'File and candidates' : 'Series integrity'}</span>
+          <SectionHeader title="Chapter duplicate coverage" />
+          <p className="m-0 mt-1 text-xs text-muted">{focus ? `${fileName(focus)} · ${allFileCount - 1} candidates` :
+            `${chapters.length} known chapters · ${allFileCount} indexed files`}</p>
+        </div>
+        {chapters.length > 0 && <div><strong className="block text-2xl leading-none font-bold text-positive tabular-nums sm:text-[1.75rem]">{percentage.format(rate)}</strong>
+          <p className="m-0 mt-1 text-xs text-muted">Chapters with matching indexed bytes</p></div>}
+      </div>
+      {chapters.length > 0 && <>
+        <div aria-hidden="true" className="flex h-2 overflow-hidden rounded-full bg-elevated">
+          {states.map(state => <span key={state} className={display[state].track} style={{ width: `${counts[state] / chapters.length * 100}%` }} />)}
+        </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          {states.map(state => <span key={state} className="text-muted"><strong className={display[state].text}>{counts[state]}</strong> {coverageLabels[state]}</span>)}
+        </div>
       </>}
+      <div className="grid items-start gap-4 desktop:grid-cols-[minmax(0,1fr)_minmax(15rem,20rem)]">
+        <div className="grid min-w-0 gap-3">
+          <h3 className="m-0 text-base font-semibold">All chapters</h3>
+          <div className="flex flex-wrap items-end gap-2">
+            <SearchField aria-label="Search chapters or file paths" placeholder="Search chapter or path" value={query}
+              onChange={event => { setQuery(event.target.value); setFileLimit(30); setGroupLimit(15); }} className="min-w-0 flex-1" />
+            <Select label="Chapter status" value={filter} options={filters} onChange={setFilter} />
+            <Select label="Chapter order" value={order} options={[{ value: 'asc', label: 'Oldest first' },
+              { value: 'desc', label: 'Newest first' }]} onChange={setOrder} />
+          </div>
+          {visible.length ? <ChapterComparison chapters={visible} colors={colors} selected={selectedChapter} highlighted={highlighted}
+            onSelect={key => { setSelectedChapter(value => value === key ? '' : key); setSelectedFile(''); setLockedFile(''); }} /> :
+            <p className="m-0 text-sm text-muted">{chapters.length ? 'No chapters match the current filters.' : 'No chapter coverage is indexed. The files are listed below.'}</p>}
+        </div>
+        <aside aria-label="Chapter and file review" className="grid min-w-0 gap-3 rounded-lg border border-line bg-inset p-3 desktop:sticky desktop:top-3">
+          <h3 className="m-0 text-sm font-semibold">{active ? `Chapter ${active.chapter}${active.volume ? ` · Vol. ${active.volume}` : ''}` : 'File review'}</h3>
+          {active ? <>
+            <p className="m-0 text-xs text-muted">{coverageLabels[active.state]} · {active.files.length} {active.files.length === 1 ? 'file' : 'files'}</p>
+            <div className="grid gap-1.5">{active.files.map(fileButton)}</div>
+          </> : !inspected && <p className="m-0 text-sm text-muted">Select a chapter to review its files, or select a file from the inventory.</p>}
+          {inspected && <div className="grid min-w-0 gap-2 rounded-md border border-line bg-panel p-2.5">
+            <div className="flex min-w-0 items-start gap-2">
+              <FileCover rootId={inspected.rootId} fileId={inspected.fileId} available={inspected.hasCover} seriesCoverKey={inspected.seriesCoverKey}
+                revision={version} className="h-14 w-9 shrink-0 rounded" />
+              <div className="min-w-0 wrap-anywhere"><strong className="block text-sm">{fileName(inspected)}</strong>
+                <span className="text-xs text-muted">{inspected.format.toUpperCase()} · {formatSize(inspected.size)} · {fileKind(inspected)}</span></div>
+            </div>
+            <code className="text-xs text-muted wrap-anywhere">{inspected.fullPath}</code>
+            <details><summary className="cursor-pointer text-xs text-muted">Content identity</summary>
+              <code className="text-xs wrap-anywhere">{inspected.sha256 ?? 'Hash unavailable'}</code>
+            </details>
+            {comparison && <p className="m-0 text-xs text-muted">{comparison.reason}</p>}
+            <Button variant="secondary" icon={ScanSearch} className="justify-self-start" onClick={() => setBatchFile(inspected)}>
+              {isBundle(inspected) ? 'Review volume chapters' : 'Review exact copies'}
+            </Button>
+          </div>}
+        </aside>
+      </div>
+    </section>
+    <div className="grid min-w-0 items-start gap-4 desktop:grid-cols-2">
+      <section aria-label="Matching byte groups" className="grid min-w-0 gap-3 rounded-xl border border-line bg-panel p-3.5 sm:p-4">
+        <SectionHeader title="Matching byte groups" />
+        <p className="m-0 text-xs text-muted">Indexed hashes group locations. Quarantine review checks physical identity and whole-file coverage.</p>
+        {visibleGroups.slice(0, groupLimit).map(group => <details key={group[0].fileId} className="rounded-lg border border-line px-2.5">
+          <summary className="min-h-11 cursor-pointer py-2 text-sm wrap-anywhere">{fileName(group[0])} · {group.length} paths</summary>
+          <div className="grid gap-1.5 pb-2">{group.map(fileButton)}</div>
+        </details>)}
+        {!visibleGroups.length && <p className="m-0 text-sm text-muted">No matching indexed byte groups in this view.</p>}
+        {visibleGroups.length > groupLimit && <Button variant="secondary" className="justify-self-start" onClick={() => setGroupLimit(value => value + 15)}>Show more groups</Button>}
+      </section>
+      <section aria-label="Files in comparison" className="grid min-w-0 gap-3 rounded-xl border border-line bg-panel p-3.5 sm:p-4">
+        <SectionHeader title={fileId ? 'Files in comparison' : 'All series files'} />
+        <div className="grid gap-1.5">{fileResults.slice(0, fileLimit).map(fileButton)}</div>
+        {!fileResults.length && <p className="m-0 text-sm text-muted">No files match the search.</p>}
+        {fileResults.length > fileLimit && <Button variant="secondary" icon={Files} className="justify-self-start" onClick={() => setFileLimit(value => value + 30)}>Show more files</Button>}
+      </section>
     </div>
-  </Modal>;
+    {batchFile && <DuplicateBatch file={batchFile} files={review.files} chapters={chapters}
+      canReview={review.canReviewQuarantine && batchFile.rootId === rootId} onClose={() => setBatchFile(null)} onChanged={refresh} onSignedOut={onSignedOut} />}
+  </div>;
 }
