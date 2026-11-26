@@ -3,14 +3,29 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { getCsrfToken } from './api';
 import { FolderField } from './FolderField';
+import { Select } from './Select';
+import type { SelectOption } from './Select';
 import { Button } from './ui';
 
-export type FolderKind = 'library' | 'import';
+export type FolderRole = 'library' | 'import';
+export type FolderKind = FolderRole | 'both';
 export type ConfiguredFolder = { id: string; path: string; name: string | null; kind: FolderKind };
 
 type FolderDraft = { id?: string; path: string; name: string; kind: FolderKind };
 
 export const ROOTS_URL = '/api/library/roots';
+
+const folderKinds = {
+  library: 'Library only',
+  import: 'Import intake only',
+  both: 'Library and import intake',
+} satisfies Record<FolderKind, string>;
+
+const folderOptions: SelectOption<FolderKind>[] = [
+  { value: 'library', label: folderKinds.library },
+  { value: 'import', label: folderKinds.import },
+  { value: 'both', label: folderKinds.both, description: 'One scan and inventory shared by both views.' },
+];
 
 export function LibrarySettings({ folders, onChange, onSignedOut }: {
   folders: ConfiguredFolder[];
@@ -59,7 +74,7 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
               <div className="folder-description">
                 <strong>{folder.name || folder.path}</strong>
                 {folder.name && <code>{folder.path}</code>}
-                <span>{folder.kind === 'import' ? 'Import folder' : 'Read-only library'}</span>
+                <span>{folderKinds[folder.kind]}</span>
               </div>
               <div className="action-row">
                 <Button variant="secondary" disabled={busy} aria-label={`Edit ${folder.name || folder.path}`}
@@ -79,11 +94,8 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
       {draft && (
         <form className="settings-form" key={draft.id ?? 'new'} onSubmit={save}>
           <h2>{draft.id ? 'Edit folder' : 'Add folder'}</h2>
-          <label htmlFor="folder-kind">Use folder for</label>
-          <select id="folder-kind" value={draft.kind} onChange={event => setDraft({ ...draft, kind: event.target.value as FolderKind })}>
-            <option value="library">Read-only library</option>
-            <option value="import">Import intake</option>
-          </select>
+          <Select label="Use folder for" value={draft.kind} options={folderOptions} disabled={busy}
+            onChange={kind => setDraft({ ...draft, kind })} />
           <label htmlFor="folder-name">Display name (optional)</label>
           <input id="folder-name" value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} />
           <FolderField id="settings-folder" label="Folder location" required value={draft.path}

@@ -62,6 +62,9 @@ class Browser:
     def files(self, root_id, query=""):
         return json.loads(self.request(f"{LIBRARY_ROOTS}/{root_id}/files{query}", 200))
 
+    def series(self, root_id, query=""):
+        return json.loads(self.request(f"{LIBRARY_ROOTS}/{root_id}/series{query}", 200))
+
     def scan(self, root_id, expected_state="complete"):
         self.request(f"{LIBRARY_ROOTS}/{root_id}/scan", 202, method="POST", token=self.csrf())
         for _ in range(80):
@@ -188,13 +191,26 @@ def verify_web_setup(executable, fixture, media):
         assert Path(root["path"]).samefile(media / "primary"), root["path"]
         browser.scan(root["id"])
         original = browser.files(root["id"], "?limit=100")
+        original_series = browser.series(root["id"], "?limit=100")
 
     # Restore the schema used before content identities were added, keeping the previous inventory.
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP INDEX library_file_content;
+            DROP INDEX library_file_series;
             ALTER TABLE library_file DROP COLUMN content_id;
+            ALTER TABLE library_file DROP COLUMN series_key;
+            ALTER TABLE library_file DROP COLUMN series_title;
             DROP TABLE library_content;
+            ALTER TABLE library_folder RENAME TO current_library_folder;
+            CREATE TABLE library_folder (
+                root_id TEXT NOT NULL PRIMARY KEY REFERENCES library_root(id),
+                path TEXT NOT NULL,
+                name TEXT,
+                kind TEXT NOT NULL CHECK (kind IN ('library', 'import'))
+            );
+            INSERT INTO library_folder SELECT * FROM current_library_folder ORDER BY rowid;
+            DROP TABLE current_library_folder;
         """)
 
     with start_app(executable, appdata, None, None) as url:
@@ -208,6 +224,10 @@ def verify_web_setup(executable, fixture, media):
         assert migrated == {"total": original["total"], "items": [
             dict(row, contentId=None, sha256=None, indexedLocations=None) for row in original["items"]
         ]}
+        assert browser.series(root["id"], "?limit=100") == original_series
+        dual = {"path": root["path"], "name": root["name"], "kind": "both"}
+        saved = json.loads(browser.request(f"{LIBRARY_ROOTS}/{root['id']}", 200, method="PUT", token=browser.csrf(), body=dual))
+        assert saved["id"] == root["id"] and browser.roots()[0]["kind"] == "both"
         browser.scan(root["id"])
         backfilled = browser.files(root["id"], "?limit=100")
         assert [(row["id"], row["sha256"]) for row in backfilled["items"]] == [
@@ -249,11 +269,47 @@ def verify_folder_settings(owner, media):
     owner.scan(added_intake["id"])
     (incoming,) = owner.files(added_intake["id"])["items"]
     assert incoming["relativePath"] == "Unmatched.cbz"
+    shared = json.loads(owner.request(f"{LIBRARY_ROOTS}/{added_intake['id']}", 200, method="PUT", token=owner.csrf(),
+                                      body=dict(intake, kind="both")))
+    assert shared["id"] == added_intake["id"] and shared["kind"] == "both"
+    assert [root["id"] for root in owner.roots()].count(shared["id"]) == 1
+    assert owner.files(shared["id"])["items"] == [incoming]
+    verify_series_groups(owner, shared["id"], media / "intake")
     owner.request(f"{LIBRARY_ROOTS}/{archive['id']}", 204, method="DELETE", token=owner.csrf())
     assert (media / "archive" / "Volume.epub").exists()
     assert (media / "intake" / "Unmatched.cbz").exists()
     assert (media / "extra" / "Keep.cbz").exists()
     return owner.roots()
+
+
+def verify_series_groups(owner, root_id, path):
+    series_title = "A Story About a Knight"
+    fixtures = [f"{series_title}/{series_title} v{volume:02}.cbz" for volume in range(1, 53)]
+    fixtures += [f"{series_title} v53 [Group A] [Ongoing].cbz", "Northbound [Ongoing]/Vol.02/001.cbz",
+                 "Northbound [Ongoing]/Ch. 1.5.cbz", "Northbound [Ongoing]/Northbound 03.cbz",
+                 "[Group B] Northbound Chapter 04.cbz", "Incoming/001.cbz", "Incoming/002.cbz",
+                 "Different Title 2.cbz", "Different Title 3.cbz"]
+    for relative in fixtures:
+        file = path / relative
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_bytes(relative.encode("utf-8"))
+
+    assert owner.scan(root_id)["fileCount"] == len(fixtures) + 1
+    groups = owner.series(root_id)
+    by_title = {group["title"]: group for group in groups["items"]}
+    assert groups["total"] == len(by_title) == 7
+    assert by_title[series_title]["fileCount"] == 53
+    assert by_title["Northbound"]["fileCount"] == 4
+    assert by_title["Incoming/001.cbz"]["fileCount"] == by_title["Incoming/002.cbz"]["fileCount"] == 1
+    assert by_title["Different Title 2"]["key"] != by_title["Different Title 3"]["key"]
+    assert owner.series(root_id, "?limit=1") == {"total": 7, "items": groups["items"][:1]}
+    query = urlencode({"seriesKey": by_title[series_title]["key"], "limit": 50})
+    first = owner.files(root_id, f"?{query}")
+    second = owner.files(root_id, f"?{query}&offset=50")
+    assert first["total"] == second["total"] == 53
+    assert {row["relativePath"] for row in first["items"] + second["items"]} == set(fixtures[:53])
+    owner.request(f"{LIBRARY_ROOTS}/{root_id}/series?offset=-1", 400)
+    owner.request(f"{LIBRARY_ROOTS}/{root_id}/files?seriesKey=invalid", 400)
 
 
 def scan_library(owner, media):
@@ -376,6 +432,7 @@ def smoke(start, media):
         assert first.headers.get_content_type() == "text/css"
         first.request("/api/server", 401)
         first.request(LIBRARY_ROOTS, 401)
+        first.request(f"{LIBRARY_ROOTS}/{uuid4()}/series", 401)
         first.request("/api/library/folders", 401)
         first.request("/api/session", 400, method="POST", body={"password": password})
         first.sign_in(uuid4().hex, 401)
@@ -390,6 +447,7 @@ def smoke(start, media):
         verify_file_identity(first, media)
         roots = verify_folder_settings(first, media)
         inventory = first.files(roots[0]["id"], "?limit=100")
+        series = first.series(roots[-1]["id"])
         assert second.roots() == roots
         first.request("/api/session", 400, method="DELETE")
         first.request("/api/session", 204, method="DELETE", token=first.csrf())
@@ -404,6 +462,7 @@ def smoke(start, media):
         assert browser.server_id() == server_id
         assert browser.roots() == roots
         assert browser.files(roots[0]["id"], "?limit=100") == inventory
+        assert browser.series(roots[-1]["id"]) == series
 
 
 def create_media_fixture(media):
@@ -449,4 +508,4 @@ if __name__ == "__main__":
                 smoke(lambda password: start_container(target.image, volume, media, password), media)
             finally:
                 subprocess.run(["docker", "volume", "rm", volume], check=True, stdout=subprocess.DEVNULL)
-    print("Passed WebUI assets, authentication, CSRF, read-only catalog, SHA-256 file identity, two clients, and restart persistence")
+    print("Passed WebUI assets, authentication, CSRF, dual-purpose folders, series groups, SHA-256 file identity, and restart persistence")

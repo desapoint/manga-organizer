@@ -4,6 +4,21 @@ Copyright (c) Meta Platforms, Inc. and affiliates.
 Tailwind CSS 4.3.5
 Copyright (c) Tailwind Labs, Inc.
 
+Radix UI Select 2.4.1 and Radix UI dependencies
+Copyright (c) 2022 WorkOS
+
+Floating UI
+Copyright (c) 2021-present Floating UI contributors
+
+aria-hidden, react-remove-scroll, react-remove-scroll-bar, react-style-singleton, use-callback-ref, and use-sidecar
+Copyright (c) 2017 Anton Korzunov
+
+get-nonce
+Copyright (c) 2020 Anton Korzunov
+
+detect-node-es
+Copyright (c) 2017 Ilya Kantor
+
 Feather-derived icons distributed by Lucide React 1.80.0
 Copyright (c) 2013-present Cole Bemis
 

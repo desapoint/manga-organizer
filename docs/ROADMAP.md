@@ -15,6 +15,14 @@ The table orders the approved scope and records the remaining acceptance gates.
 
 Tests: corrupt archive, traversal, oversized images, decimals/splits, language editions, related title collisions; no rename overwrite; missing mount/locked file/full disk and restart recovery; copy/hardlink on actual target filesystem; auth bootstrap/token revocation/CSRF/user isolation; offline progress conflict; extension package/API compatibility and failure; backup restore and upgrade/rollback. Record exact build, OS, filesystem, test fixture, steps and actual result; CI alone isn't platform qualification.
 
+## WebUI MVP
+
+1. Configure library and intake roles and browse the grouped inventory. A folder serving both roles shares one scan and inventory.
+2. Display a series cover from `cover.png` or the first readable CBZ or image ZIP page. Preserve the indexed files when an image or archive is unavailable.
+3. Open CBZ and image ZIP files from the library or intake, read them right to left or in a scrolling view, and pick up from another signed-in browser. Keep the reading position attached to verified content through file moves.
+
+Build and validate these steps as stacked pull requests for the owner to review in order. Managed rename and move workflows retain their storage qualification and recovery gates. [Remote reading](REMOTE-READING.md) · [Managed changes](FILE-ORGANIZATION.md)
+
 ## Decisions
 
 The remaining candidates, including scheduled acquisition, torrent and Usenet integrations, advanced duplicate classification, household accounts, offline reading and external reader or tracker integrations, are deferred. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [Feature selection](FEATURE-SELECTION.csv)
