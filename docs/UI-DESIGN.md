@@ -10,6 +10,8 @@ Use a persistent 232px desktop sidebar with an icon-only compact mode and access
 
 ## Functional screens
 
+- Library cover cards and series rows open a dedicated series page with the title, cover, and paginated files. The page has a stable link and keeps Library selected in the navigation. Import intake keeps its expandable rows and inspector for association and file operations.
+
 - **Overview** shows counts from configured roots, indexed file locations, folders needing review and actual scan activity. Add continue-reading and recent titles after the reader can supply those records.
 - **Library** offers grouped series suggestions and a paginated file inventory. Keep filesystem paths, formats, sizes, dates and exact-byte match signals available in the file view and each group's expanded file list. Search and cover controls belong alongside the grouped view as their backend data becomes available.
 - **Import intake** uses inventory and an inspector side by side on wide screens, with an inspector above the mobile navigation when an entry is selected. Show the source path, title suggestion or unresolved state, and actual file hash and format. A title suggestion keeps chapter coverage pending. [Association requirements](CATALOG-ASSOCIATION.md)
