@@ -79,12 +79,17 @@ internal sealed partial class ManagedFileOperations
         var shared = source.Coverage.Where(item => candidateKeys.Contains((item.Volume, item.Chapter))).ToArray();
         var possible = !exact && source.Coverage.Any(item => candidate.Coverage.Any(other =>
             item.Chapter == other.Chapter && (item.Volume is null || other.Volume is null)));
+        var sameVolume = source.VolumeHint is not null && source.VolumeHint == candidate.VolumeHint &&
+            source.ChapterHint is null && candidate.ChapterHint is null;
         var kind = exact ? "exact" : shared.Length > 0 ? (sourceOnly.Length == 0 && candidateOnly.Length == 0 ? "alternate" : "overlap")
-            : possible ? "possible-overlap" : "unrelated";
+            : possible ? "possible-overlap" : sameVolume ? "same-volume" : "unrelated";
         var allowed = false;
-        var reason = kind == "possible-overlap"
-            ? "The chapter label matches, but its volume or edition is unresolved. Keep both files."
-            : "Different bytes can contain different pages, chapters, or translations. Keep both files.";
+        var reason = kind switch
+        {
+            "possible-overlap" => "The chapter label matches, but its volume or edition is unresolved. Keep both files.",
+            "same-volume" => "The indexed volume number matches. Compare the archive details to distinguish the releases.",
+            _ => "Different bytes can contain different pages, chapters, or translations. Keep both files.",
+        };
         if (exact)
         {
             var candidateIdentity = Identity(candidate);

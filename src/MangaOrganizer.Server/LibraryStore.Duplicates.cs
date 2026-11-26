@@ -118,10 +118,12 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$file", source.FileId);
         command.Parameters.AddWithValue("$sameContent", source.ContentId);
         command.Parameters.AddWithValue("$labels", JsonSerializer.Serialize(source.Coverage.Select(item => item.Chapter).Distinct()));
+        command.Parameters.AddWithValue("$volume", (object?)(source.ChapterHint is null ? source.VolumeHint : null) ?? DBNull.Value);
         command.CommandText = "WITH covered AS (" + GroupCoverage + ") SELECT " + DuplicateColumns + " " + DuplicateSources + """
              WHERE f.id <> $file AND (f.content_id = $sameContent
-                OR (f.root_id = $root AND f.series_key = $series AND EXISTS(
-                    SELECT 1 FROM covered g WHERE g.content_id = f.content_id AND g.chapter IN (SELECT value FROM json_each($labels)))))
+                OR (f.root_id = $root AND f.series_key = $series AND (
+                    (f.volume_hint = $volume AND f.chapter_hint IS NULL) OR EXISTS(
+                    SELECT 1 FROM covered g WHERE g.content_id = f.content_id AND g.chapter IN (SELECT value FROM json_each($labels))))))
              ORDER BY f.content_id = $sameContent DESC, folder.path, f.relative_path;
             """;
         var matches = new List<DuplicateFile>();
