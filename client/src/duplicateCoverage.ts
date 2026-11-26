@@ -12,7 +12,7 @@ export const coverageLabels: Record<CoverageState, string> = {
 
 const chapterNumber = new Intl.Collator(undefined, { numeric: true });
 const coveragePalette = [
-  [61, 0.23, 275], [87, 0.18, 95], [75, 0.15, 215], [64, 0.22, 28],
+  [61, 0.23, 275], [87, 0.18, 95], [64, 0.22, 28], [75, 0.15, 215],
   [81, 0.20, 134], [72, 0.23, 335], [75, 0.18, 57], [51, 0.17, 252],
 ] as const;
 const paletteDistances = coveragePalette.map(([lightness, chroma, hue]) =>
@@ -24,6 +24,7 @@ export const chapterKey = (chapter: Chapter) => `${chapter.volume ?? ''}:${chapt
 export const fileName = (file: CoverageFile) => file.relativePath.split('/').at(-1) ?? file.relativePath;
 export const isBundle = (file: CoverageFile) => file.volumeArchive || file.chapters.length > 1;
 export const fileKind = (file: CoverageFile) => isBundle(file) ? 'Volume or bundle' : file.chapters.length ? 'Single chapter' : 'Coverage unknown';
+export const filePattern = (file: CoverageFile) => !isBundle(file) && file.chapters.length === 1 ? 'striped' : 'solid';
 
 export function byteGroups(files: CoverageFile[]) {
   const byHash = new Map<string, CoverageFile[]>();
@@ -55,14 +56,31 @@ export function chapterCoverage(files: CoverageFile[], expected: Chapter[]): Cov
     Number(a.volume) - Number(b.volume) || chapterNumber.compare(a.volume ?? '', b.volume ?? ''));
 }
 
+function coverageColor(index: number) {
+  const swatch = coveragePalette[index];
+  if (swatch) {
+    const [lightness, chroma, hue] = swatch;
+    return `oklch(${lightness}% ${chroma} ${hue})`;
+  }
+  const hue = ((index - coveragePalette.length) * 137.508) % 360;
+  return `oklch(${index % 2 ? 86 : 64}% 0.16 ${hue})`;
+}
+
 export function fileColors(files: CoverageFile[]) {
   const colors = new Map<string, string>();
   const usedByChapter = new Map<string, Set<number>>();
-  // Also separate nearby files that do not share a chapter.
+  const nextStandalone = new Map<string, number>();
+  // Also separate nearby bundles that do not share a chapter.
   const recent: number[] = [];
   for (const file of files) {
-    if (!isBundle(file) && file.chapters.length === 0) {
-      colors.set(file.fileId, 'var(--color-muted)');
+    if (!isBundle(file)) {
+      const chapter = file.chapters[0];
+      if (chapter) {
+        const key = chapterKey(chapter);
+        const index = nextStandalone.get(key) ?? 0;
+        colors.set(file.fileId, coverageColor(index));
+        nextStandalone.set(key, index + 1);
+      } else colors.set(file.fileId, 'var(--color-muted)');
       continue;
     }
     const chapters = file.chapters.map(chapterKey);
@@ -78,17 +96,11 @@ export function fileColors(files: CoverageFile[]) {
         bestDistance = distance;
       }
     }
-    const swatch = coveragePalette[index];
-    if (swatch) {
-      const [lightness, chroma, hue] = swatch;
-      colors.set(file.fileId, `oklch(${lightness}% ${chroma} ${hue})`);
+    if (index < coveragePalette.length) {
       recent.push(index);
       if (recent.length > 3) recent.shift();
-    } else {
-      while (used.has(index)) index++;
-      const hue = ((index - coveragePalette.length) * 137.508) % 360;
-      colors.set(file.fileId, `oklch(${index % 2 ? 86 : 64}% 0.16 ${hue})`);
-    }
+    } else while (used.has(index)) index++;
+    colors.set(file.fileId, coverageColor(index));
     for (const key of chapters) {
       const prior = usedByChapter.get(key);
       if (prior) prior.add(index);
@@ -98,9 +110,23 @@ export function fileColors(files: CoverageFile[]) {
   return colors;
 }
 
-export function matchingCoverage(a: CoverageFile, b: CoverageFile) {
-  if (a.rootId !== b.rootId || a.format !== b.format || a.volume !== b.volume || a.volumeArchive !== b.volumeArchive ||
-    a.chapters.length !== b.chapters.length) return false;
+function sameChapterList(a: CoverageFile, b: CoverageFile) {
+  if (a.chapters.length !== b.chapters.length) return false;
   const chapters = new Set(a.chapters.map(chapterKey));
   return b.chapters.every(chapter => chapters.has(chapterKey(chapter)));
+}
+
+export function sameVolume(a: CoverageFile, b: CoverageFile) {
+  return a.volume !== null && a.volume === b.volume && isBundle(a) && isBundle(b);
+}
+
+export function sameCoverageSpan(a: CoverageFile, b: CoverageFile) {
+  if (isBundle(a) !== isBundle(b)) return false;
+  if (!a.chapters.length || !b.chapters.length) return sameVolume(a, b);
+  return sameChapterList(a, b);
+}
+
+export function matchingCoverage(a: CoverageFile, b: CoverageFile) {
+  return a.rootId === b.rootId && a.format === b.format && a.volume === b.volume &&
+    a.volumeArchive === b.volumeArchive && sameChapterList(a, b);
 }

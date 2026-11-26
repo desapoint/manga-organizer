@@ -3,7 +3,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChapterComparison } from './ChapterComparison';
 import { CoverageMark } from './CoverageMark';
 import { DuplicateBatch } from './DuplicateBatch';
-import { byteGroups, chapterCoverage, coverageLabels, fileColors, fileKind, fileName, isBundle } from './duplicateCoverage';
+import type { DuplicateScope } from './DuplicateBatch';
+import { DuplicateFileEvidence } from './DuplicateFileEvidence';
+import { byteGroups, chapterCoverage, coverageLabels, fileColors, fileKind, fileName, filePattern, isBundle, sameCoverageSpan } from './duplicateCoverage';
 import type { Chapter, CoverageFile, CoverageState } from './duplicateCoverage';
 import { formatSize } from './library';
 import { Select } from './Select';
@@ -43,7 +45,7 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
   const [selectedFile, setSelectedFile] = useState(fileId ?? '');
   const [hoveredFile, setHoveredFile] = useState('');
   const [lockedFile, setLockedFile] = useState('');
-  const [batchFile, setBatchFile] = useState<CoverageFile | null>(null);
+  const [batchScope, setBatchScope] = useState<DuplicateScope | null>(null);
   const [fileLimit, setFileLimit] = useState(30);
   const [groupLimit, setGroupLimit] = useState(15);
   const inspector = useRef<HTMLElement>(null);
@@ -95,6 +97,8 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
   const visibleGroups = groups.filter(group => group.some(file => fileResults.includes(file)));
   const allFileCount = review.files.length;
   const rate = chapters.length ? counts.matching / chapters.length : 0;
+  const compact = focus && (focus.chapters.length > 0 || focus.volumeArchive) &&
+    review.files.every(file => file === focus || sameCoverageSpan(focus, file));
 
   function showInspector() {
     requestAnimationFrame(() => {
@@ -117,6 +121,26 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
     onChanged();
   }
 
+  const batch = batchScope && <DuplicateBatch scope={batchScope} files={review.files} chapters={chapters} colors={colors} version={version}
+    rootId={rootId} canReview={review.canReviewQuarantine && (batchScope.kind === 'chapter' || batchScope.file.rootId === rootId)}
+    onClose={() => setBatchScope(null)} onChanged={refresh} onSignedOut={onSignedOut} />;
+
+  if (focus && compact) return <section aria-label="File comparison" className="grid gap-4 p-3">
+    {error && <p role="alert" className="m-0 text-danger">{error}</p>}
+    <div className="flex flex-wrap items-start justify-between gap-2.5">
+      <div>
+        <SectionHeader title={isBundle(focus) ? focus.volume ? `Compare volume ${focus.volume}` : 'Compare bundles' : `Compare chapter ${focus.chapters[0]?.chapter}`} />
+        <p className="m-0 mt-1 text-xs text-muted">{allFileCount === 1 ? 'No other candidates indexed.' : `${allFileCount - 1} candidate${allFileCount === 2 ? '' : 's'}`}</p>
+      </div>
+      {allFileCount > 1 && <Button variant="secondary" icon={ScanSearch} onClick={() => setBatchScope({ kind: 'file', file: focus })}>
+        {isBundle(focus) ? 'Review volume duplicates' : 'Review exact copies'}
+      </Button>}
+    </div>
+    <DuplicateFileEvidence files={review.files} colors={colors} version={version} onSignedOut={onSignedOut}
+      notes={new Map(comparisons.map(item => [item.candidate.fileId, item.reason]))} />
+    {batch}
+  </section>;
+
   function fileButton(file: CoverageFile, jumpToInspector = false) {
     return <button key={file.fileId} type="button" aria-pressed={highlighted === file.fileId && lockedFile === file.fileId}
       onPointerEnter={event => { if (event.pointerType !== 'touch') setHoveredFile(file.fileId); }}
@@ -125,7 +149,7 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
       onBlur={() => setHoveredFile('')} onClick={() => inspectFile(file, jumpToInspector)}
       style={highlighted === file.fileId ? { borderColor: colors.get(file.fileId) } : undefined}
       className="flex min-h-11 min-w-0 cursor-pointer items-start gap-2 rounded-md border border-line bg-panel px-2.5 py-2 text-left">
-      <CoverageMark file={file} color={colors.get(file.fileId)} />
+      <CoverageMark pattern={filePattern(file)} color={colors.get(file.fileId)} />
       <span className="min-w-0 wrap-anywhere"><strong className="block text-xs">{fileName(file)}</strong>
         <span className="text-xs text-muted">{fileKind(file)}{file.chapters.length > 0 && ` · ${file.chapters.length} ${file.chapters.length === 1 ? 'chapter' : 'chapters'}`}</span></span>
     </button>;
@@ -161,6 +185,10 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
             <Select label="Chapter order" value={order} options={[{ value: 'asc', label: 'Oldest first' },
               { value: 'desc', label: 'Newest first' }]} onChange={setOrder} />
           </div>
+          <div role="group" aria-label="File band styles" className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+            <span className="inline-flex items-baseline gap-1.5"><CoverageMark pattern="solid" color="var(--color-control)" />Volume or bundle</span>
+            <span className="inline-flex items-baseline gap-1.5"><CoverageMark pattern="striped" color="var(--color-control)" />Standalone chapter</span>
+          </div>
           {visible.length ? <ChapterComparison chapters={visible} colors={colors} selected={selectedChapter} highlighted={highlighted}
             onSelect={key => {
               setSelectedChapter(selectedChapter === key ? '' : key);
@@ -174,6 +202,8 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
           <h3 className="m-0 text-sm font-semibold">{active ? `Chapter ${active.chapter}${active.volume ? ` · Vol. ${active.volume}` : ''}` : 'File review'}</h3>
           {active ? <>
             <p className="m-0 text-xs text-muted">{coverageLabels[active.state]} · {active.files.length} {active.files.length === 1 ? 'file' : 'files'}</p>
+            {active.files.length > 1 && <Button variant="secondary" icon={ScanSearch} className="justify-self-start"
+              onClick={() => setBatchScope({ kind: 'chapter', chapter: active })}>Review chapter duplicates</Button>}
             <div className="grid gap-1.5">{active.files.map(file => fileButton(file))}</div>
           </> : !inspected && <p className="m-0 text-sm text-muted">Select a chapter to review its files, or select a file from the inventory.</p>}
           {inspected && <div className="grid min-w-0 gap-2 rounded-md border border-line bg-panel p-2.5">
@@ -188,8 +218,8 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
               <code className="text-xs wrap-anywhere">{inspected.sha256 ?? 'Hash unavailable'}</code>
             </details>
             {comparison && <p className="m-0 text-xs text-muted">{comparison.reason}</p>}
-            <Button variant="secondary" icon={ScanSearch} className="justify-self-start" onClick={() => setBatchFile(inspected)}>
-              {isBundle(inspected) ? 'Review volume chapters' : 'Review exact copies'}
+            <Button variant="secondary" icon={ScanSearch} className="justify-self-start" onClick={() => setBatchScope({ kind: 'file', file: inspected })}>
+              {isBundle(inspected) ? inspected.chapters.length ? 'Review volume chapters' : 'Review volume duplicates' : 'Review exact copies'}
             </Button>
           </div>}
         </aside>
@@ -213,7 +243,6 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, onSignedOu
         {fileResults.length > fileLimit && <Button variant="secondary" icon={Files} className="justify-self-start" onClick={() => setFileLimit(value => value + 30)}>Show more files</Button>}
       </section>
     </div>
-    {batchFile && <DuplicateBatch file={batchFile} files={review.files} chapters={chapters}
-      canReview={review.canReviewQuarantine && batchFile.rootId === rootId} onClose={() => setBatchFile(null)} onChanged={refresh} onSignedOut={onSignedOut} />}
+    {batch}
   </div>;
 }
