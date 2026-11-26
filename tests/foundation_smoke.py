@@ -290,6 +290,7 @@ def verify_series_groups(owner, root_id, path):
     fixtures += [f"{series_title} v53 [Group A] [Ongoing].cbz", "Northbound [Ongoing]/Vol.02/001.cbz",
                  "Northbound [Ongoing]/Ch. 1.5.cbz", "Northbound [Ongoing]/Northbound 03.cbz",
                  "[Group B] Northbound Chapter 04.cbz", "Northbound/Tome 03/Ch. 15.5 — A chapter title/001.cbz",
+                 "Northbound/[Group B] Ch. 16 - 1984 (2022) (Digital).cbz",
                  "Incoming/001.cbz", "Incoming/002.cbz", "Incoming/Ch.004 - Unknown story.cbz",
                  "Chapters/Ch.004 - Unknown story.cbz", "Undead Unluck/Another Series v01.cbz",
                  "Different Title 2.cbz", "Different Title 3.cbz", "Different Title 2 (2022).cbz"]
@@ -325,7 +326,7 @@ def verify_series_groups(owner, root_id, path):
         assert {row["relativePath"] for row in files["items"]} == set(releases)
     assert groups["total"] == len(by_title) == 14
     assert by_title[series_title]["fileCount"] == 53
-    assert by_title["Northbound"]["fileCount"] == 5
+    assert by_title["Northbound"]["fileCount"] == 6
     assert by_title["Incoming/001.cbz"]["fileCount"] == by_title["Incoming/002.cbz"]["fileCount"] == 1
     assert by_title["Incoming/Ch.004 - Unknown story.cbz"]["fileCount"] == 1
     assert by_title["Chapters/Ch.004 - Unknown story.cbz"]["fileCount"] == 1

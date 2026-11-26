@@ -20,7 +20,7 @@ internal static partial class SeriesSuggestions
         var fileName = Path.GetFileNameWithoutExtension(parts[^1]);
         var title = ParseTitle(fileName);
         var folder = FindSeriesFolder(parts, rootPath);
-        if (title.Length == 0 || IsReleaseLabel(title))
+        if (title.Length == 0 || NumberOnly().IsMatch(title))
         {
             return folder;
         }
@@ -62,16 +62,16 @@ internal static partial class SeriesSuggestions
     {
         var title = ParseTitle(folder);
         var normalized = Normalize(title);
-        return normalized.Length == 0 || GenericFolders.Contains(normalized) || IsReleaseLabel(title) ? null : title;
+        return normalized.Length == 0 || GenericFolders.Contains(normalized) || NumberOnly().IsMatch(title) ? null : title;
     }
 
-    private static bool IsReleaseLabel(string title) => NumberOnly().IsMatch(title) || NumberedSubtitle().IsMatch(title);
-
-    private static string Clean(string title) => ReleasePrefix().Replace(TrailingTags().Replace(title.Trim(), ""), "").Trim();
+    private static string TrimReleaseTags(string title) => TrailingTags().Replace(title.Trim(), "").Trim();
 
     private static string ParseTitle(string name)
     {
-        var title = name.Trim();
+        var title = ReleasePrefix().Replace(name.Trim(), "");
+        if (NumberedSubtitle().IsMatch(title)) return "";
+
         var annotations = ReleaseAnnotations().Match(title);
         if (annotations.Success)
         {
@@ -80,7 +80,7 @@ internal static partial class SeriesSuggestions
             var hasYear = tags.Any(tag => ReleaseYear().IsMatch(tag.Value));
             if (hasReleaseTag || (hasYear && tags.Count == 1))
             {
-                var stem = Clean(title[..annotations.Index]);
+                var stem = TrimReleaseTags(title[..annotations.Index]);
                 var explicitTitle = RemoveNumberSuffix(stem);
                 if (explicitTitle.Length != stem.Length)
                 {
@@ -95,7 +95,7 @@ internal static partial class SeriesSuggestions
             }
         }
 
-        return RemoveNumberSuffix(Clean(title));
+        return RemoveNumberSuffix(TrimReleaseTags(title));
     }
 
     private static string RemoveNumberSuffix(string title)
