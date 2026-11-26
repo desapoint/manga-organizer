@@ -70,3 +70,7 @@ SQLite is dedicated to the public domain (https://sqlite.org/copyright.html).
 SkiaSharp and SkiaSharp Native Assets 4.157.0
 MIT License. The application packages include the SkiaSharp license and its
 bundled native third-party notices in the licenses/ directory.
+
+SharpCompress 1.0.0
+Copyright (c) 2014 Adam Hathcock
+MIT License (full terms reproduced above).

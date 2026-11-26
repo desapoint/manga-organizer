@@ -13,8 +13,8 @@ The owner requires one primary server for the main library and its reading progr
 
 | Stage | Included formats | Acceptance |
 |---|---|---|
-| First reader | CBZ and image ZIP with JPEG, PNG and WebP pages | Open a chapter through the WebUI, read in page order and resume from a second client. |
-| Next formats | CBR/RAR and loose image folders | Verify supported RAR variants and folder page order. Use the same reading and progress contract as CBZ and ZIP. |
+| First reader | CBZ, image ZIP, and single-volume, non-solid, unencrypted CBR/RAR with JPEG, PNG and WebP pages | Open a chapter through the WebUI, read in page order and resume from a second client. |
+| Next formats | More RAR variants and loose image folders | Verify solid and split RAR variants and folder page order. Use the same reading and progress contract as CBZ and ZIP. |
 | Later formats | CB7/7z, PDF and fixed-layout EPUB | Qualify each decoder on Windows and Docker and verify that its page anchors survive ordinary client handoffs. |
 
 Reflowable EPUB and text annotations are deferred. The format stages are implementation targets. [Current catalog support](FILE-ORGANIZATION.md#read-only-catalog)

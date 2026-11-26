@@ -295,6 +295,7 @@ def verify_folder_settings(owner, media):
     assert owner.files(shared["id"])["items"] == [incoming]
     verify_series_groups(owner, shared["id"], media / "intake")
     verify_cover_art(owner, shared["id"], media / "intake")
+    verify_lowest_owned_cover(owner, shared["id"], media / "intake")
     verify_live_scan(owner, shared["id"], media / "intake")
     verify_series_metadata(owner, shared["id"], media / "intake")
     owner.request(f"{LIBRARY_ROOTS}/{archive['id']}", 204, method="DELETE", token=owner.csrf())
@@ -329,6 +330,11 @@ def verify_series_groups(owner, root_id, path):
         f"Undead Unluck/Vol.{1 if chapter < 8 else 2:02} Ch.{chapter:04} - {title} (fr) [Unexpected Team].cbz"
         for chapter, title in chapter_titles
     )
+    numbered_releases["Akumetsu"].extend([
+        "Akumetsu - Integral 18 Tomes/Akumetsu - Tome 18 [CBR] [Scan DP] [FR] [1500x1200] Fin.cbr",
+        "Akumetsu - Integral 18 Tomes/Akumetsu Chapitre 19 Provider AA22D44D 1500x1200.cbz",
+        "Akumetsu Page 001 ArchiveSource high resolution.cbz",
+    ])
     for releases in numbered_releases.values():
         fixtures.extend(releases)
     for relative in fixtures:
@@ -382,6 +388,85 @@ def webp_dimensions(image):
     assert image[12:16] == b"VP8 " and image[23:26] == b"\x9d\x01\x2a"
     width, height = struct.unpack_from("<HH", image, 26)
     return width & 0x3fff, height & 0x3fff
+
+
+def stored_rar(entries, *, rar5=False):
+    """Build a single-volume RAR fixture from synthetic entries without an external encoder."""
+    if not rar5:
+        def block(header):
+            return struct.pack("<H", zlib.crc32(header) & 0xffff) + header
+
+        data = b"Rar!\x1a\x07\0" + block(struct.pack("<BHH", 0x73, 0, 13) + bytes(6))
+        for name, body in entries:
+            name = name.encode("ascii")
+            header = struct.pack("<BHHIIBIIBBHI", 0x74, 0x8000, 32 + len(name), len(body), len(body), 3,
+                                 zlib.crc32(body), 0x00210000, 20, 0x30, len(name), 0o100644)
+            data += block(header + name) + body
+        return data + block(struct.pack("<BHH", 0x7b, 0, 7))
+
+    def vint(value):
+        result = bytearray()
+        while value >= 128:
+            result.append((value & 127) | 128)
+            value >>= 7
+        result.append(value)
+        return bytes(result)
+
+    def block(header):
+        sized = vint(len(header)) + header
+        return struct.pack("<I", zlib.crc32(sized)) + sized
+
+    data = b"Rar!\x1a\x07\x01\0" + block(bytes((1, 0, 0)))
+    for name, body in entries:
+        name = name.encode("ascii")
+        header = bytes((2, 2)) + vint(len(body)) + bytes((4,)) + vint(len(body)) + bytes((0,))
+        header += struct.pack("<I", zlib.crc32(body)) + bytes((0, 0)) + vint(len(name)) + name
+        data += block(header) + body
+    return data + block(bytes((5, 0, 0)))
+
+
+def verify_lowest_owned_cover(owner, root_id, path):
+    early, late, page = synthetic_png(14, 90, 180, 19, 33), synthetic_png(80, 120, 20, 23, 38), synthetic_png(10, 12, 65)
+
+    def book(relative, image):
+        file = path / relative
+        file.parent.mkdir(parents=True, exist_ok=True)
+        with ZipFile(file, "w") as archive:
+            archive.writestr("1.png", image)
+
+    book("Chapter order/Chapter 10.cbz", late)
+    book("Chapter order/Chapter 2.5.cbz", early)
+    (path / "Chapter order" / "Chapter 1.cbr").write_bytes(b"An unusable archive")
+    book("Volume order/Tome 10/Chapter 1.cbz", late)
+    book("Volume order/Tome 2/Chapter 10.cbz", late)
+    book("Volume order/Tome 2/Chapter 3.cbz", early)
+    book("Bare order/Bare order 10 (2022) (Digital).cbz", late)
+    book("Bare order/Bare order 2 (2022) (Digital).cbz", early)
+    for rar5 in (False, True):
+        folder = path / ("Archive coverage Five" if rar5 else "Archive coverage Four")
+        folder.mkdir()
+        cover_meta = b'<ComicInfo><Pages><Page Image="1" Type="FrontCover"/></Pages></ComicInfo>'
+        (folder / "Chapter 2.cbr").write_bytes(stored_rar([
+            ("pages/1.png", page), ("pages/2.png", early), ("pages/front-cover.png", late), ("ComicInfo.xml", cover_meta),
+        ], rar5=rar5))
+
+    owner.scan(root_id)
+    for name in ("Chapter order", "Volume order", "Bare order", "Archive coverage Five", "Archive coverage Four"):
+        (series,) = owner.series(root_id, "?" + urlencode({"search": name}))["items"]
+        assert series["title"] == name and series["hasCover"]
+        listing = owner.series(root_id, "?" + urlencode({"seriesKey": series["key"]}))
+        assert listing == {"total": 1, "items": [series]}
+        series_url = f"{LIBRARY_ROOTS}/{root_id}/series/{series['key']}/cover"
+        assert webp_dimensions(owner.request(series_url, 200)) == (19, 33)
+        files = owner.files(root_id, "?" + urlencode({"seriesKey": series["key"]}))["items"]
+        assert all(item["seriesCoverKey"] == series["key"] for item in files)
+        if name.startswith("Archive coverage"):
+            (file,) = files
+            assert file["extension"] == "cbr" and file["hasCover"]
+            assert webp_dimensions(owner.request(f"{LIBRARY_ROOTS}/{root_id}/files/{file['id']}/cover", 200)) == (19, 33)
+        if name == "Chapter order":
+            (missing,) = [file for file in files if file["extension"] == "cbr"]
+            assert not missing["hasCover"] and missing["seriesCoverKey"] == series["key"]
 
 
 def verify_cover_art(owner, root_id, path):
@@ -556,6 +641,13 @@ def verify_external_metadata(executable, fixture, media):
 
 
 def verify_reader(owner, peer, root_id, path):
+    for edition in ("Four", "Five"):
+        (rar,) = owner.files(root_id, "?" + urlencode({"search": "Archive coverage " + edition}))["items"]
+        url = f"/api/reader/{rar['contentId']}"
+        assert json.loads(owner.request(url, 200))["pageCount"] == 3
+        assert owner.request(url + "/pages/0", 200) == synthetic_png(10, 12, 65)
+        assert owner.request(url + "/pages/1", 200) == synthetic_png(14, 90, 180, 19, 33)
+
     series = owner.series(root_id, "?search=eclipse")["items"][0]
     details = f"{LIBRARY_ROOTS}/{root_id}/series/{series['key']}"
     (archive,) = [file for file in owner.files(root_id, "?" + urlencode({"seriesKey": series["key"]}))["items"]
