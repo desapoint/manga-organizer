@@ -12,7 +12,7 @@ internal sealed record SeriesMetadata(string Title, string Kind, string? Alterna
 }
 internal sealed record SeriesChapter(string? Volume, string Chapter,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Source = null);
-internal sealed record LibraryChapter(string? Volume, string Chapter, string? ContentId, int ReadableFiles);
+internal sealed record LibraryChapter(string? Volume, string Chapter, string? ContentId, int ReadableFiles, bool Completed);
 internal sealed record SeriesReading(string ContentId, string RelativePath, int? PageIndex, int? PageCount, bool HasFinishedFile);
 internal sealed record SeriesDetails(SeriesMetadata? Metadata, int AvailableChapters, int ReadChapters, IReadOnlyList<string> Volumes,
     IReadOnlyList<LibraryChapter> Chapters, SeriesReading? Reading);
@@ -60,17 +60,23 @@ internal sealed partial class LibraryStore
 
         var metadata = ReadMetadata(command);
         command.Parameters.AddWithValue("$owner", owner);
+        AddWorkKey(command, root, seriesKey);
         command.CommandText = """
             WITH readable AS (
                 SELECT DISTINCT f.content_id FROM library_file f JOIN library_root r ON r.id = f.root_id
                 WHERE f.root_id = $root AND f.series_key = $series AND r.state <> 'unavailable'
                   AND f.content_id IS NOT NULL AND f.extension IN ('cbz', 'zip', 'cbr', 'rar')
             )
-            SELECT coverage.volume, coverage.chapter, MAX(COALESCE(p.completed, 0)), COUNT(readable.content_id), MIN(readable.content_id)
+            SELECT coverage.volume, coverage.chapter, COALESCE(chapter.completed, local.completed, MAX(COALESCE(p.completed, 0))),
+                COUNT(readable.content_id), MIN(readable.content_id)
             FROM (
             """ + " " + GroupCoverage + """
             ) coverage LEFT JOIN reading_progress p ON p.owner_id = $owner AND p.content_id = coverage.content_id
             LEFT JOIN readable ON readable.content_id = coverage.content_id
+            LEFT JOIN chapter_completion chapter ON chapter.owner_id = $owner AND chapter.work_key = $work
+                AND chapter.volume = coverage.volume AND chapter.chapter = coverage.chapter
+            LEFT JOIN chapter_completion local ON local.owner_id = $owner AND local.work_key = $localWork
+                AND local.volume = coverage.volume AND local.chapter = coverage.chapter
             GROUP BY coverage.volume, coverage.chapter;
             """;
         var chapters = new List<LibraryChapter>();
@@ -81,7 +87,7 @@ internal sealed partial class LibraryStore
             {
                 var volume = rows.GetString(0);
                 var count = rows.GetInt32(3);
-                chapters.Add(new(volume.Length == 0 ? null : volume, rows.GetString(1), count == 1 ? rows.GetString(4) : null, count));
+                chapters.Add(new(volume.Length == 0 ? null : volume, rows.GetString(1), count == 1 ? rows.GetString(4) : null, count, rows.GetBoolean(2)));
                 if (rows.GetBoolean(2)) readChapters++;
             }
         }

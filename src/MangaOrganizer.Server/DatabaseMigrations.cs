@@ -23,6 +23,7 @@ internal static class DatabaseMigrations
         new("0009-anilist-details"),
         new("0010-series-collections"),
         new("0011-inferred-volume-chapters"),
+        new("0012-chapter-editions"),
     ];
 
     public static int Apply(string dataDirectory)

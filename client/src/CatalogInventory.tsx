@@ -6,7 +6,7 @@ import type { TagRules } from './CollectionControls';
 import { FileMove } from './FileOperations';
 import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataEditor, SeriesInfo, useSeriesDetails } from './SeriesInfo';
-import type { Details } from './SeriesInfo';
+import { EditionCoverage, SeriesChapterList } from './EditionCoverage';
 import { FileCover, SeriesCover } from './SeriesCover';
 import { formatSize, ROOTS_URL, seriesHref, seriesReaderHref } from './library';
 import { Select } from './Select';
@@ -241,19 +241,6 @@ function ChapterTotal({ label, value, total }: { label: string; value: number; t
   </div>;
 }
 
-function SeriesChapters({ chapters, rootId, seriesKey, onFiles }: {
-  chapters: Details['chapters']; rootId: string; seriesKey: string; onFiles: () => void;
-}) {
-  return chapters.length ? <ul className="m-0 grid list-none divide-y divide-line p-0" aria-label="Indexed chapters" role="list">
-    {chapters.map(chapter => <li key={`${chapter.volume ?? ''}:${chapter.chapter}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
-      <div className="grid"><strong>Chapter {chapter.chapter}</strong>{chapter.volume && <span className="text-sm text-muted">Volume {chapter.volume}</span>}</div>
-      {chapter.contentId ? <ActionLink variant="ghost" icon={BookOpen} href={seriesReaderHref(chapter.contentId, rootId, seriesKey)}
-        aria-label={`Read file for chapter ${chapter.chapter}${chapter.volume ? ` in volume ${chapter.volume}` : ''}`}>Read file</ActionLink> :
-        chapter.readableFiles > 1 ? <Button variant="secondary" onClick={onFiles}>View files ({chapter.readableFiles})</Button> : null}
-    </li>)}
-  </ul> : <p className="m-0 p-4 text-sm text-muted">No indexed chapter numbers for this series. You can still open files directly.</p>;
-}
-
 export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventoryChanged, rootPath, ...inventory }: InventoryProps & {
   seriesKey: string; coverVersion: string; managedFolders: LibraryRoot[]; onInventoryChanged: () => void; rootPath?: string;
 }) {
@@ -274,6 +261,8 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
   const metadata = details?.metadata ?? null;
   const reading = details?.reading;
   const title = metadata?.title ?? series?.title ?? 'Series';
+  const seriesUrl = `${ROOTS_URL}/${rootId}/series/${seriesKey}`;
+  const seriesTools = { url: seriesUrl, version, onSignedOut, onChange: catalog.onDataChanged };
   const view = selectedView ?? (details?.chapters.length ? 'chapters' : details?.volumes.length ? 'volumes' : 'files');
   return (
     <section className="workspace-page" aria-labelledby="series-heading">
@@ -306,13 +295,15 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
         <ChapterTotal label="Read chapters · owned" value={details.readChapters} total={details.availableChapters} />
         <ChapterTotal label="Owned chapters · released" value={details.availableChapters} total={metadata?.totalChapters ?? null} />
       </section>}
+      {series && <EditionCoverage {...seriesTools} volume={details?.volumes.length === 1 ? details.volumes[0] : undefined}
+        onBrowse={number => { setVolume(number); setView('chapters'); }} />}
       {series && <section className="grid min-w-0 gap-3" aria-label="Series inventory">
         <SegmentedControl label="Series views" options={seriesViews} value={view} onChange={value => { setVolume(null); setView(value); }} />
         <div className="surface min-w-0">
           {view === 'files' && <FileInventory {...catalog} seriesKey={seriesKey} />}
           {view === 'chapters' && <>
             {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all chapters</Button></div>}
-            <SeriesChapters rootId={rootId} seriesKey={seriesKey} onFiles={() => setView('files')}
+            <SeriesChapterList {...seriesTools} rootId={rootId} seriesKey={seriesKey}
               chapters={details?.chapters.filter(chapter => !volume || chapter.volume === volume) ?? []} />
             {details && details.availableChapters > details.chapters.length && <p className="m-0 p-4 text-sm text-muted">Showing the first {details.chapters.length.toLocaleString()} chapters. All indexed files are in Files.</p>}
           </>}
