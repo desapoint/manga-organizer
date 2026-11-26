@@ -72,7 +72,7 @@ export function PageHeader({ id, section, title, children }: { id: string; secti
   );
 }
 
-export function SectionHeader({ id, title }: { id: string; title: string }) {
+export function SectionHeader({ id, title }: { id?: string; title: string }) {
   return <h2 id={id} className="m-0 text-lg font-semibold tracking-tight">{title}</h2>;
 }
 

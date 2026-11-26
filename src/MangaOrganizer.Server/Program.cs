@@ -60,6 +60,7 @@ builder.Services.AddSingleton(new LibraryStore(dataDirectory, () =>
         : configuredPaths;
 }));
 builder.Services.AddSingleton<LibraryScanQueue>();
+builder.Services.AddSingleton(_ => new MetadataAgent(builder.Configuration["MANGA_ORGANIZER_METADATA_SERVICE_URL"]));
 builder.Services.AddHostedService(services => services.GetRequiredService<LibraryScanQueue>());
 
 builder.Services.AddDataProtection()

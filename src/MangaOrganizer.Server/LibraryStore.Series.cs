@@ -3,7 +3,7 @@ using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
-internal sealed record CatalogSeries(string Key, string Title, long FileCount, bool Suggested, bool HasCover);
+internal sealed record CatalogSeries(string Key, string Title, long FileCount, bool Suggested, bool HasCover, bool HasMetadata);
 
 internal sealed partial class LibraryStore
 {
@@ -36,21 +36,29 @@ internal sealed partial class LibraryStore
     public CatalogPage<CatalogSeries> ReadSeries(Guid id, int offset, int limit, string search, string? sort, bool coverOnly, string? seriesKey = null)
     {
         using var database = OpenDatabase();
-        database.CreateFunction<string, string, bool>("title_contains", (title, query) =>
-            CultureInfo.InvariantCulture.CompareInfo.IndexOf(title, query, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) >= 0,
-            isDeterministic: true);
+        RegisterTitleSearch(database);
         using var transaction = database.BeginTransaction(deferred: true);
         using var command = database.CreateCommand();
         command.Transaction = transaction;
         const string seriesQuery = """
-            WITH folder_series AS (
-                SELECT f.series_key, MIN(COALESCE(f.series_title, f.relative_path)) AS title, COUNT(*) AS file_count,
+            WITH file_groups AS (
+                SELECT f.series_key, MIN(COALESCE(f.series_title, f.relative_path)) AS path_title, COUNT(*) AS file_count,
                     MAX(f.series_title IS NOT NULL) AS suggested, MAX(f.modified_at) AS latest,
-                    EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = $id AND cover.series_key = f.series_key) AS has_cover
-                FROM library_file f WHERE f.root_id = $id AND ($seriesKey IS NULL OR f.series_key = $seriesKey) GROUP BY f.series_key
+                    EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = $id AND cover.series_key = f.series_key) AS has_cover,
+                    CASE WHEN COUNT(DISTINCT cm.metadata_id) = 1 THEN MIN(cm.metadata_id) END AS linked_metadata
+                FROM library_file f LEFT JOIN content_metadata cm ON cm.content_id = f.content_id
+                WHERE f.root_id = $id AND ($seriesKey IS NULL OR f.series_key = $seriesKey) GROUP BY f.series_key
+            ), folder_series AS (
+                SELECT g.series_key, COALESCE(m.title, g.path_title) AS title, g.path_title, m.alternate_title, g.file_count,
+                    g.suggested AND m.id IS NULL AS suggested, g.latest, g.has_cover, m.id IS NOT NULL AS has_metadata
+                FROM file_groups g LEFT JOIN series_metadata_binding binding ON binding.root_id = $id AND binding.series_key = g.series_key
+                LEFT JOIN series_metadata m ON m.id = COALESCE(binding.metadata_id, g.linked_metadata)
             )
             """;
-        const string filter = " FROM folder_series WHERE ($coverOnly = 0 OR has_cover) AND ($search = '' OR title_contains(title, $search))";
+        const string filter = """
+             FROM folder_series WHERE ($coverOnly = 0 OR has_cover) AND ($search = '' OR title_contains(title, $search)
+                 OR title_contains(path_title, $search) OR title_contains(COALESCE(alternate_title, ''), $search))
+            """;
         command.CommandText = seriesQuery + " SELECT COUNT(*)" + filter;
         command.Parameters.AddWithValue("$id", id);
         command.Parameters.AddWithValue("$seriesKey", (object?)seriesKey ?? DBNull.Value);
@@ -58,7 +66,7 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$coverOnly", coverOnly);
         var total = (long)command.ExecuteScalar()!;
         var order = sort switch { "recent" => "latest DESC, ", "files" => "file_count DESC, ", _ => "" };
-        command.CommandText = seriesQuery + " SELECT series_key, title, file_count, suggested, has_cover" + filter +
+        command.CommandText = seriesQuery + " SELECT series_key, title, file_count, suggested, has_cover, has_metadata" + filter +
             " ORDER BY " + order + "title COLLATE NOCASE, series_key LIMIT $limit OFFSET $offset;";
         command.Parameters.AddWithValue("$limit", limit);
         command.Parameters.AddWithValue("$offset", offset);
@@ -66,9 +74,14 @@ internal sealed partial class LibraryStore
         using var rows = command.ExecuteReader();
         while (rows.Read())
         {
-            items.Add(new(rows.GetString(0), rows.GetString(1), rows.GetInt64(2), rows.GetBoolean(3), rows.GetBoolean(4)));
+            items.Add(new(rows.GetString(0), rows.GetString(1), rows.GetInt64(2), rows.GetBoolean(3), rows.GetBoolean(4), rows.GetBoolean(5)));
         }
 
         return new(total, items);
     }
+
+    private static void RegisterTitleSearch(SqliteConnection database) =>
+        database.CreateFunction<string, string, bool>("title_contains", (title, query) =>
+            CultureInfo.InvariantCulture.CompareInfo.IndexOf(title, query, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) >= 0,
+            isDeterministic: true);
 }

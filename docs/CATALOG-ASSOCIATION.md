@@ -34,6 +34,12 @@ The read-only scanner keeps the original inventory IDs for path rows and assigns
 
 Different hashes with explicit links to the same chapter should appear together in duplicate review. Show covers, file paths, release group, edition, coverage and available page evidence so the owner can compare versions and choose what to keep. Titles and cover similarity are matching evidence. Revalidation, recovery and the managed file policy govern any move or cleanup. [Duplicate review and safety](FILE-ORGANIZATION.md#3-duplicate-manager-ux-and-resolution)
 
+## Metadata and chapter availability
+
+Series details can search AniList by title and apply an owner-selected manga or doujin record. Owners can also enter titles, summaries, publication types and totals directly. Search matches local paths, inferred titles and saved titles and alternates. Metadata lookups are read-only and initiated from the WebUI. [AniList API guide](https://docs.anilist.co/guide/graphql/queries/media)
+
+Visible volume and chapter labels come from explicit filename numbers or owner-confirmed coverage. A volume with unknown coverage has a volume label and no inferred chapter count. The owner can list every verified chapter in a volume file. Availability counts distinct indexed chapter and volume pairs once. A missing publication total stays unknown. Metadata and confirmed coverage follow the verified content ID during a rescan after a move.
+
 ## Cover previews during scans
 
 Series covers first use a valid `cover.png`, `cover.jpg`, `cover.jpeg`, or `cover.webp` in a directory whose indexed files resolve to one series. Try numbered folder variants such as `cover-1.jpg` next. When folder artwork is unavailable, choose the lowest owned release with a usable file cover. Order numerically by volume when supplied and otherwise by chapter. Within a volume, prefer the full volume, then the lowest chapter. Try unnumbered releases in path order after numbered releases. Retain original paths and cover provenance.

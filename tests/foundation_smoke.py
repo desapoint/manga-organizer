@@ -5,6 +5,7 @@ from base64 import b64decode
 from contextlib import closing, contextmanager
 from hashlib import sha256
 from http.cookiejar import CookieJar
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import json
 import os
@@ -14,6 +15,7 @@ import sqlite3
 import struct
 import subprocess
 import tempfile
+import threading
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -81,7 +83,7 @@ class Browser:
 
 
 @contextmanager
-def start_app(executable, data_dir, media, password, *, expect_setup=False):
+def start_app(executable, data_dir, media, password, *, expect_setup=False, metadata_service=None):
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         url = f"http://127.0.0.1:{listener.getsockname()[1]}"
@@ -93,6 +95,8 @@ def start_app(executable, data_dir, media, password, *, expect_setup=False):
     env.pop(BOOTSTRAP_VARIABLE, None)
     if password is not None:
         env[BOOTSTRAP_VARIABLE] = password
+    if metadata_service is not None:
+        env["MANGA_ORGANIZER_METADATA_SERVICE_URL"] = metadata_service
     log_path = data_dir.parent / f"server-{uuid4().hex}.log"
     with log_path.open("wb") as log, subprocess.Popen([executable], env=env, stdout=log, stderr=log) as process:
         try:
@@ -201,11 +205,17 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE content_chapter;
+            DROP TABLE content_metadata;
+            DROP TABLE series_metadata_binding;
+            DROP TABLE series_metadata;
             DROP INDEX library_file_content;
             DROP INDEX library_file_series;
             ALTER TABLE library_file DROP COLUMN content_id;
             ALTER TABLE library_file DROP COLUMN series_key;
             ALTER TABLE library_file DROP COLUMN series_title;
+            ALTER TABLE library_file DROP COLUMN volume_hint;
+            ALTER TABLE library_file DROP COLUMN chapter_hint;
             DROP TABLE library_content;
             ALTER TABLE library_folder RENAME TO current_library_folder;
             CREATE TABLE library_folder (
@@ -285,6 +295,7 @@ def verify_folder_settings(owner, media):
     verify_cover_art(owner, shared["id"], media / "intake")
     verify_lowest_owned_cover(owner, shared["id"], media / "intake")
     verify_live_scan(owner, shared["id"], media / "intake")
+    verify_series_metadata(owner, shared["id"], media / "intake")
     owner.request(f"{LIBRARY_ROOTS}/{archive['id']}", 204, method="DELETE", token=owner.csrf())
     assert (media / "archive" / "Volume.epub").exists()
     assert (media / "intake" / "Unmatched.cbz").exists()
@@ -551,6 +562,82 @@ def verify_live_scan(owner, root_id, path):
     owner.scan(root_id)
 
 
+def verify_series_metadata(owner, root_id, path):
+    (series,) = owner.series(root_id, "?search=A+Story+About+a+Knight")["items"]
+    series_key = series["key"]
+    url = f"{LIBRARY_ROOTS}/{root_id}/series/{series_key}"
+    before = json.loads(owner.request(f"{url}/details", 200))
+    assert before["availableChapters"] == 0 and before["volumes"][0] == "1"
+    edit = {"title": "Knight Stories", "alternateTitle": "Chant des chevaliers", "kind": "doujin", "totalChapters": 10}
+    owner.request(f"{url}/metadata", 400, method="PUT", body=edit)
+    owner.request(f"{url}/metadata", 200, method="PUT", token=owner.csrf(), body=edit)
+    assert owner.series(root_id, "?search=chant")["items"][0]["title"] == "Knight Stories"
+    assert owner.files(root_id, "?search=chant")["total"] == 53
+    assert owner.files(root_id, "?search=v01.cbz")["total"] >= 1
+
+    files = owner.files(root_id, "?" + urlencode({"seriesKey": series_key, "limit": 100}))["items"]
+    (volume,) = [file for file in files if file["volume"] == "1"]
+    coverage = {"contentId": volume["contentId"], "volume": "01", "chapters": ["1", "1.50", "2", "2.0"]}
+    owner.request(f"{url}/coverage", 204, method="PUT", token=owner.csrf(), body=coverage)
+    details = json.loads(owner.request(f"{url}/details", 200))
+    assert details["metadata"]["kind"] == "doujin" and details["metadata"]["totalChapters"] == 10
+    assert details["availableChapters"] == 3 and details["chapters"][1] == {"volume": "1", "chapter": "1.5"}
+
+    original = path / volume["relativePath"]
+    original.rename(path / "Same content without original title.cbz")
+    owner.scan(root_id)
+    after = json.loads(owner.request(f"{url}/details", 200))
+    assert after == details
+
+
+def verify_external_metadata(executable, fixture, media):
+    media_result = {"id": 123, "title": {"english": "Synthetic provider title", "native": "本"},
+                    "description": "Metadata fixture", "status": "FINISHED", "chapters": 12, "volumes": 3,
+                    "tags": [{"name": "Doujinshi"}]}
+
+    class Provider(BaseHTTPRequestHandler):
+        def do_POST(self):
+            request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            variables = request["variables"]
+            if variables == {"title": "Issue 01"}:
+                response = {"data": {"Page": {"media": [media_result]}}}
+            elif variables == {"id": 123}:
+                response = {"data": {"Media": media_result}}
+            else:
+                response = {"errors": [{"message": "Unexpected test query"}]}
+            data = json.dumps(response).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def log_message(self, _format, *_args):
+            pass
+
+    password = uuid4().hex
+    with ThreadingHTTPServer(("127.0.0.1", 0), Provider) as service:
+        server = threading.Thread(target=service.serve_forever, daemon=True)
+        server.start()
+        try:
+            lookup = f"http://127.0.0.1:{service.server_port}/graphql"
+            with start_app(executable, fixture / "metadata-data", media, password, metadata_service=lookup) as address:
+                wait_for_server(address)
+                browser = Browser(address)
+                browser.sign_in(password)
+                root_id = browser.roots()[0]["id"]
+                browser.scan(root_id)
+                (series,) = browser.series(root_id, "?search=Issue+01")["items"]
+                url = f"{LIBRARY_ROOTS}/{root_id}/series/{series['key']}"
+                (result,) = json.loads(browser.request(f"{url}/metadata/search?title=Issue+01", 200))
+                assert result["providerId"] == 123 and result["kind"] == "doujin" and result["totalChapters"] == 12
+                browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 123})
+                assert json.loads(browser.request(f"{url}/details", 200))["metadata"]["providerId"] == 123
+        finally:
+            service.shutdown()
+            server.join(timeout=5)
+
+
 def scan_library(owner, media):
     primary, archive = owner.roots()
     assert primary["state"] == archive["state"] == "idle"
@@ -738,6 +825,7 @@ if __name__ == "__main__":
         if target.app:
             executable = str(target.app.resolve())
             verify_web_setup(executable, Path(fixture), media)
+            verify_external_metadata(executable, Path(fixture), media)
             data_dir = Path(fixture) / "data"
             smoke(lambda password: start_app(executable, data_dir, media, password), media)
         else:
