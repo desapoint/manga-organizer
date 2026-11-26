@@ -207,6 +207,7 @@ def verify_web_setup(executable, fixture, media):
             DROP TABLE schema_migration;
             DROP TABLE edition_volume_release;
             DROP TABLE edition_volume_manifest;
+            DROP TABLE preferred_chapter_release;
             DROP TABLE chapter_completion;
             DROP TABLE inferred_volume_chapters;
             DROP TABLE series_collection_item;
@@ -904,6 +905,14 @@ def verify_volume_chapters(owner, root_id, path):
     assert json.loads(owner.request(f"{group_url}/details", 200))["availableChapters"] == 5
     releases = json.loads(owner.request(f"{group_url}/chapter-releases?volume=2&chapter=3", 200))
     assert {item["contentId"] for item in releases} == {files[range_file.name]["contentId"], files[standalone.name]["contentId"]}
+    preferred_id = files[standalone.name]["contentId"]
+    preference = {"volume": "02", "chapter": "03", "contentId": preferred_id}
+    owner.request(f"{group_url}/chapter-preference", 404, method="PUT", token=owner.csrf(), body=dict(preference, chapter="4"))
+    owner.request(f"{group_url}/chapter-preference", 204, method="PUT", token=owner.csrf(), body=preference)
+    preferred = json.loads(owner.request(f"{group_url}/chapter-releases?volume=2&chapter=3", 200))
+    assert preferred[0]["contentId"] == preferred_id and preferred[0]["preferred"] and not preferred[1]["preferred"]
+    assert json.loads(owner.request(f"{group_url}/details", 200))["chapters"][0]["preferredContentId"] == preferred_id
+    owner.request(f"{group_url}/chapter-preference", 204, method="PUT", token=owner.csrf(), body=dict(preference, contentId=None))
     mark = {"volume": "02", "chapter": "03", "completed": True}
     owner.request(f"{group_url}/chapter-progress", 400, method="PUT", body=mark)
     owner.request(f"{group_url}/chapter-progress", 204, method="PUT", token=owner.csrf(), body=mark)

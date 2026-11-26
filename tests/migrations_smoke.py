@@ -40,6 +40,7 @@ def verify(app, fixture):
         database.execute("ALTER TABLE file_operation DROP COLUMN quarantine_keep_path")
         database.execute("DROP TABLE edition_volume_release")
         database.execute("DROP TABLE edition_volume_manifest")
+        database.execute("DROP TABLE preferred_chapter_release")
         database.execute("DROP TABLE chapter_completion")
         database.execute("DROP TABLE inferred_volume_chapters")
         database.execute("DROP TABLE series_collection_item")

@@ -5,6 +5,8 @@ namespace MangaOrganizer.Server;
 
 internal sealed record ChapterCompletion(string? Volume, string? Chapter, bool Completed);
 
+internal sealed record ChapterPreference(string? Volume, string? Chapter, string? ContentId);
+
 internal static class ChapterEditionEndpoints
 {
     public static void MapChapterEditions(this RouteGroupBuilder library)
@@ -23,6 +25,18 @@ internal static class ChapterEditionEndpoints
             if (!ReaderEndpoints.TryOwner(context, out var owner)) return Results.Unauthorized();
             return store.SaveChapterCompletion(root, seriesKey.ToLowerInvariant(), NormalizeVolume(change.Volume),
                 BookNumbers.Canonical(change.Chapter!), owner, change.Completed) ? Results.NoContent() : Results.NotFound();
+        }).WithMetadata(new RequestSizeLimitAttribute(4096));
+
+        series.MapPut("/chapter-preference", async (Guid root, string seriesKey, ChapterPreference preference, LibraryStore store,
+            HttpContext context, IAntiforgery antiforgery) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context) || !IsChapter(seriesKey, preference.Volume, preference.Chapter)
+                || preference.ContentId is not null && !IsId(preference.ContentId))
+                return Results.BadRequest();
+            if (!ReaderEndpoints.TryOwner(context, out var owner)) return Results.Unauthorized();
+            return store.SavePreferredChapterRelease(root, seriesKey.ToLowerInvariant(), NormalizeVolume(preference.Volume),
+                BookNumbers.Canonical(preference.Chapter!), owner, preference.ContentId?.ToLowerInvariant())
+                ? Results.NoContent() : Results.NotFound();
         }).WithMetadata(new RequestSizeLimitAttribute(4096));
 
         series.MapGet("/edition-volumes", (Guid root, string seriesKey, LibraryStore store) =>
