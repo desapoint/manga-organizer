@@ -558,7 +558,8 @@ def verify_external_metadata(executable, fixture, media):
 def verify_reader(owner, peer, root_id, path):
     series = owner.series(root_id, "?search=eclipse")["items"][0]
     details = f"{LIBRARY_ROOTS}/{root_id}/series/{series['key']}"
-    (archive,) = owner.files(root_id, "?" + urlencode({"seriesKey": series["key"]}))["items"]
+    (archive,) = [file for file in owner.files(root_id, "?" + urlencode({"seriesKey": series["key"]}))["items"]
+                  if file["relativePath"] == "Éclipse/Éclipse v01.cbz"]
     identity = archive["contentId"]
     book_url = f"/api/reader/{identity}"
     Browser(owner.url).request(book_url, 401)
@@ -566,7 +567,7 @@ def verify_reader(owner, peer, root_id, path):
     book = json.loads(owner.request(book_url, 200))
     assert book["pageCount"] == 2 and book["progress"]["revision"] == 0
     assert owner.request(f"{book_url}/pages/0", 200) == synthetic_png(32, 160, 122)
-    assert owner.request(f"{book_url}/pages/1", 200) == synthetic_png(221, 42, 70)
+    assert owner.request(f"{book_url}/pages/1", 200) == synthetic_png(221, 42, 70, 26, 39)
     owner.request(f"{book_url}/pages/2", 404)
     owner.request("/api/reader/resume", 204)
 
@@ -592,6 +593,8 @@ def verify_reader(owner, peer, root_id, path):
     owner.request("/api/reader/resume", 204)
 
     source = path / archive["relativePath"]
+    # The artwork test uses an exact copy. Leave one location for the replacement test.
+    source.with_name("Éclipse v04.cbz").unlink()
     moved = source.with_name("Relocated volume.cbz")
     source.rename(moved)
     owner.scan(root_id)
