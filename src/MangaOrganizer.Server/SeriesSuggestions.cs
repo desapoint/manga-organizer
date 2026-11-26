@@ -7,6 +7,7 @@ namespace MangaOrganizer.Server;
 internal static partial class SeriesSuggestions
 {
     private const RegexOptions MatchOptions = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
+    private const string MarkedNumber = @"(?:volume|vol|v|tome|chapter|chap|ch|c)[\s._-]*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?";
     private static readonly HashSet<string> GenericFolders = new(StringComparer.Ordinal)
     {
         "archive", "books", "chapters", "comics", "downloads", "import", "imports", "incoming",
@@ -64,11 +65,13 @@ internal static partial class SeriesSuggestions
         return normalized.Length == 0 || GenericFolders.Contains(normalized) || NumberOnly().IsMatch(title) ? null : title;
     }
 
-    private static string Clean(string title) => ReleasePrefix().Replace(TrailingTags().Replace(title.Trim(), ""), "").Trim();
+    private static string TrimReleaseTags(string title) => TrailingTags().Replace(title.Trim(), "").Trim();
 
     private static string ParseTitle(string name)
     {
-        var title = name.Trim();
+        var title = ReleasePrefix().Replace(name.Trim(), "");
+        if (NumberedSubtitle().IsMatch(title)) return "";
+
         var annotations = ReleaseAnnotations().Match(title);
         if (annotations.Success)
         {
@@ -77,7 +80,7 @@ internal static partial class SeriesSuggestions
             var hasYear = tags.Any(tag => ReleaseYear().IsMatch(tag.Value));
             if (hasReleaseTag || (hasYear && tags.Count == 1))
             {
-                var stem = Clean(title[..annotations.Index]);
+                var stem = TrimReleaseTags(title[..annotations.Index]);
                 var explicitTitle = RemoveNumberSuffix(stem);
                 if (explicitTitle.Length != stem.Length)
                 {
@@ -92,7 +95,7 @@ internal static partial class SeriesSuggestions
             }
         }
 
-        return RemoveNumberSuffix(Clean(title));
+        return RemoveNumberSuffix(TrimReleaseTags(title));
     }
 
     private static string RemoveNumberSuffix(string title)
@@ -108,8 +111,11 @@ internal static partial class SeriesSuggestions
     private static string Normalize(string title) => WordSeparator().Replace(title.Normalize(NormalizationForm.FormKC), " ")
         .Trim().ToLowerInvariant();
 
-    [GeneratedRegex(@"(?:^|[\s._-]+)(?:volume|vol|v|tome|chapter|chap|ch|c)[\s._-]*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?$", MatchOptions)]
+    [GeneratedRegex(@"(?:^|[\s._-]+)" + MarkedNumber + "$", MatchOptions)]
     private static partial Regex ChapterOrVolumeSuffix();
+
+    [GeneratedRegex("^" + MarkedNumber + @"(?:[\s._-]+" + MarkedNumber + @")*\s+[-–—]\s+\S", MatchOptions)]
+    private static partial Regex NumberedSubtitle();
 
     [GeneratedRegex(@"(?:\s*(?:\((?<tag>[^()\[\]]+)\)|\[(?<tag>[^()\[\]]+)\]))+$", MatchOptions)]
     private static partial Regex ReleaseAnnotations();
