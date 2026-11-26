@@ -21,6 +21,15 @@
   --color-violet: #bda5fa;
   --color-mint: #96e2c5;
   --color-coral: #ffa5a2;
+  --color-coverage-single: #96e2c5;
+  --color-coverage-bundle-1: #ae99f5;
+  --color-coverage-bundle-2: #efc567;
+  --color-coverage-bundle-3: #65c2ed;
+  --color-coverage-bundle-4: #f584ba;
+  --color-coverage-bundle-5: #a8d367;
+  --color-coverage-bundle-6: #f28d59;
+  --color-coverage-bundle-7: #496cf8;
+  --color-coverage-bundle-8: #dc6263;
   --color-accent: var(--color-violet);
   --color-accent-hover: color-mix(in srgb, var(--color-accent), white 20%);
   --color-accent-readable: var(--color-accent);
@@ -96,6 +105,19 @@
 }
 
 @layer components {
+  .coverage-mark {
+    background-color: var(--coverage-color);
+  }
+
+  .coverage-mark[data-variant='band'] {
+    background-color: color-mix(in srgb, var(--coverage-color) 46%, transparent);
+  }
+
+  .coverage-mark[data-pattern='striped'] {
+    background-image: repeating-linear-gradient(135deg, transparent 0 2px,
+      color-mix(in srgb, var(--color-canvas) 65%, transparent) 2px 4px);
+  }
+
   .reader-shell {
     color-scheme: dark;
     --color-ink: var(--color-reader-ink);

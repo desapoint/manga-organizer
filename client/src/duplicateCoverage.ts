@@ -48,11 +48,34 @@ export function chapterCoverage(files: CoverageFile[], expected: Chapter[]): Cov
 
 export function fileColors(files: CoverageFile[]) {
   const colors = new Map<string, string>();
-  let index = 0;
+  const usedByChapter = new Map<string, Set<number>>();
+  const paletteSize = 8;
+  let next = 0;
   for (const file of files) {
-    if (!isBundle(file)) { colors.set(file.fileId, 'var(--color-mint)'); continue; }
-    const hue = (295 + index++ * 137.508) % 300;
-    colors.set(file.fileId, `oklch(78% 0.14 ${hue >= 135 ? hue + 60 : hue})`);
+    if (!isBundle(file)) {
+      colors.set(file.fileId, file.chapters.length === 1 ? 'var(--color-coverage-single)' : 'var(--color-muted)');
+      continue;
+    }
+    const chapters = file.chapters.map(chapterKey);
+    const used = new Set(chapters.flatMap(key => [...(usedByChapter.get(key) ?? [])]));
+    let index = Array.from({ length: paletteSize }, (_, offset) => (next + offset) % paletteSize)
+      .find(candidate => !used.has(candidate));
+    if (index === undefined) {
+      index = paletteSize;
+      while (used.has(index)) index++;
+    }
+    if (index < paletteSize) {
+      colors.set(file.fileId, `var(--color-coverage-bundle-${index + 1})`);
+      next = (index + 1) % paletteSize;
+    } else {
+      const hue = ((index - paletteSize) * 137.508) % 360;
+      colors.set(file.fileId, `oklch(${index % 2 ? 86 : 64}% 0.16 ${hue})`);
+    }
+    for (const key of chapters) {
+      const prior = usedByChapter.get(key);
+      if (prior) prior.add(index);
+      else usedByChapter.set(key, new Set([index]));
+    }
   }
   return colors;
 }

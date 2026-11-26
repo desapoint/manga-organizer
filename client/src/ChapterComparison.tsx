@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { CoverageMark } from './CoverageMark';
 import { coverageLabels, fileKind, fileName } from './duplicateCoverage';
 import type { CoverageChapter } from './duplicateCoverage';
 
@@ -47,9 +48,8 @@ export function ChapterComparison({ chapters, colors, selected, highlighted, onS
             ${state === 'missing' ? 'bg-danger/10' : 'bg-elevated'}
             ${current ? 'border-accent-readable ring-1 ring-accent-readable' : tooltip ? 'border-control' : 'border-line'}`}>
           <span aria-hidden="true" className="absolute inset-0 flex flex-col">
-            {files.map(file => <span key={file.fileId} data-file={file.fileId}
-              style={{ backgroundColor: `color-mix(in srgb, ${colors.get(file.fileId)} 34%, transparent)` }}
-              className={`min-h-0 flex-1 motion-safe:transition-opacity ${highlighted && highlighted !== file.fileId ? 'opacity-20' : ''}`} />)}
+            {files.map(file => <CoverageMark key={file.fileId} file={file} color={colors.get(file.fileId)} variant="band"
+              dimmed={Boolean(highlighted) && highlighted !== file.fileId} />)}
           </span>
           <span aria-hidden="true" className="absolute inset-0 grid place-items-center px-0.5 text-xs leading-none font-semibold tabular-nums wrap-anywhere">{chapter}</span>
         </button>
@@ -57,7 +57,7 @@ export function ChapterComparison({ chapters, colors, selected, highlighted, onS
           className="pointer-events-none absolute z-20 grid max-h-40 gap-1.5 overflow-hidden rounded-lg border border-control bg-elevated p-2.5 text-xs shadow-lg">
           <strong>Chapter {chapter}{volume && ` · Vol. ${volume}`}</strong>
           {files.slice(0, 3).map(file => <div key={file.fileId} className="flex min-w-0 items-start gap-2">
-            <span aria-hidden="true" style={{ backgroundColor: colors.get(file.fileId) }} className="mt-1 size-2 shrink-0 rounded-xs" />
+            <CoverageMark file={file} color={colors.get(file.fileId)} />
             <div className="min-w-0"><div className="truncate">{fileName(file)}</div><div className="text-muted">{fileKind(file)}</div></div>
           </div>)}
           {files.length > 3 && <span className="text-muted">{files.length - 3} more files · Select chapter to see all</span>}
