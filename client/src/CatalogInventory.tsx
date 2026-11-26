@@ -1,8 +1,8 @@
-import { BookOpen, ChevronRight, Library, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { ROOTS_URL } from './library';
+import { ArrowLeft, BookOpen, ChevronRight, Library, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ROOTS_URL, seriesHref } from './library';
 import { Select } from './Select';
-import { Button, SearchField, SectionHeader, SegmentedControl } from './ui';
+import { ActionLink, Button, PageHeader, SearchField, SectionHeader, SegmentedControl } from './ui';
 
 const PAGE_SIZE = 50;
 
@@ -15,6 +15,7 @@ type CatalogEntry = {
   sha256: string | null;
   indexedLocations: number | null;
   hasCover: boolean;
+  seriesCoverKey: string | null;
 };
 
 type Series = { key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean };
@@ -98,10 +99,13 @@ function formatSize(bytes: number) {
 function FileRow({ file, rootId, version, onInspect }: Pick<InventoryProps, 'rootId' | 'version'> & { file: CatalogEntry; onInspect?: Inspect }) {
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
+  const art = file.hasCover ? coverUrl(rootId, 'files', file.id, version) :
+    file.seriesCoverKey ? coverUrl(rootId, 'series', file.seriesCoverKey, version) : undefined;
   return (
     <li>
       <span className="flex min-w-0 items-center gap-3">
-        {file.hasCover && <CoverImage url={coverUrl(rootId, 'files', file.id, version)} className="h-12 w-8 shrink-0 rounded-sm" />}
+        <CoverImage url={art} title={file.hasCover ? 'File cover' : file.seriesCoverKey ? 'Series cover' : 'No cover'}
+          className="h-12 w-8 shrink-0 rounded-sm" />
         <span className="file-path" title={file.relativePath}>
           {onInspect ? <button type="button" className="min-h-11 cursor-pointer rounded-sm border-0 bg-transparent p-0 text-start
             text-inherit wrap-anywhere hover:text-accent-readable hover:underline desktop:min-h-0"
@@ -150,10 +154,10 @@ function coverUrl(rootId: string, collection: 'series' | 'files', id: string, re
   return `${ROOTS_URL}/${rootId}/${collection}/${id}/cover?revision=${encodeURIComponent(revision)}`;
 }
 
-function CoverImage({ url, className }: { url?: string; className?: string }) {
+function CoverImage({ url, className, title }: { url?: string; className?: string; title?: string }) {
   const [failed, setFailed] = useState('');
   return (
-    <span className={`grid place-items-center overflow-hidden bg-nav-active text-nav-icon ${className ?? ''}`}>
+    <span title={title} className={`grid place-items-center overflow-hidden bg-nav-active text-nav-icon ${className ?? ''}`}>
       {url && failed !== url ? <img src={url} alt="" loading="lazy" decoding="async" onError={() => setFailed(url)}
         className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.025] motion-reduce:transform-none" /> :
         <BookOpen className="size-6" aria-hidden="true" />}
@@ -163,69 +167,71 @@ function CoverImage({ url, className }: { url?: string; className?: string }) {
 
 function SeriesRow({ series, onInspect, coverVersion, ...inventory }: InventoryProps & { series: Series; onInspect?: Inspect; coverVersion: string }) {
   const [open, setOpen] = useState(false);
+  const rowClass = 'grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl p-3 hover:bg-nav-hover sm:gap-3 sm:px-4';
+  const contents = <>
+    {series.hasCover ? <CoverImage url={coverUrl(inventory.rootId, 'series', series.key, coverVersion)} className="h-14 w-10 rounded-md" /> :
+      <span className="grid size-8 place-items-center rounded-lg bg-nav-active text-nav-icon"><Library className="size-4" aria-hidden="true" /></span>}
+    <span className="wrap-anywhere">
+      <span className="block font-semibold">{series.title}</span>
+      <span className="block text-sm text-muted">{series.fileCount.toLocaleString()} {series.fileCount === 1 ? 'file' : 'files'}</span>
+    </span>
+    <ChevronRight className="size-4 text-muted group-open:rotate-90" aria-hidden="true" />
+  </>;
 
   return (
     <li className="surface">
-      <details className="group" onToggle={event => {
+      {onInspect ? <details className="group" onToggle={event => {
         const expanded = event.currentTarget.open;
         setOpen(expanded);
-        if (expanded) onInspect?.({ kind: 'series', series });
+        if (expanded) onInspect({ kind: 'series', series });
       }}>
-        <summary className="grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl p-3
-          hover:bg-nav-hover sm:gap-3 sm:px-4 [&::-webkit-details-marker]:hidden">
-          {series.hasCover ? <CoverImage url={coverUrl(inventory.rootId, 'series', series.key, coverVersion)} className="h-14 w-10 rounded-md" /> :
-            <span className="grid size-8 place-items-center rounded-lg bg-nav-active text-nav-icon"><Library className="size-4" aria-hidden="true" /></span>}
-          <span className="wrap-anywhere">
-            <span className="block font-semibold">{series.title}</span>
-            <span className="block text-sm text-muted">{series.fileCount.toLocaleString()} {series.fileCount === 1 ? 'file' : 'files'}</span>
-          </span>
-          <ChevronRight className="size-4 text-muted group-open:rotate-90" aria-hidden="true" />
-        </summary>
+        <summary className={`${rowClass} [&::-webkit-details-marker]:hidden`}>{contents}</summary>
         {open && <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} />}
-      </details>
+      </details> : <a className={`${rowClass} text-ink no-underline`} href={seriesHref(inventory.rootId, series.key)}>{contents}</a>}
     </li>
   );
 }
 
-function CoverGrid({ series, coverVersion, ...inventory }: InventoryProps & { series: Series[]; coverVersion: string }) {
-  const [selectedKey, setSelectedKey] = useState('');
-  const selected = series.find(item => item.key === selectedKey);
-  const detail = useRef<HTMLElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (selectedKey) detail.current?.focus();
-  }, [selectedKey]);
-
+function CoverGrid({ series, rootId, coverVersion }: { series: Series[]; rootId: string; coverVersion: string }) {
   return (
-    <>
-      <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(100%,8rem),1fr))] gap-4 p-0 sm:gap-5" role="list" aria-label="Series covers">
-        {series.map(item => (
-          <li key={item.key} className="min-w-0">
-            <button type="button" aria-expanded={selectedKey === item.key} aria-controls="cover-files"
-              className="group grid w-full cursor-pointer gap-2 rounded-xl border border-transparent bg-transparent p-1 text-start text-ink
-                hover:bg-panel aria-expanded:border-nav-line aria-expanded:bg-panel" onClick={event => {
-                trigger.current = event.currentTarget;
-                setSelectedKey(selectedKey === item.key ? '' : item.key);
-              }}>
-              <CoverImage url={item.hasCover ? coverUrl(inventory.rootId, 'series', item.key, coverVersion) : undefined}
-                className="aspect-[2/3] rounded-lg" />
-              <span className="line-clamp-2 min-h-10 px-1 text-sm font-semibold wrap-anywhere" title={item.title}>{item.title}</span>
-              <span className="px-1 pb-1 text-xs text-muted">{item.fileCount.toLocaleString()} {item.fileCount === 1 ? 'file' : 'files'}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div id="cover-files">
-        {selected && <section ref={detail} tabIndex={-1} className="grid scroll-mt-4 gap-3 rounded-xl" aria-labelledby="cover-files-heading">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <SectionHeader id="cover-files-heading" title={selected.title} />
-            <Button variant="secondary" onClick={() => { setSelectedKey(''); trigger.current?.focus(); }}>Back to covers</Button>
-          </div>
-          <FileInventory key={selected.key} {...inventory} seriesKey={selected.key} />
-        </section>}
+    <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(100%,8rem),1fr))] gap-4 p-0 sm:gap-5" role="list" aria-label="Series covers">
+      {series.map(item => (
+        <li key={item.key} className="min-w-0">
+          <a href={seriesHref(rootId, item.key)} className="group grid gap-2 rounded-xl border border-transparent p-1 text-start text-ink no-underline hover:bg-panel">
+            <CoverImage url={item.hasCover ? coverUrl(rootId, 'series', item.key, coverVersion) : undefined}
+              className="aspect-[2/3] rounded-lg" />
+            <span className="line-clamp-2 min-h-10 px-1 text-sm font-semibold wrap-anywhere" title={item.title}>{item.title}</span>
+            <span className="px-1 pb-1 text-xs text-muted">{item.fileCount.toLocaleString()} {item.fileCount === 1 ? 'file' : 'files'}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function SeriesPage({ seriesKey, coverVersion, ...inventory }: InventoryProps & { seriesKey: string; coverVersion: string }) {
+  const { rootId, version, onSignedOut } = inventory;
+  const { page, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut, { seriesKey });
+  const series = page?.items[0];
+  return (
+    <section className="workspace-page" aria-labelledby="series-heading">
+      <ActionLink href="#library" variant="ghost" icon={ArrowLeft} className="justify-self-start">Back to library</ActionLink>
+      <div className="flex min-w-0 flex-wrap items-end gap-4 sm:gap-6">
+        {series?.hasCover && <CoverImage url={coverUrl(rootId, 'series', seriesKey, coverVersion)}
+          className="aspect-[2/3] w-24 shrink-0 rounded-xl sm:w-36" />}
+        <div className="min-w-0 flex-1">
+          <PageHeader id="series-heading" section="Library" title={series?.title ?? 'Series'} />
+          {series && <p className="text-sm text-muted">{series.fileCount.toLocaleString()} {series.fileCount === 1 ? 'file' : 'files'}</p>}
+        </div>
       </div>
-    </>
+      {error && <InventoryError retry={retry}>Could not load this series.</InventoryError>}
+      {!error && !page && <p role="status">Loading series…</p>}
+      {page && !series && <p>This series is no longer in the selected library folder.</p>}
+      {series && <section className="grid gap-3" aria-labelledby="series-files-heading">
+        <SectionHeader id="series-files-heading" title="Files" />
+        <FileInventory {...inventory} seriesKey={seriesKey} />
+      </section>}
+    </section>
   );
 }
 
@@ -243,7 +249,7 @@ function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, se
       {page?.total === 0 && (search || coverOnly ? <p>No series match these filters.</p> : scanComplete && <p>No supported files found.</p>)}
       {page && page.total > 0 && (
         <>
-          {coverGrid ? <CoverGrid series={page.items} coverVersion={coverVersion} {...inventory} /> : (
+          {coverGrid ? <CoverGrid series={page.items} rootId={rootId} coverVersion={coverVersion} /> : (
             <ul className="m-0 grid list-none gap-2 p-0" role="list" aria-label="Series groups">
               {page.items.map(series => <SeriesRow key={series.key} series={series} onInspect={onInspect} coverVersion={coverVersion} {...inventory} />)}
             </ul>

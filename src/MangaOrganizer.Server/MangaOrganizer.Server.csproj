@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.15" />
+    <PackageReference Include="SharpCompress" Version="1.0.0" />
     <PackageReference Include="SkiaSharp" Version="4.157.0" GeneratePathProperty="true" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.157.0" GeneratePathProperty="true" />
     <Content Include="$(PkgSkiaSharp)/LICENSE.txt" Link="licenses/SkiaSharp-LICENSE.txt"

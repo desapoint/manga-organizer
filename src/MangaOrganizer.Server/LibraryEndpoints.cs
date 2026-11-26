@@ -44,15 +44,16 @@ internal static class LibraryEndpoints
             return Results.Ok(store.ReadFiles(id, offset ?? 0, limit ?? 50, seriesKey?.ToLowerInvariant()));
         });
 
-        library.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, string? search, string? sort, bool? coverOnly, LibraryStore store) =>
+        library.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, string? search, string? sort, bool? coverOnly, string? seriesKey, LibraryStore store) =>
         {
             if (!store.TryGetRoot(id, out _))
             {
                 return Results.NotFound();
             }
 
-            return IsValidPage(offset, limit) && search is not { Length: > 160 } && sort is null or "title" or "recent" or "files"
-                ? Results.Ok(store.ReadSeries(id, offset ?? 0, limit ?? 50, search?.Trim() ?? "", sort, coverOnly == true))
+            return IsValidPage(offset, limit) && search is not { Length: > 160 } && sort is null or "title" or "recent" or "files" &&
+                (seriesKey is null || IsSeriesKey(seriesKey))
+                ? Results.Ok(store.ReadSeries(id, offset ?? 0, limit ?? 50, search?.Trim() ?? "", sort, coverOnly == true, seriesKey?.ToLowerInvariant()))
                 : Results.BadRequest();
         });
 
