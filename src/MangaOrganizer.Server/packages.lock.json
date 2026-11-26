@@ -13,6 +13,12 @@
           "SQLitePCLRaw.core": "2.1.13"
         }
       },
+      "SharpCompress": {
+        "type": "Direct",
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "bdBq9V2epw7KBX3TeA+lxnKU8dD61tsqVuyuo5cAXj4d+9+fcIQObTr0705oTWnPDRhjRx3TpgOFbYYAMObpaw=="
+      },
       "SkiaSharp": {
         "type": "Direct",
         "requested": "[4.157.0, )",

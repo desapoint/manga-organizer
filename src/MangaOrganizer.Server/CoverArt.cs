@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Xml;
 using System.Xml.Linq;
@@ -81,7 +80,7 @@ internal static class CoverArt
 
             var pages = ArchivePages.Entries(archive).ToArray();
             var designated = ComicInfoCover(archive);
-            var candidates = new List<ZipArchiveEntry>();
+            var candidates = new List<ComicEntry>();
             if (designated is >= 0 && designated < pages.Length) candidates.Add(pages[designated.Value]);
             candidates.AddRange(pages.Where(IsNamedCover));
             candidates.AddRange(pages.Take(24));
@@ -98,10 +97,10 @@ internal static class CoverArt
         });
     }
 
-    private static bool IsNamedCover(ZipArchiveEntry entry) =>
+    private static bool IsNamedCover(ComicEntry entry) =>
         Path.GetFileNameWithoutExtension(entry.Name).ToLowerInvariant() is "cover" or "front-cover" or "front_cover" or "front cover" or "frontcover";
 
-    private static int? ComicInfoCover(ZipArchive archive)
+    private static int? ComicInfoCover(ComicArchive archive)
     {
         const int maxMetadataBytes = 256 * 1024;
         var metadata = archive.Entries.Where(entry => entry.Name.Equals("ComicInfo.xml", StringComparison.OrdinalIgnoreCase))
@@ -125,7 +124,7 @@ internal static class CoverArt
             return int.TryParse((string?)cover?.Attribute("Image"), NumberStyles.None, CultureInfo.InvariantCulture, out var index)
                 ? index : null;
         }
-        catch (Exception error) when (error is XmlException or IOException or InvalidDataException or NotSupportedException)
+        catch (Exception error) when (error is XmlException || ArchivePages.IsUnreadable(error))
         {
             return null;
         }
@@ -155,7 +154,7 @@ internal static class CoverArt
         {
             return MediaFiles.Read(file, size, modifiedAt, read);
         }
-        catch (Exception error) when (error is InvalidDataException or NotSupportedException)
+        catch (Exception error) when (ArchivePages.IsUnreadable(error))
         {
             return null;
         }
