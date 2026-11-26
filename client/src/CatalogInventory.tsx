@@ -299,11 +299,11 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
       {page && !series && <p>This series is no longer in the selected library folder.</p>}
       {moved && <p role="status" className="m-0 text-sm text-positive">File change completed. See File operation history in Settings for recovery.</p>}
       {series && detailsError && <p role="alert" className="m-0 text-danger">{detailsError}</p>}
-      {series && details && <section aria-label="Reading and collection progress" className="surface grid gap-4 p-4 sm:grid-cols-2">
+      {series && details && view !== 'duplicates' && <section aria-label="Reading and collection progress" className="surface grid gap-4 p-4 sm:grid-cols-2">
         <ChapterTotal label="Read chapters · owned" value={details.readChapters} total={details.availableChapters} />
         <ChapterTotal label="Owned chapters · released" value={details.availableChapters} total={metadata?.totalChapters ?? null} />
       </section>}
-      {series && <EditionCoverage {...seriesTools} volume={details?.volumes.length === 1 ? details.volumes[0] : undefined}
+      {series && view !== 'duplicates' && <EditionCoverage {...seriesTools} volume={details?.volumes.length === 1 ? details.volumes[0] : undefined}
         onBrowse={number => { setVolume(number); setView('chapters'); }} />}
       {series && <section className="grid min-w-0 gap-3" aria-label="Series inventory">
         <SegmentedControl label="Series views" options={seriesViews} value={view} onChange={value => { setVolume(null); setView(value); }} />
