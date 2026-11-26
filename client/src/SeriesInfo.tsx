@@ -144,10 +144,10 @@ export function useSeriesDetails({ rootId, seriesKey, version, onSignedOut }: Om
 
 type EditorProps = Omit<SeriesContext, 'version'> & { metadata: Metadata | null; onChange: () => void };
 
-export function MetadataDialogAction(props: EditorProps) {
+export function MetadataDialogAction({ actionLabel = 'Manage metadata', ...props }: EditorProps & { actionLabel?: string }) {
   const [open, setOpen] = useState(false);
   return <>
-    <Button variant="secondary" className="justify-self-start" onClick={() => setOpen(true)}>Manage metadata</Button>
+    <Button variant="secondary" className="justify-self-start" onClick={() => setOpen(true)}>{actionLabel}</Button>
     {open && <Modal title="Manage series metadata" wide onClose={() => setOpen(false)}>
       <MetadataEditor {...props} />
     </Modal>}

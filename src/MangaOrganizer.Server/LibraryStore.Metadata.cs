@@ -160,6 +160,13 @@ internal sealed partial class LibraryStore
         using var command = GroupCommand(database, transaction, root, seriesKey);
         if (!GroupExists(command)) return null;
 
+        var saved = WriteMetadata(command, metadata);
+        transaction.Commit();
+        return saved;
+    }
+
+    private static SeriesMetadata WriteMetadata(SqliteCommand command, SeriesMetadata metadata)
+    {
         if (metadata.ProviderId is null && ReadMetadata(command) is { ProviderId: not null } existing)
         {
             metadata = metadata with { ProviderId = existing.ProviderId, ProviderDetails = existing.ProviderDetails };
@@ -195,7 +202,6 @@ internal sealed partial class LibraryStore
             ON CONFLICT(content_id) DO UPDATE SET metadata_id = excluded.metadata_id;
             """;
         command.ExecuteNonQuery();
-        transaction.Commit();
         return metadata;
     }
 

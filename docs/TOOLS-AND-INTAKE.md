@@ -20,6 +20,8 @@ The Associations and Metadata queue prepares AniList candidates using the indexe
 
 On successful scan publication, enqueue one initial lookup for each newly discovered, unresolved series. Compare the new published series against the previous inventory and retain an attempted-lookup record so repeat scans, worker restarts and reappearing known series do not look new. Reuse saved results across requests for the same normalized title. Imports use the same bounded queue. Failed, interrupted and unavailable scans do not enqueue suggestions.
 
+Series already in the inventory when this feature is installed can be selected through **Rescan this page**. The background lookup uses the series name and compares AniList titles and aliases for exact normalized matches. Several plausible results are available in **Review matches**, and every unresolved row supports manual assignment.
+
 A single bounded worker drains the queue independently of scanning, saves ranked suggestions locally and backs off using provider rate-limit responses. Paginate the local queue before displaying suggestions. Opening, refreshing and paging through the module only reads saved data. **Rescan this page** adds only the visible series to the lookup queue, and coalesces requests for work already queued. Keep prior suggestions usable during refresh, and report queued, no-match and retry states. Manual search still requests candidates for the series the user selected. Revalidate the current series before applying confirmation so an older queue row cannot overwrite a more recent assignment.
 
 ## Duplicate and version workbench

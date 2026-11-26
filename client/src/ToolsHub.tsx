@@ -1,9 +1,10 @@
-import { ArrowLeft, ChevronRight, Files, ScanSearch } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Files, NotebookPen, ScanSearch } from 'lucide-react';
 import { useState } from 'react';
 import { PageControls, useInventoryPage } from './CatalogInventory';
 import { DuplicateReview } from './DuplicateReview';
 import { duplicateToolsHref, ROOTS_URL, seriesHref } from './library';
 import type { LibraryRoot, SeriesLocation, toolsLocation } from './library';
+import { MetadataQueue } from './MetadataQueue';
 import { Select } from './Select';
 import { ActionLink, Button, PageHeader, SearchField, SectionHeader, SegmentedControl } from './ui';
 
@@ -32,11 +33,14 @@ export function ToolsHub({ route, roots, version, onSignedOut, onChanged }: Inve
   if (kind !== 'all') query.kind = kind;
   if (root) query.root = root;
   return <section className="workspace-page" aria-labelledby="tools-heading">
-    {route.module === 'duplicates' && <ActionLink variant="ghost" icon={ArrowLeft}
+    {route.module !== 'home' && <ActionLink variant="ghost" icon={ArrowLeft}
       href={series ? duplicateToolsHref() : '#tools'} className="justify-self-start">{series ? 'Back to duplicates' : 'Back to Tools'}</ActionLink>}
     <PageHeader id="tools-heading" section={route.module === 'home' ? 'Management' : 'Tools'}
-      title={route.module === 'home' ? 'Tools' : 'Duplicates'} />
-    {route.module === 'home' ? <ActionLink variant="secondary" icon={Files} href={duplicateToolsHref()} className="justify-self-start">Duplicates</ActionLink> :
+      title={route.module === 'home' ? 'Tools' : route.module === 'metadata' ? 'Associations and metadata' : 'Duplicates'} />
+    {route.module === 'home' ? <div className="action-row">
+      <ActionLink variant="secondary" icon={Files} href={duplicateToolsHref()}>Duplicates</ActionLink>
+      <ActionLink variant="secondary" icon={NotebookPen} href="#tools/metadata">Associations and metadata</ActionLink>
+    </div> : route.module === 'metadata' ? <MetadataQueue roots={roots} version={version} onSignedOut={onSignedOut} /> :
       series ? <DuplicateWorkbench key={series.rootId + series.seriesKey} series={series} fileId={route.fileId} kind={query.kind} version={version}
         onSignedOut={onSignedOut} onChanged={onChanged} /> :
         <>

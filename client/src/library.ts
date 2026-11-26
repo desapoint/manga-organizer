@@ -80,6 +80,7 @@ export function duplicateToolsHref(location?: SeriesLocation, fileId?: string) {
 
 export function toolsLocation(hash: string) {
   if (hash === '#tools') return { module: 'home' as const };
+  if (hash === '#tools/metadata') return { module: 'metadata' as const };
   const match = /^#tools\/duplicates(?:\/([a-f0-9-]{36})\/([a-f0-9]{64})(?:\/([a-f0-9]{32}))?)?$/i.exec(hash);
   if (!match) return null;
   const [, rootId, seriesKey, fileId] = match;

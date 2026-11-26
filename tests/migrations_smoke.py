@@ -58,6 +58,8 @@ def verify(app, fixture, previous_app=None):
     with closing(sqlite3.connect(fresh / "organizer.sqlite")) as database:
         assert database.execute("PRAGMA journal_mode = WAL").fetchone() == ("wal",)
         database.execute("PRAGMA wal_autocheckpoint = 0")
+        database.execute("DROP INDEX library_file_series_lookup")
+        database.execute("DROP TABLE metadata_suggestion")
         database.execute("ALTER TABLE file_operation DROP COLUMN quarantine_keep_file")
         database.execute("ALTER TABLE file_operation DROP COLUMN quarantine_keep_path")
         database.execute("DROP TABLE edition_volume_release")

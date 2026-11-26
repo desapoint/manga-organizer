@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace MangaOrganizer.Server;
@@ -10,6 +11,11 @@ internal sealed record MetadataMatch(int ProviderId, string Title, string? Alter
     string? Summary, string? Status, int? TotalChapters, int? TotalVolumes, AniListDetails ProviderDetails)
 {
     public string ProviderUrl => MetadataAgent.ListingUrl(ProviderId);
+    [JsonIgnore]
+    public IReadOnlyList<string> LookupTitles { get; init; } = [];
+
+    internal SeriesMetadata ToMetadata(string? kind = null) => new(Title, kind ?? Kind, AlternateTitle, Summary,
+        Status, TotalChapters, TotalVolumes, ProviderId, ProviderDetails);
 }
 
 internal sealed record AniListDetails(string? CoverUrl, string? Format, string? CountryOfOrigin, int? StartYear, int? EndYear,
@@ -17,18 +23,22 @@ internal sealed record AniListDetails(string? CoverUrl, string? Format, string? 
 internal sealed record AniListTag(string Name, bool Spoiler);
 internal sealed record AniListCredit(string Name, string? Role);
 
-internal sealed class MetadataLookupException(string message) : Exception(message);
+internal sealed class MetadataLookupException(string message, DateTimeOffset? retryAt = null) : Exception(message)
+{
+    public DateTimeOffset? RetryAt => retryAt;
+}
 
 internal sealed partial class MetadataAgent : IDisposable
 {
     private const string MediaFields = """
-        id title { english romaji native } description(asHtml:false) status chapters volumes
+        id title { english romaji native } synonyms description(asHtml:false) status chapters volumes
         coverImage { medium large } format countryOfOrigin startDate { year } endDate { year }
         genres tags { name isMediaSpoiler isGeneralSpoiler }
         staff(page:1,perPage:12) { edges { role node { name { full } } } }
         """;
     private readonly HttpClient client;
     private readonly Uri endpoint;
+    private long rateLimitUntil;
 
     public MetadataAgent(string? localEndpoint)
     {
@@ -71,6 +81,9 @@ internal sealed partial class MetadataAgent : IDisposable
 
     private async Task<MetadataData?> Request(string query, object variables, CancellationToken cancellationToken)
     {
+        var blockedUntil = new DateTimeOffset(Interlocked.Read(ref rateLimitUntil), TimeSpan.Zero);
+        if (blockedUntil > DateTimeOffset.UtcNow)
+            throw RateLimited(blockedUntil);
         try
         {
             using var content = new ByteArrayContent(JsonSerializer.SerializeToUtf8Bytes(new { query, variables }));
@@ -78,7 +91,12 @@ internal sealed partial class MetadataAgent : IDisposable
             using var response = await client.PostAsync(endpoint, content, cancellationToken);
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
-                throw new MetadataLookupException("The metadata provider is rate-limiting requests. Try again shortly.");
+                var now = DateTimeOffset.UtcNow;
+                var retry = response.Headers.RetryAfter;
+                var resume = retry?.Date ?? now.Add(retry?.Delta ?? TimeSpan.FromSeconds(60));
+                if (resume <= now) resume = now.AddSeconds(3);
+                Interlocked.Exchange(ref rateLimitUntil, resume.UtcTicks);
+                throw RateLimited(resume);
             }
             if (!response.IsSuccessStatusCode)
             {
@@ -100,6 +118,9 @@ internal sealed partial class MetadataAgent : IDisposable
         }
     }
 
+    private static MetadataLookupException RateLimited(DateTimeOffset retryAt) =>
+        new("AniList is rate-limiting requests. Queued lookups will retry later.", retryAt);
+
     private static MetadataMatch? ToMatch(ProviderMedia media)
     {
         var titles = new[] { media.Title?.English, media.Title?.Romaji, media.Title?.Native }
@@ -120,8 +141,12 @@ internal sealed partial class MetadataAgent : IDisposable
         var country = media.CountryOfOrigin is { Length: 2 } code && code.All(char.IsAsciiLetter) ? code.ToUpperInvariant() : null;
         var details = new AniListDetails(CoverUrl(media.CoverImage?.Medium) ?? CoverUrl(media.CoverImage?.Large),
             Truncate(media.Format, 40), country, ValidYear(media.StartDate), ValidYear(media.EndDate), genres, tags, credits);
-        return new(media.Id, titles[0], titles.Skip(1).FirstOrDefault(), doujin ? "doujin" : "manga",
-            Truncate(PlainDescription(media.Description), 6000), Truncate(media.Status, 40), ValidTotal(media.Chapters), ValidTotal(media.Volumes), details);
+        return new MetadataMatch(media.Id, titles[0], titles.Skip(1).FirstOrDefault(), doujin ? "doujin" : "manga",
+            Truncate(PlainDescription(media.Description), 6000), Truncate(media.Status, 40), ValidTotal(media.Chapters), ValidTotal(media.Volumes), details)
+        {
+            LookupTitles = titles.Concat((media.Synonyms ?? []).Take(24).Select(value => Truncate(value, 300)).OfType<string>())
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+        };
     }
 
     internal static string? PlainDescription(string? value)
@@ -161,7 +186,7 @@ internal sealed partial class MetadataAgent : IDisposable
     private sealed record ProviderPage(ProviderMedia?[]? Media);
     private sealed record ProviderMedia(int Id, ProviderTitle? Title, string? Description, string? Status, int? Chapters,
         int? Volumes, ProviderTag?[]? Tags, string?[]? Genres, string? Format, string? CountryOfOrigin, ProviderDate? StartDate,
-        ProviderDate? EndDate, ProviderCover? CoverImage, ProviderStaff? Staff);
+        ProviderDate? EndDate, ProviderCover? CoverImage, ProviderStaff? Staff, string?[]? Synonyms);
     private sealed record ProviderTitle(string? English, string? Romaji, string? Native);
     private sealed record ProviderTag(string? Name, bool? IsMediaSpoiler, bool? IsGeneralSpoiler);
     private sealed record ProviderDate(int? Year);

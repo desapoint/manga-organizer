@@ -51,8 +51,7 @@ internal static class MetadataEndpoints
                 {
                     var match = await agent.Read(providerId, cancellationToken);
                     if (match is null) return Results.NotFound();
-                    metadata = new(match.Title, change.Kind ?? match.Kind, match.AlternateTitle, match.Summary, match.Status,
-                        match.TotalChapters, match.TotalVolumes, match.ProviderId, match.ProviderDetails);
+                    metadata = match.ToMetadata(change.Kind);
                 }
                 catch (MetadataLookupException error)
                 {

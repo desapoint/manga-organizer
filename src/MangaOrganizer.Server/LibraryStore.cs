@@ -221,6 +221,7 @@ internal sealed partial class LibraryStore
         }
         else
         {
+            QueueArrivingSeries(command);
             command.CommandText = """
                 INSERT INTO library_content(sha256)
                     SELECT DISTINCT sha256 FROM scan_hash WHERE sha256 IS NOT NULL
