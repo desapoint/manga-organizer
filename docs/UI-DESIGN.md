@@ -23,7 +23,7 @@ Use a persistent 232px desktop sidebar with an icon-only compact mode and access
 | Area | Interaction | Backend evidence |
 | --- | --- | --- |
 | Cover browsing | Lazy-load 2:3 covers with a fallback for unavailable images. Opening a card reveals the indexed series files. Add search, sorting and reading status as the server supports them. | File-backed `cover.png` or first readable archive page and real series groups. |
-| Series details | Show the cover and title, then distinguish Chapters, Volumes, Files and Details when each has real records. Keep release variants separate and show unresolved coverage. | Reviewed series and chapter links, release evidence and progress. |
+| Series details | Lead with the cover, title and reading action. Organize Chapters, Volumes and Files, and place secondary metadata in More info. [Design checklist](SERIES-DETAIL-TODO.md) | Reviewed series and chapter links, release evidence and progress. |
 | Reader | Use an almost-black workspace, hideable toolbar, right-to-left paging, continuous scroll and a visible page position. Navigate actual files or linked chapters. | Approved CBZ and image ZIP reader with validated progress through the primary. |
 | Advanced import | Review title and chapter links, inspect source and destination, preview the operation, confirm when required and show the result. | Qualified storage, explicit or unambiguous association, and revalidation and recovery. |
 | Integrity review | Compare paths, hashes, physical identity, edition and coverage side by side. Show a dry-run plan before any managed change. | Verified physical identity and linked chapter coverage. |
