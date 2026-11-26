@@ -8,7 +8,8 @@ internal static class LibraryEndpoints
     public static void MapLibrary(this RouteGroupBuilder api, string dataDirectory)
     {
         var library = api.MapGroup("/library/roots").RequireAuthorization();
-        library.MapGet("", (LibraryStore store) => Results.Ok(store.ReadRoots()));
+        library.MapGet("", (LibraryStore store, LibraryScanQueue scans) => Results.Ok(store.ReadRoots()
+            .Select(root => root.State is "queued" or "scanning" ? root with { ScanProgress = scans.Status(root.Id) } : root)));
         api.MapGet("/library/folders", (string? path) => FolderBrowser.Browse(path, dataDirectory)).RequireAuthorization();
 
         library.MapPost("", (LibraryFolderChange change, LibraryStore store, HttpContext context, IAntiforgery antiforgery) =>
@@ -77,7 +78,7 @@ internal static class LibraryEndpoints
             {
                 return Results.NotFound();
             }
-            return scans.TryQueue(root) ? Results.Accepted() : Results.Conflict();
+            return scans.Queue(root) is { } queued ? Results.Accepted(value: queued) : Results.Conflict();
         });
     }
 

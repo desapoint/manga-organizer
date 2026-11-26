@@ -14,6 +14,8 @@ Rescan a folder after upgrading to assign content IDs to its existing entries. R
 
 Scans run one at a time. The server skips symbolic links and Windows reparse points, and publishes a successful full inventory as one database transaction. An unavailable root, failed scan or interrupted scan preserves the prior inventory. If an inventory with files suddenly scans empty, the WebUI reports it for review and keeps the prior entries. The next successful scan with files replaces those entries. Mounted media can remain read-only in Docker. See the [configuration instructions](../README.md#configure-the-read-only-library).
 
+During a scan, the WebUI shows files discovered, bytes read while verifying hashes, groups checked for covers and the publishing stage. Both views of a dual-purpose folder observe the same progress. The last published inventory remains available until the new scan completes.
+
 ## Import intake and association
 
 When a reviewed move would collide with an existing release, allow the owner to keep both using a numbered destination visible in the preview. Preserve each chapter or language variant as a separate file. Allow a reviewed move to bring along source folder artwork, retaining distinct destination cover images with names such as `cover-1.jpg` and `cover-2.jpg`. The planned paths and content must be revalidated at confirmation.

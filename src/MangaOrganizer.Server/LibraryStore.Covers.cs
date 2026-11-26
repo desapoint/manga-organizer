@@ -60,17 +60,20 @@ internal sealed partial class LibraryStore
         }
     }
 
-    private static void StageCovers(SqliteConnection database, string root, CancellationToken cancellationToken)
+    private static void StageCovers(SqliteConnection database, string root, ScanProgress scan, CancellationToken cancellationToken)
     {
         using var transaction = database.BeginTransaction(deferred: true);
         using var query = database.CreateCommand();
         query.Transaction = transaction;
+        query.CommandText = "SELECT COUNT(DISTINCT series_key) FROM scan_file;";
+        scan.BeginCovers((long)query.ExecuteScalar()!);
         query.CommandText = """
             WITH directories AS (
                 SELECT directory, COUNT(DISTINCT series_key) = 1 AS unambiguous FROM scan_file GROUP BY directory
             )
-            SELECT f.series_key, f.directory, d.unambiguous, f.relative_path, f.extension, f.size, f.modified_at, f.sha256, f.series_title
+            SELECT f.series_key, f.directory, d.unambiguous, f.relative_path, f.extension, f.size, f.modified_at, h.sha256, f.series_title
             FROM scan_file f JOIN directories d USING(directory)
+            LEFT JOIN scan_hash h ON h.relative_path = f.relative_path
             ORDER BY f.series_key, f.relative_path;
             """;
         using var insert = database.CreateCommand();
@@ -114,6 +117,7 @@ internal sealed partial class LibraryStore
                 {
                     var archiveDigest = rows.GetFieldValue<byte[]>(7);
                     var relativePath = rows.GetString(3);
+                    scan.BeginFile(relativePath);
                     var fileSize = rows.GetInt64(5);
                     var modifiedAt = rows.GetDateTimeOffset(6);
                     var cover = cache.FindArchive(archiveDigest, relativePath, fileSize, modifiedAt);
@@ -154,6 +158,7 @@ internal sealed partial class LibraryStore
             }
 
             var source = firstSidecar ?? lowestArchiveCover;
+            scan.CheckedCover(source is not null);
             if (source is null) return;
 
             key.Value = currentKey;
