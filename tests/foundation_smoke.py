@@ -205,6 +205,9 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE file_operation;
+            DROP TABLE reading_progress_event;
+            DROP TABLE reading_progress;
             DROP TABLE content_chapter;
             DROP TABLE content_metadata;
             DROP TABLE series_metadata_binding;
@@ -224,7 +227,7 @@ def verify_web_setup(executable, fixture, media):
                 name TEXT,
                 kind TEXT NOT NULL CHECK (kind IN ('library', 'import'))
             );
-            INSERT INTO library_folder SELECT * FROM current_library_folder ORDER BY rowid;
+            INSERT INTO library_folder SELECT root_id, path, name, kind FROM current_library_folder ORDER BY rowid;
             DROP TABLE current_library_folder;
             UPDATE library_root SET state = 'scanning';
         """)
@@ -591,16 +594,25 @@ def verify_series_metadata(owner, root_id, path):
 
 
 def verify_external_metadata(executable, fixture, media):
+    cover = "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/fixture.jpg"
     media_result = {"id": 123, "title": {"english": "Synthetic provider title", "native": "本"},
                     "description": "Metadata fixture", "status": "FINISHED", "chapters": 12, "volumes": 3,
-                    "tags": [{"name": "Doujinshi"}]}
+                    "format": "ONE_SHOT", "countryOfOrigin": "JP", "startDate": {"year": 2011},
+                    "endDate": {"year": 2012}, "genres": ["Drama", "drama"],
+                    "coverImage": {"medium": cover}, "staff": {"edges": [
+                        {"role": "Story & Art", "node": {"name": {"full": "Fixture Author"}}}]},
+                    "tags": [{"name": "Doujinshi"}, {"name": "Hidden outcome", "isMediaSpoiler": True}]}
+    no_cover = {"id": 456, "title": {"romaji": "Cover fallback"},
+                "coverImage": {"medium": "https://s4.anilist.co.invalid/file/anilistcdn/media/manga/cover/fake.jpg"}}
 
     class Provider(BaseHTTPRequestHandler):
         def do_POST(self):
             request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             variables = request["variables"]
-            if variables == {"title": "Issue 01"}:
-                response = {"data": {"Page": {"media": [media_result]}}}
+            if not all(field in request["query"] for field in ("coverImage", "genres", "isMediaSpoiler", "staff")):
+                response = {"errors": [{"message": "Missing provider fields"}]}
+            elif variables == {"title": "Issue 01"}:
+                response = {"data": {"Page": {"media": [media_result, no_cover]}}}
             elif variables == {"id": 123}:
                 response = {"data": {"Media": media_result}}
             else:
@@ -629,13 +641,85 @@ def verify_external_metadata(executable, fixture, media):
                 browser.scan(root_id)
                 (series,) = browser.series(root_id, "?search=Issue+01")["items"]
                 url = f"{LIBRARY_ROOTS}/{root_id}/series/{series['key']}"
-                (result,) = json.loads(browser.request(f"{url}/metadata/search?title=Issue+01", 200))
+                result, fallback = json.loads(browser.request(f"{url}/metadata/search?title=Issue+01", 200))
                 assert result["providerId"] == 123 and result["kind"] == "doujin" and result["totalChapters"] == 12
-                browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 123})
-                assert json.loads(browser.request(f"{url}/details", 200))["metadata"]["providerId"] == 123
+                assert result["providerUrl"] == "https://anilist.co/manga/123"
+                assert result["providerDetails"] == {
+                    "coverUrl": cover, "format": "ONE_SHOT", "countryOfOrigin": "JP", "startYear": 2011, "endYear": 2012,
+                    "genres": ["Drama"], "tags": [{"name": "Doujinshi", "spoiler": False}, {"name": "Hidden outcome", "spoiler": True}],
+                    "credits": [{"name": "Fixture Author", "role": "Story & Art"}],
+                }
+                assert fallback["providerDetails"]["coverUrl"] is None and fallback["providerDetails"]["tags"] == []
+                saved = json.loads(browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 123}))
+                assert saved == result and json.loads(browser.request(f"{url}/details", 200))["metadata"] == result
+                edit = {"title": "My corrected title", "kind": "doujin", "totalChapters": 12}
+                corrected = json.loads(browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(), body=edit))
+                assert corrected["title"] == edit["title"] and corrected["providerUrl"] == result["providerUrl"]
+                assert corrected["providerDetails"] == result["providerDetails"]
+                assert json.loads(browser.request(f"{url}/details", 200))["metadata"] == corrected
         finally:
             service.shutdown()
             server.join(timeout=5)
+
+
+def verify_reader(owner, peer, root_id, path):
+    for edition in ("Four", "Five"):
+        (rar,) = owner.files(root_id, "?" + urlencode({"search": "Archive coverage " + edition}))["items"]
+        url = f"/api/reader/{rar['contentId']}"
+        assert json.loads(owner.request(url, 200))["pageCount"] == 3
+        assert owner.request(url + "/pages/0", 200) == synthetic_png(10, 12, 65)
+        assert owner.request(url + "/pages/1", 200) == synthetic_png(14, 90, 180, 19, 33)
+
+    series = owner.series(root_id, "?search=eclipse")["items"][0]
+    details = f"{LIBRARY_ROOTS}/{root_id}/series/{series['key']}"
+    (archive,) = [file for file in owner.files(root_id, "?" + urlencode({"seriesKey": series["key"]}))["items"]
+                  if file["relativePath"] == "Éclipse/Éclipse v01.cbz"]
+    identity = archive["contentId"]
+    book_url = f"/api/reader/{identity}"
+    Browser(owner.url).request(book_url, 401)
+    Browser(owner.url).request(f"{book_url}/pages/0", 401)
+    book = json.loads(owner.request(book_url, 200))
+    assert book["pageCount"] == 2 and book["progress"]["revision"] == 0
+    assert owner.request(f"{book_url}/pages/0", 200) == synthetic_png(32, 160, 122)
+    assert owner.request(f"{book_url}/pages/1", 200) == synthetic_png(221, 42, 70, 26, 39)
+    owner.request(f"{book_url}/pages/2", 404)
+    owner.request("/api/reader/resume", 204)
+
+    local = {"title": "Éclipse", "kind": "manga", "totalChapters": 4}
+    owner.request(f"{details}/metadata", 200, method="PUT", body=local, token=owner.csrf())
+    owner.request(f"{details}/coverage", 204, method="PUT", token=owner.csrf(),
+                  body={"contentId": identity, "volume": "1", "chapters": ["1", "2"]})
+    first_update = {"updateId": str(uuid4()), "baseRevision": 0, "pageIndex": 1}
+    owner.request(f"{book_url}/progress", 400, method="PUT", body=first_update)
+    result = json.loads(owner.request(f"{book_url}/progress", 200, method="PUT", token=owner.csrf(), body=first_update))
+    assert result == {"pageIndex": 1, "revision": 1, "completed": False}
+    assert json.loads(peer.request(book_url, 200))["progress"] == result
+    assert json.loads(peer.request("/api/reader/resume", 200))["contentId"] == identity
+    assert json.loads(owner.request(f"{book_url}/progress", 200, method="PUT", token=owner.csrf(), body=first_update)) == result
+    conflict = dict(first_update, updateId=str(uuid4()), pageIndex=0)
+    assert json.loads(peer.request(f"{book_url}/progress", 409, method="PUT", token=peer.csrf(), body=conflict)) == result
+    back = {"updateId": str(uuid4()), "baseRevision": 1, "pageIndex": 0}
+    assert json.loads(peer.request(f"{book_url}/progress", 200, method="PUT", token=peer.csrf(), body=back))["pageIndex"] == 0
+    finish = {"updateId": str(uuid4()), "baseRevision": 2, "pageIndex": 1, "completed": True}
+    result = json.loads(peer.request(f"{book_url}/progress", 200, method="PUT", token=peer.csrf(), body=finish))
+    assert result["completed"] and result["revision"] == 3
+    assert json.loads(owner.request(f"{details}/details", 200))["readChapters"] == 2
+    owner.request("/api/reader/resume", 204)
+
+    source = path / archive["relativePath"]
+    # The artwork test uses an exact copy. Leave one location for the replacement test.
+    source.with_name("Éclipse v04.cbz").unlink()
+    moved = source.with_name("Relocated volume.cbz")
+    source.rename(moved)
+    owner.scan(root_id)
+    assert json.loads(owner.request(book_url, 200))["progress"] == result
+    with ZipFile(moved, "w") as replacement:
+        replacement.writestr("1.png", synthetic_png(1, 2, 3))
+    owner.scan(root_id)
+    owner.request(book_url, 422)
+    (new_file,) = owner.files(root_id, "?search=Relocated+volume")["items"]
+    new_book = json.loads(owner.request("/api/reader/" + new_file["contentId"], 200))
+    assert new_book["progress"]["revision"] == 0 and new_file["contentId"] != identity
 
 
 def scan_library(owner, media):
@@ -772,6 +856,8 @@ def smoke(start, media):
         scan_library(first, media)
         verify_file_identity(first, media)
         roots = verify_folder_settings(first, media)
+        verify_reader(first, second, roots[-1]["id"], media / "intake")
+        roots = first.roots()
         inventory = first.files(roots[0]["id"], "?limit=100")
         series = first.series(roots[-1]["id"])
         assert second.roots() == roots
@@ -835,4 +921,4 @@ if __name__ == "__main__":
                 smoke(lambda password: start_container(target.image, volume, media, password), media)
             finally:
                 subprocess.run(["docker", "volume", "rm", volume], check=True, stdout=subprocess.DEVNULL)
-    print("Passed WebUI assets, authentication, CSRF, dual-purpose folders, series groups, cover art, file identity, and restart persistence")
+    print("Passed WebUI assets, authentication, CSRF, library scans, cover art, metadata, reader handoff, and restart persistence")

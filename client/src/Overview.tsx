@@ -1,8 +1,27 @@
-import { ArrowUpRight, FolderCog, Library } from 'lucide-react';
+import { ArrowUpRight, BookOpen, FolderCog, Library } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { LibraryRoot } from './library';
+import { SeriesCover } from './SeriesCover';
 import { ActionLink, ScanBadge, SectionHeader } from './ui';
 
-export function Overview({ roots }: { roots: LibraryRoot[] }) {
+type Resume = { contentId: string; title: string; rootId: string; seriesKey: string; hasCover: boolean;
+  lastScannedAt: string | null; pageIndex: number; pageCount: number };
+
+export function Overview({ roots, onSignedOut }: { roots: LibraryRoot[]; onSignedOut: () => void }) {
+  const [resume, setResume] = useState<Resume | null>(null);
+  const inventoryVersion = roots.map(root => `${root.id}:${root.lastScannedAt}`).join('|');
+
+  useEffect(() => {
+    const request = new AbortController();
+    async function readResume() {
+      const response = await fetch('/api/reader/resume', { signal: request.signal });
+      if (response.status === 401) return onSignedOut();
+      const result = response.ok && response.status !== 204 ? await response.json() as Resume : null;
+      if (!request.signal.aborted) setResume(result);
+    }
+    void readResume().catch(() => { if (!request.signal.aborted) setResume(null); });
+    return () => request.abort();
+  }, [inventoryVersion, onSignedOut]);
   const scanned = roots.filter(root => root.lastScannedAt !== null);
   const indexed = roots.reduce((total, root) => total + root.fileCount, 0);
   const review = roots.filter(root => ['unavailable', 'incomplete', 'emptyReview', 'interrupted'].includes(root.state));
@@ -11,6 +30,19 @@ export function Overview({ roots }: { roots: LibraryRoot[] }) {
 
   return (
     <>
+      {resume && <section className="surface flex flex-wrap items-center gap-4 p-4 sm:p-5" aria-labelledby="resume-heading">
+        <SeriesCover available={resume.hasCover} seriesKey={resume.seriesKey} rootId={resume.rootId}
+          revision={resume.lastScannedAt ?? ''} className="h-24 w-16 shrink-0 rounded-md sm:h-32 sm:w-22" />
+        <div className="grid flex-1 gap-2">
+          <SectionHeader id="resume-heading" title="Continue reading" />
+          <strong>{resume.title}</strong>
+          <div className="grid max-w-72 gap-1 text-sm text-muted">
+            <span>Page {resume.pageIndex + 1} of {resume.pageCount}</span>
+            <progress aria-label="Reading position" className="h-2 w-full accent-accent" value={resume.pageIndex + 1} max={resume.pageCount} />
+          </div>
+          <ActionLink className="justify-self-start" icon={BookOpen} href={`#read/${resume.contentId}`}>Resume reading</ActionLink>
+        </div>
+      </section>}
       <section className="surface grid gap-5 rounded-2xl p-[clamp(1rem,3vw,2rem)]" aria-labelledby="collection-heading">
         <SectionHeader id="collection-heading" title="Collection at a glance" />
         <dl className="m-0 grid grid-cols-3 gap-3 border-y border-line py-4">

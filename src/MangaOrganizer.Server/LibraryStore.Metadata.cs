@@ -1,12 +1,17 @@
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
 internal sealed record SeriesMetadata(string Title, string Kind, string? AlternateTitle, string? Summary, string? Status,
-    int? TotalChapters, int? TotalVolumes, int? ProviderId);
+    int? TotalChapters, int? TotalVolumes, int? ProviderId, AniListDetails? ProviderDetails)
+{
+    public string? ProviderUrl => ProviderId is { } id ? MetadataAgent.ListingUrl(id) : null;
+}
 internal sealed record SeriesChapter(string? Volume, string Chapter);
-internal sealed record SeriesDetails(SeriesMetadata? Metadata, int AvailableChapters, IReadOnlyList<string> Volumes, IReadOnlyList<SeriesChapter> Chapters);
+internal sealed record SeriesDetails(SeriesMetadata? Metadata, int AvailableChapters, int ReadChapters, IReadOnlyList<string> Volumes,
+    IReadOnlyList<SeriesChapter> Chapters);
 
 internal sealed partial class LibraryStore
 {
@@ -36,35 +41,28 @@ internal sealed partial class LibraryStore
         command.ExecuteNonQuery();
     }
 
-    public SeriesDetails? ReadSeriesDetails(Guid root, string seriesKey)
+    public SeriesDetails? ReadSeriesDetails(Guid root, string seriesKey, Guid owner)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: true);
         using var command = GroupCommand(database, transaction, root, seriesKey);
         if (!GroupExists(command)) return null;
 
-        command.CommandText = """
-            SELECT title, kind, alternate_title, summary, status, total_chapters, total_volumes, provider_id
-            FROM series_metadata WHERE id =
-            """ + " " + MetadataIdForGroup;
-        SeriesMetadata? metadata = null;
-        using (var rows = command.ExecuteReader())
-        {
-            if (rows.Read())
-            {
-                metadata = new(rows.GetString(0), rows.GetString(1), ReadText(rows, 2), ReadText(rows, 3), ReadText(rows, 4),
-                    ReadInt(rows, 5), ReadInt(rows, 6), ReadInt(rows, 7));
-            }
-        }
-
-        command.CommandText = "SELECT DISTINCT volume, chapter FROM (" + GroupCoverage + ");";
+        var metadata = ReadMetadata(command);
+        command.Parameters.AddWithValue("$owner", owner);
+        command.CommandText = "SELECT coverage.volume, coverage.chapter, MAX(COALESCE(p.completed, 0)) FROM (" + GroupCoverage + """
+            ) coverage LEFT JOIN reading_progress p ON p.owner_id = $owner AND p.content_id = coverage.content_id
+            GROUP BY coverage.volume, coverage.chapter;
+            """;
         var chapters = new List<SeriesChapter>();
+        var readChapters = 0;
         using (var rows = command.ExecuteReader())
         {
             while (rows.Read())
             {
                 var volume = rows.GetString(0);
                 chapters.Add(new(volume.Length == 0 ? null : volume, rows.GetString(1)));
+                if (rows.GetBoolean(2)) readChapters++;
             }
         }
 
@@ -77,16 +75,21 @@ internal sealed partial class LibraryStore
             while (rows.Read()) volumes.Add(rows.GetString(0));
         }
 
-        return new(metadata, chapters.Count, volumes.OrderBy(Numeric).Take(500).ToArray(),
+        return new(metadata, chapters.Count, readChapters, volumes.OrderBy(Numeric).Take(500).ToArray(),
             chapters.OrderBy(chapter => Numeric(chapter.Volume)).ThenBy(chapter => Numeric(chapter.Chapter)).Take(500).ToArray());
     }
 
-    public bool SaveMetadata(Guid root, string seriesKey, SeriesMetadata metadata)
+    public SeriesMetadata? SaveMetadata(Guid root, string seriesKey, SeriesMetadata metadata)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
         using var command = GroupCommand(database, transaction, root, seriesKey);
-        if (!GroupExists(command)) return false;
+        if (!GroupExists(command)) return null;
+
+        if (metadata.ProviderId is null && ReadMetadata(command) is { ProviderId: not null } existing)
+        {
+            metadata = metadata with { ProviderId = existing.ProviderId, ProviderDetails = existing.ProviderDetails };
+        }
 
         command.CommandText = "SELECT " + MetadataIdForGroup;
         var id = command.ExecuteScalar() as string ?? Guid.NewGuid().ToString("N");
@@ -99,13 +102,17 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$chapters", (object?)metadata.TotalChapters ?? DBNull.Value);
         command.Parameters.AddWithValue("$volumes", (object?)metadata.TotalVolumes ?? DBNull.Value);
         command.Parameters.AddWithValue("$provider", (object?)metadata.ProviderId ?? DBNull.Value);
+        var providerDetails = metadata.ProviderDetails is { } details ? JsonSerializer.Serialize(details) : null;
+        command.Parameters.AddWithValue("$providerDetails", (object?)providerDetails ?? DBNull.Value);
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);
         command.CommandText = """
-            INSERT INTO series_metadata(id, series_key, title, alternate_title, kind, summary, status, total_chapters, total_volumes, provider_id, updated_at)
-                VALUES ($id, $series, $title, $alternate, $kind, $summary, $status, $chapters, $volumes, $provider, $now)
+            INSERT INTO series_metadata(id, series_key, title, alternate_title, kind, summary, status, total_chapters, total_volumes,
+                provider_id, provider_details, updated_at)
+                VALUES ($id, $series, $title, $alternate, $kind, $summary, $status, $chapters, $volumes, $provider, $providerDetails, $now)
             ON CONFLICT(id) DO UPDATE SET title = excluded.title, kind = excluded.kind, alternate_title = excluded.alternate_title,
                 summary = excluded.summary, status = excluded.status, total_chapters = excluded.total_chapters,
-                total_volumes = excluded.total_volumes, provider_id = excluded.provider_id, updated_at = excluded.updated_at;
+                total_volumes = excluded.total_volumes, provider_id = excluded.provider_id,
+                provider_details = excluded.provider_details, updated_at = excluded.updated_at;
             INSERT INTO series_metadata_binding(root_id, series_key, metadata_id) VALUES ($root, $series, $id)
             ON CONFLICT(root_id, series_key) DO UPDATE SET metadata_id = excluded.metadata_id;
             INSERT INTO content_metadata(content_id, metadata_id)
@@ -115,7 +122,21 @@ internal sealed partial class LibraryStore
             """;
         command.ExecuteNonQuery();
         transaction.Commit();
-        return true;
+        return metadata;
+    }
+
+    private static SeriesMetadata? ReadMetadata(SqliteCommand command)
+    {
+        command.CommandText = """
+            SELECT title, kind, alternate_title, summary, status, total_chapters, total_volumes, provider_id, provider_details
+            FROM series_metadata WHERE id =
+            """ + " " + MetadataIdForGroup;
+        using var rows = command.ExecuteReader();
+        if (!rows.Read()) return null;
+
+        var details = ReadText(rows, 8) is { } stored ? JsonSerializer.Deserialize<AniListDetails>(stored) : null;
+        return new(rows.GetString(0), rows.GetString(1), ReadText(rows, 2), ReadText(rows, 3), ReadText(rows, 4),
+            ReadInt(rows, 5), ReadInt(rows, 6), ReadInt(rows, 7), details);
     }
 
     public bool SaveCoverage(Guid root, string seriesKey, string contentId, string volume, IReadOnlyList<string> chapters)

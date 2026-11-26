@@ -2,6 +2,7 @@ import { ArrowLeft, BookOpen, ChevronRight, Library, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ChapterCoverage } from './ChapterCoverage';
 import { SeriesInfo } from './SeriesInfo';
+import { FileCover, SeriesCover } from './SeriesCover';
 import { formatSize, ROOTS_URL, seriesHref } from './library';
 import { Select } from './Select';
 import { ActionLink, Button, PageHeader, SearchField, SectionHeader, SegmentedControl } from './ui';
@@ -101,12 +102,11 @@ function FileRow({ file, rootId, version, onInspect, coverageUrl, onSaved, onSig
   const [showCoverage, setShowCoverage] = useState(false);
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
-  const art = file.hasCover ? coverUrl(rootId, 'files', file.id, version) :
-    file.seriesCoverKey ? coverUrl(rootId, 'series', file.seriesCoverKey, version) : undefined;
+  const readable = file.contentId && ['cbz', 'zip', 'cbr', 'rar'].includes(file.extension);
   return (
     <li>
       <span className="flex min-w-0 items-center gap-3">
-        <CoverImage url={art} title={file.hasCover ? 'File cover' : file.seriesCoverKey ? 'Series cover' : 'No cover'}
+        <FileCover rootId={rootId} fileId={file.id} available={file.hasCover} seriesCoverKey={file.seriesCoverKey} revision={version}
           className="h-12 w-8 shrink-0 rounded-sm" />
         <span className="file-path" title={file.relativePath}>
           {onInspect ? <button type="button" className="min-h-11 cursor-pointer rounded-sm border-0 bg-transparent p-0 text-start
@@ -124,6 +124,9 @@ function FileRow({ file, rootId, version, onInspect, coverageUrl, onSaved, onSig
       <span className="file-format">{file.extension.toUpperCase()}</span>
       <span>{formatSize(file.size)}</span>
       <time dateTime={file.modifiedAt}>{new Date(file.modifiedAt).toLocaleDateString()}</time>
+      {readable && <div className="col-span-full">
+        <ActionLink variant="ghost" icon={BookOpen} href={`#read/${file.contentId}${onInspect ? '/intake' : ''}`}>Read file</ActionLink>
+      </div>}
       {coverageUrl && file.contentId && <details className="col-span-full" onToggle={event => setShowCoverage(event.currentTarget.open)}>
         <summary className="min-h-9 cursor-pointer py-2 text-sm text-accent-readable">Set chapter coverage</summary>
         {showCoverage && <ChapterCoverage url={coverageUrl} contentId={file.contentId} volumeHint={file.volume}
@@ -163,26 +166,11 @@ function FileInventory({ rootId, seriesKey, version, onSignedOut, onDataChanged,
   );
 }
 
-function coverUrl(rootId: string, collection: 'series' | 'files', id: string, revision: string) {
-  return `${ROOTS_URL}/${rootId}/${collection}/${id}/cover?revision=${encodeURIComponent(revision)}`;
-}
-
-function CoverImage({ url, className, title }: { url?: string; className?: string; title?: string }) {
-  const [failed, setFailed] = useState('');
-  return (
-    <span title={title} className={`grid place-items-center overflow-hidden bg-nav-active text-nav-icon ${className ?? ''}`}>
-      {url && failed !== url ? <img src={url} alt="" loading="lazy" decoding="async" onError={() => setFailed(url)}
-        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.025] motion-reduce:transform-none" /> :
-        <BookOpen className="size-6" aria-hidden="true" />}
-    </span>
-  );
-}
-
 function SeriesRow({ series, onInspect, coverVersion, ...inventory }: InventoryActions & { series: Series; onInspect?: Inspect; coverVersion: string }) {
   const [open, setOpen] = useState(false);
   const rowClass = 'grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl p-3 hover:bg-nav-hover sm:gap-3 sm:px-4';
   const contents = <>
-    {series.hasCover ? <CoverImage url={coverUrl(inventory.rootId, 'series', series.key, coverVersion)} className="h-14 w-10 rounded-md" /> :
+    {series.hasCover ? <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available={series.hasCover} revision={coverVersion} className="h-14 w-10 rounded-md" /> :
       <span className="grid size-8 place-items-center rounded-lg bg-nav-active text-nav-icon"><Library className="size-4" aria-hidden="true" /></span>}
     <span className="wrap-anywhere">
       <span className="block font-semibold">{series.title}</span>
@@ -215,7 +203,7 @@ function CoverGrid({ series, rootId, coverVersion }: { series: Series[]; rootId:
       {series.map(item => (
         <li key={item.key} className="min-w-0">
           <a href={seriesHref(rootId, item.key)} className="group grid gap-2 rounded-xl border border-transparent p-1 text-start text-ink no-underline hover:bg-panel">
-            <CoverImage url={item.hasCover ? coverUrl(rootId, 'series', item.key, coverVersion) : undefined}
+            <SeriesCover rootId={rootId} seriesKey={item.key} available={item.hasCover} revision={coverVersion}
               className="aspect-[2/3] rounded-lg" />
             <span className="line-clamp-2 min-h-10 px-1 text-sm font-semibold wrap-anywhere" title={item.title}>{item.title}</span>
             <span className="px-1 pb-1 text-xs text-muted">{item.fileCount.toLocaleString()} {item.fileCount === 1 ? 'file' : 'files'}</span>
@@ -236,7 +224,7 @@ export function SeriesPage({ seriesKey, coverVersion, ...inventory }: InventoryP
     <section className="workspace-page" aria-labelledby="series-heading">
       <ActionLink href="#library" variant="ghost" icon={ArrowLeft} className="justify-self-start">Back to library</ActionLink>
       <div className="flex min-w-0 flex-wrap items-end gap-4 sm:gap-6">
-        {series?.hasCover && <CoverImage url={coverUrl(rootId, 'series', seriesKey, coverVersion)}
+        {series?.hasCover && <SeriesCover rootId={rootId} seriesKey={seriesKey} available={series.hasCover} revision={coverVersion}
           className="aspect-[2/3] w-24 shrink-0 rounded-xl sm:w-36" />}
         <div className="min-w-0 flex-1">
           <PageHeader id="series-heading" section="Library" title={series?.title ?? 'Series'} />

@@ -90,7 +90,7 @@ export function Catalog({ view, title, section, onSignedOut, series, children }:
       <PageHeader id="catalog-heading" section={section} title={title} />
       {rootsError && <p role="alert" className="error">{rootsError}</p>}
       {!roots && !rootsError && <p role="status">Loading library folders…</p>}
-      {view === 'overview' && roots && <Overview roots={roots} />}
+      {view === 'overview' && roots && <Overview roots={roots} onSignedOut={onSignedOut} />}
       {view === 'settings' && roots && (
         <>
           <LibrarySettings folders={roots} onSignedOut={onSignedOut} onChange={() => setRefresh(value => value + 1)} />

@@ -6,7 +6,7 @@ The interactive mockup illustrates the library detail page. Open the HTML locall
 
 - [ ] Keep the dedicated Library series URL and a clear way back to Library. Keep Import intake's expandable lists and inspector for association and file operations.
 - [ ] Lead with the cached cover, series title, short synopsis and reading action when available. Show useful metadata near the title, such as publication type or status. Keep the page usable without artwork or metadata.
-- [ ] Give **More info** an accessible dialog for the full synopsis, alternate titles, creator credits, publication year and status, original language, genres, metadata source and library location as those records become available. Keep metadata lookup and editing easy to find. Return keyboard focus to the invoking control when the dialog closes.
+- [ ] Give **More info** an accessible dialog for the full synopsis, alternate titles, creator credits, publication year and status, original language, genres, tags, metadata source and library location as those records become available. Keep metadata lookup and editing easy to find. Return keyboard focus to the invoking control when the dialog closes. [Metadata roadmap](ROADMAP.md#metadata-enhancements)
 - [ ] Show **Continue reading** when the primary server has an unfinished position for this series. Use the real file and page position, and show **Start reading** when the series has a readable starting point and no saved progress.
 - [ ] Use the shared Tailwind theme, Lucide icons, buttons, styled selects and responsive navigation. Keep the cover and primary action easy to reach on phones. Wrap filters and action groups, keep 44px touch targets, and test long Unicode titles and paths at narrow widths in both themes.
 

@@ -13,8 +13,8 @@ The owner requires one primary server for the main library and its reading progr
 
 | Stage | Included formats | Acceptance |
 |---|---|---|
-| First reader | CBZ and image ZIP with JPEG, PNG and WebP pages | Open a chapter through the WebUI, read in page order and resume from a second client. |
-| Next formats | CBR/RAR and loose image folders | Verify supported RAR variants and folder page order. Use the same reading and progress contract as CBZ and ZIP. |
+| First reader | CBZ, image ZIP, and single-volume, non-solid, unencrypted CBR/RAR with JPEG, PNG and WebP pages | Open a chapter through the WebUI, read in page order and resume from a second client. |
+| Next formats | More RAR variants and loose image folders | Verify solid and split RAR variants and folder page order. Use the same reading and progress contract as CBZ and ZIP. |
 | Later formats | CB7/7z, PDF and fixed-layout EPUB | Qualify each decoder on Windows and Docker and verify that its page anchors survive ordinary client handoffs. |
 
 Reflowable EPUB and text annotations are deferred. The format stages are implementation targets. [Current catalog support](FILE-ORGANIZATION.md#read-only-catalog)
@@ -22,6 +22,10 @@ Reflowable EPUB and text annotations are deferred. The format stages are impleme
 Files in the library and import intake are eligible for reading when their format is supported. An unmatched file can open by its catalog identity while its metadata association is pending. [Import intake and association](FILE-ORGANIZATION.md#import-intake-and-association)
 
 ## Progress validation
+
+The WebUI MVP reads CBZ and image ZIP in a right-to-left page layout. The server verifies archive bytes and bounds archive entries and page sizes. Files can open from Library or Import intake while metadata is unresolved. Resume entries use the verified content ID, so a rescan after a rename or move can find the same position.
+
+The MVP saves page position automatically as pages load. Finishing a file is a separate action. For series counters, a finished file counts its verified or explicitly numbered chapters once. Reopening an archive whose bytes changed creates a separate reading identity once scanned.
 
 The server validates the authenticated account, chapter or edition, content version and page or position before accepting an update. Store progress against a stable logical chapter and a page anchor so a rename, move or verified equivalent repack preserves the resume point. If the content changes and the position cannot be mapped safely, retain the previous anchor for review.
 
