@@ -24,6 +24,14 @@ The reader must allow eligible files to open from intake or a library when their
 
 Group files by folder and normalized title, then allow series assignment before chapter coverage is complete. Store paths separately from verified content hashes and link content to every chapter it covers. Different hashes associated with the same chapter appear together for owner review. Intake scan cover previews use `cover.png` or a supported first page. [Catalog identity and association](CATALOG-ASSOCIATION.md)
 
+## Reviewed moves and renames
+
+Folders start read-only. Enable **Allow reviewed file moves and renames** separately from the library and import roles for each writable folder you want to manage. Scan the source and open **Move or rename** on a verified file. Choose the destination folder and a relative path, preview the source and destination, then confirm the change. The same folder can serve as source and destination for an in-place rename or reorganization.
+
+The server revalidates the file digest and prepares a verified recovery copy before moving the source. It verifies a staged copy on the destination storage and publishes it without overwriting an existing path. The catalog updates the file location while preserving content identity, chapter coverage and reading progress. An archive cover can follow the file immediately, and existing folder artwork takes precedence. Recovery material uses additional storage in the server data directory and hidden recovery files on the media root.
+
+Use **File operation history** in Library settings to inspect results and explicitly restore an original path. Restores recheck content and protect occupied paths. An interrupted operation is marked for review at restart. Docker mounts must be writable for the folders you opt into management. [Installation](INSTALL.md)
+
 ## 1. Organization workflow
 
 - Add multiple roots (local paths, UNC/SMB on Windows, mounted Docker paths); designate read-only, managed or staging roots. Scan recursively with excludes, symlink/reparse-point rules, progress, cancel/pause/resume, incremental/full scans; report unavailable roots rather than treating them as empty.

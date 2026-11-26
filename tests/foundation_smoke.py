@@ -119,11 +119,11 @@ def start_app(executable, data_dir, media, password, *, expect_setup=False, meta
 
 
 @contextmanager
-def start_container(image, volume, media, password):
+def start_container(image, volume, media, password, *, readonly=True):
     name = f"manga-smoke-{uuid4().hex}"
     command = ["docker", "run", "--detach", "--name", name, "-p", "127.0.0.1::8787",
                "--mount", f"type=volume,source={volume},target=/config",
-               "--mount", f"type=bind,source={media},target=/media,readonly",
+               "--mount", f"type=bind,source={media},target=/media" + (",readonly" if readonly else ""),
                "--env", "MANGA_ORGANIZER_LIBRARY_ROOTS__0=/media/primary",
                "--env", "MANGA_ORGANIZER_LIBRARY_ROOTS__1=/media/archive"]
     env = os.environ.copy()
@@ -204,6 +204,7 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE file_operation;
             DROP TABLE reading_progress_event;
             DROP TABLE reading_progress;
             DROP TABLE content_chapter;
@@ -225,7 +226,7 @@ def verify_web_setup(executable, fixture, media):
                 name TEXT,
                 kind TEXT NOT NULL CHECK (kind IN ('library', 'import'))
             );
-            INSERT INTO library_folder SELECT * FROM current_library_folder ORDER BY rowid;
+            INSERT INTO library_folder SELECT root_id, path, name, kind FROM current_library_folder ORDER BY rowid;
             DROP TABLE current_library_folder;
             UPDATE library_root SET state = 'scanning';
         """)
@@ -698,6 +699,123 @@ def create_media_fixture(media):
         (primary / "linked-file.epub").symlink_to("../archive/Volume.epub")
 
 
+def create_managed_fixture(media):
+    for path in (media, media / "primary", media / "archive"):
+        path.mkdir()
+        path.chmod(0o777)
+    with ZipFile(media / "primary" / "Chapter 1.cbz", "w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr("pages/1.png", synthetic_png(32, 160, 122))
+
+
+def verify_managed_files(start, media, *, shared_permissions=False, data_directory=None):
+    password = uuid4().hex
+    original = media / "primary" / "Chapter 1.cbz"
+    original_bytes = original.read_bytes()
+    target = media / "archive" / "Sorted" / "Moved.cbz"
+    if shared_permissions:
+        target.parent.mkdir()
+        target.parent.chmod(0o777)
+    operations = "/api/file-operations"
+    with start(password) as url:
+        wait_for_server(url)
+        owner = Browser(url)
+        owner.request(operations, 401)
+        owner.sign_in(password)
+        primary, archive = owner.roots()
+        owner.scan(primary["id"])
+        (item,) = owner.files(primary["id"])["items"]
+        (series,) = owner.series(primary["id"])["items"]
+        original_cover = f"{LIBRARY_ROOTS}/{primary['id']}/series/{series['key']}/cover"
+        moved_cover = f"{LIBRARY_ROOTS}/{archive['id']}/series/{series['key']}/cover"
+        cover_bytes = owner.request(original_cover, 200)
+        plan = {"sourceRoot": primary["id"], "fileId": item["id"], "targetRoot": archive["id"], "targetPath": "Sorted/Moved.cbz"}
+        owner.request(f"{operations}/preview", 409, method="POST", token=owner.csrf(), body=plan)
+        for root in (primary, archive):
+            options = {"path": root["path"], "kind": "both", "name": root["name"], "managed": True}
+            saved = json.loads(owner.request(f"{LIBRARY_ROOTS}/{root['id']}", 200, method="PUT", token=owner.csrf(), body=options))
+            assert saved["managed"] and saved["id"] == root["id"]
+
+        def preview(path, destination=archive["id"], expected=200):
+            return json.loads(owner.request(f"{operations}/preview", expected, method="POST", token=owner.csrf(),
+                                            body=dict(plan, targetPath=path, targetRoot=destination)))
+
+        preview("../Escaped.cbz", expected=409)
+        collision = preview("Occupied.cbz")
+        occupied = media / "archive" / "Occupied.cbz"
+        occupied.write_bytes(b"Existing copy protected")
+        owner.request(f"{operations}/{collision['id']}/apply", 409, method="POST", token=owner.csrf())
+        assert occupied.read_bytes() == b"Existing copy protected" and original.read_bytes() == original_bytes
+
+        move = preview("Sorted/Moved.cbz")
+        assert move["state"] == "planned" and not target.exists() and target.parent.exists() == shared_permissions
+        operation = f"{operations}/{move['id']}"
+        owner.request(f"{operation}/apply", 400, method="POST")
+        completed = json.loads(owner.request(f"{operation}/apply", 200, method="POST", token=owner.csrf()))
+        assert completed["state"] == "completed" and completed["recovery"]
+        assert not original.exists() and target.read_bytes() == original_bytes
+        assert owner.files(primary["id"])["total"] == 0
+        (moved,) = owner.files(archive["id"])["items"]
+        assert moved["id"] == item["id"] and moved["contentId"] == item["contentId"]
+        assert owner.request(moved_cover, 200) == cover_bytes
+        assert json.loads(owner.request(f"{operation}/apply", 200, method="POST", token=owner.csrf())) == completed
+
+    with start(None) as url:
+        wait_for_server(url)
+        owner = Browser(url)
+        owner.sign_in(password)
+        history = json.loads(owner.request(operations, 200))
+        assert any(entry["id"] == move["id"] and entry["state"] == "completed" for entry in history)
+        restored = json.loads(owner.request(f"{operation}/restore", 200, method="POST", token=owner.csrf()))
+        assert restored["state"] == "restored" and not target.exists() and original.read_bytes() == original_bytes
+        (restored_file,) = owner.files(primary["id"])["items"]
+        assert restored_file["id"] == item["id"] and restored_file["contentId"] == item["contentId"]
+        assert owner.request(original_cover, 200) == cover_bytes
+
+        case_change = preview("chapter 1.cbz", destination=primary["id"])
+        case_url = f"{operations}/{case_change['id']}"
+        owner.request(f"{case_url}/apply", 200, method="POST", token=owner.csrf())
+        assert "chapter 1.cbz" in {file.name for file in original.parent.iterdir()}
+        owner.request(f"{case_url}/restore", 200, method="POST", token=owner.csrf())
+        assert original.name in {file.name for file in original.parent.iterdir()}
+
+        changed = preview("Changed.cbz")
+        old = original.stat()
+        modified = b"!" + original_bytes[1:]
+        original.write_bytes(modified)
+        os.utime(original, ns=(old.st_atime_ns, old.st_mtime_ns))
+        owner.request(f"{operations}/{changed['id']}/apply", 409, method="POST", token=owner.csrf())
+        assert original.read_bytes() == modified and not (media / "archive" / "Changed.cbz").exists()
+        review = next(operation for operation in json.loads(owner.request(operations, 200)) if operation["id"] == changed["id"])
+        assert review["state"] == "review" and review["recovery"] is None
+
+        if data_directory is None:
+            return
+
+        original.write_bytes(original_bytes)
+        interrupted = preview("Interrupted.cbz")
+
+    # Mimic an interruption after verification and parking, before the catalog commit.
+    interrupted_id = UUID(interrupted["id"]).hex
+    backup = data_directory / "file-recovery" / f"{interrupted_id}.backup"
+    backup.write_bytes(original_bytes)
+    original.rename(original.with_name(f".manga-organizer-{interrupted_id}-original.recovery"))
+    blocked_target = media / "archive" / "Interrupted.cbz"
+    blocked_target.write_bytes(b"A file created independently before recovery")
+    with closing(sqlite3.connect(data_directory / "organizer.sqlite")) as database, database:
+        changed_rows = database.execute("UPDATE file_operation SET state = 'applying' WHERE lower(id) = ?", (interrupted["id"],))
+        assert changed_rows.rowcount == 1
+
+    with start(None) as url:
+        wait_for_server(url)
+        owner = Browser(url)
+        owner.sign_in(password)
+        history = json.loads(owner.request(operations, 200))
+        assert any(entry["id"] == interrupted["id"] and entry["state"] == "review" for entry in history)
+        result = json.loads(owner.request(f"{operations}/{interrupted['id']}/restore", 200, method="POST", token=owner.csrf()))
+        assert result["state"] == "restored" and original.read_bytes() == original_bytes
+        assert blocked_target.read_bytes() == b"A file created independently before recovery"
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -707,12 +825,17 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory() as fixture:
         media = Path(fixture) / "media"
         create_media_fixture(media)
+        managed_media = Path(fixture) / "managed-media"
+        create_managed_fixture(managed_media)
         if target.app:
             executable = str(target.app.resolve())
             verify_web_setup(executable, Path(fixture), media)
             verify_external_metadata(executable, Path(fixture), media)
             data_dir = Path(fixture) / "data"
             smoke(lambda password: start_app(executable, data_dir, media, password), media)
+            managed_data = Path(fixture) / "managed-data"
+            verify_managed_files(lambda password: start_app(executable, managed_data, managed_media, password), managed_media,
+                                 data_directory=managed_data)
         else:
             volume = f"manga-smoke-{uuid4().hex}"
             subprocess.run(["docker", "volume", "create", volume], check=True, stdout=subprocess.DEVNULL)
@@ -720,4 +843,11 @@ if __name__ == "__main__":
                 smoke(lambda password: start_container(target.image, volume, media, password), media)
             finally:
                 subprocess.run(["docker", "volume", "rm", volume], check=True, stdout=subprocess.DEVNULL)
-    print("Passed WebUI assets, authentication, CSRF, library scans, cover art, metadata, reader handoff, and restart persistence")
+            managed_volume = f"manga-managed-{uuid4().hex}"
+            subprocess.run(["docker", "volume", "create", managed_volume], check=True, stdout=subprocess.DEVNULL)
+            try:
+                verify_managed_files(lambda password: start_container(target.image, managed_volume, managed_media, password, readonly=False),
+                                     managed_media, shared_permissions=True)
+            finally:
+                subprocess.run(["docker", "volume", "rm", managed_volume], check=True, stdout=subprocess.DEVNULL)
+    print("Passed WebUI assets, authentication, CSRF, scans, covers, metadata, reader handoff, and reviewed file operations")

@@ -18,6 +18,7 @@ internal static class DatabaseMigrations
         new("0004-cover-sources"),
         new("0005-series-metadata", (database, command, _) => LibraryStore.BackfillBookNumbers(database, command)),
         new("0006-reading-progress"),
+        new("0007-managed-files"),
     ];
 
     public static int Apply(string dataDirectory)

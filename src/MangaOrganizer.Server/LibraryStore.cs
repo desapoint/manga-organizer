@@ -5,7 +5,7 @@ namespace MangaOrganizer.Server;
 internal sealed record LibraryRoot(Guid Id, string Path);
 internal sealed record LibraryRootStatus(Guid Id, string Path, string State, long FileCount,
     DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks, string? Name, string Kind, bool HasCovers,
-    ScanSnapshot? ScanProgress = null);
+    bool Managed, ScanSnapshot? ScanProgress = null);
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt,
     string? ContentId, string? Sha256, long? IndexedLocations, string? Volume, string? Chapter);
 internal sealed record CatalogPage<T>(long Total, IReadOnlyList<T> Items);
@@ -21,7 +21,11 @@ internal sealed partial class LibraryStore
         using var transaction = database.BeginTransaction();
         using var command = database.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "UPDATE library_root SET state = 'interrupted' WHERE state IN ('queued', 'scanning');";
+        command.CommandText = """
+            UPDATE library_root SET state = 'interrupted' WHERE state IN ('queued', 'scanning');
+            UPDATE file_operation SET state = 'review', message = 'The server stopped during this operation. Verify retained files before recovery.'
+                WHERE state IN ('applying', 'restoring');
+            """;
         command.ExecuteNonQuery();
 
         command.CommandText = "INSERT OR IGNORE INTO library_settings(singleton) VALUES (1);";
@@ -52,7 +56,7 @@ internal sealed partial class LibraryStore
         command.CommandText = """
             SELECT r.id, f.path, r.state, r.file_count, r.last_attempt_at,
                 r.last_scanned_at, r.skipped_links, f.name, f.kind,
-                EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = r.id)
+                EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = r.id), f.managed
             FROM library_folder f JOIN library_root r ON r.id = f.root_id
             ORDER BY f.rowid;
             """;
@@ -63,7 +67,7 @@ internal sealed partial class LibraryStore
             result.Add(new(row.GetGuid(0), row.GetString(1), row.GetString(2), row.GetInt64(3),
                 row.IsDBNull(4) ? null : row.GetDateTimeOffset(4),
                 row.IsDBNull(5) ? null : row.GetDateTimeOffset(5), row.GetInt64(6),
-                row.IsDBNull(7) ? null : row.GetString(7), row.GetString(8), row.GetBoolean(9)));
+                row.IsDBNull(7) ? null : row.GetString(7), row.GetString(8), row.GetBoolean(9), row.GetBoolean(10)));
         }
         return result;
     }
@@ -124,7 +128,9 @@ internal sealed partial class LibraryStore
         command.CommandText = """
             UPDATE library_root SET state = 'queued', last_attempt_at = $now
             WHERE id = $id AND state NOT IN ('queued', 'scanning')
-                AND EXISTS (SELECT 1 FROM library_folder WHERE root_id = $id);
+                AND EXISTS (SELECT 1 FROM library_folder WHERE root_id = $id)
+                AND NOT EXISTS (SELECT 1 FROM file_operation op WHERE op.state IN ('applying', 'restoring')
+                    AND $id IN (op.source_root, op.target_root));
             """;
         command.Parameters.AddWithValue("$id", id);
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);

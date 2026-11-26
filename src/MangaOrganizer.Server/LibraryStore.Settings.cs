@@ -2,10 +2,10 @@ using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
-internal sealed record LibraryFolderChange(string? Path, string? Name, string? Kind);
-internal sealed record LibraryFolder(Guid Id, string Path, string? Name, string Kind);
+internal sealed record LibraryFolderChange(string? Path, string? Name, string? Kind, bool? Managed);
+internal sealed record LibraryFolder(Guid Id, string Path, string? Name, string Kind, bool Managed);
 
-internal sealed class LibraryFolderBusyException() : Exception("Wait for the folder scan to finish before changing this folder.");
+internal sealed class LibraryFolderBusyException() : Exception("Wait for the scan or file operation to finish before changing this folder.");
 
 internal sealed partial class LibraryStore
 {
@@ -57,7 +57,7 @@ internal sealed partial class LibraryStore
         }
 
         LibraryScanner.NormalizeRoot(path, dataDirectory, otherPaths);
-        var folder = SaveFolder(command, id, path, name, change.Kind);
+        var folder = SaveFolder(command, id, path, name, change.Kind, change.Managed);
         transaction.Commit();
         return folder;
     }
@@ -83,12 +83,13 @@ internal sealed partial class LibraryStore
     {
         command.Parameters.Clear();
         command.CommandText = """
-            SELECT r.state FROM library_folder f JOIN library_root r ON r.id = f.root_id
-            WHERE f.root_id = $id;
+            SELECT CASE WHEN EXISTS (SELECT 1 FROM file_operation op WHERE op.state IN ('applying', 'restoring')
+                AND $id IN (op.source_root, op.target_root)) THEN 'applying' ELSE r.state END
+            FROM library_folder f JOIN library_root r ON r.id = f.root_id WHERE f.root_id = $id;
             """;
         command.Parameters.AddWithValue("$id", id);
         var state = command.ExecuteScalar() as string;
-        if (state is "queued" or "scanning")
+        if (state is "queued" or "scanning" or "applying")
         {
             throw new LibraryFolderBusyException();
         }
@@ -96,7 +97,7 @@ internal sealed partial class LibraryStore
         return state is not null;
     }
 
-    private static LibraryFolder SaveFolder(SqliteCommand command, Guid? currentId, string path, string? name, string kind)
+    private static LibraryFolder SaveFolder(SqliteCommand command, Guid? currentId, string path, string? name, string kind, bool? managed = null)
     {
         command.Parameters.Clear();
         command.CommandText = """
@@ -109,17 +110,18 @@ internal sealed partial class LibraryStore
 
         command.Parameters.Clear();
         command.CommandText = currentId is null
-            ? "INSERT INTO library_folder(root_id, path, name, kind) VALUES ($id, $path, $name, $kind);"
-            : "UPDATE library_folder SET root_id = $id, path = $path, name = $name, kind = $kind WHERE root_id = $currentId;";
+            ? "INSERT INTO library_folder(root_id, path, name, kind, managed) VALUES ($id, $path, $name, $kind, COALESCE($managed, 0)) RETURNING managed;"
+            : "UPDATE library_folder SET root_id = $id, path = $path, name = $name, kind = $kind, managed = COALESCE($managed, managed) WHERE root_id = $currentId RETURNING managed;";
         command.Parameters.AddWithValue("$id", rootId);
         command.Parameters.AddWithValue("$path", path);
         command.Parameters.AddWithValue("$name", (object?)name ?? DBNull.Value);
         command.Parameters.AddWithValue("$kind", kind);
+        command.Parameters.AddWithValue("$managed", (object?)managed ?? DBNull.Value);
         if (currentId is not null)
         {
             command.Parameters.AddWithValue("$currentId", currentId.Value);
         }
-        command.ExecuteNonQuery();
-        return new LibraryFolder(rootId, path, name, kind);
+        var isManaged = (long)command.ExecuteScalar()! == 1;
+        return new LibraryFolder(rootId, path, name, kind, isManaged);
     }
 }

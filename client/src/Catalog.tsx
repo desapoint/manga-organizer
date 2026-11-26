@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getCsrfToken } from './api';
 import { CatalogInventory } from './CatalogInventory';
+import { FileOperationHistory } from './FileOperations';
 import { ROOTS_URL, scanIsActive } from './library';
 import type { FolderRole, LibraryRoot } from './library';
 import { LibrarySettings } from './LibrarySettings';
@@ -90,6 +91,7 @@ export function Catalog({ view, title, section, onSignedOut, children }: {
         <>
           <LibrarySettings folders={roots} onSignedOut={onSignedOut} onChange={() => setRefresh(value => value + 1)} />
           {children}
+          <FileOperationHistory onSignedOut={onSignedOut} onChanged={() => setRefresh(value => value + 1)} />
         </>
       )}
       {visibleRoots?.length === 0 && catalogView && (
@@ -119,7 +121,9 @@ export function Catalog({ view, title, section, onSignedOut, children }: {
           {scanError && <p role="alert" className="error">{scanError}</p>}
           <CatalogInventory key={selected.id} rootId={selected.id} version={`${inventoryVersion}:${refresh}`}
             onSignedOut={onSignedOut} scanComplete={selected.state === 'complete'} intake={view === 'import'} rootPath={selected.path}
-            hasCovers={selected.hasCovers} coverVersion={selected.lastScannedAt ?? ''} />
+            hasCovers={selected.hasCovers} coverVersion={selected.lastScannedAt ?? ''}
+            managedFolders={selected.managed ? roots?.filter(root => root.managed) ?? [] : []}
+            onInventoryChanged={() => setRefresh(value => value + 1)} />
         </>
       )}
     </section>
