@@ -34,6 +34,8 @@ Use stable work, edition, volume and chapter identities with exact decimal and p
 - Use the shared accessible select for dropdowns. Keep action buttons at their intrinsic size and wrap action groups when horizontal space is limited.
 - Use one set of destinations for the desktop sidebar and the compact phone navigation. A future Android app shares the destinations, labels, matching review and reader interaction patterns. Both clients use the primary server's library identities and progress state. [Client responsibilities](REMOTE-READING.md#server-and-client-responsibilities)
 
+Use the INK//SHELF palette, shared shell, and screen patterns for the functional WebUI and upcoming reader. [UI design](UI-DESIGN.md)
+
 ## File organization and duplicate management (required)
 
 See [FILE-ORGANIZATION.md](FILE-ORGANIZATION.md). One physical-file inventory and fingerprint index shared by scanning, importing, renaming and deduplication. Separate file identity (path and filesystem object), content identity (hashes and ordered page manifests), and bibliographic identity (work/edition/chapter/coverage). A read-only scan produces proposals; a permission-checked executor revalidates identity, coverage, mount and target state before any mutation. Journal operations, stage cross-filesystem copies, preserve references, quarantine where permitted and support recovery. Neither Windows remote client nor another worker may mutate server files independently.

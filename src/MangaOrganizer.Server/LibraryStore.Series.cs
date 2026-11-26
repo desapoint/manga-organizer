@@ -2,7 +2,7 @@ using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
-internal sealed record CatalogSeries(string Key, string Title, long FileCount);
+internal sealed record CatalogSeries(string Key, string Title, long FileCount, bool Suggested);
 
 internal sealed partial class LibraryStore
 {
@@ -42,7 +42,7 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$id", id);
         var total = (long)command.ExecuteScalar()!;
         command.CommandText = """
-            SELECT series_key, MIN(COALESCE(series_title, relative_path)) AS title, COUNT(*)
+            SELECT series_key, MIN(COALESCE(series_title, relative_path)) AS title, COUNT(*), MAX(series_title IS NOT NULL)
             FROM library_file WHERE root_id = $id
             GROUP BY series_key ORDER BY title COLLATE NOCASE, series_key LIMIT $limit OFFSET $offset;
             """;
@@ -52,7 +52,7 @@ internal sealed partial class LibraryStore
         using var rows = command.ExecuteReader();
         while (rows.Read())
         {
-            items.Add(new(rows.GetString(0), rows.GetString(1), rows.GetInt64(2)));
+            items.Add(new(rows.GetString(0), rows.GetString(1), rows.GetInt64(2), rows.GetBoolean(3)));
         }
 
         return new(total, items);

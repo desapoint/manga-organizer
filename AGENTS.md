@@ -12,6 +12,8 @@ WebUI changes must follow the shared design system. Use Tailwind CSS and its the
 
 Use the shared accessible select component for styled dropdowns. Keep action buttons at their intrinsic size, align them with adjacent content, and wrap action groups on narrow screens.
 
+Follow the INK//SHELF design direction in docs/UI-DESIGN.md. Keep Manga Organizer as the application name. Use the shared responsive shell, editorial page headers, dark-first Tailwind palette and warm paper mode. Display real server data and expose functional destinations only. Keep file inventory accessible alongside series and cover views.
+
 Allow one folder to serve as the library, import intake, or both. A dual-purpose folder shares one root ID, inventory and scan across both views. Keep storage mutation permissions separate from folder roles. Show series groups before individual files in the library and import inventory, including folder-based grouping for numbered files and title-based grouping for chapter and volume suffixes. Keep ambiguous entries visible and preserve original paths and content identities for review.
 
 The first usable WebUI reader must show cover art from the media files. Honor a folder cover first, then use the first supported archive page. Build the WebUI MVP in stacked pull requests. Branch from the previous PR after its checks pass, and leave the stack open for the owner to merge in order.

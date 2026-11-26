@@ -211,6 +211,7 @@ def verify_web_setup(executable, fixture, media):
             );
             INSERT INTO library_folder SELECT * FROM current_library_folder ORDER BY rowid;
             DROP TABLE current_library_folder;
+            UPDATE library_root SET state = 'scanning';
         """)
 
     with start_app(executable, appdata, None, None) as url:
@@ -220,6 +221,7 @@ def verify_web_setup(executable, fixture, media):
         browser.sign_in(password)
         assert browser.server_id() == identity
         assert [configured["id"] for configured in browser.roots()] == [root["id"]]
+        assert browser.roots()[0]["state"] == "interrupted"
         migrated = browser.files(root["id"], "?limit=100")
         assert migrated == {"total": original["total"], "items": [
             dict(row, contentId=None, sha256=None, indexedLocations=None) for row in original["items"]

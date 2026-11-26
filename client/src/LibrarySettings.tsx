@@ -3,17 +3,13 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { getCsrfToken } from './api';
 import { FolderField } from './FolderField';
+import { ROOTS_URL } from './library';
+import type { FolderKind, LibraryRoot } from './library';
 import { Select } from './Select';
 import type { SelectOption } from './Select';
-import { Button } from './ui';
-
-export type FolderRole = 'library' | 'import';
-export type FolderKind = FolderRole | 'both';
-export type ConfiguredFolder = { id: string; path: string; name: string | null; kind: FolderKind };
+import { Button, ScanBadge, SectionHeader } from './ui';
 
 type FolderDraft = { id?: string; path: string; name: string; kind: FolderKind };
-
-export const ROOTS_URL = '/api/library/roots';
 
 const folderKinds = {
   library: 'Library only',
@@ -28,7 +24,7 @@ const folderOptions: SelectOption<FolderKind>[] = [
 ];
 
 export function LibrarySettings({ folders, onChange, onSignedOut }: {
-  folders: ConfiguredFolder[];
+  folders: LibraryRoot[];
   onChange: () => void;
   onSignedOut: () => void;
 }) {
@@ -66,15 +62,23 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
   }
 
   return (
-    <div className="library-settings">
+    <section className="surface grid gap-4 p-4 sm:p-5" aria-labelledby="library-folders-heading">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SectionHeader id="library-folders-heading" title="Library folders" />
+        {!draft && <Button icon={Plus} disabled={busy} onClick={() => {
+          setError('');
+          setDraft({ path: '', name: '', kind: 'library' });
+        }}>Add folder</Button>}
+      </div>
+      {folders.length === 0 && !draft && <p className="m-0 text-sm text-muted">Add a server folder to start indexing your collection.</p>}
       {folders.length > 0 && (
-        <ul className="settings-folders" aria-label="Configured folders">
+        <ul className="settings-folders" role="list" aria-label="Configured folders">
           {folders.map(folder => (
             <li key={folder.id}>
               <div className="folder-description">
                 <strong>{folder.name || folder.path}</strong>
                 {folder.name && <code>{folder.path}</code>}
-                <span>{folderKinds[folder.kind]}</span>
+                <div className="action-row text-sm text-muted">{folderKinds[folder.kind]} <ScanBadge state={folder.state} /></div>
               </div>
               <div className="action-row">
                 <Button variant="secondary" disabled={busy} aria-label={`Edit ${folder.name || folder.path}`}
@@ -87,10 +91,6 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
         </ul>
       )}
       {error && <p role="alert" className="error">{error}</p>}
-      {!draft && <Button icon={Plus} disabled={busy} onClick={() => {
-        setError('');
-        setDraft({ path: '', name: '', kind: 'library' });
-      }}>Add folder</Button>}
       {draft && (
         <form className="settings-form" key={draft.id ?? 'new'} onSubmit={save}>
           <h2>{draft.id ? 'Edit folder' : 'Add folder'}</h2>
@@ -106,6 +106,6 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
           </div>
         </form>
       )}
-    </div>
+    </section>
   );
 }

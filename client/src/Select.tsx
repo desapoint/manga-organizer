@@ -37,7 +37,7 @@ export function Select<Value extends string>({ label, value, options, onChange, 
         <SelectPrimitive.Portal>
           <SelectPrimitive.Content position="popper" sideOffset={5} align="start" collisionPadding={12}
             className="z-30 max-h-[min(20rem,var(--radix-select-content-available-height))] w-[var(--radix-select-trigger-width)]
-              max-w-[var(--radix-select-content-available-width)] overflow-hidden rounded-xl border border-control bg-panel text-ink shadow-lg">
+              max-w-[var(--radix-select-content-available-width)] overflow-hidden rounded-xl border border-control bg-elevated text-ink shadow-lg">
             <SelectPrimitive.ScrollUpButton className="grid place-items-center text-muted">
               <ChevronUp className="size-4" aria-hidden="true" />
             </SelectPrimitive.ScrollUpButton>
@@ -47,7 +47,7 @@ export function Select<Value extends string>({ label, value, options, onChange, 
                   className="relative grid min-h-10 cursor-default content-center rounded-lg py-2 pe-3 ps-9 text-sm wrap-anywhere
                     outline-none data-[highlighted]:bg-nav-hover data-[state=checked]:text-secondary">
                   <SelectPrimitive.ItemIndicator className="absolute start-3 top-2.5">
-                    <Check className="size-4 text-accent" aria-hidden="true" />
+                    <Check className="size-4 text-accent-readable" aria-hidden="true" />
                   </SelectPrimitive.ItemIndicator>
                   <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
                   {option.description && <span className="text-xs text-muted">{option.description}</span>}

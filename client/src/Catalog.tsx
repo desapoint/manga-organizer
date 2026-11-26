@@ -1,45 +1,29 @@
 import { FolderCog, ScanSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { getCsrfToken } from './api';
 import { CatalogInventory } from './CatalogInventory';
-import { LibrarySettings, ROOTS_URL } from './LibrarySettings';
-import type { ConfiguredFolder, FolderRole } from './LibrarySettings';
+import { ROOTS_URL, scanIsActive, scanLabels } from './library';
+import type { FolderRole, LibraryRoot } from './library';
+import { LibrarySettings } from './LibrarySettings';
+import { Overview } from './Overview';
 import { Select } from './Select';
-import { ActionLink, Button } from './ui';
+import { ActionLink, Button, PageHeader } from './ui';
 
-export type CatalogView = FolderRole | 'settings';
+export type CatalogView = FolderRole | 'settings' | 'overview';
 
-const SCAN_LABELS = {
-  idle: 'Ready to scan.',
-  queued: 'Scan queued.',
-  scanning: 'Scanning…',
-  complete: 'Scan complete.',
-  unavailable: 'Folder unavailable. Any previous inventory is still shown.',
-  incomplete: 'Scan could not finish. Any previous inventory is still shown.',
-  emptyReview: 'This scan found no supported files. Check the folder or mount. The previous inventory is still shown.',
-  interrupted: 'Scan interrupted. Any previous inventory is still shown.',
-};
-
-type Root = ConfiguredFolder & {
-  state: keyof typeof SCAN_LABELS;
-  fileCount: number;
-  lastScannedAt: string | null;
-  skippedLinks: number;
-};
-
-function scanIsActive(root: Root) {
-  return root.state === 'queued' || root.state === 'scanning';
-}
-
-export function Catalog({ view, title, onSignedOut }: { view: CatalogView; title: string; onSignedOut: () => void }) {
-  const [roots, setRoots] = useState<Root[] | null>(null);
+export function Catalog({ view, title, section, onSignedOut, children }: {
+  view: CatalogView; title: string; section: string; onSignedOut: () => void; children?: ReactNode;
+}) {
+  const [roots, setRoots] = useState<LibraryRoot[] | null>(null);
   const [selectedId, setSelectedId] = useState('');
   const [refresh, setRefresh] = useState(0);
   const [scanPending, setScanPending] = useState(false);
   const [rootsError, setRootsError] = useState('');
   const [scanError, setScanError] = useState('');
 
-  const visibleRoots = view === 'settings' ? [] : roots?.filter(root => root.kind === view || root.kind === 'both');
+  const catalogView = view === 'library' || view === 'import';
+  const visibleRoots = catalogView ? roots?.filter(root => root.kind === view || root.kind === 'both') : [];
   const selected = visibleRoots?.find(root => root.id === selectedId) ?? visibleRoots?.[0];
   const folderOptions = visibleRoots?.map(root => ({ value: root.id, label: root.name || root.path, description: root.name ? root.path : undefined })) ?? [];
   const rootId = selected?.id;
@@ -58,7 +42,7 @@ export function Catalog({ view, title, onSignedOut }: { view: CatalogView; title
         const response = await fetch(ROOTS_URL, { signal: request.signal });
         if (response.status === 401) return onSignedOut();
         if (!response.ok) throw new Error();
-        const available = await response.json() as Root[];
+        const available = await response.json() as LibraryRoot[];
         if (request.signal.aborted) return;
         setRoots(available);
         setRootsError('');
@@ -97,12 +81,17 @@ export function Catalog({ view, title, onSignedOut }: { view: CatalogView; title
 
   return (
     <section className="workspace-page" aria-labelledby="catalog-heading">
-      <h1 id="catalog-heading">{title}</h1>
+      <PageHeader id="catalog-heading" section={section} title={title} />
       {rootsError && <p role="alert" className="error">{rootsError}</p>}
       {!roots && !rootsError && <p role="status">Loading library folders…</p>}
-      {view === 'settings' && roots && <LibrarySettings folders={roots} onSignedOut={onSignedOut}
-        onChange={() => setRefresh(value => value + 1)} />}
-      {visibleRoots?.length === 0 && view !== 'settings' && (
+      {view === 'overview' && roots && <Overview roots={roots} />}
+      {view === 'settings' && roots && (
+        <>
+          <LibrarySettings folders={roots} onSignedOut={onSignedOut} onChange={() => setRefresh(value => value + 1)} />
+          {children}
+        </>
+      )}
+      {visibleRoots?.length === 0 && catalogView && (
         <div className="surface catalog-surface">
           <p>{view === 'import' ? 'Add an intake folder to see files awaiting association.' : 'Add a folder on the server to start building your catalog.'}</p>
           <ActionLink icon={FolderCog} href="#settings">Manage folders</ActionLink>
@@ -119,7 +108,7 @@ export function Catalog({ view, title, onSignedOut }: { view: CatalogView; title
                 }} />
               <Button icon={ScanSearch} onClick={startScan} disabled={scanPending || scanIsActive(selected)}>Scan folder</Button>
             </div>
-            <p className="scan-state" role="status">{SCAN_LABELS[selected.state]}</p>
+            <p className="scan-state" role="status">{scanLabels[selected.state]}</p>
             <div className="catalog-summary">
               <span>{selected.fileCount.toLocaleString()} {selected.fileCount === 1 ? 'file' : 'files'}</span>
               {selected.lastScannedAt && <span>Last indexed {new Date(selected.lastScannedAt).toLocaleString()}</span>}
@@ -128,7 +117,7 @@ export function Catalog({ view, title, onSignedOut }: { view: CatalogView; title
           </div>
           {scanError && <p role="alert" className="error">{scanError}</p>}
           <CatalogInventory key={selected.id} rootId={selected.id} version={`${inventoryVersion}:${refresh}`}
-            onSignedOut={onSignedOut} scanComplete={selected.state === 'complete'} />
+            onSignedOut={onSignedOut} scanComplete={selected.state === 'complete'} intake={view === 'import'} rootPath={selected.path} />
         </>
       )}
     </section>
