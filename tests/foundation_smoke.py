@@ -1177,7 +1177,7 @@ def verify_managed_files(start, media, *, shared_permissions=False, data_directo
         second_source.unlink()
         owner.scan(primary["id"])
 
-        review_duplicates(owner, primary["id"], original.parent)
+        review_duplicates(owner, primary["id"], original.parent, shared_permissions=shared_permissions)
 
         changed = preview("Changed.cbz")
         old = original.stat()
@@ -1219,7 +1219,11 @@ def verify_managed_files(start, media, *, shared_permissions=False, data_directo
         assert blocked_target.read_bytes() == b"A file created independently before recovery"
 
 
-def review_duplicates(owner, root, directory):
+def review_duplicates(owner, root, directory, *, shared_permissions=False):
+    if shared_permissions:
+        quarantine_directory = directory / ".manga-organizer-quarantine"
+        quarantine_directory.mkdir()
+        quarantine_directory.chmod(0o777)
     volume = directory / "Safety Fixture Vol.01 Ch.1-3.cbz"
     chapter = directory / "Safety Fixture Vol.01 Ch.1.cbz"
     copy = directory / "Safety Fixture Vol.01 Ch.1-3 [Variant 1].cbz"
