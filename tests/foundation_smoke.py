@@ -781,8 +781,10 @@ def verify_managed_files(start, media, *, shared_permissions=False, data_directo
         changed = preview("Changed.cbz")
         old = original.stat()
         modified = b"!" + original_bytes[1:]
-        original.write_bytes(modified)
-        os.utime(original, ns=(old.st_atime_ns, old.st_mtime_ns))
+        replacement = original.with_suffix(".replacement")
+        replacement.write_bytes(modified)
+        os.utime(replacement, ns=(old.st_atime_ns, old.st_mtime_ns))
+        replacement.replace(original)
         owner.request(f"{operations}/{changed['id']}/apply", 409, method="POST", token=owner.csrf())
         assert original.read_bytes() == modified and not (media / "archive" / "Changed.cbz").exists()
         review = next(operation for operation in json.loads(owner.request(operations, 200)) if operation["id"] == changed["id"])
