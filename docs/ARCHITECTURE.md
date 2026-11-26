@@ -26,7 +26,12 @@ Modules: catalog, scanner, file organizer, duplicate index and resolution planne
 
 Use stable work, edition, volume and chapter identities with exact decimal and part numbering. Store physical file locations separately from verified content hashes. Link content to each verified chapter and its page coverage. Different hashes can be variants of the same chapter. Preserve logical IDs and user progress across file moves, and record release provenance with associations. Users have independent progress, bookmarks and permissions. Jobs support retries and use idempotency keys. [Catalog identity and association](CATALOG-ASSOCIATION.md)
 
-The WebUI uses desktop side navigation and a compact navigation bar on phones. A future Android app shares the same destinations, labels, matching review and reader interaction patterns. Both clients use the primary server's library identities and progress state. [Client responsibilities](REMOTE-READING.md#server-and-client-responsibilities)
+## WebUI design requirements
+
+- Use Tailwind CSS for new and updated WebUI styles. Define shared colors and breakpoints in the Tailwind theme. Keep layout utilities with the component they style and centralize shared rules.
+- Use Lucide for interface icons. Keep visible labels on navigation items, hide decorative icons from assistive technology and give icon-only controls an accessible name.
+- Reuse React components for repeated controls and layouts. Extend them with named style variants, optional icons, native element props and composable content as needed. Keep semantic elements, visible keyboard focus and responsive behavior across variants.
+- Use one set of destinations for the desktop sidebar and the compact phone navigation. A future Android app shares the destinations, labels, matching review and reader interaction patterns. Both clients use the primary server's library identities and progress state. [Client responsibilities](REMOTE-READING.md#server-and-client-responsibilities)
 
 ## File organization and duplicate management (required)
 
