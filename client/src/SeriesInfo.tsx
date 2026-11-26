@@ -1,10 +1,11 @@
-import { Search, Save } from 'lucide-react';
+import { ExternalLink, Search, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { getCsrfToken } from './api';
 import { ROOTS_URL } from './library';
 import { Select } from './Select';
-import { Button, SearchField, SectionHeader } from './ui';
+import { CoverImage } from './SeriesCover';
+import { ActionLink, Button, SearchField, SectionHeader } from './ui';
 
 type BookKind = 'manga' | 'doujin';
 type Metadata = {
@@ -16,6 +17,18 @@ type Metadata = {
   totalChapters: number | null;
   totalVolumes: number | null;
   providerId: number | null;
+  providerUrl: string | null;
+  providerDetails: AniListDetails | null;
+};
+type AniListDetails = {
+  coverUrl: string | null;
+  format: string | null;
+  countryOfOrigin: string | null;
+  startYear: number | null;
+  endYear: number | null;
+  genres: string[];
+  tags: { name: string; spoiler: boolean }[];
+  credits: { name: string; role: string | null }[];
 };
 
 type Details = {
@@ -27,6 +40,40 @@ type Details = {
 };
 
 const kinds = [{ value: 'manga', label: 'Manga' }, { value: 'doujin', label: 'Doujin' }] as const;
+
+function publicationYears({ startYear, endYear }: AniListDetails) {
+  if (startYear && endYear && startYear !== endYear) return `${startYear}–${endYear}`;
+  return startYear ?? endYear;
+}
+
+function MetadataTags({ names }: { names: string[] }) {
+  return <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" role="list">
+    {names.map(name => <li key={name} className="rounded-md border border-line px-2 py-1 text-xs wrap-anywhere">{name}</li>)}
+  </ul>;
+}
+
+function ProviderFacts({ details }: { details: AniListDetails }) {
+  const years = publicationYears(details);
+  const tags = details.tags.filter(tag => !tag.spoiler).map(tag => tag.name);
+  const spoilers = details.tags.filter(tag => tag.spoiler).map(tag => tag.name);
+  return (
+    <dl className="m-0 grid gap-2 text-sm wrap-anywhere">
+      {details.format && <div><dt className="inline font-semibold">Format</dt> <dd className="inline text-muted">{details.format.toLowerCase().replaceAll('_', ' ')}</dd></div>}
+      {years && <div><dt className="inline font-semibold">Publication years</dt> <dd className="inline text-muted">{years}</dd></div>}
+      {details.countryOfOrigin && <div><dt className="inline font-semibold">Country of origin</dt> <dd className="inline text-muted">{details.countryOfOrigin}</dd></div>}
+      {details.credits.length > 0 && <div><dt className="inline font-semibold">Credits</dt> <dd className="inline text-muted">
+        {details.credits.map(credit => credit.role ? `${credit.name} (${credit.role})` : credit.name).join(' · ')}</dd></div>}
+      {details.genres.length > 0 && <div><dt className="mb-1 font-semibold">Genres</dt><dd><MetadataTags names={details.genres} /></dd></div>}
+      {(tags.length > 0 || spoilers.length > 0) && <div><dt className="mb-1 font-semibold">Tags</dt><dd>
+        {tags.length > 0 && <MetadataTags names={tags} />}
+        {spoilers.length > 0 && <details>
+          <summary className="min-h-11 cursor-pointer py-2 text-muted">Show spoiler tags</summary>
+          <MetadataTags names={spoilers} />
+        </details>}
+      </dd></div>}
+    </dl>
+  );
+}
 
 function SeriesMetadataForm({ title, metadata, save }: { title: string; metadata: Metadata | null; save: (values: object) => Promise<boolean> }) {
   const [kind, setKind] = useState<BookKind>(metadata?.kind ?? 'manga');
@@ -159,14 +206,15 @@ export function SeriesInfo({ rootId, seriesKey, title, version, onSignedOut, onC
             <SectionHeader title={metadata?.title ?? 'Series details'} />
             {metadata && <span className="text-sm text-muted">{metadata.kind === 'doujin' ? 'Doujin' : 'Manga'}
               {metadata.status && ' · ' + metadata.status.toLowerCase().replaceAll('_', ' ')}
-              {metadata.providerId && <> · <a className="text-accent-readable" href={'https://anilist.co/manga/' + metadata.providerId}
-                target="_blank" rel="noreferrer">AniList</a></>}
+              {metadata.providerUrl && <> · <a className="text-accent-readable" href={metadata.providerUrl}
+                target="_blank" rel="noreferrer">Open in AniList</a></>}
             </span>}
           </div>
           <Button variant="secondary" onClick={() => setEdit(value => !value)}>{edit ? 'Close editor' : 'Edit metadata'}</Button>
         </div>
         {metadata?.alternateTitle && <p className="m-0 text-sm text-muted">{metadata.alternateTitle}</p>}
         {metadata?.summary && <p className="m-0 max-w-prose text-sm whitespace-pre-line text-detail">{metadata.summary}</p>}
+        {metadata?.providerDetails && <ProviderFacts details={metadata.providerDetails} />}
         <div className="grid gap-1 text-sm">
           <strong>Available chapters</strong>
           <span className="text-muted">{details.availableChapters.toLocaleString()}
@@ -200,13 +248,26 @@ export function SeriesInfo({ rootId, seriesKey, title, version, onSignedOut, onC
       </form>
       {matches?.length === 0 && <p className="m-0 text-sm text-muted">No matching metadata found.</p>}
       {!!matches?.length && <ul className="m-0 grid list-none gap-2 p-0" role="list" aria-label="Metadata results">
-        {matches.map(candidate => <li key={candidate.providerId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-3">
-          <div className="grid gap-0.5"><strong>{candidate.title}</strong>
-            <span className="text-sm text-muted">{candidate.alternateTitle ?? (candidate.kind === 'doujin' ? 'Doujin' : 'Manga')}</span>
+        {matches.map(candidate => <li key={candidate.providerId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line p-3">
+          <div className="flex min-w-0 flex-[1_1_14rem] items-center gap-3">
+            <CoverImage src={candidate.providerDetails?.coverUrl ?? undefined} className="h-21 w-14 shrink-0 rounded-md" />
+            <div className="grid min-w-0 gap-1 wrap-anywhere">
+              <strong>{candidate.title}</strong>
+              {candidate.alternateTitle && <span className="text-sm text-muted">{candidate.alternateTitle}</span>}
+              <span className="text-sm text-muted">
+                {[candidate.kind === 'doujin' ? 'Doujin' : 'Manga', candidate.providerDetails && publicationYears(candidate.providerDetails),
+                  candidate.status?.toLowerCase().replaceAll('_', ' ')].filter(Boolean).join(' · ')}
+              </span>
+            </div>
           </div>
-          <Button variant="secondary" disabled={saving !== null} onClick={() => void choose(candidate)}>
-            {saving === candidate.providerId ? 'Saving…' : 'Use this match'}
-          </Button>
+          <div className="action-row">
+            {candidate.providerUrl && <ActionLink variant="ghost" icon={ExternalLink} href={candidate.providerUrl} target="_blank" rel="noreferrer">
+              Open in AniList
+            </ActionLink>}
+            <Button variant="secondary" disabled={saving !== null} onClick={() => void choose(candidate)}>
+              {saving === candidate.providerId ? 'Saving…' : 'Use this match'}
+            </Button>
+          </div>
         </li>)}
       </ul>}
       {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}

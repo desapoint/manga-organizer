@@ -205,6 +205,7 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE file_operation;
             DROP TABLE reading_progress_event;
             DROP TABLE reading_progress;
             DROP TABLE content_chapter;
@@ -226,7 +227,7 @@ def verify_web_setup(executable, fixture, media):
                 name TEXT,
                 kind TEXT NOT NULL CHECK (kind IN ('library', 'import'))
             );
-            INSERT INTO library_folder SELECT * FROM current_library_folder ORDER BY rowid;
+            INSERT INTO library_folder SELECT root_id, path, name, kind FROM current_library_folder ORDER BY rowid;
             DROP TABLE current_library_folder;
             UPDATE library_root SET state = 'scanning';
         """)
@@ -593,16 +594,25 @@ def verify_series_metadata(owner, root_id, path):
 
 
 def verify_external_metadata(executable, fixture, media):
+    cover = "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/fixture.jpg"
     media_result = {"id": 123, "title": {"english": "Synthetic provider title", "native": "本"},
                     "description": "Metadata fixture", "status": "FINISHED", "chapters": 12, "volumes": 3,
-                    "tags": [{"name": "Doujinshi"}]}
+                    "format": "ONE_SHOT", "countryOfOrigin": "JP", "startDate": {"year": 2011},
+                    "endDate": {"year": 2012}, "genres": ["Drama", "drama"],
+                    "coverImage": {"medium": cover}, "staff": {"edges": [
+                        {"role": "Story & Art", "node": {"name": {"full": "Fixture Author"}}}]},
+                    "tags": [{"name": "Doujinshi"}, {"name": "Hidden outcome", "isMediaSpoiler": True}]}
+    no_cover = {"id": 456, "title": {"romaji": "Cover fallback"},
+                "coverImage": {"medium": "https://s4.anilist.co.invalid/file/anilistcdn/media/manga/cover/fake.jpg"}}
 
     class Provider(BaseHTTPRequestHandler):
         def do_POST(self):
             request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             variables = request["variables"]
-            if variables == {"title": "Issue 01"}:
-                response = {"data": {"Page": {"media": [media_result]}}}
+            if not all(field in request["query"] for field in ("coverImage", "genres", "isMediaSpoiler", "staff")):
+                response = {"errors": [{"message": "Missing provider fields"}]}
+            elif variables == {"title": "Issue 01"}:
+                response = {"data": {"Page": {"media": [media_result, no_cover]}}}
             elif variables == {"id": 123}:
                 response = {"data": {"Media": media_result}}
             else:
@@ -631,10 +641,22 @@ def verify_external_metadata(executable, fixture, media):
                 browser.scan(root_id)
                 (series,) = browser.series(root_id, "?search=Issue+01")["items"]
                 url = f"{LIBRARY_ROOTS}/{root_id}/series/{series['key']}"
-                (result,) = json.loads(browser.request(f"{url}/metadata/search?title=Issue+01", 200))
+                result, fallback = json.loads(browser.request(f"{url}/metadata/search?title=Issue+01", 200))
                 assert result["providerId"] == 123 and result["kind"] == "doujin" and result["totalChapters"] == 12
-                browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 123})
-                assert json.loads(browser.request(f"{url}/details", 200))["metadata"]["providerId"] == 123
+                assert result["providerUrl"] == "https://anilist.co/manga/123"
+                assert result["providerDetails"] == {
+                    "coverUrl": cover, "format": "ONE_SHOT", "countryOfOrigin": "JP", "startYear": 2011, "endYear": 2012,
+                    "genres": ["Drama"], "tags": [{"name": "Doujinshi", "spoiler": False}, {"name": "Hidden outcome", "spoiler": True}],
+                    "credits": [{"name": "Fixture Author", "role": "Story & Art"}],
+                }
+                assert fallback["providerDetails"]["coverUrl"] is None and fallback["providerDetails"]["tags"] == []
+                saved = json.loads(browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 123}))
+                assert saved == result and json.loads(browser.request(f"{url}/details", 200))["metadata"] == result
+                edit = {"title": "My corrected title", "kind": "doujin", "totalChapters": 12}
+                corrected = json.loads(browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(), body=edit))
+                assert corrected["title"] == edit["title"] and corrected["providerUrl"] == result["providerUrl"]
+                assert corrected["providerDetails"] == result["providerDetails"]
+                assert json.loads(browser.request(f"{url}/details", 200))["metadata"] == corrected
         finally:
             service.shutdown()
             server.join(timeout=5)
