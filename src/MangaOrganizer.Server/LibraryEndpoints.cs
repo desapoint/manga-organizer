@@ -37,23 +37,35 @@ internal static class LibraryEndpoints
             {
                 return Results.NotFound();
             }
-            if (!IsValidPage(offset, limit) || (seriesKey is not null && (seriesKey.Length != 64 || !seriesKey.All(char.IsAsciiHexDigit))))
+            if (!IsValidPage(offset, limit) || (seriesKey is not null && !IsSeriesKey(seriesKey)))
             {
                 return Results.BadRequest();
             }
             return Results.Ok(store.ReadFiles(id, offset ?? 0, limit ?? 50, seriesKey?.ToLowerInvariant()));
         });
 
-        library.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, LibraryStore store) =>
+        library.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, string? search, string? sort, bool? coverOnly, LibraryStore store) =>
         {
             if (!store.TryGetRoot(id, out _))
             {
                 return Results.NotFound();
             }
 
-            return IsValidPage(offset, limit)
-                ? Results.Ok(store.ReadSeries(id, offset ?? 0, limit ?? 50))
+            return IsValidPage(offset, limit) && search is not { Length: > 160 } && sort is null or "title" or "recent" or "files"
+                ? Results.Ok(store.ReadSeries(id, offset ?? 0, limit ?? 50, search?.Trim() ?? "", sort, coverOnly == true))
                 : Results.BadRequest();
+        });
+
+        library.MapGet("/{id:guid}/series/{seriesKey}/cover", (Guid id, string seriesKey, LibraryStore store, HttpContext context) =>
+        {
+            if (!IsSeriesKey(seriesKey)) return Results.NotFound();
+
+            var cover = store.ReadCover(id, seriesKey.ToLowerInvariant());
+            if (cover is null) return Results.NotFound();
+
+            context.Response.Headers.CacheControl = "private, max-age=120";
+            context.Response.Headers.XContentTypeOptions = "nosniff";
+            return Results.File(cover.Bytes, cover.MediaType);
         });
 
         library.MapPost("/{id:guid}/scan", async (Guid id, LibraryStore store, LibraryScanQueue scans,
@@ -72,6 +84,7 @@ internal static class LibraryEndpoints
     }
 
     private static bool IsValidPage(int? offset, int? limit) => offset is not < 0 && limit is not (< 1 or > 100);
+    private static bool IsSeriesKey(string value) => value.Length == 64 && value.All(char.IsAsciiHexDigit);
 
     private static async Task<IResult> SaveFolder(Guid? id, LibraryFolderChange change, LibraryStore store,
         HttpContext context, IAntiforgery antiforgery)

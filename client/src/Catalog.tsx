@@ -117,7 +117,8 @@ export function Catalog({ view, title, section, onSignedOut, children }: {
           </div>
           {scanError && <p role="alert" className="error">{scanError}</p>}
           <CatalogInventory key={selected.id} rootId={selected.id} version={`${inventoryVersion}:${refresh}`}
-            onSignedOut={onSignedOut} scanComplete={selected.state === 'complete'} intake={view === 'import'} rootPath={selected.path} />
+            onSignedOut={onSignedOut} scanComplete={selected.state === 'complete'} intake={view === 'import'} rootPath={selected.path}
+            hasCovers={selected.hasCovers} coverVersion={selected.lastScannedAt ?? ''} />
         </>
       )}
     </section>

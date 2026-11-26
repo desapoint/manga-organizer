@@ -1,8 +1,9 @@
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
-internal sealed record CatalogSeries(string Key, string Title, long FileCount, bool Suggested);
+internal sealed record CatalogSeries(string Key, string Title, long FileCount, bool Suggested, bool HasCover);
 
 internal sealed partial class LibraryStore
 {
@@ -32,27 +33,39 @@ internal sealed partial class LibraryStore
         command.ExecuteNonQuery();
     }
 
-    public CatalogPage<CatalogSeries> ReadSeries(Guid id, int offset, int limit)
+    public CatalogPage<CatalogSeries> ReadSeries(Guid id, int offset, int limit, string search, string? sort, bool coverOnly)
     {
         using var database = OpenDatabase();
+        database.CreateFunction<string, string, bool>("title_contains", (title, query) =>
+            CultureInfo.InvariantCulture.CompareInfo.IndexOf(title, query, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) >= 0,
+            isDeterministic: true);
         using var transaction = database.BeginTransaction(deferred: true);
         using var command = database.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = "SELECT COUNT(DISTINCT series_key) FROM library_file WHERE root_id = $id;";
-        command.Parameters.AddWithValue("$id", id);
-        var total = (long)command.ExecuteScalar()!;
-        command.CommandText = """
-            SELECT series_key, MIN(COALESCE(series_title, relative_path)) AS title, COUNT(*), MAX(series_title IS NOT NULL)
-            FROM library_file WHERE root_id = $id
-            GROUP BY series_key ORDER BY title COLLATE NOCASE, series_key LIMIT $limit OFFSET $offset;
+        const string seriesQuery = """
+            WITH folder_series AS (
+                SELECT f.series_key, MIN(COALESCE(f.series_title, f.relative_path)) AS title, COUNT(*) AS file_count,
+                    MAX(f.series_title IS NOT NULL) AS suggested, MAX(f.modified_at) AS latest,
+                    EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = $id AND cover.series_key = f.series_key) AS has_cover
+                FROM library_file f WHERE f.root_id = $id GROUP BY f.series_key
+            )
             """;
+        const string filter = " FROM folder_series WHERE ($coverOnly = 0 OR has_cover) AND ($search = '' OR title_contains(title, $search))";
+        command.CommandText = seriesQuery + " SELECT COUNT(*)" + filter;
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$search", search);
+        command.Parameters.AddWithValue("$coverOnly", coverOnly);
+        var total = (long)command.ExecuteScalar()!;
+        var order = sort switch { "recent" => "latest DESC, ", "files" => "file_count DESC, ", _ => "" };
+        command.CommandText = seriesQuery + " SELECT series_key, title, file_count, suggested, has_cover" + filter +
+            " ORDER BY " + order + "title COLLATE NOCASE, series_key LIMIT $limit OFFSET $offset;";
         command.Parameters.AddWithValue("$limit", limit);
         command.Parameters.AddWithValue("$offset", offset);
         var items = new List<CatalogSeries>(limit);
         using var rows = command.ExecuteReader();
         while (rows.Read())
         {
-            items.Add(new(rows.GetString(0), rows.GetString(1), rows.GetInt64(2), rows.GetBoolean(3)));
+            items.Add(new(rows.GetString(0), rows.GetString(1), rows.GetInt64(2), rows.GetBoolean(3), rows.GetBoolean(4)));
         }
 
         return new(total, items);

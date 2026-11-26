@@ -25,6 +25,7 @@ export type LibraryRoot = {
   fileCount: number;
   lastScannedAt: string | null;
   skippedLinks: number;
+  hasCovers: boolean;
 };
 
 export function scanIsActive(root: LibraryRoot) {

@@ -37,6 +37,8 @@ Look for `cover.png` beside the files and use it as the folder's cover candidate
 
 Show covers alongside original and normalized titles during association review. Equal or visually similar covers can raise the ranking of a series candidate. Conflicting edition, language or chapter evidence still needs review. Files with an unavailable cover stay visible and eligible for association and reading.
 
+The WebUI MVP indexes a cover source per series group on scan. It uses `cover.png` in a folder whose files resolve to one group, then looks for the first bounded JPEG, PNG or WebP page in a CBZ or image ZIP. Stored cover sources reference the original media. Rescan existing folders to index artwork after upgrading.
+
 ## Acceptance cases
 
 - `Northbound/01.cbz`, `Northbound/Ch. 1.5.cbz` and `Northbound/Vol. 02.cbz` can be assigned to one series together. The volume retains unresolved chapter coverage until it is verified.
