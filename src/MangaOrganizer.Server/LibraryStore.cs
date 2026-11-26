@@ -168,7 +168,9 @@ internal sealed partial class LibraryStore
             );
             CREATE TEMP TABLE scan_hash (
                 relative_path TEXT PRIMARY KEY,
-                sha256 BLOB
+                sha256 BLOB,
+                detected_chapters TEXT,
+                chapter_source TEXT
             );
             CREATE TEMP TABLE scan_cover (
                 series_key TEXT PRIMARY KEY,
@@ -213,6 +215,14 @@ internal sealed partial class LibraryStore
                 INSERT INTO library_content(sha256)
                     SELECT DISTINCT sha256 FROM scan_hash WHERE sha256 IS NOT NULL
                     ON CONFLICT(sha256) DO NOTHING;
+                INSERT INTO inferred_volume_chapters(content_id, volume, chapters, source)
+                    SELECT c.id, MIN(s.volume_hint), MIN(h.detected_chapters), MIN(h.chapter_source)
+                    FROM scan_hash h JOIN scan_file s ON s.relative_path = h.relative_path
+                    JOIN library_content c ON c.sha256 = h.sha256
+                    WHERE h.detected_chapters IS NOT NULL
+                    GROUP BY c.id
+                    HAVING COUNT(DISTINCT s.volume_hint) = 1 AND COUNT(DISTINCT h.detected_chapters) = 1
+                    ON CONFLICT(content_id) DO NOTHING;
                 INSERT INTO library_file(root_id, relative_path, extension, size, modified_at, content_id, series_key, series_title, volume_hint, chapter_hint)
                     SELECT $id, s.relative_path, s.extension, s.size, s.modified_at, c.id, s.series_key, s.series_title, s.volume_hint, s.chapter_hint
                     FROM scan_file s LEFT JOIN scan_hash h ON h.relative_path = s.relative_path

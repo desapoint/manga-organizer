@@ -38,6 +38,7 @@ Track the responsive series layout, More info dialog, library coverage and chapt
 - [ ] Support multiple metadata providers with per-server provider priority and per-series overrides. Record the source of imported metadata and let owners choose which provider to use when results conflict.
 - [ ] Let owners set preferred title and metadata languages, plus preferred languages for reading local releases. Support per-series overrides and keep publication origin distinct from release language.
 - [ ] Support multiple alternate titles with language labels, use them in local search, and let owners choose the display title and which alternates appear in series details.
+- [ ] Match volume files that only have a volume number using verified edition-specific volume-to-chapter manifests. Review gaps and conflicting editions. An aggregate AniList chapter or volume count cannot supply this mapping.
 
 ## Decisions
 

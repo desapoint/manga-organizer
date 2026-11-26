@@ -42,7 +42,7 @@ Owners can also enter titles, summaries, publication types and totals directly. 
 
 Filter Library series by saved tags. A series must have every included tag and is excluded if it has any excluded tag. Dynamic collections save the title search, cover requirement and tag filters and reevaluate them across active library folders. Manual collections retain explicit series selections. Deleting a collection removes its rules or selections and leaves the series and files in the library.
 
-Visible volume and chapter labels come from explicit filename numbers or owner-confirmed coverage. A volume with unknown coverage has a volume label and no inferred chapter count. The owner can list every verified chapter in a volume file. Availability counts distinct indexed chapter and volume pairs once. A missing publication total stays unknown. Metadata and confirmed coverage follow the verified content ID during a rescan after a move.
+Visible volume and chapter labels come from explicit filename numbers, detected volume coverage or owner-confirmed coverage. Scan a numbered volume archive to detect an explicit chapter range such as `Vol. 02 Ch. 8-14.cbz` or obtain chapter numbers from its explicitly labeled page folders. If the two signals disagree, review the file. A volume with unknown coverage has a volume label and no inferred chapter count. Detected coverage follows the verified content ID across file moves, and an owner assignment takes precedence. Availability counts distinct indexed chapter and volume pairs once. A missing publication total stays unknown.
 
 ## Cover previews during scans
 

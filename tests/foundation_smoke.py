@@ -205,6 +205,7 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE inferred_volume_chapters;
             DROP TABLE series_collection_item;
             DROP TABLE series_collection;
             DROP TABLE file_operation;
@@ -867,6 +868,51 @@ def verify_file_identity(owner, media):
     assert entries(primary)[chapter_path]["contentId"] == identity
 
 
+def verify_volume_chapters(owner, root_id, path):
+    editions = path / "Collected editions"
+    editions.mkdir()
+    range_file = editions / "Collected editions Vol.02 Ch.3–5.cbz"
+    archive_file = editions / "Collected editions Vol.03.cbz"
+    ambiguous_file = editions / "Collected editions Vol.04 Ch.13-17.cbz"
+    unnamed_file = editions / "Collected editions Vol.05.cbz"
+    examples = [(range_file, ["1.png", "2.png"]),
+                (archive_file, ["cover.png", "Chapter 6 - Beginnings/1.png", "Chapter 7.5/1.png"]),
+                (ambiguous_file, ["Chapter 13/1.png", "Chapter 17/1.png"]),
+                (unnamed_file, ["001.png", "002.png"])]
+    for index, (archive_file_path, pages) in enumerate(examples):
+        with ZipFile(archive_file_path, "w") as archive:
+            for page in pages:
+                archive.writestr(page, synthetic_png(1, 2, index + 3))
+    owner.scan(root_id)
+    (group,) = owner.series(root_id, "?search=Collected+editions")["items"]
+    group_url = f"{LIBRARY_ROOTS}/{root_id}/series/{group['key']}"
+    files = {Path(item["relativePath"]).name: item for item in owner.files(root_id, "?seriesKey=" + group["key"])["items"]}
+
+    def coverage(file, url=group_url):
+        content_id = files[file.name]["contentId"]
+        return json.loads(owner.request(f"{url}/coverage?contentId={content_id}", 200))
+
+    assert [(item["volume"], item["chapter"], item["source"]) for item in coverage(range_file)] == [
+        ("2", "3", "filename"), ("2", "4", "filename"), ("2", "5", "filename"),
+    ]
+    assert [(item["chapter"], item["source"]) for item in coverage(archive_file)] == [("6", "archive"), ("7.5", "archive")]
+    assert coverage(ambiguous_file) == coverage(unnamed_file) == []
+    assert json.loads(owner.request(f"{group_url}/details", 200))["availableChapters"] == 5
+    manual = {"contentId": files[range_file.name]["contentId"], "volume": "2", "chapters": ["9"]}
+    owner.request(f"{group_url}/coverage", 204, method="PUT", token=owner.csrf(), body=manual)
+    assert coverage(range_file) == [{"volume": "2", "chapter": "9"}]
+    owner.request(f"{group_url}/coverage", 204, method="PUT", token=owner.csrf(), body=dict(manual, chapters=[]))
+    assert len(coverage(range_file)) == 3
+
+    moved = editions / "Collection renamed without chapter labels.cbz"
+    range_file.rename(moved)
+    owner.scan(root_id)
+    (renamed,) = owner.series(root_id, "?search=Collection+renamed")["items"]
+    files[moved.name] = files[range_file.name]
+    new_url = f"{LIBRARY_ROOTS}/{root_id}/series/{renamed['key']}"
+    assert len(coverage(moved, new_url)) == 3
+
+
 def smoke(start, media):
     password = uuid4().hex
     with start(password) as url:
@@ -896,6 +942,7 @@ def smoke(start, media):
         verify_file_identity(first, media)
         roots = verify_folder_settings(first, media)
         verify_reader(first, second, roots[-1]["id"], media / "intake")
+        verify_volume_chapters(first, roots[-1]["id"], media / "intake")
         roots = first.roots()
         inventory = first.files(roots[0]["id"], "?limit=100")
         series = first.series(roots[-1]["id"])

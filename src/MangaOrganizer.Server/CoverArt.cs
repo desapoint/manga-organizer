@@ -97,7 +97,7 @@ internal static class CoverArt
         });
     }
 
-    private static bool IsNamedCover(ComicEntry entry) =>
+    internal static bool IsNamedCover(ComicEntry entry) =>
         Path.GetFileNameWithoutExtension(entry.Name).ToLowerInvariant() is "cover" or "front-cover" or "front_cover" or "front cover" or "frontcover";
 
     private static int? ComicInfoCover(ComicArchive archive)

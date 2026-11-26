@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
@@ -9,7 +10,8 @@ internal sealed record SeriesMetadata(string Title, string Kind, string? Alterna
 {
     public string? ProviderUrl => ProviderId is { } id ? MetadataAgent.ListingUrl(id) : null;
 }
-internal sealed record SeriesChapter(string? Volume, string Chapter);
+internal sealed record SeriesChapter(string? Volume, string Chapter,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Source = null);
 internal sealed record LibraryChapter(string? Volume, string Chapter, string? ContentId, int ReadableFiles);
 internal sealed record SeriesReading(string ContentId, string RelativePath, int? PageIndex, int? PageCount, bool HasFinishedFile);
 internal sealed record SeriesDetails(SeriesMetadata? Metadata, int AvailableChapters, int ReadChapters, IReadOnlyList<string> Volumes,
@@ -30,9 +32,15 @@ internal sealed partial class LibraryStore
         SELECT f.content_id, c.volume, c.chapter FROM library_file f JOIN content_chapter c ON c.content_id = f.content_id
         WHERE f.root_id = $root AND f.series_key = $series
         UNION
+        SELECT f.content_id, inferred.volume, chapter.value
+        FROM library_file f JOIN inferred_volume_chapters inferred ON inferred.content_id = f.content_id, json_each(inferred.chapters) chapter
+        WHERE f.root_id = $root AND f.series_key = $series
+            AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = f.content_id)
+        UNION
         SELECT f.content_id, COALESCE(f.volume_hint, ''), f.chapter_hint FROM library_file f
         WHERE f.root_id = $root AND f.series_key = $series AND f.content_id IS NOT NULL AND f.chapter_hint IS NOT NULL
             AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = f.content_id)
+            AND NOT EXISTS (SELECT 1 FROM inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
         """;
 
     internal static void BackfillBookNumbers(SqliteConnection database, SqliteCommand command)
@@ -79,7 +87,9 @@ internal sealed partial class LibraryStore
         }
 
         command.CommandText = """
-            SELECT DISTINCT volume_hint FROM library_file WHERE root_id = $root AND series_key = $series AND volume_hint IS NOT NULL;
+            SELECT DISTINCT volume_hint FROM library_file WHERE root_id = $root AND series_key = $series AND volume_hint IS NOT NULL
+                AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = library_file.content_id)
+                AND NOT EXISTS (SELECT 1 FROM inferred_volume_chapters inferred WHERE inferred.content_id = library_file.content_id);
             """;
         var volumes = chapters.Select(chapter => chapter.Volume).OfType<string>().ToHashSet(StringComparer.Ordinal);
         using (var rows = command.ExecuteReader())
@@ -217,13 +227,19 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$content", contentId);
         if (!ContentInGroup(command)) return null;
 
-        command.CommandText = "SELECT volume, chapter FROM content_chapter WHERE content_id = $content;";
+        command.CommandText = """
+            SELECT volume, chapter, NULL FROM content_chapter WHERE content_id = $content
+            UNION ALL
+            SELECT inferred.volume, chapter.value, inferred.source
+            FROM inferred_volume_chapters inferred, json_each(inferred.chapters) chapter
+            WHERE inferred.content_id = $content AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = $content);
+            """;
         var result = new List<SeriesChapter>();
         using var rows = command.ExecuteReader();
         while (rows.Read())
         {
             var volume = rows.GetString(0);
-            result.Add(new(volume.Length == 0 ? null : volume, rows.GetString(1)));
+            result.Add(new(volume.Length == 0 ? null : volume, rows.GetString(1), ReadText(rows, 2)));
         }
         return result.OrderBy(chapter => Numeric(chapter.Chapter)).ToArray();
     }

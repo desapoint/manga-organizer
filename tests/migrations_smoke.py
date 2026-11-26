@@ -36,6 +36,7 @@ def verify(app, fixture):
 
     # Exercise the exact schema from the previous managed-file preview with an AniList assignment.
     with closing(sqlite3.connect(fresh / "organizer.sqlite")) as database:
+        database.execute("DROP TABLE inferred_volume_chapters")
         database.execute("DROP TABLE series_collection_item")
         database.execute("DROP TABLE series_collection")
         database.execute("ALTER TABLE series_metadata DROP COLUMN provider_details")
