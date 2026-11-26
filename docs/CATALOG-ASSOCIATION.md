@@ -41,11 +41,15 @@ Visible volume and chapter labels come from explicit filename numbers or owner-c
 
 ## Cover previews during scans
 
-Look for `cover.png` beside the files and use it as the folder's cover candidate. When it is absent or invalid, use the first readable page of a supported manga file. Keep the image's provenance so the owner can see whether it came from the folder or a particular release. Create bounded previews without modifying the source, follow the existing archive, filesystem and permissions rules, and invalidate the preview when its source changes.
+Series covers first use a valid `cover.png`, `cover.jpg`, `cover.jpeg`, or `cover.webp` in a directory whose indexed files resolve to one series. If the named cover is unavailable, try numbered variants such as `cover-1.jpg`, then use the first file cover available for the series. Retain original paths and cover provenance.
 
 Show covers alongside original and normalized titles during association review. Equal or visually similar covers can raise the ranking of a series candidate. Conflicting edition, language or chapter evidence still needs review. Files with an unavailable cover stay visible and eligible for association and reading.
 
-The WebUI MVP indexes a cover source per series group on scan. It uses `cover.png` in a folder whose files resolve to one group, then looks for the first bounded JPEG, PNG or WebP page in a CBZ or image ZIP. Stored cover sources reference the original media. Rescan existing folders to index artwork after upgrading.
+Each CBZ or image ZIP can have an independent file cover. Prefer a readable page marked `FrontCover` in `ComicInfo.xml` using the reader's zero-based page order. Then try an explicitly named `cover` or `front-cover` image inside the archive, followed by the first readable page. The file inventory shows these covers even when its series uses different artwork. [ComicInfo schema](https://github.com/anansi-project/comicinfo/blob/99e1453a163c777b4b5320a68732f6f133ac7918/schema/v2.0/ComicInfo.xsd)
+
+Store high-quality WebP previews in a persistent, content-addressed cache under the server data directory. Encode at up to 2048 pixels on the long edge and retain the input dimensions for smaller artwork. Use one stored copy for identical image bytes and reuse file cover results by the verified archive digest. Update cover selection on rescan. Rescan an existing library to populate file covers after upgrading.
+
+A later update must let the owner click a cover to see a larger preview and choose preferred series artwork from multiple folders, file covers, or metadata sources. Show provenance and remember the explicit choice across rescans.
 
 ## Acceptance cases
 

@@ -7,7 +7,7 @@ internal sealed record LibraryRootStatus(Guid Id, string Path, string State, lon
     DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks, string? Name, string Kind, bool HasCovers,
     ScanSnapshot? ScanProgress = null);
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt,
-    string? ContentId, string? Sha256, long? IndexedLocations, string? Volume, string? Chapter);
+    string? ContentId, string? Sha256, long? IndexedLocations, string? Volume, string? Chapter, bool HasCover);
 internal sealed record CatalogPage<T>(long Total, IReadOnlyList<T> Items);
 
 internal sealed partial class LibraryStore
@@ -17,7 +17,8 @@ internal sealed partial class LibraryStore
     public LibraryStore(string dataDirectory, Func<IReadOnlyList<string>> initialPaths)
     {
         this.dataDirectory = dataDirectory;
-        using var database = OpenDatabase();
+        using var database = OpenCoverDatabase();
+        CoverCache.Initialize(database);
         using var transaction = database.BeginTransaction();
         using var command = database.CreateCommand();
         command.Transaction = transaction;
@@ -70,7 +71,7 @@ internal sealed partial class LibraryStore
 
     public CatalogPage<CatalogEntry> ReadFiles(Guid id, int offset, int limit, string? seriesKey, string search)
     {
-        using var database = OpenDatabase();
+        using var database = OpenCoverDatabase();
         RegisterTitleSearch(database);
         using var transaction = database.BeginTransaction(deferred: true);
         using var command = database.CreateCommand();
@@ -101,7 +102,8 @@ internal sealed partial class LibraryStore
                     SELECT COUNT(*) FROM library_file location
                     JOIN library_folder folder ON folder.root_id = location.root_id
                     WHERE location.content_id = c.id
-                ) END, f.volume_hint, f.chapter_hint
+                ) END, f.volume_hint, f.chapter_hint,
+                EXISTS(SELECT 1 FROM artwork.archive_cover cover WHERE cover.archive_sha = c.sha256)
             """ + " " + sources + scope + " ORDER BY f.relative_path LIMIT $limit OFFSET $offset;";
         command.Parameters.AddWithValue("$limit", limit);
         command.Parameters.AddWithValue("$offset", offset);
@@ -112,7 +114,7 @@ internal sealed partial class LibraryStore
             var verified = !rows.IsDBNull(5);
             items.Add(new(rows.GetString(0), rows.GetString(1), rows.GetString(2), rows.GetInt64(3), rows.GetDateTimeOffset(4),
                 verified ? rows.GetString(5) : null, verified ? rows.GetString(6) : null, verified ? rows.GetInt64(7) : null,
-                ReadText(rows, 8), ReadText(rows, 9)));
+                ReadText(rows, 8), ReadText(rows, 9), rows.GetBoolean(10)));
         }
         return new(total, items);
     }
@@ -143,7 +145,7 @@ internal sealed partial class LibraryStore
 
     public void Refresh(LibraryRoot root, ScanProgress scan, CancellationToken cancellationToken)
     {
-        using var database = OpenDatabase();
+        using var database = OpenCoverDatabase();
         using var command = database.CreateCommand();
         command.CommandText = """
             CREATE TEMP TABLE scan_file (
@@ -168,6 +170,11 @@ internal sealed partial class LibraryStore
                 modified_at TEXT NOT NULL,
                 archive_entry TEXT,
                 sha256 BLOB NOT NULL
+            );
+            CREATE TEMP TABLE scan_sidecar (
+                series_key TEXT NOT NULL,
+                relative_path TEXT PRIMARY KEY,
+                image_sha BLOB NOT NULL
             );
             """;
         command.ExecuteNonQuery();
@@ -211,6 +218,19 @@ internal sealed partial class LibraryStore
                 DELETE FROM library_series_cover WHERE root_id = $id;
                 INSERT INTO library_series_cover(root_id, series_key, relative_path, size, modified_at, archive_entry, sha256)
                     SELECT $id, series_key, relative_path, size, modified_at, archive_entry, sha256 FROM scan_cover;
+                DELETE FROM artwork.folder_cover WHERE root_id = $id OR root_id NOT IN (SELECT root_id FROM library_folder);
+                INSERT INTO artwork.folder_cover(root_id, series_key, relative_path, image_sha)
+                    SELECT $id, series_key, relative_path, image_sha FROM scan_sidecar;
+                DELETE FROM artwork.archive_cover AS cover WHERE NOT EXISTS (
+                    SELECT 1 FROM library_content c JOIN library_file f ON f.content_id = c.id JOIN library_folder folder ON folder.root_id = f.root_id
+                    WHERE c.sha256 = cover.archive_sha
+                );
+                DELETE FROM artwork.image WHERE sha256 NOT IN (
+                    SELECT image_sha FROM artwork.archive_cover
+                    UNION SELECT image_sha FROM artwork.folder_cover
+                    UNION SELECT cover.sha256 FROM library_series_cover cover JOIN library_folder folder ON folder.root_id = cover.root_id
+                );
+                PRAGMA artwork.incremental_vacuum(128);
                 UPDATE library_root SET state = 'complete', file_count = $count,
                     last_scanned_at = $now, skipped_links = $skipped WHERE id = $id;
                 """;
