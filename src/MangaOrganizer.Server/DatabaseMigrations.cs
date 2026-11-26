@@ -25,6 +25,7 @@ internal static class DatabaseMigrations
         new("0011-inferred-volume-chapters"),
         new("0012-chapter-editions"),
         new("0013-duplicate-quarantine"),
+        new("0014-preferred-chapter-release"),
     ];
 
     public static int Apply(string dataDirectory)

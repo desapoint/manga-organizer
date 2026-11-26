@@ -7,7 +7,7 @@ import type { Details } from './SeriesInfo';
 import { ActionLink, Button, Modal, SectionHeader } from './ui';
 
 type Chapter = Details['chapters'][number];
-type Release = { contentId: string; relativePath: string; format: string; pageIndex: number | null; pageCount: number | null; unresolvedVolume: boolean };
+type Release = { contentId: string; relativePath: string; format: string; pageIndex: number | null; pageCount: number | null; unresolvedVolume: boolean; preferred: boolean };
 type EditionVolume = {
   id: string; edition: string; volume: string; chapters: string[]; contentIds: string[];
   available: string[]; state: 'complete' | 'partial' | 'missing' | 'unknown';
@@ -45,13 +45,31 @@ async function saveSeries(url: string, data: object, onSignedOut: () => void) {
   }
 }
 
-function ReleasePicker({ chapter, rootId, seriesKey, url, version, onSignedOut, onClose }: Omit<SeriesTools, 'onChange'> & {
+function ReleasePicker({ chapter, rootId, seriesKey, url, version, onSignedOut, onChange, onClose }: SeriesTools & {
   chapter: Chapter; rootId: string; seriesKey: string; onClose: () => void;
 }) {
   const query = new URLSearchParams({ chapter: chapter.chapter, volume: chapter.volume ?? '' });
   const { items, error } = useSeriesList<Release>(url + '/chapter-releases?' + query, version, onSignedOut);
-  return <Modal title={`Releases for chapter ${chapter.chapter}`} onClose={onClose}>
+  const [busy, setBusy] = useState(false);
+  const [preferenceError, setPreferenceError] = useState('');
+
+  async function prefer(file: Release) {
+    setBusy(true);
+    setPreferenceError('');
+    try {
+      await saveSeries(url + '/chapter-preference', { volume: chapter.volume, chapter: chapter.chapter,
+        contentId: file.preferred ? null : file.contentId }, onSignedOut);
+      onChange();
+    } catch (reason) {
+      setPreferenceError(reason instanceof Error ? reason.message : 'Could not save the preferred release.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <Modal title={`Releases for chapter ${chapter.chapter}`} onClose={() => { if (!busy) onClose(); }}>
     {error && <p role="alert" className="text-danger">Could not load releases.</p>}
+    {preferenceError && <p role="alert" className="text-danger">{preferenceError}</p>}
     {!items && !error && <p role="status">Loading releases…</p>}
     {items?.length === 0 && <p>No readable release is indexed for this chapter.</p>}
     {items && items.length > 0 && <>
@@ -61,9 +79,13 @@ function ReleasePicker({ chapter, rootId, seriesKey, url, version, onSignedOut, 
           <div className="min-w-0">
             <code>{file.relativePath}</code>
             <p className="m-0 text-sm text-muted">{file.format.toUpperCase()}{file.pageIndex !== null && ` · Page ${file.pageIndex + 1} of ${file.pageCount}`}</p>
+            {file.preferred && <p className="m-0 text-sm text-positive">Preferred release</p>}
           </div>
-          <ActionLink href={seriesReaderHref(file.contentId, rootId, seriesKey)} icon={BookOpen} variant="secondary"
-            onClick={onClose}>{file.pageIndex === null ? 'Open file' : 'Resume file'}</ActionLink>
+          <div className="action-row">
+            <ActionLink href={seriesReaderHref(file.contentId, rootId, seriesKey)} icon={BookOpen} variant="secondary"
+              onClick={onClose}>{file.pageIndex === null ? 'Open file' : 'Resume file'}</ActionLink>
+            <Button variant="ghost" disabled={busy} onClick={() => void prefer(file)}>{file.preferred ? 'Clear preference' : 'Prefer this release'}</Button>
+          </div>
         </li>)}
       </ul>
     </>}
@@ -105,6 +127,8 @@ export function SeriesChapterList({ chapters, rootId, seriesKey, url, version, o
           {chapter.volume ? `Volume ${chapter.volume} · ` : ''}{chapter.completed ? 'Read' : 'Unread'}
         </span></div>
         <div className="action-row">
+          {chapter.preferredContentId && chapter.readableFiles > 1 && <ActionLink icon={BookOpen} variant="secondary"
+            href={seriesReaderHref(chapter.preferredContentId, rootId, seriesKey)}>Read preferred</ActionLink>}
           {chapter.readableFiles > 1 ? <Button variant="secondary" onClick={() => setChosen(chapter)}>Choose release ({chapter.readableFiles})</Button> :
             chapter.contentId && <ActionLink variant="ghost" icon={BookOpen} href={seriesReaderHref(chapter.contentId, rootId, seriesKey)}>Read file</ActionLink>}
           <Button variant="ghost" icon={chapter.completed ? undefined : Check} disabled={busy}
@@ -114,7 +138,7 @@ export function SeriesChapterList({ chapters, rootId, seriesKey, url, version, o
     </ul> : <p className="m-0 p-4 text-sm text-muted">{filter ? 'No matching chapter numbers.' : 'No indexed chapter numbers. Files remain available in the Files tab.'}</p>}
     {filtered.length > limit && <div className="p-4"><Button variant="secondary" onClick={() => setLimit(count => count + 50)}>Show more chapters</Button></div>}
     {chosen && <ReleasePicker chapter={chosen} rootId={rootId} seriesKey={seriesKey} url={url}
-      version={version} onSignedOut={onSignedOut} onClose={() => setChosen(null)} />}
+      version={version} onSignedOut={onSignedOut} onChange={onChange} onClose={() => setChosen(null)} />}
   </>;
 }
 
@@ -207,6 +231,17 @@ export function EditionCoverage({ url, version, onSignedOut, onChange, onBrowse,
       <progress className="h-2 w-full accent-accent" value={selected.available.length} max={selected.chapters.length}
         aria-label="Verified chapter coverage" />
       <p className="m-0 text-sm text-muted">{selected.available.length} of {selected.chapters.length} verified chapters indexed</p>
+      <details>
+        <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Show chapter coverage</summary>
+        <ul aria-label="Expected chapters" role="list" className="m-0 flex list-none flex-wrap gap-2 p-0">
+          {selected.chapters.map(chapter => {
+            const present = selected.available.includes(chapter);
+            const status = present ? 'Indexed' : selected.state === 'unknown' ? 'Unknown' : 'Missing';
+            return <li key={chapter} className={`rounded-md border px-2 py-1 text-xs ${present ? statusClasses.complete :
+              selected.state === 'unknown' ? statusClasses.unknown : statusClasses.missing}`}>Ch. {chapter} · {status}</li>;
+          })}
+        </ul>
+      </details>
       <div className="action-row"><Button variant="ghost" onClick={() => onBrowse(selected.volume)}>View chapters</Button>
         <Button variant="ghost" icon={Pencil} onClick={() => setEditing(selected)}>Edit verified volume</Button></div>
     </div>}

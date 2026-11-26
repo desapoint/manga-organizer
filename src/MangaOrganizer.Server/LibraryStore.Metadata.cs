@@ -12,7 +12,8 @@ internal sealed record SeriesMetadata(string Title, string Kind, string? Alterna
 }
 internal sealed record SeriesChapter(string? Volume, string Chapter,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Source = null);
-internal sealed record LibraryChapter(string? Volume, string Chapter, string? ContentId, int ReadableFiles, bool Completed);
+internal sealed record LibraryChapter(string? Volume, string Chapter, string? ContentId, int ReadableFiles, bool Completed,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PreferredContentId = null);
 internal sealed record SeriesReading(string ContentId, string RelativePath, int? PageIndex, int? PageCount, bool HasFinishedFile);
 internal sealed record SeriesDetails(SeriesMetadata? Metadata, int AvailableChapters, int ReadChapters, IReadOnlyList<string> Volumes,
     IReadOnlyList<LibraryChapter> Chapters, SeriesReading? Reading);
@@ -68,7 +69,8 @@ internal sealed partial class LibraryStore
                   AND f.content_id IS NOT NULL AND f.extension IN ('cbz', 'zip', 'cbr', 'rar')
             )
             SELECT coverage.volume, coverage.chapter, COALESCE(chapter.completed, local.completed, MAX(COALESCE(p.completed, 0))),
-                COUNT(readable.content_id), MIN(readable.content_id)
+                COUNT(readable.content_id), MIN(readable.content_id),
+                MAX(CASE WHEN readable.content_id = COALESCE(preferred.content_id, preferred_local.content_id) THEN readable.content_id END)
             FROM (
             """ + " " + GroupCoverage + """
             ) coverage LEFT JOIN reading_progress p ON p.owner_id = $owner AND p.content_id = coverage.content_id
@@ -77,6 +79,10 @@ internal sealed partial class LibraryStore
                 AND chapter.volume = coverage.volume AND chapter.chapter = coverage.chapter
             LEFT JOIN chapter_completion local ON local.owner_id = $owner AND local.work_key = $localWork
                 AND local.volume = coverage.volume AND local.chapter = coverage.chapter
+            LEFT JOIN preferred_chapter_release preferred ON preferred.owner_id = $owner AND preferred.work_key = $work
+                AND preferred.volume = coverage.volume AND preferred.chapter = coverage.chapter
+            LEFT JOIN preferred_chapter_release preferred_local ON preferred_local.owner_id = $owner AND preferred_local.work_key = $localWork
+                AND preferred_local.volume = coverage.volume AND preferred_local.chapter = coverage.chapter
             GROUP BY coverage.volume, coverage.chapter;
             """;
         var chapters = new List<LibraryChapter>();
@@ -87,7 +93,7 @@ internal sealed partial class LibraryStore
             {
                 var volume = rows.GetString(0);
                 var count = rows.GetInt32(3);
-                chapters.Add(new(volume.Length == 0 ? null : volume, rows.GetString(1), count == 1 ? rows.GetString(4) : null, count, rows.GetBoolean(2)));
+                chapters.Add(new(volume.Length == 0 ? null : volume, rows.GetString(1), count == 1 ? rows.GetString(4) : null, count, rows.GetBoolean(2), ReadText(rows, 5)));
                 if (rows.GetBoolean(2)) readChapters++;
             }
         }

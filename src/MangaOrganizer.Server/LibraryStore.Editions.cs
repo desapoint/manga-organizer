@@ -3,7 +3,7 @@ using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
-internal sealed record ChapterRelease(string ContentId, string RelativePath, string Format, int? PageIndex, int? PageCount, bool UnresolvedVolume = false);
+internal sealed record ChapterRelease(string ContentId, string RelativePath, string Format, int? PageIndex, int? PageCount, bool UnresolvedVolume = false, bool Preferred = false);
 internal sealed record EditionVolume(string Id, string Edition, string Volume, string[] Chapters, string[] ContentIds,
     string[] Available, string State);
 internal sealed record EditionVolumeChange(string? Edition, string? Volume, string[]? Chapters, string[]? ContentIds, string? FullVolumeContentId);
@@ -26,18 +26,24 @@ internal sealed partial class LibraryStore
         using var command = GroupCommand(database, transaction, root, series);
         if (!GroupExists(command)) return null;
 
+        AddWorkKey(command, root, series);
         command.Parameters.AddWithValue("$volume", volume);
         command.Parameters.AddWithValue("$chapter", chapter);
         command.Parameters.AddWithValue("$owner", owner);
         command.CommandText = "WITH covered AS (" + GroupCoverage + """
             )
-            SELECT f.content_id, MIN(f.relative_path), f.extension, p.page_index, p.page_count
+            SELECT f.content_id, MIN(f.relative_path), f.extension, p.page_index, p.page_count, 0,
+                f.content_id = COALESCE(preferred.content_id, local.content_id, '') AS preferred_release
             FROM covered c JOIN library_file f ON f.content_id = c.content_id
             JOIN library_root r ON r.id = f.root_id
             LEFT JOIN reading_progress p ON p.content_id = f.content_id AND p.owner_id = $owner
+            LEFT JOIN preferred_chapter_release preferred ON preferred.owner_id = $owner AND preferred.work_key = $work
+                AND preferred.volume = $volume AND preferred.chapter = $chapter
+            LEFT JOIN preferred_chapter_release local ON local.owner_id = $owner AND local.work_key = $localWork
+                AND local.volume = $volume AND local.chapter = $chapter
             WHERE c.volume = $volume AND c.chapter = $chapter AND f.root_id = $root AND f.series_key = $series
                 AND r.state <> 'unavailable' AND f.extension IN ('cbz', 'zip', 'cbr', 'rar')
-            GROUP BY f.content_id ORDER BY MIN(f.relative_path);
+            GROUP BY f.content_id ORDER BY preferred_release DESC, MIN(f.relative_path);
             """;
         return ReadReleases(command);
     }
@@ -64,6 +70,43 @@ internal sealed partial class LibraryStore
         var changed = command.ExecuteNonQuery() == 1;
         transaction.Commit();
         return changed;
+    }
+
+    public bool SavePreferredChapterRelease(Guid root, string series, string volume, string chapter, Guid owner, string? contentId)
+    {
+        using var database = OpenDatabase();
+        using var transaction = database.BeginTransaction(deferred: false);
+        using var command = GroupCommand(database, transaction, root, series);
+        if (!GroupExists(command)) return false;
+
+        AddWorkKey(command, root, series);
+        command.Parameters.AddWithValue("$volume", volume);
+        command.Parameters.AddWithValue("$chapter", chapter);
+        command.Parameters.AddWithValue("$owner", owner);
+        if (contentId is null)
+        {
+            command.CommandText = """
+                DELETE FROM preferred_chapter_release WHERE owner_id = $owner AND work_key IN ($work, $localWork)
+                    AND volume = $volume AND chapter = $chapter;
+                """;
+            command.ExecuteNonQuery();
+            transaction.Commit();
+            return true;
+        }
+
+        command.Parameters.AddWithValue("$content", contentId);
+        command.CommandText = "WITH covered AS (" + GroupCoverage + """
+            )
+            INSERT INTO preferred_chapter_release(owner_id, work_key, volume, chapter, content_id)
+            SELECT $owner, $work, $volume, $chapter, $content
+            WHERE EXISTS(SELECT 1 FROM covered c JOIN library_file f ON f.content_id = c.content_id
+                WHERE c.content_id = $content AND c.volume = $volume AND c.chapter = $chapter
+                    AND f.root_id = $root AND f.series_key = $series AND f.extension IN ('cbz', 'zip', 'cbr', 'rar'))
+            ON CONFLICT(owner_id, work_key, volume, chapter) DO UPDATE SET content_id = excluded.content_id;
+            """;
+        var saved = command.ExecuteNonQuery() == 1;
+        transaction.Commit();
+        return saved;
     }
 
     public IReadOnlyList<EditionVolume>? ReadEditionVolumes(Guid root, string series)
@@ -132,7 +175,7 @@ internal sealed partial class LibraryStore
         using var rows = command.ExecuteReader();
         var releases = new List<ChapterRelease>();
         while (rows.Read()) releases.Add(new(rows.GetString(0), rows.GetString(1), rows.GetString(2), ReadInt(rows, 3), ReadInt(rows, 4),
-            rows.FieldCount > 5 && !rows.IsDBNull(5) && rows.GetBoolean(5)));
+            rows.FieldCount > 5 && !rows.IsDBNull(5) && rows.GetBoolean(5), rows.FieldCount > 6 && rows.GetBoolean(6)));
         return releases;
     }
 
