@@ -13,7 +13,7 @@ type BatchResult = { id: string; result: Operation | null; error: string | null 
 
 function quarantineCandidates(focus: CoverageFile, files: CoverageFile[], nearby: CoverageChapter[]) {
   const coveredFiles = new Set(nearby.flatMap(chapter => chapter.files.map(file => file.fileId)));
-  const exactMatches = byteGroups(files);
+  const exactMatches = byteGroups(files.filter(file => file.rootId === focus.rootId));
   const pairs: Pair[] = [];
   for (const group of exactMatches) {
     const remaining = [...group].sort((a, b) => Number(b.fileId === focus.fileId) - Number(a.fileId === focus.fileId));
