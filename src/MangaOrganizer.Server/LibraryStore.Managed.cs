@@ -45,9 +45,15 @@ internal sealed partial class LibraryStore
 
     public bool HasOtherSeriesInFolder(Guid root, string path, string series)
     {
-        var directory = path[..(path.LastIndexOf('/') + 1)];
         using var database = OpenDatabase();
+        return HasOtherSeriesInFolder(database, null, root, path, series);
+    }
+
+    private static bool HasOtherSeriesInFolder(SqliteConnection database, SqliteTransaction? transaction, Guid root, string path, string series)
+    {
+        var directory = path[..(path.LastIndexOf('/') + 1)];
         using var command = database.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             SELECT EXISTS(SELECT 1 FROM library_file WHERE root_id = $root AND series_key <> $series
                 AND substr(relative_path, 1, length($directory)) = $directory
@@ -155,7 +161,7 @@ internal sealed partial class LibraryStore
         var path = restore ? operation.SourcePath : operation.TargetPath;
         var cache = new CoverCache(database, transaction);
         var directory = path[..Math.Max(0, path.LastIndexOf('/'))];
-        if (!HasOtherSeriesInFolder(id, path, operation.SeriesKey) &&
+        if (!HasOtherSeriesInFolder(database, transaction, id, path, operation.SeriesKey) &&
             CoverArt.FindSidecars(root, directory, cache).FirstOrDefault() is { } sidecar)
         {
             return sidecar;
