@@ -29,6 +29,7 @@ type CatalogEntry = {
   extension: string;
   size: number;
   modifiedAt: string;
+  indexedLocations: number | null;
 };
 type Page = { total: number; items: CatalogEntry[] };
 
@@ -57,7 +58,7 @@ export function Catalog({ view, onSignedOut }: { view: CatalogView; onSignedOut:
   const visibleRoots = roots?.filter(root => root.kind === view);
   const selected = visibleRoots?.find(root => root.id === selectedId) ?? visibleRoots?.[0];
   const rootId = selected?.id;
-  const lastScannedAt = selected?.lastScannedAt;
+  const inventoryVersion = roots?.map(root => `${root.id}:${root.lastScannedAt}`).join('|');
   const page = inventory?.rootId === rootId && inventory?.offset === offset ? inventory : null;
 
   useEffect(() => {
@@ -116,7 +117,7 @@ export function Catalog({ view, onSignedOut }: { view: CatalogView; onSignedOut:
       if (!request.signal.aborted) setFilesError('Could not load the inventory.');
     });
     return () => request.abort();
-  }, [rootId, lastScannedAt, offset, refresh, onSignedOut]);
+  }, [rootId, inventoryVersion, offset, refresh, onSignedOut]);
 
   async function startScan() {
     if (!rootId) return;
@@ -186,7 +187,13 @@ export function Catalog({ view, onSignedOut }: { view: CatalogView; onSignedOut:
                 <ul className="catalog-files" aria-label="Catalog files">
                   {page.items.map(file => (
                     <li key={file.id}>
-                      <span className="file-path">{file.relativePath}</span>
+                      <span className="file-path">
+                        {file.relativePath}
+                        {file.indexedLocations === null && <small>Content identity unavailable</small>}
+                        {file.indexedLocations !== null && file.indexedLocations > 1 && (
+                          <small>Same bytes at {file.indexedLocations.toLocaleString()} indexed locations</small>
+                        )}
+                      </span>
                       <span className="file-format">{file.extension.toUpperCase()}</span>
                       <span>{formatSize(file.size)}</span>
                       <time dateTime={file.modifiedAt}>{new Date(file.modifiedAt).toLocaleDateString()}</time>

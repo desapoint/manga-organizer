@@ -41,7 +41,7 @@ In Docker, bind-mount folders you want to browse and select their container path
 --env MANGA_ORGANIZER_LIBRARY_ROOTS__0=/media/manga
 ```
 
-The catalog records paths, sizes and timestamps in SQLite and keeps the last successful inventory when a root goes offline. See the [read-only catalog scope](docs/FILE-ORGANIZATION.md#read-only-catalog).
+The catalog records file locations and SHA-256 identities in SQLite. Rescans recognize identical bytes after renames or moves and keep the last successful inventory when a root goes offline. See the [read-only catalog scope](docs/FILE-ORGANIZATION.md#read-only-catalog).
 
 ## Start here
 

@@ -1,13 +1,15 @@
 """Exercise the published server through its browser-facing HTTP API."""
 
 import argparse
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
+from hashlib import sha256
 from http.cookiejar import CookieJar
 from pathlib import Path
 import json
 import os
 import re
 import socket
+import sqlite3
 import subprocess
 import tempfile
 import time
@@ -184,6 +186,16 @@ def verify_web_setup(executable, fixture, media):
         identity = browser.server_id()
         (root,) = browser.roots()
         assert Path(root["path"]).samefile(media / "primary"), root["path"]
+        browser.scan(root["id"])
+        original = browser.files(root["id"], "?limit=100")
+
+    # Restore the schema used before content identities were added, keeping the previous inventory.
+    with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
+        database.executescript("""
+            DROP INDEX library_file_content;
+            ALTER TABLE library_file DROP COLUMN content_id;
+            DROP TABLE library_content;
+        """)
 
     with start_app(executable, appdata, None, None) as url:
         wait_for_server(url)
@@ -191,7 +203,17 @@ def verify_web_setup(executable, fixture, media):
         browser.request("/api/setup", 404)
         browser.sign_in(password)
         assert browser.server_id() == identity
-        assert browser.roots() == [root]
+        assert [configured["id"] for configured in browser.roots()] == [root["id"]]
+        migrated = browser.files(root["id"], "?limit=100")
+        assert migrated == {"total": original["total"], "items": [
+            dict(row, contentId=None, sha256=None, indexedLocations=None) for row in original["items"]
+        ]}
+        browser.scan(root["id"])
+        backfilled = browser.files(root["id"], "?limit=100")
+        assert [(row["id"], row["sha256"]) for row in backfilled["items"]] == [
+            (row["id"], row["sha256"]) for row in original["items"]
+        ]
+        assert all(row["contentId"] for row in backfilled["items"])
 
 
 def verify_folder_settings(owner, media):
@@ -274,7 +296,70 @@ def scan_library(owner, media):
     assert owner.scan(root_id)["fileCount"] == 52
     assert owner.files(root_id, "?offset=50")["items"][-1]["id"] == chapter_row["id"]
     assert (chapter.read_bytes(), chapter.stat().st_mtime_ns) == before
-    return owner.roots(), owner.files(root_id)
+
+
+def verify_file_identity(owner, media):
+    primary, archive = owner.roots()
+    source = media / "primary" / "nested" / "Chapter 12.5.CBZ"
+    source_bytes = source.read_bytes()
+
+    def entries(root):
+        return {row["relativePath"]: row for row in owner.files(root["id"], "?limit=100")["items"]}
+
+    chapter_path = "nested/Chapter 12.5.CBZ"
+    original = entries(primary)[chapter_path]
+    identity = original["contentId"]
+    assert identity and original["sha256"] == sha256(source_bytes).hexdigest() and original["indexedLocations"] == 1
+
+    copy = media / "archive" / "Copy.cbz"
+    alias = media / "archive" / "Alias.cbz"
+    copy.write_bytes(source_bytes)
+    os.link(source, alias)
+    owner.scan(archive["id"])
+    locations = [entries(primary)[chapter_path], entries(archive)[copy.name], entries(archive)[alias.name]]
+    assert len({row["id"] for row in locations}) == 3
+    assert all(row["contentId"] == identity and row["indexedLocations"] == 3 for row in locations)
+    copy.unlink()
+    alias.unlink()
+    owner.scan(archive["id"])
+
+    renamed = source.with_name("Renamed.cbz")
+    source.rename(renamed)
+    owner.scan(primary["id"])
+    after_rename = entries(primary)
+    assert chapter_path not in after_rename
+    assert after_rename["nested/Renamed.cbz"]["contentId"] == identity
+
+    moved = media / "archive" / renamed.name
+    renamed.rename(moved)
+    owner.scan(primary["id"])
+    assert "nested/Renamed.cbz" not in entries(primary)
+    owner.scan(archive["id"])
+    after_move = entries(archive)[moved.name]
+    assert after_move["contentId"] == identity and after_move["indexedLocations"] == 1
+
+    previous = moved.stat()
+    replacement = b"!" + source_bytes[1:]
+    moved.write_bytes(replacement)
+    os.utime(moved, ns=(previous.st_atime_ns, previous.st_mtime_ns))
+    owner.scan(archive["id"])
+    replaced = entries(archive)[moved.name]
+    assert replaced["id"] == after_move["id"] and replaced["contentId"] != identity
+    assert replaced["sha256"] == sha256(replacement).hexdigest()
+
+    source.write_bytes(source_bytes)
+    moved.unlink()
+    owner.scan(archive["id"])
+    if hasattr(os, "mkfifo"):
+        special = source.with_name("Pipe.cbz")
+        os.mkfifo(special)
+        owner.scan(primary["id"])
+        unreadable = entries(primary)["nested/Pipe.cbz"]
+        assert unreadable["contentId"] is None and unreadable["sha256"] is None and unreadable["indexedLocations"] is None
+        special.unlink()
+
+    owner.scan(primary["id"])
+    assert entries(primary)[chapter_path]["contentId"] == identity
 
 
 def smoke(start, media):
@@ -298,8 +383,10 @@ def smoke(start, media):
         second.request("/api/server", 401)
         second.sign_in(password)
         assert second.server_id() == server_id
-        _, inventory = scan_library(first, media)
+        scan_library(first, media)
+        verify_file_identity(first, media)
         roots = verify_folder_settings(first, media)
+        inventory = first.files(roots[0]["id"], "?limit=100")
         assert second.roots() == roots
         first.request("/api/session", 400, method="DELETE")
         first.request("/api/session", 204, method="DELETE", token=first.csrf())
@@ -313,7 +400,7 @@ def smoke(start, media):
         browser.sign_in(password)
         assert browser.server_id() == server_id
         assert browser.roots() == roots
-        assert browser.files(roots[0]["id"]) == inventory
+        assert browser.files(roots[0]["id"], "?limit=100") == inventory
 
 
 def create_media_fixture(media):
@@ -321,7 +408,7 @@ def create_media_fixture(media):
     (primary / "nested").mkdir(parents=True)
     archive.mkdir()
     media.chmod(0o755)
-    (primary / "nested" / "Chapter 12.5.CBZ").write_bytes(b"Synthetic chapter inventory fixture")
+    (primary / "nested" / "Chapter 12.5.CBZ").write_bytes(b"Synthetic chapter inventory fixture" * 5000)
     for index in range(52):
         (primary / f"Issue {index:02}.pdf").write_bytes(b"Synthetic inventory fixture")
     (primary / "notes.txt").write_text("Ignored by the inventory.")
@@ -359,4 +446,4 @@ if __name__ == "__main__":
                 smoke(lambda password: start_container(target.image, volume, media, password), media)
             finally:
                 subprocess.run(["docker", "volume", "rm", volume], check=True, stdout=subprocess.DEVNULL)
-    print("Passed WebUI assets, authentication, CSRF, read-only catalog, two clients, and restart persistence")
+    print("Passed WebUI assets, authentication, CSRF, read-only catalog, SHA-256 file identity, two clients, and restart persistence")

@@ -1,6 +1,6 @@
 namespace MangaOrganizer.Server;
 
-internal sealed record LibraryFileFact(string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt);
+internal sealed record LibraryFileFact(string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt, byte[]? Sha256);
 
 internal static class LibraryScanner
 {
@@ -82,6 +82,7 @@ internal static class LibraryScanner
     public static long Collect(string path, Action<LibraryFileFact> addFile, CancellationToken cancellationToken)
     {
         long skippedLinks = 0;
+        var buffer = new byte[64 * 1024];
         Visit(new DirectoryInfo(path));
         return skippedLinks;
 
@@ -104,7 +105,10 @@ internal static class LibraryScanner
                 else if (entry is FileInfo file && Extensions.Contains(file.Extension))
                 {
                     var relativePath = Path.GetRelativePath(path, file.FullName).Replace(Path.DirectorySeparatorChar, '/');
-                    addFile(new(relativePath, file.Extension[1..].ToLowerInvariant(), file.Length, file.LastWriteTimeUtc));
+                    var size = file.Length;
+                    var modifiedAt = file.LastWriteTimeUtc;
+                    var digest = LibraryFileHasher.Read(file, size, modifiedAt, buffer, cancellationToken);
+                    addFile(new(relativePath, file.Extension[1..].ToLowerInvariant(), size, modifiedAt, digest));
                 }
             }
         }
