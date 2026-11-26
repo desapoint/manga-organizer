@@ -31,3 +31,13 @@ export type LibraryRoot = {
 export function scanIsActive(root: LibraryRoot) {
   return root.state === 'queued' || root.state === 'scanning';
 }
+export type SeriesLocation = { rootId: string; seriesKey: string };
+
+export function seriesHref(rootId: string, seriesKey: string) {
+  return `#series/${rootId}/${seriesKey}`;
+}
+
+export function seriesLocation(hash: string): SeriesLocation | null {
+  const [, rootId, seriesKey] = /^#series\/([a-f0-9-]{36})\/([a-f0-9]{64})$/i.exec(hash) ?? [];
+  return rootId && seriesKey ? { rootId, seriesKey } : null;
+}

@@ -6,7 +6,7 @@ internal sealed record LibraryRoot(Guid Id, string Path);
 internal sealed record LibraryRootStatus(Guid Id, string Path, string State, long FileCount,
     DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks, string? Name, string Kind, bool HasCovers);
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt,
-    string? ContentId, string? Sha256, long? IndexedLocations, bool HasCover);
+    string? ContentId, string? Sha256, long? IndexedLocations, bool HasCover, string? SeriesCoverKey);
 internal sealed record CatalogPage<T>(long Total, IReadOnlyList<T> Items);
 
 internal sealed partial class LibraryStore
@@ -90,7 +90,8 @@ internal sealed partial class LibraryStore
                     SELECT COUNT(*) FROM library_file location
                     JOIN library_folder folder ON folder.root_id = location.root_id
                     WHERE location.content_id = c.id
-                ) END, EXISTS(SELECT 1 FROM artwork.archive_cover cover WHERE cover.archive_sha = c.sha256)
+                ) END, EXISTS(SELECT 1 FROM artwork.archive_cover cover WHERE cover.archive_sha = c.sha256),
+                (SELECT cover.series_key FROM library_series_cover cover WHERE cover.root_id = f.root_id AND cover.series_key = f.series_key)
             FROM library_file f LEFT JOIN library_content c ON c.id = f.content_id
             WHERE f.root_id = $id
             """ + " " + seriesFilter + " ORDER BY f.relative_path LIMIT $limit OFFSET $offset;";
@@ -103,7 +104,7 @@ internal sealed partial class LibraryStore
             var verified = !rows.IsDBNull(5);
             items.Add(new(rows.GetString(0), rows.GetString(1), rows.GetString(2), rows.GetInt64(3), rows.GetDateTimeOffset(4),
                 verified ? rows.GetString(5) : null, verified ? rows.GetString(6) : null, verified ? rows.GetInt64(7) : null,
-                rows.GetBoolean(8)));
+                rows.GetBoolean(8), rows.IsDBNull(9) ? null : rows.GetString(9)));
         }
         return new(total, items);
     }

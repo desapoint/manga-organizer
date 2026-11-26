@@ -69,7 +69,7 @@ internal sealed partial class LibraryStore
             WITH directories AS (
                 SELECT directory, COUNT(DISTINCT series_key) = 1 AS unambiguous FROM scan_file GROUP BY directory
             )
-            SELECT f.series_key, f.directory, d.unambiguous, f.relative_path, f.extension, f.size, f.modified_at, f.sha256
+            SELECT f.series_key, f.directory, d.unambiguous, f.relative_path, f.extension, f.size, f.modified_at, f.sha256, f.series_title
             FROM scan_file f JOIN directories d USING(directory)
             ORDER BY f.series_key, f.relative_path;
             """;
@@ -93,7 +93,8 @@ internal sealed partial class LibraryStore
         var cache = new CoverCache(database, transaction);
         string? currentKey = null;
         var directories = new HashSet<string>(StringComparer.Ordinal);
-        CoverSource? firstArchiveCover = null;
+        CoverSource? lowestArchiveCover = null;
+        CoverOrder lowestOrder = default;
         using (var rows = query.ExecuteReader())
         {
             while (rows.Read())
@@ -105,7 +106,7 @@ internal sealed partial class LibraryStore
                     PublishCandidate();
                     currentKey = seriesKey;
                     directories.Clear();
-                    firstArchiveCover = null;
+                    lowestArchiveCover = null;
                 }
 
                 if (rows.GetBoolean(2)) directories.Add(rows.GetString(1));
@@ -121,7 +122,15 @@ internal sealed partial class LibraryStore
                         cover = CoverArt.FindArchiveCover(cache, root, relativePath, fileSize, modifiedAt, cancellationToken);
                         if (cover is not null) cache.RememberArchive(archiveDigest, cover);
                     }
-                    firstArchiveCover ??= cover;
+                    if (cover is not null)
+                    {
+                        var order = CoverOrder.ForFile(relativePath, rows.IsDBNull(8) ? null : rows.GetString(8));
+                        if (lowestArchiveCover is null || order.CompareTo(lowestOrder) < 0)
+                        {
+                            lowestArchiveCover = cover;
+                            lowestOrder = order;
+                        }
+                    }
                 }
             }
         }
@@ -144,7 +153,7 @@ internal sealed partial class LibraryStore
                 rememberSidecar.ExecuteNonQuery();
             }
 
-            var source = firstSidecar ?? firstArchiveCover;
+            var source = firstSidecar ?? lowestArchiveCover;
             if (source is null) return;
 
             key.Value = currentKey;
