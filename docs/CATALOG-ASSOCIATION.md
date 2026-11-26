@@ -18,7 +18,7 @@ Library and import inventories show path-based series candidates as expandable g
 
 Prefer links to individual chapters. A volume file links to every verified chapter it contains. Record page boundaries when available. Keep a series or volume association with unresolved chapter coverage when the source gives only a volume number. The owner can review and complete chapter links later.
 
-Give each logical chapter a stable identity. Account for the work, language or edition, exact chapter and part, and volume or numbering scheme when needed. Chapter 1 in two volumes with independent numbering has two identities. A chapter-only file and a volume that includes the same chapter can reference that chapter together. Preserve the coverage of other chapters and unique pages when comparing variants.
+The expanded model gives each chapter a stable ID within its work. Absolute numbering, parts and named extras identify chapters through verified mappings. Languages, editions and volume labels describe releases and source numbering. A resetting label such as chapter 1 needs a mapping before it can be joined to another source. A chapter-only file and a volume can reference one canonical chapter while preserving their independent releases, page evidence and extras. The current tuple-based links stay available through the compatibility migration. [Canonical chapter and release model](RELEASE-IDENTITY.md)
 
 ## Paths, hashes and associations
 
@@ -42,7 +42,7 @@ Owners can also enter titles, summaries, publication types and totals directly. 
 
 Filter Library series by saved tags. A series must have every included tag and is excluded if it has any excluded tag. Dynamic collections save the title search, cover requirement and tag filters and reevaluate them across active library folders. Manual collections retain explicit series selections. Deleting a collection removes its rules or selections and leaves the series and files in the library.
 
-Visible volume and chapter labels come from explicit filename numbers, detected volume coverage or owner-confirmed coverage. Scan a numbered volume archive to detect an explicit chapter range such as `Vol. 02 Ch. 8-14.cbz` or obtain chapter numbers from its explicitly labeled page folders. If the two signals disagree, review the file. A volume with unknown coverage has a volume label and no inferred chapter count. Detected coverage follows the verified content ID across file moves, and an owner assignment takes precedence. Availability counts distinct indexed chapter and volume pairs once. A missing publication total stays unknown.
+Visible volume and chapter labels come from explicit filename numbers, detected volume coverage or owner-confirmed coverage. A numbered volume archive can carry an explicit range such as `Vol. 02 Ch. 8-14.cbz` or explicitly labeled page folders. Resolve contradictory signals through review. Unknown coverage keeps the volume label and the chapter count unknown. Detected coverage follows the verified content ID, and owner assignments take precedence. The current counter deduplicates indexed chapter and volume pairs. The expanded counter counts resolved canonical chapters and shows unresolved coverage separately. A missing publication total stays unknown. [Verified page boundaries](READING-CONTINUITY.md#chapter-boundaries)
 
 ## Cover previews during scans
 
@@ -64,6 +64,6 @@ A later update must let the owner click a cover to see a larger preview and choo
 - `Northbound [Group A] [Ongoing]` and `Northbound [Group B]` can suggest the same series. A similarly titled translation or edition remains distinguishable, even with the same cover.
 - `A Kiss with a Cat v01 (2022) (Digital) (1r0n)`, `Akumetsu - Tome 01 [CBR] [Scan DP] [FR] [1500x1200]` and `Undead Unluck 107 (2022) (Digital) (1r0n)` group with the other releases of their respective series. Title numbers such as `Different Title 2` stay in the title when numbering evidence is absent.
 - `Undead Unluck/Vol.01 Ch.0001 - Undead and Unluck (fr) [Unexpected Team].cbz` groups under `Undead Unluck`. A numbered subtitle in a generic intake folder with no series ancestor remains an individual entry.
-- A volume containing chapters 1–4 links to all four chapters. A differently packaged chapter 1 appears alongside the volume's chapter 1 for review. Chapter 1 in a different volume or edition remains separate when the numbering differs.
+- A volume containing chapters 1–4 links to all four chapters. A differently packaged chapter 1 appears alongside the volume’s chapter 1 for review. An ambiguous label in a different volume or edition stays unresolved or separate until the numbering is mapped.
 - Moving the same bytes between roots or renaming them preserves the content ID, associations and progress while updating available paths. Keeping both copies yields two locations and one content record. Replacing the bytes at an existing path keeps the older association available for review.
 - A valid `cover.png` is used first. Without it, a supported first page is selected. Corrupt or missing images leave the file listed. Cover previews help rank suggestions without deciding a move or cleanup.

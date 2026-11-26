@@ -8,6 +8,8 @@ The server applies pending SQLite migrations in order at startup and records the
 
 Migration SQL is embedded in the server and is available in the repository. The Windows and Linux migration jobs verify fresh databases, legacy upgrades and repeated runs. [Migration scripts](../src/MangaOrganizer.Server/Migrations) · [Verification workflow](../.github/workflows/migrations.yml)
 
+The verified automatic pre-upgrade backup and guarded restore workflow is planned. Continue using the maintenance backup procedure above with the current release. [Backup implementation plan](UPGRADE-RECOVERY.md)
+
 | Server | Release assets |
 | --- | --- |
 | Windows x64 | `MangaOrganizer-Setup-win-x64.exe` or `MangaOrganizer-win-x64.zip` |

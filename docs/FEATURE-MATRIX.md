@@ -75,8 +75,11 @@
 
 | F69 | Physical file organization and bulk rename/move | D | D | P | D | P | ? | ? | KR/KK/MK |
 | F70 | Duplicate detection, review and safe resolution | P | D | D | P | ? | ? | ? | MK/UC/KK |
+| F71 | Verified chapter-to-page boundaries within a release | ? | ? | ? | ? | ? | ? | ? | Local archive evidence |
+| F72 | Cross-release page correspondence and in-reader switching | ? | ? | ? | ? | ? | ? | ? | Local page manifests |
+| F73 | Catalog maintenance and guarded data reset | ? | ? | ? | ? | ? | ? | ? | Organizer workflows |
 
-F69 and F70 are required outcomes. Exact duplicate review and opt-in, reviewed file operations are in scope. Similarity detection, automatic cleanup and the broader behaviors in related clusters are deferred. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [File organization specification](FILE-ORGANIZATION.md)
+F69 and F70 are required outcomes. Scope includes reviewed file changes, exact and overlapping release comparison, persistent alternatives and explicit managed-trash admission. Read-only similarity evidence can aid comparison. Only deliberately trashed entries can expire automatically under F34. F71–F73 are Organizer requirements with upstream parity unverified. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [Implementation backlog](EXPANDED-BACKLOG.md)
 
 ## Selection rules
 
