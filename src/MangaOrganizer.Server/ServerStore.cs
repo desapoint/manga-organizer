@@ -26,16 +26,6 @@ internal static class ServerStore
         using var command = database.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            CREATE TABLE IF NOT EXISTS server_identity (
-                singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-                instance_id TEXT NOT NULL,
-                owner_id TEXT NOT NULL,
-                password_hash TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS server_setup (
-                singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-                library_path TEXT NOT NULL
-            );
             SELECT i.instance_id, i.owner_id, i.password_hash, s.library_path
             FROM server_identity i LEFT JOIN server_setup s ON i.singleton = s.singleton
             WHERE i.singleton = 1;

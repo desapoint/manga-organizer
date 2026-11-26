@@ -199,6 +199,7 @@ def verify_web_setup(executable, fixture, media):
     # Restore the schema used before content identities were added, keeping the previous inventory.
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
+            DROP TABLE schema_migration;
             DROP INDEX library_file_content;
             DROP INDEX library_file_series;
             ALTER TABLE library_file DROP COLUMN content_id;

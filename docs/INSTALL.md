@@ -2,6 +2,12 @@
 
 Each pull request merged into `main` produces a GitHub development prerelease. Download the assets for one primary server and verify the file hashes against `SHA256SUMS.txt`. Windows and Linux packages are self-contained. The Windows setup program is unsigned. [GitHub Releases](https://github.com/desapoint/manga-organizer/releases)
 
+## Database upgrades
+
+The server applies pending SQLite migrations in order at startup and records them in `schema_migration`. Stop the server and back up its data directory before a maintenance upgrade. Run `MangaOrganizer.Server.exe --migrate` on Windows or `./MangaOrganizer.Server --migrate` on Linux to apply migrations without starting the server. Set `MANGA_ORGANIZER_DATA_DIR` to the same directory the server normally uses. A Docker container can run the same `--migrate` argument with its existing configuration volume mounted.
+
+Migration SQL is embedded in the server and is available in the repository. The Windows and Linux migration jobs verify fresh databases, legacy upgrades and repeated runs. [Migration scripts](../src/MangaOrganizer.Server/Migrations) · [Verification workflow](../.github/workflows/migrations.yml)
+
 | Server | Release assets |
 | --- | --- |
 | Windows x64 | `MangaOrganizer-Setup-win-x64.exe` or `MangaOrganizer-win-x64.zip` |
