@@ -1226,9 +1226,10 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
         quarantine_directory.chmod(0o777)
     volume = directory / "Safety Fixture Vol.01 Ch.1-3.cbz"
     chapter = directory / "Safety Fixture Vol.01 Ch.1.cbz"
+    unrelated_chapter = directory / "Safety Fixture Vol.01 Ch.9.cbz"
     copy = directory / "Safety Fixture Vol.01 Ch.1-3 [Variant 1].cbz"
     alias = directory / "Safety Fixture Vol.01 Ch.1 [Variant 1].cbz"
-    for index, path in enumerate((volume, chapter)):
+    for index, path in enumerate((volume, chapter, unrelated_chapter)):
         with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
             archive.writestr("1.png", synthetic_png(125, index + 5, 35))
     copy.write_bytes(volume.read_bytes())
@@ -1248,6 +1249,14 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     review = compare(volume)
     assert review["source"]["volumeArchive"]
     comparisons = {item["candidate"]["relativePath"]: item for item in review["comparisons"]}
+    (series,) = owner.series(root, "?search=Safety+Fixture")["items"]
+    owner.request(f"{LIBRARY_ROOTS}/{root}/series/{series['key']}/edition-volumes", 204, method="PUT", token=owner.csrf(),
+                  body={"edition": "Safety fixture", "volume": "1", "chapters": ["1", "24"], "contentIds": []})
+    series_review = json.loads(owner.request(f"{operations}/duplicates/{root}/series/{series['key']}", 200))
+    assert series_review["canReviewQuarantine"]
+    assert {item["relativePath"] for item in series_review["files"]} == {volume.name, chapter.name, copy.name, alias.name, unrelated_chapter.name}
+    assert {item["chapter"] for item in series_review["expected"]} == {"1", "24"}
+    assert unrelated_chapter.name not in comparisons
     overlap = comparisons[chapter.name]
     assert overlap["kind"] == "overlap" and not overlap["canQuarantine"]
     assert not overlap["candidate"]["volumeArchive"]
@@ -1269,7 +1278,8 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     owner.scan(root)
     confirmed = quarantine(copy, volume, 200)
     url = f"{operations}/{confirmed['id']}"
-    result = json.loads(owner.request(url + "/apply", 200, method="POST", token=owner.csrf()))
+    (batch_item,) = json.loads(owner.request(operations + "/batch-apply", 200, method="POST", token=owner.csrf(), body={"ids": [confirmed["id"]]}))
+    result = batch_item["result"]
     assert result["kind"] == "quarantine" and result["state"] == "completed"
     assert not copy.exists() and volume.read_bytes() == backup_source
     assert Path(result["target"]).name.endswith(".recovery")
@@ -1279,7 +1289,7 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     owner.request(url + "/restore", 200, method="POST", token=owner.csrf())
     assert copy.read_bytes() == volume.read_bytes() == backup_source
 
-    for path in (volume, chapter, copy, alias):
+    for path in (volume, chapter, copy, alias, unrelated_chapter):
         path.unlink()
     owner.scan(root)
 

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { ChapterCoverage } from './ChapterCoverage';
 import { CollectionForm, emptyFilters, SeriesCollectionMembership, TagRulesFields, useTagNames } from './CollectionControls';
 import type { TagRules } from './CollectionControls';
-import { DuplicateReview } from './DuplicateReview';
+import { DuplicateReview, DuplicateReviewDialog } from './DuplicateReview';
 import { FileMove } from './FileOperations';
 import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
@@ -140,10 +140,10 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
       {file.contentId && <div className="action-row col-span-full">
         {readable && <ActionLink variant="ghost" icon={BookOpen} href={onInspect ? `#read/${file.contentId}/intake` :
           seriesKey ? seriesReaderHref(file.contentId, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>}
-        <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare duplicates</Button>
+        <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare this file</Button>
         {coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>Set chapter coverage</Button>}
         {managedFolders.length > 0 && <Button variant="ghost" onClick={() => setShowMove(true)}>Move or rename</Button>}
-        {showDuplicates && <DuplicateReview rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
+        {showDuplicates && <DuplicateReviewDialog rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
           onClose={() => setShowDuplicates(false)} onChanged={onMoved} />}
         {showCoverage && coverageUrl && <Modal title="Set chapter coverage" onClose={() => setShowCoverage(false)}>
           <p className="m-0 mb-3 text-sm"><code>{file.relativePath}</code></p>
@@ -237,7 +237,8 @@ export function CoverGrid({ series, coverVersion }: { series: Series[]; coverVer
   );
 }
 
-const seriesViews = [{ value: 'chapters', label: 'Chapters' }, { value: 'volumes', label: 'Volumes' }, { value: 'files', label: 'Files' }] as const;
+const seriesViews = [{ value: 'chapters', label: 'Chapters' }, { value: 'volumes', label: 'Volumes' }, { value: 'files', label: 'Files' },
+  { value: 'duplicates', label: 'Duplicates' }] as const;
 type SeriesView = typeof seriesViews[number]['value'];
 
 function ChapterTotal({ label, value, total }: { label: string; value: number; total: number | null }) {
@@ -310,6 +311,8 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
         <SegmentedControl label="Series views" options={seriesViews} value={view} onChange={value => { setVolume(null); setView(value); }} />
         <div className="surface min-w-0">
           {view === 'files' && <FileInventory {...catalog} seriesKey={seriesKey} />}
+          {view === 'duplicates' && <DuplicateReview rootId={rootId} seriesKey={seriesKey} version={version}
+            onSignedOut={onSignedOut} onChanged={() => { catalog.onDataChanged(); catalog.onMoved(); }} />}
           {view === 'chapters' && <>
             {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all chapters</Button></div>}
             <SeriesChapterList {...seriesTools} rootId={rootId} seriesKey={seriesKey}
