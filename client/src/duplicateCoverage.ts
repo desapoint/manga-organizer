@@ -68,7 +68,7 @@ export function fileColors(files: CoverageFile[]) {
     const chapters = file.chapters.map(chapterKey);
     const used = new Set(chapters.flatMap(key => [...(usedByChapter.get(key) ?? [])]));
     const neighbors = [...new Set([...used, ...recent])].filter(index => index < bundlePalette.length);
-    let index = bundlePalette.length;
+    let index: number = bundlePalette.length;
     let bestDistance = -1;
     for (const [candidate, distances] of paletteDistances.entries()) {
       if (used.has(candidate)) continue;
