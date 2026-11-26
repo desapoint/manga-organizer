@@ -106,16 +106,17 @@
 
 @layer components {
   .coverage-mark {
-    background-color: var(--coverage-color);
+    --coverage-fill: var(--coverage-color);
+    background-color: var(--coverage-fill);
   }
 
   .coverage-mark[data-variant='band'] {
-    background-color: color-mix(in srgb, var(--coverage-color) 46%, transparent);
+    --coverage-fill: color-mix(in srgb, var(--coverage-color) 46%, var(--color-elevated));
   }
 
   .coverage-mark[data-pattern='striped'] {
     background-image: repeating-linear-gradient(135deg, transparent 0 2px,
-      color-mix(in srgb, var(--color-canvas) 65%, transparent) 2px 4px);
+      color-mix(in oklch, var(--coverage-fill) 74%, black) 2px 4px);
   }
 
   .reader-shell {
