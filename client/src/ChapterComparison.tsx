@@ -7,6 +7,7 @@ type ChapterComparisonProps = {
   sourceOnly: Chapter[];
   candidateOnly: Chapter[];
   labels: Record<Side, string>;
+  unresolved: boolean;
 };
 
 const files = {
@@ -17,7 +18,7 @@ const sides = ['source', 'candidate'] as const;
 const numbers = new Intl.Collator(undefined, { numeric: true });
 const percentage = new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 });
 
-export function ChapterComparison({ shared, sourceOnly, candidateOnly, labels }: ChapterComparisonProps) {
+export function ChapterComparison({ shared, sourceOnly, candidateOnly, labels, unresolved }: ChapterComparisonProps) {
   const [hoveredFile, setHoveredFile] = useState<Side | null>(null);
   const [focusedFile, setFocusedFile] = useState<Side | null>(null);
   const [pinnedFile, setPinnedFile] = useState<Side | null>(null);
@@ -39,7 +40,8 @@ export function ChapterComparison({ shared, sourceOnly, candidateOnly, labels }:
     else chaptersByVolume.set(chapter.volume, [chapter]);
   }
   const detail = chapters.find(chapter => chapter.key === inspected);
-  const overlap = chapters.length ? shared.length / chapters.length : 0;
+  const comparable = !unresolved && (shared.length > 0 || (sourceOnly.length > 0 && candidateOnly.length > 0));
+  const overlap = comparable ? shared.length / chapters.length : 0;
 
   return <section aria-label="Chapter comparison" className="grid min-w-0 gap-3 rounded-xl border border-line bg-panel p-3.5 sm:gap-4 sm:p-5">
     <div className="flex flex-wrap items-start justify-between gap-x-5 gap-y-2">
@@ -48,16 +50,16 @@ export function ChapterComparison({ shared, sourceOnly, candidateOnly, labels }:
         <h3 className="m-0 text-xl leading-tight font-bold tracking-tight">Chapter coverage</h3>
         <p className="m-0 mt-1 text-xs text-muted">Compare coverage indexed for the two files.</p>
       </div>
-      {chapters.length > 0 && <div>
+      {comparable ? <div>
         <strong className="block text-2xl leading-none font-bold text-positive tabular-nums sm:text-[1.75rem]">{percentage.format(overlap)}</strong>
         <p className="m-0 mt-1 text-xs text-muted">{shared.length} of {chapters.length} chapters shared</p>
-      </div>}
+      </div> : chapters.length > 0 && <span className="rounded-md border border-warning/35 bg-warning/10 px-2 py-1 text-xs text-warning">Overlap unresolved</span>}
     </div>
 
     {chapters.length > 0 ? <>
-      <div aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-elevated">
+      {comparable && <div aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-elevated">
         <div className="h-full rounded-full bg-positive" style={{ width: `${overlap * 100}%` }} />
-      </div>
+      </div>}
       <div role="group" aria-label="File coverage legend" className="flex flex-wrap gap-x-4 gap-y-1">
         {sides.map(side => <button key={side} type="button" aria-pressed={pinnedFile === side}
           onPointerEnter={event => { if (event.pointerType !== 'touch') setHoveredFile(side); }} onPointerLeave={() => setHoveredFile(null)}
