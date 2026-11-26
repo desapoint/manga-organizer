@@ -902,7 +902,21 @@ def verify_volume_chapters(owner, root_id, path):
     ]
     assert [(item["chapter"], item["source"]) for item in coverage(archive_file)] == [("6", "archive"), ("7.5", "archive")]
     assert coverage(ambiguous_file) == coverage(unnamed_file) == []
-    assert json.loads(owner.request(f"{group_url}/details", 200))["availableChapters"] == 5
+    details = json.loads(owner.request(f"{group_url}/details", 200))
+    assert details["availableChapters"] == 5
+    assert details["indexedVolumes"] == len(details["volumes"])
+    assert "2" in details["readableVolumes"] and "5" in details["readableVolumes"]
+    volume_query = "?seriesKey=" + group["key"] + "&volume=02&limit=1"
+    first_volume_page = owner.files(root_id, volume_query)
+    second_volume_page = owner.files(root_id, volume_query + "&offset=1")
+    assert first_volume_page["total"] == second_volume_page["total"] == 2
+    assert {Path(page["items"][0]["relativePath"]).name for page in (first_volume_page, second_volume_page)} == {range_file.name, standalone.name}
+    assert owner.files(root_id, "?seriesKey=" + group["key"] + "&volume=9") == {"total": 0, "items": []}
+    owner.request(f"{LIBRARY_ROOTS}/{root_id}/files?volume=2", 400)
+    owner.request(f"{LIBRARY_ROOTS}/{root_id}/files?seriesKey={group['key']}&volume=unknown", 400)
+    volume_two = json.loads(owner.request(f"{group_url}/volume-releases?volume=02", 200))
+    assert {Path(file["relativePath"]).name for file in volume_two} == {range_file.name}
+    assert json.loads(owner.request(f"{group_url}/volume-releases?volume=9", 200)) == []
     releases = json.loads(owner.request(f"{group_url}/chapter-releases?volume=2&chapter=3", 200))
     assert {item["contentId"] for item in releases} == {files[range_file.name]["contentId"], files[standalone.name]["contentId"]}
     preferred_id = files[standalone.name]["contentId"]
@@ -922,8 +936,11 @@ def verify_volume_chapters(owner, root_id, path):
     owner.request(f"{group_url}/chapter-progress", 204, method="PUT", token=owner.csrf(), body=dict(mark, completed=False))
     assert json.loads(owner.request(f"{group_url}/details", 200))["readChapters"] == 0
 
-    candidates = json.loads(owner.request(f"{group_url}/edition-candidates?volume=5", 200))
+    candidates = json.loads(owner.request(f"{group_url}/volume-releases?volume=5", 200))
     assert len(candidates) == 1 and candidates[0]["unresolvedVolume"]
+    volume_five = owner.files(root_id, "?seriesKey=" + group["key"] + "&volume=5")
+    assert volume_five["total"] == 1 and volume_five["items"][0]["contentId"] == candidates[0]["contentId"]
+    assert json.loads(owner.request(f"/api/reader/{candidates[0]['contentId']}", 200))["pageCount"] == 2
     manifest = {"edition": "Fixture digital edition", "volume": "5", "chapters": ["21", "22"],
                 "contentIds": [files[unnamed_file.name]["contentId"]]}
     owner.request(f"{group_url}/edition-volumes", 204, method="PUT", token=owner.csrf(), body=manifest)

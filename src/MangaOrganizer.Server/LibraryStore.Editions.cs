@@ -3,13 +3,36 @@ using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
-internal sealed record ChapterRelease(string ContentId, string RelativePath, string Format, int? PageIndex, int? PageCount, bool UnresolvedVolume = false, bool Preferred = false);
+internal sealed record ChapterRelease(string ContentId, string RelativePath, string Format, int? PageIndex, int? PageCount,
+    bool UnresolvedVolume = false, bool Preferred = false);
 internal sealed record EditionVolume(string Id, string Edition, string Volume, string[] Chapters, string[] ContentIds,
     string[] Available, string State);
 internal sealed record EditionVolumeChange(string? Edition, string? Volume, string[]? Chapters, string[]? ContentIds, string? FullVolumeContentId);
 
 internal sealed partial class LibraryStore
 {
+    private const string GroupVolumeMatch = """
+        (f.volume_hint = $volume OR EXISTS(SELECT 1 FROM covered c WHERE c.volume = $volume AND c.content_id = f.content_id)
+            OR EXISTS(SELECT 1 FROM edition_volume_release e JOIN edition_volume_manifest m ON m.id = e.manifest_id
+                WHERE (m.work_key = $work OR m.work_key = $localWork) AND m.volume = $volume AND e.content_id = f.content_id))
+        """;
+
+    private const string GroupVolumeArchives = """
+        SELECT f.volume_hint AS volume, f.content_id FROM library_file f
+        WHERE f.root_id = $root AND f.series_key = $series AND f.content_id IS NOT NULL
+            AND f.volume_hint IS NOT NULL AND f.chapter_hint IS NULL
+            AND NOT EXISTS(SELECT 1 FROM covered c WHERE c.content_id = f.content_id AND c.volume <> f.volume_hint)
+        UNION
+        SELECT volume, content_id FROM covered WHERE volume <> ''
+        GROUP BY volume, content_id HAVING COUNT(DISTINCT chapter) > 1
+        """;
+
+    private const string ReadableGroupFiles = """
+        SELECT f.content_id, f.relative_path, f.extension FROM library_file f JOIN library_root r ON r.id = f.root_id
+        WHERE f.root_id = $root AND f.series_key = $series AND r.state <> 'unavailable'
+            AND f.content_id IS NOT NULL AND f.extension IN ('cbz', 'zip', 'cbr', 'rar')
+        """;
+
     private static void AddWorkKey(SqliteCommand command, Guid root, string seriesKey)
     {
         command.CommandText = "SELECT " + MetadataIdForGroup;
@@ -44,6 +67,29 @@ internal sealed partial class LibraryStore
             WHERE c.volume = $volume AND c.chapter = $chapter AND f.root_id = $root AND f.series_key = $series
                 AND r.state <> 'unavailable' AND f.extension IN ('cbz', 'zip', 'cbr', 'rar')
             GROUP BY f.content_id ORDER BY preferred_release DESC, MIN(f.relative_path);
+            """;
+        return ReadReleases(command);
+    }
+
+    public IReadOnlyList<ChapterRelease>? ReadVolumeReleases(Guid root, string series, string volume, Guid owner)
+    {
+        using var database = OpenDatabase();
+        using var transaction = database.BeginTransaction(deferred: true);
+        using var command = GroupCommand(database, transaction, root, series);
+        if (!GroupExists(command)) return null;
+
+        command.Parameters.AddWithValue("$volume", volume);
+        command.Parameters.AddWithValue("$owner", owner);
+        command.CommandText = "WITH covered AS (" + GroupCoverage + "), volume_archive AS (" + GroupVolumeArchives
+            + "), readable AS (" + ReadableGroupFiles + """
+            )
+            SELECT f.content_id, MIN(f.relative_path), f.extension, p.page_index, p.page_count,
+                NOT EXISTS(SELECT 1 FROM covered c WHERE c.content_id = f.content_id AND c.volume = $volume),
+                0
+            FROM volume_archive a JOIN readable f ON f.content_id = a.content_id
+            LEFT JOIN reading_progress p ON p.content_id = f.content_id AND p.owner_id = $owner
+            WHERE a.volume = $volume
+            GROUP BY f.content_id ORDER BY MIN(f.relative_path);
             """;
         return ReadReleases(command);
     }
@@ -159,12 +205,13 @@ internal sealed partial class LibraryStore
             )
             SELECT f.content_id, MIN(f.relative_path), f.extension, NULL, NULL,
                 MAX(f.volume_hint = $volume AND f.chapter_hint IS NULL
-                    AND NOT EXISTS(SELECT 1 FROM covered c WHERE c.content_id = f.content_id))
+                    AND NOT EXISTS(SELECT 1 FROM covered c WHERE c.content_id = f.content_id)),
+                0
             FROM library_file f
             WHERE f.root_id = $root AND f.series_key = $series AND f.content_id IS NOT NULL
-              AND (f.volume_hint = $volume OR EXISTS(SELECT 1 FROM covered c WHERE c.volume = $volume AND c.content_id = f.content_id)
-                OR EXISTS(SELECT 1 FROM edition_volume_release e JOIN edition_volume_manifest m ON m.id = e.manifest_id
-                    WHERE (m.work_key = $work OR m.work_key = $localWork) AND m.volume = $volume AND e.content_id = f.content_id))
+              AND
+            """ + " " + GroupVolumeMatch + """
+
             GROUP BY f.content_id ORDER BY MIN(f.relative_path);
             """;
         return ReadReleases(command);
@@ -175,7 +222,7 @@ internal sealed partial class LibraryStore
         using var rows = command.ExecuteReader();
         var releases = new List<ChapterRelease>();
         while (rows.Read()) releases.Add(new(rows.GetString(0), rows.GetString(1), rows.GetString(2), ReadInt(rows, 3), ReadInt(rows, 4),
-            rows.FieldCount > 5 && !rows.IsDBNull(5) && rows.GetBoolean(5), rows.FieldCount > 6 && rows.GetBoolean(6)));
+            !rows.IsDBNull(5) && rows.GetBoolean(5), rows.GetBoolean(6)));
         return releases;
     }
 

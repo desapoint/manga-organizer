@@ -7,9 +7,9 @@ import { DuplicateReview, DuplicateReviewDialog } from './DuplicateReview';
 import { FileMove } from './FileOperations';
 import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
-import { EditionCoverage, SeriesChapterList } from './EditionCoverage';
+import { EditionCoverage, SeriesChapterList, VolumeReleasePicker } from './EditionCoverage';
 import { FileCover, SeriesCover } from './SeriesCover';
-import { formatSize, ROOTS_URL, seriesHref, seriesReaderHref } from './library';
+import { formatSize, isReadableArchive, ROOTS_URL, seriesHref, seriesReaderHref } from './library';
 import { Select } from './Select';
 import { ActionLink, Button, Modal, PageHeader, SearchField, SectionHeader, SegmentedControl } from './ui';
 
@@ -115,7 +115,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
   const [moving, setMoving] = useState(false);
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
-  const readable = file.contentId && ['cbz', 'zip', 'cbr', 'rar'].includes(file.extension);
+  const readable = file.contentId && isReadableArchive(file.extension);
   return (
     <li>
       <span className="flex min-w-0 items-center gap-3">
@@ -159,10 +159,10 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
   );
 }
 
-function FileInventory({ rootId, seriesKey, version, onSignedOut, onDataChanged, managedFolders, onMoved, onInspect, search = '' }:
-  InventoryActions & { seriesKey?: string; onInspect?: Inspect; search?: string }) {
+function FileInventory({ rootId, seriesKey, volume, version, onSignedOut, onDataChanged, managedFolders, onMoved, onInspect, search = '' }:
+  InventoryActions & { seriesKey?: string; volume?: string; onInspect?: Inspect; search?: string }) {
   const { page, offset, setOffset, error, retry } = useInventoryPage<CatalogEntry>(`${ROOTS_URL}/${rootId}/files`, version, onSignedOut,
-    seriesKey ? { seriesKey, search } : { search });
+    seriesKey ? { seriesKey, search, ...(volume ? { volume } : {}) } : { search });
   const label = seriesKey ? 'Series files' : 'Catalog files';
   const coverageUrl = seriesKey ? `${ROOTS_URL}/${rootId}/series/${seriesKey}/coverage` : undefined;
   return (
@@ -241,7 +241,7 @@ const seriesViews = [{ value: 'chapters', label: 'Chapters' }, { value: 'volumes
   { value: 'duplicates', label: 'Duplicates' }] as const;
 type SeriesView = typeof seriesViews[number]['value'];
 
-function ChapterTotal({ label, value, total }: { label: string; value: number; total: number | null }) {
+function CollectionTotal({ label, value, total }: { label: string; value: number; total: number | null }) {
   return <div className="grid min-w-0 gap-1.5">
     <strong className="text-sm">{label}</strong>
     <span className="text-sm text-muted">{value.toLocaleString()}{total === null ? ' · released total unknown' : ` of ${total.toLocaleString()}`}</span>
@@ -257,6 +257,7 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
   const [dialog, setDialog] = useState<'info' | 'cover' | null>(null);
   const [selectedView, setView] = useState<SeriesView | null>(null);
   const [volume, setVolume] = useState<string | null>(null);
+  const [readingVolume, setReadingVolume] = useState<string | null>(null);
   const catalog = { ...inventory, version: `${inventory.version}:${revision}`, managedFolders,
     onDataChanged: () => setRevision(value => value + 1), onMoved: () => {
       setMoved(true);
@@ -271,7 +272,8 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
   const title = metadata?.title ?? series?.title ?? 'Series';
   const seriesUrl = `${ROOTS_URL}/${rootId}/series/${seriesKey}`;
   const seriesTools = { url: seriesUrl, version, onSignedOut, onChange: catalog.onDataChanged };
-  const view = selectedView ?? (details?.chapters.length ? 'chapters' : details?.volumes.length ? 'volumes' : 'files');
+  const view = selectedView ?? (details?.chapters.length ? 'chapters' : details?.volumes.length ? 'volumes' :
+    metadata?.totalChapters != null ? 'chapters' : metadata?.totalVolumes != null ? 'volumes' : 'files');
   return (
     <section className="workspace-page" aria-labelledby="series-heading">
       <ActionLink href="#library" variant="ghost" icon={ArrowLeft} className="justify-self-start">Back to library</ActionLink>
@@ -301,16 +303,20 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
       {page && !series && <p>This series is no longer in the selected library folder.</p>}
       {moved && <p role="status" className="m-0 text-sm text-positive">File change completed. See File operation history in Settings for recovery.</p>}
       {series && detailsError && <p role="alert" className="m-0 text-danger">{detailsError}</p>}
-      {series && details && view !== 'duplicates' && <section aria-label="Reading and collection progress" className="surface grid gap-4 p-4 sm:grid-cols-2">
-        <ChapterTotal label="Read chapters · owned" value={details.readChapters} total={details.availableChapters} />
-        <ChapterTotal label="Owned chapters · released" value={details.availableChapters} total={metadata?.totalChapters ?? null} />
+      {series && details && view !== 'duplicates' && <section aria-label="Reading and collection progress" className="surface grid gap-4 p-4 sm:grid-cols-3">
+        <CollectionTotal label="Read chapters · indexed" value={details.readChapters} total={details.availableChapters} />
+        <CollectionTotal label="Indexed chapters · released" value={details.availableChapters} total={metadata?.totalChapters ?? null} />
+        <CollectionTotal label="Indexed volumes · released" value={details.indexedVolumes} total={metadata?.totalVolumes ?? null} />
       </section>}
       {series && view !== 'duplicates' && <EditionCoverage {...seriesTools} volume={details?.volumes.length === 1 ? details.volumes[0] : undefined}
         onBrowse={number => { setVolume(number); setView('chapters'); }} />}
       {series && <section className="grid min-w-0 gap-3" aria-label="Series inventory">
         <SegmentedControl label="Series views" options={seriesViews} value={view} onChange={value => { setVolume(null); setView(value); }} />
         <div className="surface min-w-0">
-          {view === 'files' && <FileInventory {...catalog} seriesKey={seriesKey} />}
+          {view === 'files' && <>
+            {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all files</Button></div>}
+            <FileInventory key={volume ?? 'all-files'} {...catalog} seriesKey={seriesKey} volume={volume ?? undefined} />
+          </>}
           {view === 'duplicates' && <DuplicateReview rootId={rootId} seriesKey={seriesKey} version={version}
             onSignedOut={onSignedOut} onChanged={() => { catalog.onDataChanged(); catalog.onMoved(); }} />}
           {view === 'chapters' && <>
@@ -322,12 +328,18 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
           {view === 'volumes' && (details?.volumes.length ? <ul aria-label="Indexed volumes" role="list" className="m-0 list-none divide-y divide-line p-0">
             {details.volumes.map(number => <li key={number} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
               <strong>Volume {number}</strong>
-              {details.chapters.some(chapter => chapter.volume === number) ? <Button variant="ghost" onClick={() => { setVolume(number); setView('chapters'); }}>View chapters</Button> :
-                <Button variant="ghost" onClick={() => setView('files')}>View files</Button>}
+              <div className="action-row">
+                {details.readableVolumes.includes(number) &&
+                  <Button variant="secondary" icon={BookOpen} onClick={() => setReadingVolume(number)}>Read volume</Button>}
+                {details.chapters.some(chapter => chapter.volume === number) &&
+                  <Button variant="ghost" onClick={() => { setVolume(number); setView('chapters'); }}>View chapters</Button>}
+                <Button variant="ghost" onClick={() => { setVolume(number); setView('files'); }}>View files</Button>
+              </div>
             </li>)}
           </ul> : <p className="m-0 p-4 text-sm text-muted">No indexed volumes for this series.</p>)}
         </div>
       </section>}
+      {readingVolume && <VolumeReleasePicker {...seriesTools} rootId={rootId} seriesKey={seriesKey} volume={readingVolume} onClose={() => setReadingVolume(null)} />}
       {series && <SeriesCollectionMembership rootId={rootId} seriesKey={seriesKey} onSignedOut={onSignedOut} />}
       {dialog === 'info' && <Modal title="More info" onClose={() => setDialog(null)}>
         <div className="grid gap-4">

@@ -17,6 +17,12 @@ internal static class ChapterEditionEndpoints
             && store.ReadChapterReleases(root, seriesKey.ToLowerInvariant(), NormalizeVolume(volume), BookNumbers.Canonical(chapter!), owner) is { } list
                 ? Results.Ok(list) : Results.NotFound());
 
+        series.MapGet("/volume-releases", (Guid root, string seriesKey, string? volume, LibraryStore store, HttpContext context) =>
+            ReaderEndpoints.TryOwner(context, out var owner) && LibraryEndpoints.IsSeriesKey(seriesKey)
+            && volume is not null && BookNumbers.IsNumber(volume)
+            && store.ReadVolumeReleases(root, seriesKey.ToLowerInvariant(), BookNumbers.Canonical(volume), owner) is { } list
+                ? Results.Ok(list) : Results.NotFound());
+
         series.MapPut("/chapter-progress", async (Guid root, string seriesKey, ChapterCompletion change, LibraryStore store,
             HttpContext context, IAntiforgery antiforgery) =>
         {

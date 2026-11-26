@@ -16,7 +16,7 @@ internal sealed record LibraryChapter(string? Volume, string Chapter, string? Co
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PreferredContentId = null);
 internal sealed record SeriesReading(string ContentId, string RelativePath, int? PageIndex, int? PageCount, bool HasFinishedFile);
 internal sealed record SeriesDetails(SeriesMetadata? Metadata, int AvailableChapters, int ReadChapters, IReadOnlyList<string> Volumes,
-    IReadOnlyList<LibraryChapter> Chapters, SeriesReading? Reading);
+    IReadOnlyList<LibraryChapter> Chapters, SeriesReading? Reading, int IndexedVolumes, IReadOnlyList<string> ReadableVolumes);
 
 internal sealed partial class LibraryStore
 {
@@ -62,12 +62,8 @@ internal sealed partial class LibraryStore
         var metadata = ReadMetadata(command);
         command.Parameters.AddWithValue("$owner", owner);
         AddWorkKey(command, root, seriesKey);
-        command.CommandText = """
-            WITH readable AS (
-                SELECT DISTINCT f.content_id FROM library_file f JOIN library_root r ON r.id = f.root_id
-                WHERE f.root_id = $root AND f.series_key = $series AND r.state <> 'unavailable'
-                  AND f.content_id IS NOT NULL AND f.extension IN ('cbz', 'zip', 'cbr', 'rar')
-            )
+        command.CommandText = "WITH readable_files AS (" + ReadableGroupFiles + """
+            ), readable AS (SELECT DISTINCT content_id FROM readable_files)
             SELECT coverage.volume, coverage.chapter, COALESCE(chapter.completed, local.completed, MAX(COALESCE(p.completed, 0))),
                 COUNT(readable.content_id), MIN(readable.content_id),
                 MAX(CASE WHEN readable.content_id = COALESCE(preferred.content_id, preferred_local.content_id) THEN readable.content_id END)
@@ -109,9 +105,20 @@ internal sealed partial class LibraryStore
             while (rows.Read()) volumes.Add(rows.GetString(0));
         }
 
-        return new(metadata, chapters.Count, readChapters, volumes.OrderBy(Numeric).Take(500).ToArray(),
+        command.CommandText = "WITH covered AS (" + GroupCoverage + "), volume_archive AS (" + GroupVolumeArchives
+            + "), readable AS (" + ReadableGroupFiles + """
+            )
+            SELECT DISTINCT a.volume FROM volume_archive a JOIN readable f ON f.content_id = a.content_id;
+            """;
+        var readableVolumes = new HashSet<string>(StringComparer.Ordinal);
+        using (var rows = command.ExecuteReader())
+        {
+            while (rows.Read()) readableVolumes.Add(rows.GetString(0));
+        }
+        var listedVolumes = volumes.OrderBy(Numeric).Take(500).ToArray();
+        return new(metadata, chapters.Count, readChapters, listedVolumes,
             chapters.OrderBy(chapter => Numeric(chapter.Volume)).ThenBy(chapter => Numeric(chapter.Chapter)).Take(500).ToArray(),
-            ReadSeriesReading(command));
+            ReadSeriesReading(command), volumes.Count, listedVolumes.Where(readableVolumes.Contains).ToArray());
     }
 
     private static SeriesReading? ReadSeriesReading(SqliteCommand command)
