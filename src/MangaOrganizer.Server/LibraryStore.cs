@@ -4,7 +4,7 @@ namespace MangaOrganizer.Server;
 
 internal sealed record LibraryRoot(Guid Id, string Path);
 internal sealed record LibraryRootStatus(Guid Id, string Path, string State, long FileCount,
-    DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks, string? Name, string Kind);
+    DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks, string? Name, string Kind, bool HasCovers);
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt,
     string? ContentId, string? Sha256, long? IndexedLocations);
 internal sealed record CatalogPage<T>(long Total, IReadOnlyList<T> Items);
@@ -46,6 +46,16 @@ internal sealed partial class LibraryStore
             );
             CREATE TABLE IF NOT EXISTS library_settings (
                 singleton INTEGER PRIMARY KEY CHECK (singleton = 1)
+            );
+            CREATE TABLE IF NOT EXISTS library_series_cover (
+                root_id TEXT NOT NULL REFERENCES library_root(id),
+                series_key TEXT NOT NULL,
+                relative_path TEXT NOT NULL,
+                size INTEGER NOT NULL,
+                modified_at TEXT NOT NULL,
+                archive_entry TEXT,
+                sha256 BLOB NOT NULL CHECK (length(sha256) = 32),
+                PRIMARY KEY(root_id, series_key)
             );
             UPDATE library_root SET state = 'interrupted' WHERE state IN ('queued', 'scanning');
             """;
@@ -89,7 +99,8 @@ internal sealed partial class LibraryStore
         using var command = database.CreateCommand();
         command.CommandText = """
             SELECT r.id, f.path, r.state, r.file_count, r.last_attempt_at,
-                r.last_scanned_at, r.skipped_links, f.name, f.kind
+                r.last_scanned_at, r.skipped_links, f.name, f.kind,
+                EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = r.id)
             FROM library_folder f JOIN library_root r ON r.id = f.root_id
             ORDER BY f.rowid;
             """;
@@ -100,7 +111,7 @@ internal sealed partial class LibraryStore
             result.Add(new(row.GetGuid(0), row.GetString(1), row.GetString(2), row.GetInt64(3),
                 row.IsDBNull(4) ? null : row.GetDateTimeOffset(4),
                 row.IsDBNull(5) ? null : row.GetDateTimeOffset(5), row.GetInt64(6),
-                row.IsDBNull(7) ? null : row.GetString(7), row.GetString(8)));
+                row.IsDBNull(7) ? null : row.GetString(7), row.GetString(8), row.GetBoolean(9)));
         }
         return result;
     }
@@ -180,12 +191,22 @@ internal sealed partial class LibraryStore
                 modified_at TEXT NOT NULL,
                 sha256 BLOB,
                 series_key TEXT NOT NULL,
-                series_title TEXT
+                series_title TEXT,
+                directory TEXT NOT NULL
+            );
+            CREATE TEMP TABLE scan_cover (
+                series_key TEXT PRIMARY KEY,
+                relative_path TEXT NOT NULL,
+                size INTEGER NOT NULL,
+                modified_at TEXT NOT NULL,
+                archive_entry TEXT,
+                sha256 BLOB NOT NULL
             );
             """;
         command.ExecuteNonQuery();
 
         var (count, skippedLinks) = StageFiles(database, root.Path, cancellationToken);
+        if (count > 0) StageCovers(database, root.Path, cancellationToken);
         LibraryScanner.RequireRoot(root.Path);
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -211,6 +232,9 @@ internal sealed partial class LibraryStore
                         extension = excluded.extension, size = excluded.size, modified_at = excluded.modified_at,
                         content_id = excluded.content_id, series_key = excluded.series_key, series_title = excluded.series_title;
                 DELETE FROM library_file WHERE root_id = $id AND relative_path NOT IN (SELECT relative_path FROM scan_file);
+                DELETE FROM library_series_cover WHERE root_id = $id;
+                INSERT INTO library_series_cover(root_id, series_key, relative_path, size, modified_at, archive_entry, sha256)
+                    SELECT $id, series_key, relative_path, size, modified_at, archive_entry, sha256 FROM scan_cover;
                 UPDATE library_root SET state = 'complete', file_count = $count,
                     last_scanned_at = $now, skipped_links = $skipped WHERE id = $id;
                 """;
@@ -229,7 +253,7 @@ internal sealed partial class LibraryStore
         using var transaction = database.BeginTransaction(deferred: true);
         using var insert = database.CreateCommand();
         insert.Transaction = transaction;
-        insert.CommandText = "INSERT INTO scan_file VALUES ($path, $extension, $size, $modified, $sha256, $seriesKey, $seriesTitle);";
+        insert.CommandText = "INSERT INTO scan_file VALUES ($path, $extension, $size, $modified, $sha256, $seriesKey, $seriesTitle, $directory);";
         var relativePath = insert.Parameters.Add("$path", SqliteType.Text);
         var extension = insert.Parameters.Add("$extension", SqliteType.Text);
         var size = insert.Parameters.Add("$size", SqliteType.Integer);
@@ -237,6 +261,7 @@ internal sealed partial class LibraryStore
         var sha256 = insert.Parameters.Add("$sha256", SqliteType.Blob);
         var seriesKey = insert.Parameters.Add("$seriesKey", SqliteType.Text);
         var seriesTitle = insert.Parameters.Add("$seriesTitle", SqliteType.Text);
+        var directory = insert.Parameters.Add("$directory", SqliteType.Text);
         insert.Prepare();
 
         long count = 0;
@@ -250,6 +275,7 @@ internal sealed partial class LibraryStore
             var title = SeriesSuggestions.CandidateTitle(file.RelativePath, path);
             seriesKey.Value = SeriesSuggestions.Key(file.RelativePath, title);
             seriesTitle.Value = (object?)title ?? DBNull.Value;
+            directory.Value = file.RelativePath[..Math.Max(file.RelativePath.LastIndexOf('/'), 0)];
             insert.ExecuteNonQuery();
             count++;
         }, cancellationToken);

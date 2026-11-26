@@ -10,6 +10,7 @@ import os
 import re
 import socket
 import sqlite3
+import struct
 import subprocess
 import tempfile
 import time
@@ -17,6 +18,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 from uuid import UUID, uuid4
+from zipfile import ZIP_DEFLATED, ZipFile
+import zlib
 
 
 BOOTSTRAP_VARIABLE = "MANGA_ORGANIZER_BOOTSTRAP_PASSWORD"
@@ -277,6 +280,7 @@ def verify_folder_settings(owner, media):
     assert [root["id"] for root in owner.roots()].count(shared["id"]) == 1
     assert owner.files(shared["id"])["items"] == [incoming]
     verify_series_groups(owner, shared["id"], media / "intake")
+    verify_cover_art(owner, shared["id"], media / "intake")
     owner.request(f"{LIBRARY_ROOTS}/{archive['id']}", 204, method="DELETE", token=owner.csrf())
     assert (media / "archive" / "Volume.epub").exists()
     assert (media / "intake" / "Unmatched.cbz").exists()
@@ -341,6 +345,43 @@ def verify_series_groups(owner, root_id, path):
     assert {row["relativePath"] for row in first["items"] + second["items"]} == set(fixtures[:53])
     owner.request(f"{LIBRARY_ROOTS}/{root_id}/series?offset=-1", 400)
     owner.request(f"{LIBRARY_ROOTS}/{root_id}/files?seriesKey=invalid", 400)
+
+
+def synthetic_png(red, green, blue, width=12, height=18):
+    def chunk(tag, body):
+        return struct.pack(">I", len(body)) + tag + body + struct.pack(">I", zlib.crc32(tag + body))
+
+    header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    pixels = (b"\0" + bytes((red, green, blue)) * width) * height
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(pixels)) + chunk(b"IEND", b"")
+
+
+def verify_cover_art(owner, root_id, path):
+    sidecar_bytes, first_page, later_page = synthetic_png(90, 20, 220), synthetic_png(32, 160, 122), synthetic_png(221, 42, 70)
+    src = path / "Éclipse"
+    src.mkdir()
+    with ZipFile(src / "Éclipse v01.cbz", "w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr("./unsafe.png", later_page)
+        archive.writestr("pages/1.png", b"Corrupt first entry")
+        archive.writestr("pages/10.png", later_page)
+        archive.writestr("pages/2.png", first_page)
+    (src / "cover.png").write_bytes(sidecar_bytes)
+    owner.scan(root_id)
+    assert any(root["id"] == root_id and root["hasCovers"] for root in owner.roots())
+    (series,) = owner.series(root_id, "?search=eclipse&coverOnly=true")["items"]
+    assert series["title"] == "Éclipse" and series["hasCover"]
+    url = f"{LIBRARY_ROOTS}/{root_id}/series/{series['key']}/cover"
+    assert owner.request(url, 200) == sidecar_bytes
+    assert owner.headers.get_content_type() == "image/png" and owner.headers["X-Content-Type-Options"] == "nosniff"
+    Browser(owner.url).request(url, 401)
+
+    (src / "cover.png").write_bytes(b"Invalid cover")
+    owner.request(url, 404)
+    owner.scan(root_id)
+    assert owner.request(url, 200) == first_page
+    all_series = owner.series(root_id, "?sort=files")["items"]
+    assert all_series[0]["fileCount"] == 53 and any(not grouped["hasCover"] for grouped in all_series)
+    owner.request(f"{LIBRARY_ROOTS}/{root_id}/series?sort=unknown", 400)
 
 
 def scan_library(owner, media):
@@ -539,4 +580,4 @@ if __name__ == "__main__":
                 smoke(lambda password: start_container(target.image, volume, media, password), media)
             finally:
                 subprocess.run(["docker", "volume", "rm", volume], check=True, stdout=subprocess.DEVNULL)
-    print("Passed WebUI assets, authentication, CSRF, dual-purpose folders, series groups, SHA-256 file identity, and restart persistence")
+    print("Passed WebUI assets, authentication, CSRF, dual-purpose folders, series groups, cover art, file identity, and restart persistence")

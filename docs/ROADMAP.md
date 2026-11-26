@@ -17,11 +17,14 @@ Tests: corrupt archive, traversal, oversized images, decimals/splits, language e
 
 ## WebUI MVP
 
-1. Configure library and intake roles and browse the grouped inventory. A folder serving both roles shares one scan and inventory.
-2. Display a series cover from `cover.png` or the first readable CBZ or image ZIP page. Preserve the indexed files when an image or archive is unavailable.
-3. Open CBZ and image ZIP files from the library or intake, read them right to left or in a scrolling view, and pick up from another signed-in browser. Keep the reading position attached to verified content through file moves.
+1. Configure library and intake roles and browse grouped series and physical files. A folder serving both roles shares one scan and inventory.
+2. Show file-backed covers with searchable series browsing. Use `cover.png` or the first readable CBZ or image ZIP page. Preserve files when an image or archive is unavailable.
+3. Version SQLite migrations and provide a migration command and verification job. Report live scan stages and counts.
+4. Search local files and metadata. Fetch basic manga and doujin metadata, record series, volume and chapter links, and show availability against known total chapters.
+5. Read CBZ and image ZIP files right to left and resume on another signed-in browser. Count completed chapters against known totals and retain progress through moves of verified content.
+6. Preview and confirm file moves and renames. Preserve content identity, prevent overwrite, and record operation and recovery state.
 
-Build and validate these steps as stacked pull requests for the owner to review in order. Managed rename and move workflows retain their storage qualification and recovery gates. [Remote reading](REMOTE-READING.md) · [Managed changes](FILE-ORGANIZATION.md)
+Build and validate each feature in a stacked pull request based on the preceding checked branch. The owner merges and tests them in order. Downloads and complex metadata scraping follow the MVP. A right-to-left layout is sufficient for the first reader. Managed rename and move workflows retain their storage qualification and recovery gates. [Remote reading](REMOTE-READING.md) · [Managed changes](FILE-ORGANIZATION.md)
 
 ## Decisions
 

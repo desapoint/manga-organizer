@@ -2,7 +2,6 @@ name: Development release
 
 on:
   pull_request:
-    branches: [main]
     paths: ['src/**', 'client/**', 'packaging/**', 'docs/INSTALL.md', 'tests/foundation_smoke.py', 'Dockerfile', '.dockerignore', '.github/workflows/release.yml']
   push:
     branches: [main]
