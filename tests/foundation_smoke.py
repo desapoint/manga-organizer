@@ -990,6 +990,8 @@ def verify_catalog_visibility(owner, root, path):
     pending = "Pending Signal Ch.01.cbz"
     comic(first, (90, 120, 150))
     comic(pending, (90, 121, 150))
+    duplicate = "Pending Signal Ch.01 [Exact Copy].cbz"
+    (path / duplicate).write_bytes((path / pending).read_bytes())
     comic("03.cbz", (90, 122, 150))
     (path / no_cover).write_bytes(b"Unillustrated periodical fixture")
     owner.scan(root)
@@ -1004,6 +1006,9 @@ def verify_catalog_visibility(owner, root, path):
               "color": "black-and-white", "censorship": "uncensored"}
     owner.request(version, 400, method="PUT", body=change)
     owner.request(version, 204, method="PUT", token=owner.csrf(), body=change)
+    pending_files = files("all", "search=Pending+Signal")[1]
+    ungrouped = files("all", "search=03.cbz")[1]["03.cbz"]
+    verify_bulk_release_tags(owner, root, [pending_files[pending], pending_files[duplicate], ungrouped])
     assert "03.cbz" in files("series", "search=03.cbz")[1]
     assert pending in files("metadata", "search=Pending+Signal")[1]
     owner.request(url + "/details?published=true", 404)
@@ -1044,7 +1049,51 @@ def verify_catalog_visibility(owner, root, path):
     assert total == 2 and page[later]["id"] == release["id"]
     assert page[later]["associationConfirmed"]
     assert files("attention", f"seriesKey={parchment}")[0] == 0
-    assert json.loads(owner.request(version, 200))["tags"]["language"] == "ja"
+    assert json.loads(owner.request(version, 200))["tags"] == {
+        "language": "ja", "color": "black-and-white", "censorship": "uncensored",
+        "edition": None, "group": "Batch Fixture", "revision": 2,
+    }
+
+
+def verify_bulk_release_tags(owner, root, files):
+    url = f"/api/versions/{root}"
+    selection = {"fileIds": [item["id"] for item in files]}
+    owner.request(url + "/batch-preview", 400, method="POST", body=selection)
+    owner.request(url + "/batch-preview", 400, method="POST", token=owner.csrf(),
+                  body={"fileIds": [files[0]["id"], files[0]["id"].upper()]})
+    owner.request(url + "/batch-preview", 409, method="POST", token=owner.csrf(),
+                  body={"fileIds": [files[0]["id"], uuid4().hex]})
+
+    def preview():
+        return json.loads(owner.request(url + "/batch-preview", 200, method="POST", token=owner.csrf(), body=selection))
+
+    def targets(rows):
+        return [{"fileId": row["fileId"], "contentId": row["contentId"], "relativePath": row["relativePath"],
+                 "revision": row["tags"]["revision"]} for row in rows]
+
+    original = preview()
+    assert [row["fileId"] for row in original] == selection["fileIds"]
+    assert original[0]["tags"] == original[1]["tags"] and original[2]["tags"]["revision"] == 0
+    batch = {"field": "group", "value": "Batch Fixture", "targets": targets(original)}
+    owner.request(url + "/batch", 400, method="PUT", body=batch)
+    owner.request(url + "/batch", 400, method="PUT", token=owner.csrf(), body={**batch, "field": "unsupported"})
+    moved = [*batch["targets"][:-1], {**batch["targets"][-1], "relativePath": "different.cbz"}]
+    owner.request(url + "/batch", 409, method="PUT", token=owner.csrf(), body={**batch, "targets": moved})
+    assert preview() == original
+
+    last = original[-1]
+    owner.request(url + "/files/" + last["fileId"], 204, method="PUT", token=owner.csrf(),
+                  body={**last["tags"], "contentId": last["contentId"], "edition": "Concurrent edition"})
+    owner.request(url + "/batch", 409, method="PUT", token=owner.csrf(), body=batch)
+    current = preview()
+    assert current[:2] == original[:2] and current[-1]["tags"]["edition"] == "Concurrent edition"
+    owner.request(url + "/batch", 204, method="PUT", token=owner.csrf(), body={**batch, "targets": targets(current)})
+    corrected = preview()
+    for before, after in zip(current, corrected):
+        assert after["tags"] == {**before["tags"], "group": "Batch Fixture", "revision": before["tags"]["revision"] + 1}
+    owner.request(url + "/batch", 204, method="PUT", token=owner.csrf(),
+                  body={"field": "edition", "value": None, "targets": targets(corrected[2:])})
+    assert preview()[-1]["tags"]["edition"] is None
 
 
 def verify_maintenance(owner):

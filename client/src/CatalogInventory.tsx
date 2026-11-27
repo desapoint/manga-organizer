@@ -6,7 +6,7 @@ import { CollectionForm, emptyFilters, SeriesCollectionMembership, TagRulesField
 import type { TagRules } from './CollectionControls';
 import { DuplicateReviewDialog } from './DuplicateReview';
 import { FileMove } from './FileOperations';
-import { EditReleaseTags } from './ReleaseTagsEditor';
+import { EditReleaseTags, ReleaseSelectionActions, SelectReleaseCheckbox, useReleaseSelection } from './ReleaseTagsEditor';
 import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
 import { EditionCoverage, SeriesChapterList, VolumeReleasePicker } from './EditionCoverage';
@@ -155,9 +155,10 @@ function FileAssociationAction({ file, rootId, onSignedOut, onChange }: {
     onChange={onChange} onSignedOut={onSignedOut} actionLabel="Assign series metadata" />;
 }
 
-function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut }:
+function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut, selection }:
   Pick<InventoryProps, 'rootId' | 'version'> & {
   file: CatalogEntry; seriesKey?: string; onInspect?: Inspect; onSignedOut: () => void; management?: FileManagement;
+  selection: ReturnType<typeof useReleaseSelection>;
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
   const [move, setMove] = useState<'organize' | 'transfer' | null>(null);
@@ -170,7 +171,9 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   const transferTarget = file.associationConfirmed ? management?.intakeTarget : undefined;
   return (
     <li>
-      <span className="flex min-w-0 items-center gap-3">
+      <span className="flex min-w-0 items-center gap-3 max-[36rem]:col-span-full">
+        {selection.enabled && file.contentId && <SelectReleaseCheckbox path={file.relativePath}
+          checked={selection.selected.includes(file.id)} onChange={() => selection.toggle(file.id)} />}
         <FileCover rootId={rootId} fileId={file.id} available={file.hasCover} seriesCoverKey={file.seriesCoverKey} revision={version}
           className="h-12 w-8 shrink-0 rounded-sm" />
         <span className="file-path" title={file.relativePath}>
@@ -224,6 +227,8 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
   if (seriesKey) params.set('seriesKey', seriesKey);
   if (volume) params.set('volume', volume);
   const { page, offset, setOffset, error, retry } = useInventoryPage<CatalogEntry>(`${ROOTS_URL}/${rootId}/files`, version, onSignedOut, params);
+  const editable = page?.items.filter(file => file.contentId).map(file => file.id) ?? [];
+  const selection = useReleaseSelection(`${rootId}:${params}:${offset}`, editable);
   const label = seriesKey ? 'Series files' : 'Catalog files';
   return (
     <>
@@ -233,10 +238,13 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
         'No files in the current inventory.' : 'No files match this view.'}</p>}
       {page && page.total > 0 && (
         <div className={seriesKey ? 'min-w-0 rounded-b-xl border-t border-line bg-inset' : 'surface'}>
+          {management && editable.length > 0 && <div className="border-b border-line px-4 py-2">
+            <ReleaseSelectionActions selection={selection} rootId={rootId} onSignedOut={onSignedOut} onSaved={management.onDataChanged} />
+          </div>}
           <div className="catalog-columns" aria-hidden="true"><span>File</span><span>Type</span><span>Size</span><span>Modified</span></div>
           <ul className="catalog-files" role="list" aria-label={label}>
             {page.items.map(file => <FileRow key={file.id} file={file} rootId={rootId} seriesKey={seriesKey} version={version}
-              onInspect={onInspect} onSignedOut={onSignedOut} management={management} />)}
+              onInspect={onInspect} onSignedOut={onSignedOut} management={management} selection={selection} />)}
           </ul>
           {page.total > PAGE_SIZE && (
             <div className="border-t border-line p-3">
