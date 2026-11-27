@@ -1450,6 +1450,9 @@ def verify_routed_intake(owner, media, source, target):
     preview(draft, 409)
     owner.request(volume_url + "/coverage", 204, method="PUT", token=owner.csrf(), body=whole_volume)
     volume_target = media / "archive" / volume_item["intakePath"]
+    # Match the other managed fixture folders shared by the host and the non-root Docker user.
+    volume_target.parent.mkdir()
+    volume_target.parent.chmod(0o777)
     volume_plan = preview({**draft, "targetPath": volume_item["intakePath"]})
     owner.request(f"{operations}/{volume_plan['id']}/apply", 200, method="POST", token=owner.csrf())
     assert not unnumbered.exists() and volume_target.is_file()
