@@ -368,7 +368,7 @@ function SeriesRow({ series, onInspect, coverVersion, catalogView, ...inventory 
     <div id={filesId} hidden={!open}>
       {open && <>
         <SeriesInfo rootId={inventory.rootId} seriesKey={series.key} title={series.title} version={inventory.version}
-          onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut} suggestion={series.aniList?.metadata} />
+          onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut} suggestion={series.aniList?.revision ? series.aniList.metadata : undefined} />
         <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} management={inventory} catalogView={catalogView}
           importGroupSize={series.fileCount} />
       </>}

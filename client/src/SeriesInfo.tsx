@@ -105,7 +105,7 @@ function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const sourceId = metadata?.providerId ?? suggestion?.providerId;
+  const sourceId = suggestion?.providerId ?? metadata?.providerId;
 
   function update<K extends keyof typeof fields>(field: K, value: (typeof fields)[K]) {
     setFields(current => ({ ...current, [field]: value }));
@@ -117,7 +117,7 @@ function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }:
     setError('');
     setNotice('');
     try {
-      const source = !metadata?.providerId && suggestion ? suggestion : await loadProvider(sourceId);
+      const source = suggestion ?? await loadProvider(sourceId);
       const incoming = metadataFields(source, title);
       setFields(current => replace ? incoming : {
         title: current.title.trim() ? current.title : incoming.title,
@@ -215,32 +215,40 @@ export function useSeriesDetails({ rootId, seriesKey, version, onSignedOut, publ
 
 type EditorProps = Omit<SeriesContext, 'version'> & { metadata: Metadata | null; onChange: () => void; published?: boolean };
 
-export function MetadataDialogAction({ actionLabel = 'Edit metadata', suggestion, ...props }: EditorProps & {
+export function MetadataDialogAction({ actionLabel = 'Edit metadata', ...props }: EditorProps & {
   actionLabel?: string; suggestion?: Metadata;
 }) {
   const [open, setOpen] = useState(false);
-  const url = metadataUrl(props);
-  async function loadProvider(id: number) {
-    const response = await fetch(url + '/metadata/anilist/' + id);
-    return metadataResponse(response, props.onSignedOut, 'Could not load AniList metadata.');
-  }
   return <>
     <Button variant="secondary" className="justify-self-start" onClick={() => setOpen(true)}>{actionLabel}</Button>
-    {open && <Modal title="Edit series metadata" onClose={() => setOpen(false)}>
-      <SeriesMetadataForm title={props.title} metadata={props.metadata} suggestion={suggestion} loadProvider={loadProvider}
-        save={async values => { await saveMetadata(props, values); setOpen(false); props.onChange(); }} />
-    </Modal>}
+    {open && <MetadataDraftDialog {...props} onClose={() => setOpen(false)} />}
   </>;
+}
+
+function MetadataDraftDialog({ onClose, suggestion, ...props }: EditorProps & { onClose: () => void; suggestion?: Metadata }) {
+  async function loadProvider(id: number) {
+    const response = await fetch(metadataUrl(props) + '/metadata/anilist/' + id);
+    return metadataResponse(response, props.onSignedOut, 'Could not load AniList metadata.');
+  }
+
+  return <Modal title="Edit series metadata" onClose={onClose}>
+    <SeriesMetadataForm title={props.title} metadata={props.metadata} suggestion={suggestion} loadProvider={loadProvider}
+      save={async values => { await saveMetadata(props, values); onClose(); props.onChange(); }} />
+  </Modal>;
 }
 
 export function AniListSearchAction({ iconOnly, ...props }: Omit<EditorProps, 'metadata'> & { iconOnly?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<{ metadata: Metadata | null; suggestion: Metadata } | null>(null);
+
   return <>
     <Button variant="ghost" icon={Search} aria-label="Find on AniList" title="Find on AniList"
       onClick={() => setOpen(true)}>{!iconOnly && 'Find on AniList'}</Button>
     {open && <Modal title="Find on AniList" wide onClose={() => setOpen(false)}>
-      <AniListSearch {...props} onChange={() => { setOpen(false); props.onChange(); }} />
+      <AniListSearch {...props} onChange={() => { setOpen(false); props.onChange(); }}
+        onReview={(metadata, suggestion) => { setOpen(false); setDraft({ metadata, suggestion }); }} />
     </Modal>}
+    {draft && <MetadataDraftDialog {...props} {...draft} onClose={() => setDraft(null)} />}
   </>;
 }
 
@@ -265,7 +273,9 @@ async function saveMetadata(props: Omit<EditorProps, 'metadata'>, body: object) 
   return metadataResponse(response, props.onSignedOut, 'Could not save series metadata.');
 }
 
-function AniListSearch(props: Omit<EditorProps, 'metadata'>) {
+function AniListSearch({ onReview, ...props }: Omit<EditorProps, 'metadata'> & {
+  onReview: (metadata: Metadata | null, suggestion: Metadata) => void;
+}) {
   const { title, onSignedOut, onChange } = props;
   const url = metadataUrl(props);
   const [query, setQuery] = useState(title);
@@ -307,6 +317,23 @@ function AniListSearch(props: Omit<EditorProps, 'metadata'>) {
     }
   }
 
+  async function review(candidate: Metadata) {
+    if (candidate.providerId === null) return;
+    setError('');
+    setSaving(candidate.providerId);
+    try {
+      const response = await fetch(url + '/details' + (props.published ? '?published=true' : ''));
+      if (response.status === 401) return onSignedOut();
+      if (!response.ok) throw new Error('Could not load the current series details.');
+      const details = await response.json() as Details;
+      onReview(details.metadata, candidate);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not open the metadata editor.');
+    } finally {
+      setSaving(null);
+    }
+  }
+
   return (
     <div className="grid min-w-0 gap-4">
       <form onSubmit={findMetadata} className="action-row">
@@ -334,8 +361,9 @@ function AniListSearch(props: Omit<EditorProps, 'metadata'>) {
             {candidate.providerUrl && <ActionLink variant="ghost" icon={ExternalLink} href={candidate.providerUrl} target="_blank" rel="noreferrer">
               Open in AniList
             </ActionLink>}
+            <Button variant="secondary" disabled={saving !== null} onClick={() => void review(candidate)}>Review in editor</Button>
             <Button variant="secondary" disabled={saving !== null} onClick={() => void choose(candidate)}>
-              {saving === candidate.providerId ? 'Saving…' : 'Use this match'}
+              Use this match
             </Button>
           </div>
         </li>)}
