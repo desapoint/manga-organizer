@@ -7,7 +7,7 @@ using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
-internal sealed record MaintenanceScans(bool AllLibraries, Guid[]? RootIds);
+internal sealed record MaintenanceScans(bool AllLibraries, Guid[]? RootIds, bool Full = false);
 internal sealed record MaintenanceScanResult(Guid RootId, string State);
 internal sealed record ResetPreviewRequest(string? Level, Guid[]? RootIds);
 internal sealed record ResetConfirmation(string? Token, string? Confirmation);
@@ -32,7 +32,7 @@ internal static class MaintenanceEndpoints
             foreach (var id in ids)
             {
                 var state = !libraries.TryGetValue(id, out var root) ? "missing" :
-                    scans.Queue(new(root.Id, root.Path)) is not null ? "queued" : "busy";
+                    scans.Queue(new(root.Id, root.Path), request.Full) is not null ? "queued" : "busy";
                 results.Add(new(id, state));
             }
             return Results.Accepted(value: results);

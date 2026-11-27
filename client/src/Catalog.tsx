@@ -66,12 +66,12 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
     };
   }, [refresh, onSignedOut]);
 
-  async function startScan() {
+  async function startScan(full: boolean) {
     if (!rootId) return;
     setScanPending(true);
     setScanError('');
     try {
-      const response = await fetch(`${ROOTS_URL}/${rootId}/scan`, {
+      const response = await fetch(`${ROOTS_URL}/${rootId}/scan?full=${full}`, {
         method: 'POST', headers: { 'X-CSRF-Token': await getCsrfToken() },
       });
       if (response.status === 401) return onSignedOut();
@@ -123,7 +123,12 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
                   setSelectedId(id);
                   setScanError('');
                 }} />
-              <Button icon={ScanSearch} onClick={startScan} disabled={scanPending || scanIsActive(selected)}>Scan folder</Button>
+              <div className="action-row">
+                <Button icon={ScanSearch} onClick={() => void startScan(false)}
+                  disabled={scanPending || scanIsActive(selected)}>Quick scan</Button>
+                <Button variant="secondary" onClick={() => void startScan(true)}
+                  disabled={scanPending || scanIsActive(selected)}>Full verification</Button>
+              </div>
             </div>
             <ScanStatus root={selected} />
             <div className="catalog-summary">

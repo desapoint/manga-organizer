@@ -49,6 +49,11 @@ def verify_canonical_upgrade(app, fresh, data, target_version):
           closing(sqlite3.connect(data / "organizer.sqlite")) as database):
         source.backup(database)
         database.executescript("""
+            DROP TABLE library_sidecar_stamp;
+            ALTER TABLE library_file DROP COLUMN scan_stamp;
+            ALTER TABLE library_file DROP COLUMN scan_chapters;
+            ALTER TABLE library_file DROP COLUMN scan_chapter_source;
+            ALTER TABLE library_root DROP COLUMN last_scan;
             DROP TABLE series_release_metadata;
             DROP TABLE series_identity_alias;
             DROP TABLE series_cover_preference;
@@ -145,6 +150,11 @@ def verify(app, fixture, previous_app=None):
         database.execute("DROP TABLE series_collection_item")
         database.execute("DROP TABLE series_collection")
         database.execute("DROP TABLE series_cover_preference")
+        database.execute("DROP TABLE library_sidecar_stamp")
+        database.execute("ALTER TABLE library_file DROP COLUMN scan_stamp")
+        database.execute("ALTER TABLE library_file DROP COLUMN scan_chapters")
+        database.execute("ALTER TABLE library_file DROP COLUMN scan_chapter_source")
+        database.execute("ALTER TABLE library_root DROP COLUMN last_scan")
         database.execute("DROP TABLE series_release_metadata")
         database.execute("DROP TABLE series_identity_alias")
         database.execute("DROP INDEX series_metadata_anilist_id")

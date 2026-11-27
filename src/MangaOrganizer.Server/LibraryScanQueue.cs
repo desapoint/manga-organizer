@@ -14,11 +14,11 @@ internal sealed class LibraryScanQueue(LibraryStore store, ILogger<LibraryScanQu
         SingleReader = true,
     });
 
-    public ScanSnapshot? Queue(LibraryRoot root)
+    public ScanSnapshot? Queue(LibraryRoot root, bool full = false)
     {
         if (!store.TryQueue(root.Id)) return null;
 
-        var scan = new ScanProgress();
+        var scan = new ScanProgress(full);
         var queued = scan.Snapshot();
         active[root.Id] = scan;
         if (requests.Writer.TryWrite(new(root, scan))) return queued;

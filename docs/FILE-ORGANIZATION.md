@@ -16,6 +16,8 @@ Scans run one at a time. The server skips symbolic links and Windows reparse poi
 
 During a scan, the WebUI shows files discovered, bytes read while verifying hashes, groups checked for covers and the publishing stage. Both views of a dual-purpose folder observe the same progress. The last published inventory remains available until the new scan completes.
 
+**Quick scan** walks the entire folder and reuses saved hashes and scanned chapter coverage when file identity, size, modification time and filesystem change time agree. Local NTFS on Windows and ext-family, XFS, Btrfs and tmpfs mounts on Linux can supply this evidence. Files on other mounts are read and hashed, including uncertainty on network and pooled shares. **Full verification** reads every media file and refreshes the scan evidence. The scanner reuses matching archive artwork and checks local folder artwork for additions, changes and removals. The first scan after upgrading builds the cache. Each completed scan reports files hashed, files reused, bytes read for hashing and duration. Reviewed file operations verify content independently.
+
 ## Import intake and association
 
 When a reviewed move would collide with an existing release, allow the owner to keep both using a numbered destination visible in the preview. Preserve each chapter or language variant as a separate file. Allow a reviewed move to bring along source folder artwork, retaining distinct destination cover images with names such as `cover-1.jpg` and `cover-2.jpg`. The planned paths and content must be revalidated at confirmation.

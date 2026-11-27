@@ -1,10 +1,15 @@
+using System.Diagnostics;
+
 namespace MangaOrganizer.Server;
 
 internal sealed record ScanSnapshot(string Phase, long DiscoveredFiles, long ProcessedFiles, long VerifiedFiles,
-    long TotalBytes, long BytesRead, string? CurrentPath, long SeriesTotal, long SeriesChecked, long CoversFound);
+    long TotalBytes, long BytesRead, string? CurrentPath, long SeriesTotal, long SeriesChecked, long CoversFound,
+    long HashedFiles, long ReusedFiles, long ElapsedMilliseconds, bool Full);
 
-internal sealed class ScanProgress
+internal sealed class ScanProgress(bool full)
 {
+    public bool Full { get; } = full;
+    private long startedAt;
     private readonly object gate = new();
     private string phase = "queued";
     private long discoveredFiles;
@@ -12,6 +17,7 @@ internal sealed class ScanProgress
     private long verifiedFiles;
     private long totalBytes;
     private long bytesRead;
+    private long reusedFiles;
     private string? currentPath;
     private long seriesTotal;
     private long seriesChecked;
@@ -22,7 +28,8 @@ internal sealed class ScanProgress
         lock (gate)
         {
             return new(phase, discoveredFiles, processedFiles, verifiedFiles, totalBytes, bytesRead, currentPath,
-                seriesTotal, seriesChecked, coversFound);
+                seriesTotal, seriesChecked, coversFound, verifiedFiles - reusedFiles, reusedFiles,
+                startedAt == 0 ? 0 : (long)Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds, Full);
         }
     }
 
@@ -30,6 +37,7 @@ internal sealed class ScanProgress
     {
         lock (gate)
         {
+            if (startedAt == 0) startedAt = Stopwatch.GetTimestamp();
             phase = next;
             currentPath = null;
         }
@@ -54,12 +62,13 @@ internal sealed class ScanProgress
         lock (gate) bytesRead += count;
     }
 
-    public void FinishedFile(bool verified)
+    public void FinishedFile(bool verified, bool reused)
     {
         lock (gate)
         {
             processedFiles++;
             if (verified) verifiedFiles++;
+            if (reused) reusedFiles++;
         }
     }
 

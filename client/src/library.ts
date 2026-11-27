@@ -17,7 +17,7 @@ export const scanLabels = {
 export type ScanState = keyof typeof scanLabels;
 
 export type ScanSnapshot = {
-  phase: 'queued' | 'discovering' | 'hashing' | 'covers' | 'publishing';
+  phase: 'queued' | 'discovering' | 'hashing' | 'covers' | 'publishing' | 'complete';
   discoveredFiles: number;
   processedFiles: number;
   verifiedFiles: number;
@@ -27,6 +27,10 @@ export type ScanSnapshot = {
   seriesTotal: number;
   seriesChecked: number;
   coversFound: number;
+  hashedFiles: number;
+  reusedFiles: number;
+  elapsedMilliseconds: number;
+  full: boolean;
 };
 
 export type LibraryRoot = {
@@ -41,6 +45,7 @@ export type LibraryRoot = {
   hasCovers: boolean;
   managed: boolean;
   scanProgress: ScanSnapshot | null;
+  lastScan: ScanSnapshot | null;
   intakeTargetId: string | null;
 };
 
