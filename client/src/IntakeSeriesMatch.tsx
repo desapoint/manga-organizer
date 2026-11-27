@@ -62,7 +62,7 @@ export function IntakeSeriesMatch({ series, onSignedOut, onSaved }: Props) {
       </span>
     </button> : series.lookupQueued && <span className="text-xs text-muted">AniList lookup queued</span>}
     {match?.revision && <Button icon={Check} variant="secondary" disabled={busy} onClick={() => void apply()}>Confirm match</Button>}
-    <AniListSearchAction rootId={series.rootId} seriesKey={series.key} title={series.title} iconOnly
+    <AniListSearchAction rootId={series.rootId} seriesKey={series.key} title={series.title} lookupTitle={series.lookupTitle} iconOnly
       onChange={onSaved} onSignedOut={onSignedOut} />
     {details && metadata && <Modal title={metadata.title} wide onClose={() => { if (!busy) setDetails(false); }}>
       <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">

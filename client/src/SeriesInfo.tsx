@@ -279,7 +279,9 @@ function MetadataDraftDialog({ onClose, suggestion, ...props }: EditorProps & { 
   </Modal>;
 }
 
-export function AniListSearchAction({ iconOnly, ...props }: Omit<EditorProps, 'metadata'> & { iconOnly?: boolean }) {
+type AniListSearchProps = Omit<EditorProps, 'metadata'> & { lookupTitle?: string };
+
+export function AniListSearchAction({ iconOnly, ...props }: AniListSearchProps & { iconOnly?: boolean }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<{ metadata: Metadata | null; suggestion: Metadata } | null>(null);
 
@@ -315,12 +317,12 @@ async function saveMetadata(props: Omit<EditorProps, 'metadata'>, body: object) 
   return metadataResponse(response, props.onSignedOut, 'Could not save series metadata.');
 }
 
-function AniListSearch({ onReview, ...props }: Omit<EditorProps, 'metadata'> & {
+function AniListSearch({ onReview, lookupTitle, ...props }: AniListSearchProps & {
   onReview: (metadata: Metadata | null, suggestion: Metadata) => void;
 }) {
   const { title, onSignedOut, onChange } = props;
   const url = metadataUrl(props);
-  const [query, setQuery] = useState(title);
+  const [query, setQuery] = useState(lookupTitle ?? title);
   const [matches, setMatches] = useState<Metadata[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<number | null>(null);

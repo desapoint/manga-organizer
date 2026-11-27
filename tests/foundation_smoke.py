@@ -368,6 +368,14 @@ def verify_series_groups(owner, root_id, path):
         "Side Story 22.0": "(C101) [Studio (Artist)] Side Story 22.0 (Original) [English] [Digital].cbz",
         "Archive Route 2": "(C103) [Studio (Artist)] Archive Route 2 — The Archive Arc (Fixture Franchise) [English] =Imari=.cbz",
         "Pet's Great Escape": "(C104) [Studio (Artist)]Pet's Great Escape [English] {Translator}.cbz",
+        "Evening Study": "(COMITIA101) [Studio (Artist)] Evening Study & [English] [TL].cbz",
+        "Blue Notebook": "(COMITIA118) [Studio (Artist)] Blue Notebook [English].cbz",
+        "Spring Sketches": "(COMITIA124) [Studio (Artist)] Spring Sketches [English] =Translators=.cbz",
+        "Garden Route": "(COMITIA130) [Studio (Artist)] Garden Route 1-3 - The Garden Path 1-3 [English].cbz",
+        "Kitto Haru Comes in Spring": "(COMITIA137) [Studio (Artist)] Kitto Haru Comes in Spring (English) (Translator).cbz",
+        "Tea Time - At Dawn": "(COMIKET104) [Studio] Tea Time - At Dawn [English].cbz",
+        "Koi no Silver Himitsu": "(COMITIA137) [Studio (Artist)] Koi no Silver Himitsu The Secret of Silver (English).cbz",
+        "Haru no Tabiji The Animation": "(COMITIA142) [Studio] Haru no Tabiji The Animation (English).cbz",
     }
     fixtures.extend(doujin_releases.values())
     for relative in fixtures:
@@ -392,6 +400,12 @@ def verify_series_groups(owner, root_id, path):
         assert not entry["associationConfirmed"]
     arc = owner.files(root_id, "?seriesKey=" + by_title["Archive Route 2"]["key"])["items"][0]["filenameEvidence"]
     assert arc["alternateTitle"] == "The Archive Arc" and "Fixture Franchise" in arc["notes"]
+    garden = owner.files(root_id, "?seriesKey=" + by_title["Garden Route"]["key"])["items"][0]["filenameEvidence"]
+    assert garden["alternateTitle"] == "The Garden Path" and "1-3" in garden["notes"]
+    assert garden["event"] == "COMITIA130" and garden["creator"] == "Studio (Artist)"
+    bilingual = owner.files(root_id, "?seriesKey=" + by_title["Koi no Silver Himitsu"]["key"])["items"][0]["filenameEvidence"]
+    assert bilingual["alternateTitle"] == "The Secret of Silver"
+    assert owner.series(root_id, "?view=all&search=Incoming%2F001.cbz")["items"][0]["lookupTitle"] == ""
     assert by_title[series_title]["fileCount"] == 53
     assert by_title["Northbound"]["fileCount"] == 6
     assert by_title["Incoming/001.cbz"]["fileCount"] == by_title["Incoming/002.cbz"]["fileCount"] == 1
@@ -2206,6 +2220,8 @@ def verify_metadata_queue(executable, fixture):
                 "Alpha Shelf": [{"id": 21, "title": {"english": "Alpha release", "native": "Alpha Shelf"}}],
                 "Beta Shelf": [{"id": 22, "title": {"english": "Beta Shelf"}}, {"id": 23, "title": {"romaji": "Beta Shelf"}}],
                 "Rate Shelf": [{"id": 24, "title": {"english": "Rate Shelf"}}],
+                "Lantern Evening": [{"id": 25, "title": {"english": "Lantern Evening"}}],
+                "Moonlit Notes": [{"id": 26, "title": {"english": "Moonlit Notes"}}],
             }
             result = json.dumps({"data": {"Page": {"media": matches.get(title, [])}}}).encode()
             self.send_response(200)
@@ -2348,6 +2364,53 @@ def verify_metadata_queue(executable, fixture):
                     list(requests.map(manual_search, ["User Lookup One", "User Lookup Two"]))
                 assert {name for name, _ in calls[-2:]} == {"User Lookup One", "User Lookup Two"}
                 assert calls[-1][1] - calls[-2][1] >= 2.8
+
+                browser = Browser(address)
+                browser.sign_in(password)
+                prefix = "(COMITIA101) [Studio (Artist)] "
+                note = " & [English] [Translator]"
+                old_title = prefix + "Lantern Evening" + note
+                old_key = sha256(old_title.encode()).hexdigest()
+                old_path = old_title + ".pdf"
+                (media / "primary" / old_path).write_bytes(b"Previously indexed raw convention title")
+                same_key_title = "Moonlit Notes"
+                same_key = sha256(b"series\0moonlit notes").hexdigest()
+                second_path = "(C103) [Studio (Artist)] " + same_key_title + note + ".pdf"
+                (media / "primary" / second_path).write_bytes(b"Previously indexed bare title with a separator")
+                with closing(sqlite3.connect(data / "organizer.sqlite")) as database, database:
+                    for key, title, path in ((old_key, old_title, old_path), (same_key, same_key_title + " &", second_path)):
+                        digest = sha256((media / "primary" / path).read_bytes()).digest()
+                        content = database.execute("INSERT INTO library_content(sha256) VALUES (?) RETURNING id", (digest,)).fetchone()[0]
+                        database.execute("""
+                            INSERT INTO library_file(root_id, relative_path, extension, size, modified_at, series_key, series_title, content_id)
+                            SELECT root_id, ?, 'pdf', 10, modified_at, ?, ?, ?
+                            FROM library_file WHERE lower(root_id) = ? LIMIT 1
+                            """, (path, key, title, content, root))
+                        database.execute("""
+                            INSERT INTO metadata_suggestion(series_key, title, revision, queued, requested_at, candidates)
+                            VALUES (?, ?, lower(hex(randomblob(16))), 0, unixepoch(), '[]')
+                            """, (key, title))
+
+                before = len(calls)
+                (legacy,) = browser.series(root, f"?view=all&seriesKey={old_key}")["items"]
+                assert legacy["title"] == old_title and legacy["lookupTitle"] == "Lantern Evening"
+                (file,) = browser.files(root, f"?view=all&seriesKey={old_key}")["items"]
+                assert file["relativePath"] == old_path and file["lookupTitle"] == "Lantern Evening"
+                (row,) = json.loads(browser.request(queue + "?search=Lantern+Evening", 200))["items"]
+                assert row["lookupTitle"] == "Lantern Evening" and row["candidates"] == []
+                browser.request(queue + "/refresh", 202, method="POST", token=browser.csrf(),
+                                body={"items": [{"rootId": root, "seriesKey": old_key}]})
+                legacy_result = settled(browser, 10)[old_title]
+                assert legacy_result["candidates"][0]["matchingTitle"] == "Lantern Evening"
+                assert [name for name, _ in calls[before:]] == ["Lantern Evening"]
+                browser.request(f"{queue}/{root}/{old_key}", 200, method="POST", token=browser.csrf(),
+                                body={"revision": legacy_result["revision"], "providerId": 25})
+
+                browser.scan(root)
+                rescanned = settled(browser, 9)[same_key_title]
+                assert rescanned["seriesKey"] == same_key and rescanned["candidates"][0]["matchingTitle"] == same_key_title
+                assert browser.files(root, f"?view=library&seriesKey={old_key}")["items"][0]["associationConfirmed"]
+                assert [name for name, _ in calls[before:]] == ["Lantern Evening", same_key_title]
         finally:
             release_page.set()
             service.shutdown()
