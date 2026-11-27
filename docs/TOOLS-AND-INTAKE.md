@@ -61,6 +61,8 @@ The series displays known chapter and volume totals even when the local indexed 
 
 Provide separate reset levels for catalog, progress and configuration. The preview lists affected records, retained data and consequences for a fresh scan or reconfiguration. A catalog reset clears and rebuilds the selected inventory and associations while preserving identity references needed by retained progress and recovery records. Progress reset explicitly targets reading state. Configuration reset targets selected editable settings, preserves server identity and credentials, and keeps root references required for recovery even if active settings are reset. Implement from an allowlisted record inventory under a verified backup and exclusive maintenance fence. Refuse or defer while affected operations are active, require dedicated confirmation and make interruption recoverable. Every level preserves media bytes, trash and recovery files and the records needed to restore them. [Backup and recovery](UPGRADE-RECOVERY.md) · [Managed trash](DUPLICATE-AND-TRASH.md)
 
+In **Maintenance → Data resets**, select the level and, for catalog or configuration, the affected folders. Type the phrase shown in the preview to apply. The catalog reset removes selected file inventory, series bindings and associations exclusive to those files. The configuration reset clears the selected folders’ display names, intake targets and managed permissions, and assigns the Library role. The progress reset clears saved positions and read status for the signed-in account. Backups and completed resets appear in **Recent resets**. Folder scans and file operations must be idle before the reset can commit.
+
 ## Confirmed workflow decisions
 
 | Decision | Status |

@@ -13,16 +13,19 @@ internal static class UpgradeBackup
 
     private sealed record BackupFile(string Path, long Bytes, string Sha256);
 
-    public static string Create(string dataDirectory, SqliteCommand sourceCommand, IReadOnlyList<string> tables, int previousSchema, int targetSchema)
+    public static string Create(string dataDirectory, SqliteCommand sourceCommand, IReadOnlyList<string> tables, int previousSchema, int targetSchema,
+        bool maintenance = false)
     {
         if (tables.Contains("file_operation"))
         {
-            sourceCommand.CommandText = "SELECT 1 FROM file_operation WHERE state IN ('applying', 'restoring', 'review') LIMIT 1;";
+            sourceCommand.CommandText = maintenance
+                ? "SELECT 1 FROM file_operation WHERE state IN ('applying', 'restoring') LIMIT 1;"
+                : "SELECT 1 FROM file_operation WHERE state IN ('applying', 'restoring', 'review') LIMIT 1;";
             if (sourceCommand.ExecuteScalar() is not null)
                 throw new InvalidOperationException("Resolve interrupted file operations with the previous version before upgrading.");
         }
 
-        var backupDirectory = Path.Combine(dataDirectory, "upgrade-backups");
+        var backupDirectory = Path.Combine(dataDirectory, maintenance ? "maintenance-backups" : "upgrade-backups");
         CreatePrivateDirectory(backupDirectory);
         var timestamp = DateTimeOffset.UtcNow;
         var name = $"{timestamp:yyyyMMddTHHmmssfffZ}-schema-{previousSchema}-{Guid.NewGuid():N}";
@@ -54,7 +57,8 @@ internal static class UpgradeBackup
             ApplicationVersion = typeof(UpgradeBackup).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion,
             SourceSchema = previousSchema,
             TargetSchema = targetSchema,
-            RestoreWith = "Use the Manga Organizer version that was running before this upgrade.",
+            RestoreWith = maintenance ? "Use the Manga Organizer version that created this maintenance snapshot." :
+                "Use the Manga Organizer version that was running before this upgrade.",
             TableCounts = counts,
             Files = files,
             RecoveryFiles = "Media and file-recovery bytes remain in their original locations.",

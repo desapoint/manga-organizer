@@ -29,6 +29,7 @@ internal static class DatabaseMigrations
         new("0015-metadata-suggestions"),
         new("0016-intake-destinations"),
         new("0017-release-tags"),
+        new("0018-maintenance-resets"),
     ];
 
     public static int Apply(string dataDirectory)

@@ -10,6 +10,7 @@ from pathlib import Path
 import json
 import os
 import re
+from shutil import copytree
 import socket
 import sqlite3
 import struct
@@ -207,6 +208,7 @@ def verify_web_setup(executable, fixture, media):
             DROP TABLE schema_migration;
             DROP TABLE metadata_suggestion;
             DROP TABLE release_tag;
+            DROP TABLE maintenance_reset;
             DROP TABLE library_intake_target;
             DROP TABLE edition_volume_release;
             DROP TABLE edition_volume_manifest;
@@ -1079,6 +1081,13 @@ def verify_maintenance(owner):
     library_ids = {item["id"] for item in roots if item["kind"] in {"library", "both"}}
     assert {result["rootId"] for result in all_scans} == library_ids
     wait(library_ids)
+    reset_preview = json.loads(owner.request(url + "/resets/preview", 200, method="POST", token=owner.csrf(),
+                                             body={"level": "progress"}))
+    assert any(item["count"] for item in reset_preview["affected"])
+    reset = json.loads(owner.request(url + "/resets/apply", 200, method="POST", token=owner.csrf(), body={
+        "token": reset_preview["token"], "confirmation": reset_preview["confirmation"],
+    }))
+    assert reset["level"] == "progress" and reset["backupDirectory"]
 
 
 def smoke(start, media):
@@ -1682,6 +1691,115 @@ def verify_metadata_queue(executable, fixture):
             thread.join()
 
 
+def verify_maintenance_resets(executable, fixture):
+    media, data = fixture / "reset-media", fixture / "reset-data"
+    create_managed_fixture(media)
+    source_file = media / "primary" / "Chapter 1.cbz"
+    target_file = media / "archive" / "Chapter 1.cbz"
+    contents = source_file.read_bytes()
+    password = uuid4().hex
+    endpoint = "/api/maintenance/resets"
+    operations = "/api/file-operations"
+
+    def preview(owner, level, roots=(), expected=200):
+        return json.loads(owner.request(endpoint + "/preview", expected, method="POST", token=owner.csrf(),
+                                        body={"level": level, "rootIds": list(roots)}))
+
+    def apply(owner, plan, expected=200, text=None):
+        return json.loads(owner.request(endpoint + "/apply", expected, method="POST", token=owner.csrf(),
+                                        body={"token": plan["token"], "confirmation": text if text is not None else plan["confirmation"]}))
+
+    with start_app(executable, data, media, password) as url:
+        wait_for_server(url)
+        Browser(url).request(endpoint, 401)
+        owner = Browser(url)
+        owner.sign_in(password)
+        source, target = owner.roots()
+        source_id, target_id = source["id"], target["id"]
+        for folder, kind, name in [(source, "both", "Reset source"), (target, "library", "Retained target")]:
+            owner.request(f"{LIBRARY_ROOTS}/{folder['id']}", 200, method="PUT", token=owner.csrf(),
+                          body={"path": folder["path"], "kind": kind, "name": name, "managed": True})
+        owner.request(f"{LIBRARY_ROOTS}/{source_id}/intake-target", 204, method="PUT", token=owner.csrf(),
+                      body={"targetRoot": target_id})
+        owner.scan(source_id)
+        (file,) = owner.files(source_id)["items"]
+        series = f"{LIBRARY_ROOTS}/{source_id}/series/{file['seriesKey']}"
+        owner.request(series + "/metadata", 200, method="PUT", token=owner.csrf(), body={"title": "Reset Fixture", "kind": "manga"})
+        transfer = json.loads(owner.request(operations + "/preview", 200, method="POST", token=owner.csrf(), body={
+            "sourceRoot": source_id, "targetRoot": target_id, "fileId": file["id"],
+            "targetPath": target_file.name, "intakeTransfer": True,
+        }))
+        operation = f"{operations}/{transfer['id']}"
+        owner.request(operation + "/apply", 200, method="POST", token=owner.csrf())
+        recovery = data / "file-recovery" / f"{UUID(transfer['id']).hex}.backup"
+        assert recovery.read_bytes() == contents
+        source_file.write_bytes(contents)
+        owner.scan(source_id)
+
+        book = "/api/reader/" + file["contentId"]
+        owner.request(book + "/progress", 200, method="PUT", token=owner.csrf(),
+                      body={"updateId": str(uuid4()), "baseRevision": 0, "pageIndex": 0})
+        cancelled = preview(owner, "progress")
+        assert any(change["count"] for change in cancelled["affected"])
+        assert json.loads(owner.request(endpoint, 200)) == []
+        apply(owner, cancelled, 400, "WRONG")
+        owner.request(book + "/progress", 200, method="PUT", token=owner.csrf(),
+                      body={"updateId": str(uuid4()), "baseRevision": 1, "pageIndex": 0, "completed": True})
+        apply(owner, cancelled, 409)
+        assert json.loads(owner.request(book, 200))["progress"]["revision"] == 2
+
+        plan = preview(owner, "progress")
+        backup_root = data / "maintenance-backups"
+        backup_root.write_text("Fixture destination creation failure")
+        try:
+            apply(owner, plan, 503)
+            assert json.loads(owner.request(book, 200))["progress"]["revision"] == 2
+        finally:
+            backup_root.unlink()
+        progress = apply(owner, preview(owner, "progress"))
+        backup_path = backup_root / progress["backupDirectory"]
+        assert (backup_path / "manifest.json").is_file()
+        assert json.loads(owner.request(book, 200))["progress"]["revision"] == 0
+        with closing(sqlite3.connect(backup_path / "organizer.sqlite")) as backup:
+            assert backup.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+            assert backup.execute("SELECT revision FROM reading_progress").fetchone() == (2,)
+
+        with closing(sqlite3.connect(data / "organizer.sqlite")) as db, db:
+            db.execute("UPDATE library_root SET state = 'queued' WHERE lower(id) = ?", (source_id,))
+        preview(owner, "catalog", [source_id], 409)
+        with closing(sqlite3.connect(data / "organizer.sqlite")) as db, db:
+            db.execute("UPDATE library_root SET state = 'complete' WHERE lower(id) = ?", (source_id,))
+
+        catalog = apply(owner, preview(owner, "catalog", [source_id]))
+        assert owner.files(source_id)["total"] == 0
+        assert owner.files(target_id, "?view=library")["total"] == 1
+        assert source_file.read_bytes() == target_file.read_bytes() == contents
+        assert recovery.read_bytes() == contents
+
+        configuration = apply(owner, preview(owner, "configuration", [source_id]))
+        saved = next(folder for folder in owner.roots() if folder["id"] == source_id)
+        assert saved["kind"] == "library" and not saved["managed"] and saved["intakeTargetId"] is None
+        assert saved["name"] is None and Path(saved["path"]).samefile(source_file.parent)
+        assert recovery.read_bytes() == contents
+        assert [record["id"] for record in json.loads(owner.request(endpoint, 200))] == [configuration["id"], catalog["id"], progress["id"]]
+
+    with start_app(executable, data, media, None) as url:
+        wait_for_server(url)
+        owner = Browser(url)
+        owner.sign_in(password)
+        assert len(json.loads(owner.request(endpoint, 200))) == 3
+        assert json.loads(owner.request(book, 200))["progress"]["revision"] == 0
+
+    restored_data = fixture / "reset-restore"
+    copytree(backup_path, restored_data)
+    with start_app(executable, restored_data, media, None) as url:
+        wait_for_server(url)
+        owner = Browser(url)
+        owner.sign_in(password)
+        assert json.loads(owner.request(book, 200))["progress"]["revision"] == 2
+        assert any(item["id"] == transfer["id"] for item in json.loads(owner.request(operations, 200)))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -1698,6 +1816,7 @@ if __name__ == "__main__":
             verify_web_setup(executable, Path(fixture), media)
             verify_external_metadata(executable, Path(fixture), media)
             verify_metadata_queue(executable, Path(fixture))
+            verify_maintenance_resets(executable, Path(fixture))
             data_dir = Path(fixture) / "data"
             smoke(lambda password: start_app(executable, data_dir, media, password), media)
             managed_data = Path(fixture) / "managed-data"
