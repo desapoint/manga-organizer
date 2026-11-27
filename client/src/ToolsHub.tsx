@@ -2,6 +2,7 @@ import { ArrowLeft, ChevronRight, Files, ScanSearch } from 'lucide-react';
 import { useState } from 'react';
 import { PageControls, useInventoryPage } from './CatalogInventory';
 import { DuplicateDecisions, duplicateReviewStates, findingNames } from './DuplicateDecisions';
+import { DuplicateFolderComparison } from './DuplicateFolderComparison';
 import { DuplicateReview } from './DuplicateReview';
 import { duplicateToolsHref, organizeToolsHref, ROOTS_URL, seriesHref, versionsToolsHref } from './library';
 import type { LibraryRoot, SeriesLocation, toolsLocation } from './library';
@@ -27,7 +28,8 @@ const duplicateStatuses = [
   { value: 'all', label: 'All review states' },
 ] as const;
 
-const reviewViews = [{ value: 'files', label: 'File duplicates' }, { value: 'overlaps', label: 'Series overlaps' }] as const;
+const reviewViews = [{ value: 'files', label: 'File duplicates' }, { value: 'overlaps', label: 'Series overlaps' },
+  { value: 'folders', label: 'Compare folders' }] as const;
 type DuplicateSeries = { rootId: string; seriesKey: string; title: string; candidateFiles: number };
 type QueueFile = { fileId: string; relativePath: string; reasons: string[] };
 type Route = NonNullable<ReturnType<typeof toolsLocation>>;
@@ -61,7 +63,8 @@ export function ToolsHub({ route, roots, version, onSignedOut, onChanged }: Inve
       route.module === 'maintenance' ? <MaintenanceTools roots={roots} onSignedOut={onSignedOut} onChanged={onChanged} /> :
       route.module === 'versions' ? <VersionsTool roots={roots} series={versionSeries} version={version}
         onSignedOut={onSignedOut} onChanged={onChanged} /> :
-      series ? <DuplicateWorkbench key={series.rootId + series.seriesKey} series={series} fileId={route.fileId} kind={query.kind}
+      series ? <DuplicateWorkbench key={series.rootId + series.seriesKey + (route.folders ? ':folders' : '')} series={series}
+        fileId={route.fileId} folders={route.folders} roots={roots} kind={query.kind}
         status={query.status} version={version}
         onSignedOut={onSignedOut} onChanged={onChanged} /> :
         <>
@@ -113,10 +116,11 @@ function QueueError({ children, onRetry }: { children: string; onRetry: () => vo
     <Button variant="secondary" onClick={onRetry}>Retry</Button></div>;
 }
 
-function DuplicateWorkbench({ series, fileId, kind, status, version, onSignedOut, onChanged }: Inventory & {
-  series: SeriesLocation; fileId?: string; kind?: string; status?: string; onChanged: () => void;
+function DuplicateWorkbench({ series, fileId, folders, roots, kind, status, version, onSignedOut, onChanged }: Inventory & {
+  series: SeriesLocation; fileId?: string; folders: boolean; roots: LibraryRoot[] | null;
+  kind?: string; status?: string; onChanged: () => void;
 }) {
-  const [view, setView] = useState<typeof reviewViews[number]['value']>('files');
+  const [view, setView] = useState<typeof reviewViews[number]['value']>(folders ? 'folders' : 'files');
   const { rootId, seriesKey } = series;
   const { page } = useInventoryPage<{ title: string }>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut, { seriesKey });
   return <div className="grid min-w-0 gap-4">
@@ -126,7 +130,8 @@ function DuplicateWorkbench({ series, fileId, kind, status, version, onSignedOut
       <DuplicateDecisions {...series} version={version} onSignedOut={onSignedOut} onChanged={onChanged} />
       <ActionLink variant="ghost" href={seriesHref(rootId, seriesKey)}>Open series in Library</ActionLink>
     </div>
-    {view === 'overlaps' ? <div className="surface overflow-hidden">
+    {view === 'folders' ? <DuplicateFolderComparison {...series} roots={roots} version={version}
+      onSignedOut={onSignedOut} onChanged={onChanged} /> : view === 'overlaps' ? <div className="surface overflow-hidden">
       <DuplicateReview {...series} version={version} onSignedOut={onSignedOut} onChanged={onChanged} />
     </div> : fileId ? <div className="grid min-w-0 gap-2">
       <ActionLink className="justify-self-start" variant="ghost" icon={ArrowLeft} href={duplicateToolsHref(series)}>Back to candidate files</ActionLink>

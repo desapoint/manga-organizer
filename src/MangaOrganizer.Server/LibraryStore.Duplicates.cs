@@ -13,14 +13,19 @@ internal sealed record SeriesDuplicateReview(bool CanReviewQuarantine, IReadOnly
 
 internal sealed partial class LibraryStore
 {
-    public SeriesDuplicateReview? ReadSeriesDuplicateReview(Guid root, string series)
+    public SeriesDuplicateReview? ReadSeriesDuplicateReview(Guid root, string series, bool compareFolders = false)
     {
         using var database = OpenCoverDatabase();
         using var transaction = database.BeginTransaction(deferred: true);
         using var command = GroupCommand(database, transaction, root, series);
+        if (compareFolders && !GroupExists(command)) return null;
+        command.Parameters.AddWithValue("$compareFolders", compareFolders);
         command.CommandText = """
-            WITH identities AS (
-                SELECT DISTINCT content_id FROM library_file WHERE root_id = $root AND series_key = $series
+            WITH scoped AS (
+                SELECT f.* FROM library_file f
+                WHERE f.series_key = $series AND (f.root_id = $root OR $compareFolders)
+            ), identities AS (
+                SELECT DISTINCT content_id FROM scoped
             ), mapped AS (
                 SELECT c.content_id, c.volume, c.chapter, 'manual' AS source
                 FROM content_chapter c JOIN identities i ON i.content_id = c.content_id
@@ -33,12 +38,11 @@ internal sealed partial class LibraryStore
                 folder.managed AND r.state = 'complete',
                 EXISTS(SELECT 1 FROM artwork.archive_cover art WHERE art.archive_sha = c.sha256),
                 (SELECT cover.series_key FROM library_series_cover cover WHERE cover.root_id = f.root_id AND cover.series_key = f.series_key),
-                mapped.volume, mapped.chapter, mapped.source
-            FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
+                mapped.volume, mapped.chapter, mapped.source, f.root_id
+            FROM scoped f JOIN library_folder folder ON folder.root_id = f.root_id
             JOIN library_root r ON r.id = f.root_id LEFT JOIN library_content c ON c.id = f.content_id
             LEFT JOIN mapped ON mapped.content_id = f.content_id
-            WHERE f.root_id = $root AND f.series_key = $series
-            ORDER BY f.relative_path, mapped.volume, mapped.chapter;
+            ORDER BY f.root_id, f.relative_path, mapped.volume, mapped.chapter;
             """;
         var files = new Dictionary<string, SeriesDuplicateFile>(StringComparer.Ordinal);
         var managed = false;
@@ -52,11 +56,12 @@ internal sealed partial class LibraryStore
                 if (!files.TryGetValue(id, out var file))
                 {
                     var path = rows.GetString(1);
-                    file = new(root, id, path, Path.Combine(rows.GetString(2), path), rows.GetString(3), rows.GetInt64(4),
+                    var locationRoot = rows.GetGuid(14);
+                    file = new(locationRoot, id, path, Path.Combine(rows.GetString(2), path), rows.GetString(3), rows.GetInt64(4),
                         rows.IsDBNull(5) ? null : Convert.ToHexStringLower(rows.GetFieldValue<byte[]>(5)), volume,
                         volume is not null && chapter is null, rows.GetBoolean(9), ReadText(rows, 10), []);
                     files.Add(id, file);
-                    managed = rows.GetBoolean(8);
+                    if (locationRoot == root) managed = rows.GetBoolean(8);
                 }
                 if (ReadText(rows, 12) is { } number)
                 {
@@ -67,6 +72,7 @@ internal sealed partial class LibraryStore
             }
         }
         if (files.Count == 0) return null;
+        if (compareFolders) return new(managed, files.Values.ToArray(), []);
 
         AddWorkKey(command, root, series);
         command.CommandText = """

@@ -12,7 +12,8 @@ import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
 import { EditionCoverage, SeriesChapterList, VolumeReleasePicker } from './EditionCoverage';
 import { FileCover, SeriesCover } from './SeriesCover';
-import { duplicateToolsHref, formatSize, isReadableArchive, organizeToolsHref, ROOTS_URL, seriesHref, seriesReaderHref } from './library';
+import { duplicateFoldersHref, duplicateToolsHref, formatSize, isReadableArchive, organizeToolsHref, ROOTS_URL,
+  seriesHref, seriesReaderHref } from './library';
 import { Select } from './Select';
 import { ActionLink, Button, Modal, PageHeader, SearchField, SectionHeader, SegmentedControl } from './ui';
 
@@ -368,6 +369,7 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
             <MetadataDialogAction rootId={rootId} seriesKey={seriesKey} title={title} metadata={metadata} published
               onChange={onDataChanged} onSignedOut={onSignedOut} />
             <ActionLink variant="ghost" href={duplicateToolsHref({ rootId, seriesKey })}>Review duplicates in Tools</ActionLink>
+            <ActionLink variant="ghost" href={duplicateFoldersHref({ rootId, seriesKey })}>Compare folders in Tools</ActionLink>
           </div>}
           {reading?.pageIndex != null && <p className="m-0 text-sm text-muted wrap-anywhere">
             Page {reading.pageIndex + 1} of {reading.pageCount} · {reading.relativePath.split('/').at(-1)}</p>}

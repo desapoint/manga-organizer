@@ -65,6 +65,8 @@ def verify(app, fixture, previous_app=None):
         database.execute("DROP TABLE library_intake_target")
         database.execute("ALTER TABLE file_operation DROP COLUMN intake_transfer")
         database.execute("DROP TABLE metadata_suggestion")
+        database.execute("ALTER TABLE file_operation DROP COLUMN quarantine_keep_root")
+        database.execute("ALTER TABLE file_operation DROP COLUMN quarantine_keep_base")
         database.execute("ALTER TABLE file_operation DROP COLUMN quarantine_keep_file")
         database.execute("ALTER TABLE file_operation DROP COLUMN quarantine_keep_path")
         database.execute("DROP TABLE edition_volume_release")

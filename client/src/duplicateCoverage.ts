@@ -127,6 +127,6 @@ export function sameCoverageSpan(a: CoverageFile, b: CoverageFile) {
 }
 
 export function matchingCoverage(a: CoverageFile, b: CoverageFile) {
-  return a.rootId === b.rootId && a.format === b.format && a.volume === b.volume &&
+  return a.format === b.format && a.volume === b.volume &&
     a.volumeArchive === b.volumeArchive && sameChapterList(a, b);
 }

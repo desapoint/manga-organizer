@@ -2,7 +2,7 @@ import { Files, ScanSearch } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChapterComparison } from './ChapterComparison';
 import { CoverageMark } from './CoverageMark';
-import { DuplicateBatch } from './DuplicateBatch';
+import { DuplicateBatch, exactCopyPairs } from './DuplicateBatch';
 import type { DuplicateScope } from './DuplicateBatch';
 import { DuplicateFileEvidence } from './DuplicateFileEvidence';
 import { byteGroups, chapterCoverage, coverageLabels, fileColors, fileKind, fileName, filePattern, isBundle, sameCoverageSpan } from './duplicateCoverage';
@@ -10,7 +10,7 @@ import type { Chapter, CoverageFile, CoverageState } from './duplicateCoverage';
 import { formatSize } from './library';
 import { Select } from './Select';
 import { FileCover } from './SeriesCover';
-import { Button, Modal, SearchField, SectionHeader } from './ui';
+import { ActionLink, Button, Modal, SearchField, SectionHeader } from './ui';
 
 type Review = { files: CoverageFile[]; expected: Chapter[]; canReviewQuarantine: boolean };
 type Compared = { candidate: CoverageFile; kind: string; reason: string };
@@ -133,7 +133,7 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, quickRevie
   }
 
   const batch = batchScope && <DuplicateBatch scope={batchScope} files={review.files} chapters={chapters} colors={colors} version={version}
-    rootId={rootId} canReview={review.canReviewQuarantine && (batchScope.kind === 'chapter' || batchScope.file.rootId === rootId)}
+    rootId={rootId} canReview={review.canReviewQuarantine && (batchScope.kind !== 'file' || batchScope.file.rootId === rootId)}
     onClose={() => setBatchScope(null)} onChanged={refresh} onSignedOut={onSignedOut} />;
 
   if (focus && compact) return <section aria-label="File comparison" className="grid gap-4 p-3">
@@ -149,8 +149,18 @@ export function DuplicateReview({ rootId, seriesKey, fileId, version, quickRevie
       </Button>}
     </div>
     {bothViews && <Button variant="ghost" className="justify-self-start" onClick={() => setIncludeOverlaps(true)}>Show all candidate overlaps</Button>}
+    {groups.length > 0 && <p className="m-0 text-sm text-muted">{review.canReviewQuarantine
+      ? 'Open the copy you want to keep to preview removal of its exact duplicates.'
+      : <>Removal requires a completed scan and managed file operations. <ActionLink variant="ghost" href="#settings">Library settings</ActionLink></>}</p>}
     <DuplicateFileEvidence files={review.files} colors={colors} version={version} onSignedOut={onSignedOut}
-      notes={new Map(comparisons.map(item => [item.candidate.fileId, item.reason]))} />
+      notes={new Map(comparisons.map(item => [item.candidate.fileId, item.reason]))}
+      fileActions={keep => {
+        if (!review.canReviewQuarantine || keep.rootId !== rootId) return null;
+        const pairs = exactCopyPairs(review.files.filter(file => file.rootId === rootId), [keep]);
+        return pairs.length > 0 && <Button variant="secondary" onClick={() => setBatchScope({ kind: 'copies', pairs })}>
+          Keep this copy…
+        </Button>;
+      }} />
     {batch}
   </section>;
 
