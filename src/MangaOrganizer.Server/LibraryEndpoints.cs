@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MangaOrganizer.Server;
 
+internal sealed record IntakeTargetChange(Guid? TargetRoot);
+
 internal static class LibraryEndpoints
 {
     public static void MapLibrary(this RouteGroupBuilder api, string dataDirectory)
@@ -19,6 +21,23 @@ internal static class LibraryEndpoints
             SaveFolder(null, change, store, context, antiforgery)).WithMetadata(new RequestSizeLimitAttribute(32 * 1024));
         library.MapPut("/{id:guid}", (Guid id, LibraryFolderChange change, LibraryStore store, HttpContext context, IAntiforgery antiforgery) =>
             SaveFolder(id, change, store, context, antiforgery)).WithMetadata(new RequestSizeLimitAttribute(32 * 1024));
+        library.MapPut("/{id:guid}/intake-target", async (Guid id, IntakeTargetChange change, LibraryStore store,
+            HttpContext context, IAntiforgery antiforgery) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context)) return Results.BadRequest();
+            try
+            {
+                return store.SetIntakeTarget(id, change.TargetRoot) ? Results.NoContent() : Results.NotFound();
+            }
+            catch (ArgumentException error)
+            {
+                return Results.BadRequest(new { message = error.Message });
+            }
+            catch (LibraryFolderBusyException error)
+            {
+                return Results.Conflict(new { message = error.Message });
+            }
+        }).WithMetadata(new RequestSizeLimitAttribute(4096));
         library.MapDelete("/{id:guid}", async (Guid id, LibraryStore store, HttpContext context, IAntiforgery antiforgery) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))

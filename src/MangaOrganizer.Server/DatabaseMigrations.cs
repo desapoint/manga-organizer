@@ -27,6 +27,7 @@ internal static class DatabaseMigrations
         new("0013-duplicate-quarantine"),
         new("0014-preferred-chapter-release"),
         new("0015-metadata-suggestions"),
+        new("0016-intake-destinations"),
     ];
 
     public static int Apply(string dataDirectory)

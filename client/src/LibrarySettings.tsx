@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { getCsrfToken } from './api';
 import { FolderField } from './FolderField';
-import { ROOTS_URL } from './library';
+import { intakeTargetFor, ROOTS_URL } from './library';
 import type { FolderKind, LibraryRoot } from './library';
 import { Select } from './Select';
 import type { SelectOption } from './Select';
@@ -30,6 +30,8 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
 }) {
   const [draft, setDraft] = useState<FolderDraft | null>(null);
   const [remove, setRemove] = useState<LibraryRoot | null>(null);
+  const [routing, setRouting] = useState<LibraryRoot | null>(null);
+  const [targetRoot, setTargetRoot] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -63,6 +65,31 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
     if (draft) void changeFolder(draft.id ? 'PUT' : 'POST', draft.id, draft);
   }
 
+  async function saveTarget(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!routing) return;
+    setBusy(true);
+    setError('');
+    try {
+      const response = await fetch(`${ROOTS_URL}/${routing.id}/intake-target`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
+        body: JSON.stringify({ targetRoot: targetRoot || null }),
+      });
+      if (response.status === 401) return onSignedOut();
+      if (!response.ok) {
+        const details = await response.json().catch(() => null) as { message?: string } | null;
+        throw new Error(details?.message ?? 'Could not save the intake target.');
+      }
+      setRouting(null);
+      onChange();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not save the intake target.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="surface grid gap-4 p-4 sm:p-5" aria-labelledby="library-folders-heading">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -75,22 +102,34 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
       {folders.length === 0 && <p className="m-0 text-sm text-muted">Add a server folder to start indexing your collection.</p>}
       {folders.length > 0 && (
         <ul className="settings-folders" role="list" aria-label="Configured folders">
-          {folders.map(folder => (
+          {folders.map(folder => {
+            const target = intakeTargetFor(folder, folders);
+            return (
             <li key={folder.id}>
               <div className="folder-description">
                 <strong>{folder.name || folder.path}</strong>
                 {folder.name && <code>{folder.path}</code>}
                 <div className="action-row text-sm text-muted">{folderKinds[folder.kind]} · {folder.managed ? 'Managed' : 'Read-only'}
                   <ScanBadge state={folder.state} /></div>
+                {folder.kind !== 'library' && <span className="text-sm text-muted">
+                  {target ? `Target library · ${target.name || target.path}` : 'Choose a target library'}
+                </span>}
               </div>
               <div className="action-row">
+                {folder.kind !== 'library' && <Button variant="secondary" disabled={busy}
+                  aria-label={`Set intake target for ${folder.name || folder.path}`} onClick={() => {
+                    setError('');
+                    setTargetRoot(target?.id ?? '');
+                    setRouting(folder);
+                  }}>Set intake target</Button>}
                 <Button variant="secondary" disabled={busy} aria-label={`Edit ${folder.name || folder.path}`}
                   onClick={() => { setError(''); setDraft({ ...folder, name: folder.name ?? '' }); }}>Edit</Button>
                 <Button variant="secondary" disabled={busy} aria-label={`Remove ${folder.name || folder.path}`}
                   onClick={() => { setError(''); setRemove(folder); }}>Remove</Button>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
       {draft && <Modal title={draft.id ? 'Edit folder' : 'Add folder'} wide onClose={() => { if (!busy) setDraft(null); }}>
@@ -120,6 +159,21 @@ export function LibrarySettings({ folders, onChange, onSignedOut }: {
           <Button variant="secondary" disabled={busy} onClick={() => void changeFolder('DELETE', remove.id)}>Remove folder</Button>
           <Button variant="ghost" disabled={busy} onClick={() => setRemove(null)}>Cancel</Button>
         </div>
+      </Modal>}
+      {routing && <Modal title="Set intake target" onClose={() => { if (!busy) setRouting(null); }}>
+        <form onSubmit={saveTarget}>
+          <p className="m-0 text-sm text-muted">{routing.name || routing.path}</p>
+          <Select label="Target library" value={targetRoot} onChange={setTargetRoot} disabled={busy}
+            options={[{ value: '', label: 'None' }, ...folders.filter(folder => folder.kind !== 'import').map(folder => ({
+              value: folder.id, label: folder.name || folder.path,
+              description: folder.id === routing.id ? 'Same folder · File confirmation publishes to Library' : undefined,
+            }))]} />
+          {error && <p role="alert" className="error">{error}</p>}
+          <div className="action-row">
+            <Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save target'}</Button>
+            <Button variant="secondary" disabled={busy} onClick={() => setRouting(null)}>Cancel</Button>
+          </div>
+        </form>
       </Modal>}
     </section>
   );

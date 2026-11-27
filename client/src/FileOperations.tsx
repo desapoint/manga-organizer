@@ -50,8 +50,9 @@ function OperationDetails({ operation }: { operation: Operation }) {
   );
 }
 
-export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, onApplying, onApplied }: {
-  rootId: string; fileId: string; relativePath: string; folders: LibraryRoot[]; onSignedOut: () => void; onApplying: (busy: boolean) => void; onApplied: () => void;
+export function FileMove({ rootId, fileId, relativePath, folders, intakeTarget, onSignedOut, onApplying, onApplied }: {
+  rootId: string; fileId: string; relativePath: string; folders: LibraryRoot[]; intakeTarget?: LibraryRoot;
+  onSignedOut: () => void; onApplying: (busy: boolean) => void; onApplied: () => void;
 }) {
   const [targetRoot, setTargetRoot] = useState(rootId);
   const [targetPath, setTargetPath] = useState(relativePath);
@@ -66,7 +67,10 @@ export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, o
     setError('');
     setBusy(true);
     try {
-      setPlan(await postFileOperation('/preview', onSignedOut, { sourceRoot: rootId, fileId, targetRoot, targetPath, keepBoth, copyFolderCovers }));
+      setPlan(await postFileOperation('/preview', onSignedOut, {
+        sourceRoot: rootId, fileId, targetRoot: intakeTarget?.id ?? targetRoot, targetPath, keepBoth, copyFolderCovers,
+        intakeTransfer: !!intakeTarget,
+      }));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not preview this change.');
     } finally {
@@ -98,11 +102,13 @@ export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, o
         <p className="m-0 text-sm text-muted">The file is rechecked before moving. A recovery copy is retained.</p>
         {plan.covers.length > 0 && <p className="m-0 text-sm text-muted">Folder covers are copied and kept at both locations.</p>}
         <div className="action-row">
-          <Button icon={ArrowRightLeft} disabled={busy} onClick={() => void apply()}>{busy ? 'Moving file…' : 'Confirm move or rename'}</Button>
+          <Button icon={ArrowRightLeft} disabled={busy} onClick={() => void apply()}>
+            {busy ? 'Moving file…' : intakeTarget ? 'Confirm transfer' : 'Confirm move or rename'}</Button>
           <Button variant="secondary" disabled={busy} onClick={() => setPlan(null)}>Back to path</Button>
         </div>
       </> : <form onSubmit={preview}>
-        <Select label="Destination folder" value={targetRoot} options={options} onChange={setTargetRoot} disabled={busy} />
+        {intakeTarget ? <p className="m-0 text-sm">Target library · {intakeTarget.name || intakeTarget.path}</p> :
+          <Select label="Destination folder" value={targetRoot} options={options} onChange={setTargetRoot} disabled={busy} />}
         <label className="grid gap-1">Destination path<input value={targetPath} onChange={event => setTargetPath(event.target.value)}
           maxLength={4096} required /><span className="field-help">Enter a path inside that folder, including the file extension.</span></label>
         <label className="flex items-start gap-2"><input type="checkbox" checked={keepBoth}
