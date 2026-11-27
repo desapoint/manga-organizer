@@ -655,6 +655,8 @@ def verify_external_metadata(executable, fixture):
                 response = {"errors": [{"message": "Missing provider fields"}]}
             elif variables == {"title": "Issue 01"}:
                 response = {"data": {"Page": {"media": [media_result, no_cover]}}}
+            elif variables == {"title": "One Lucky Day"}:
+                response = {"data": {"Page": {"media": [no_cover]}}}
             elif variables == {"id": 123}:
                 response = {"data": {"Media": media_result}}
             elif variables == {"id": 456}:
@@ -734,7 +736,14 @@ def verify_external_metadata(executable, fixture):
                 (one_shot,) = browser.series(root_id, "?search=One+Lucky+Day")["items"]
                 single = f"{LIBRARY_ROOTS}/{root_id}/series/{one_shot['key']}"
                 assert json.loads(browser.request(single + "/chapters", 200))["total"] == 0
-                browser.request(single + "/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 456})
+                for _ in range(80):
+                    (proposal,) = json.loads(browser.request("/api/metadata-suggestions?search=One+Lucky+Day", 200))["items"]
+                    if proposal["candidates"]:
+                        break
+                    time.sleep(0.1)
+                assert proposal["candidates"] and proposal["candidates"][0]["match"]["providerId"] == 456
+                browser.request(f"/api/metadata-suggestions/{root_id}/{one_shot['key']}", 200, method="POST", token=browser.csrf(),
+                                body={"providerId": 456, "revision": proposal["revision"]})
                 (item,) = json.loads(browser.request(single + "/chapters?published=true", 200))["items"]
                 assert item["chapter"] == "1" and item["contentId"] and item["readableFiles"] == 1
                 assert json.loads(browser.request(single + "/chapter-releases?chapter=1&published=true", 200))[0]["contentId"] == item["contentId"]
@@ -1446,9 +1455,9 @@ def verify_routed_intake(owner, media, source, target):
     assert not unnumbered.exists() and volume_target.is_file()
     (transferred,) = owner.files(target_id, f"?seriesKey={no_number['seriesKey']}&volume=7&view=library")["items"]
     assert transferred["contentId"] == volume_item["contentId"]
-    volume_target.unlink()
-    volume_target.parent.rmdir()
-    owner.scan(target_id)
+    owner.request(f"{operations}/{volume_plan['id']}/restore", 200, method="POST", token=owner.csrf())
+    assert unnumbered.is_file() and not volume_target.exists()
+    unnumbered.unlink()
     mixed = json.loads(owner.request(f"{operations}/batch-preview", 200, method="POST", token=owner.csrf(),
                                      body={"items": [ready_plan, pending_plan]}))
     assert mixed[0]["plan"]["target"].endswith(ready.name) and mixed[1]["plan"] is None
