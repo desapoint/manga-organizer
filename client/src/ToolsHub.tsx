@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, Files, FolderCog, Layers, NotebookPen, ScanSearch, Settings2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Files, ScanSearch } from 'lucide-react';
 import { useState } from 'react';
 import { PageControls, useInventoryPage } from './CatalogInventory';
 import { DuplicateDecisions, duplicateReviewStates, findingNames } from './DuplicateDecisions';
@@ -9,6 +9,7 @@ import { MaintenanceTools } from './MaintenanceTools';
 import { MetadataQueue } from './MetadataQueue';
 import { OrganizeTools } from './OrganizeTools';
 import { Select } from './Select';
+import { toolsNavigation } from './toolsNavigation';
 import { ActionLink, Button, PageHeader, SearchField, SectionHeader, SegmentedControl } from './ui';
 import { VersionsTool } from './VersionsTool';
 
@@ -41,8 +42,7 @@ export function ToolsHub({ route, roots, version, onSignedOut, onChanged }: Inve
   const [search, setSearch] = useState('');
   const series = route.module === 'duplicates' ? route.series : null;
   const versionSeries = route.module === 'versions' ? route.series : null;
-  const name = { home: 'Tools', metadata: 'Associations and metadata', duplicates: 'Duplicates',
-    organize: 'Organize', maintenance: 'Maintenance', versions: 'Versions and alternatives' }[route.module];
+  const name = toolsNavigation.find(item => item.module === route.module)?.label ?? 'Tools';
   const query: Record<string, string> = { search: search.trim() };
   if (kind !== 'all') query.kind = kind;
   if (status !== 'all') query.status = status;
@@ -54,11 +54,7 @@ export function ToolsHub({ route, roots, version, onSignedOut, onChanged }: Inve
     <PageHeader id="tools-heading" section={route.module === 'home' ? 'Management' : 'Tools'}
       title={name} />
     {route.module === 'home' ? <div className="action-row">
-      <ActionLink variant="secondary" icon={Files} href={duplicateToolsHref()}>Duplicates</ActionLink>
-      <ActionLink variant="secondary" icon={Layers} href={versionsToolsHref()}>Versions and alternatives</ActionLink>
-      <ActionLink variant="secondary" icon={NotebookPen} href="#tools/metadata">Associations and metadata</ActionLink>
-      <ActionLink variant="secondary" icon={FolderCog} href={organizeToolsHref()}>Organize</ActionLink>
-      <ActionLink variant="secondary" icon={Settings2} href="#tools/maintenance">Maintenance</ActionLink>
+      {toolsNavigation.map(item => <ActionLink key={item.module} variant="secondary" icon={item.icon} href={item.href}>{item.label}</ActionLink>)}
     </div> : route.module === 'metadata' ? <MetadataQueue roots={roots} version={version} onSignedOut={onSignedOut} onChanged={onChanged} /> :
       route.module === 'organize' ? <OrganizeTools rootId={route.rootId} seriesKey={route.seriesKey} roots={roots} version={version}
         onSignedOut={onSignedOut} onChanged={onChanged} /> :
