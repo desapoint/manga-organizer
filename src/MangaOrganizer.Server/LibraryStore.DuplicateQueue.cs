@@ -28,7 +28,7 @@ internal sealed partial class LibraryStore
         )
         """;
 
-    private const string DuplicateQueue = ScopedDuplicateCoverage + """
+    private const string DuplicateReasons = ScopedDuplicateCoverage + """
         , repeated_chapters AS (
             SELECT DISTINCT a.id FROM chapter_labels a JOIN chapter_labels b USING (root_id, series_key, chapter)
             WHERE a.id <> b.id AND (a.volume = b.volume OR a.volume = '' OR b.volume = '')
@@ -46,17 +46,27 @@ internal sealed partial class LibraryStore
             UNION
             SELECT f.id, 'volume' FROM scoped f JOIN repeated_volumes USING (root_id, series_key, volume_hint)
             WHERE f.chapter_hint IS NULL
-        ), matching AS (
-            SELECT DISTINCT id FROM reasons WHERE $kind IS NULL OR reason = $kind
         )
         """;
 
-    public CatalogPage<DuplicateSeries> ReadDuplicateSeries(Guid? root, string? kind, string search, int offset, int limit)
+    private static string DuplicateQueue(string? status) => DuplicateReasons + (status is null
+        ? """
+          , matching AS (SELECT DISTINCT id FROM reasons WHERE $kind IS NULL OR reason = $kind)
+          """
+        : DuplicateReviewStatuses + """
+          , status_reasons AS (
+              SELECT r.id, r.reason FROM reasons r JOIN scoped f ON f.id = r.id
+              JOIN review_status s ON s.root_id = f.root_id AND s.series_key = f.series_key AND s.reason = r.reason
+              WHERE s.status = $status
+          ), matching AS (SELECT DISTINCT id FROM status_reasons)
+          """);
+
+    public CatalogPage<DuplicateSeries> ReadDuplicateSeries(Guid? root, string? kind, string? status, string search, int offset, int limit)
     {
         using var database = OpenDatabase();
         RegisterTitleSearch(database);
         using var transaction = database.BeginTransaction(deferred: true);
-        using var command = DuplicateQueueCommand(database, transaction, root, null, kind, offset, limit);
+        using var command = DuplicateQueueCommand(database, transaction, root, null, kind, offset, limit, status);
         command.Parameters.AddWithValue("$search", search);
         const string filter = """
             , grouped AS (
@@ -70,9 +80,10 @@ internal sealed partial class LibraryStore
                 GROUP BY f.root_id, f.series_key
             )
             """;
-        command.CommandText = DuplicateQueue + filter + " SELECT COUNT(*) FROM grouped;";
+        var queue = DuplicateQueue(status);
+        command.CommandText = queue + filter + " SELECT COUNT(*) FROM grouped;";
         var total = (long)command.ExecuteScalar()!;
-        command.CommandText = DuplicateQueue + filter + """
+        command.CommandText = queue + filter + """
 
             SELECT root_id, series_key, title, files FROM grouped
             ORDER BY title COLLATE NOCASE, root_id, series_key LIMIT $limit OFFSET $offset;
@@ -83,16 +94,18 @@ internal sealed partial class LibraryStore
         return new(total, rows);
     }
 
-    public CatalogPage<DuplicateQueueFile> ReadDuplicateQueue(Guid root, string series, string? kind, int offset, int limit)
+    public CatalogPage<DuplicateQueueFile> ReadDuplicateQueue(Guid root, string series, string? kind, string? status, int offset, int limit)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: true);
-        using var command = DuplicateQueueCommand(database, transaction, root, series, kind, offset, limit);
-        command.CommandText = DuplicateQueue + " SELECT COUNT(*) FROM matching;";
+        using var command = DuplicateQueueCommand(database, transaction, root, series, kind, offset, limit, status);
+        var queue = DuplicateQueue(status);
+        command.CommandText = queue + " SELECT COUNT(*) FROM matching;";
         var total = (long)command.ExecuteScalar()!;
-        command.CommandText = DuplicateQueue + """
+        var matchingReasons = status is null ? "reasons" : "status_reasons";
+        command.CommandText = queue + $"""
 
-            SELECT f.id, f.relative_path, (SELECT group_concat(reason) FROM reasons WHERE id = f.id)
+            SELECT f.id, f.relative_path, (SELECT group_concat(reason) FROM {matchingReasons} WHERE id = f.id)
             FROM scoped f JOIN matching USING (id)
             ORDER BY f.relative_path, f.id LIMIT $limit OFFSET $offset;
             """;
@@ -103,7 +116,7 @@ internal sealed partial class LibraryStore
     }
 
     private static SqliteCommand DuplicateQueueCommand(SqliteConnection database, SqliteTransaction transaction, Guid? root,
-        string? series, string? kind, int offset, int limit)
+        string? series, string? kind, int offset, int limit, string? status = null)
     {
         var command = database.CreateCommand();
         command.Transaction = transaction;
@@ -112,6 +125,12 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$kind", (object?)kind ?? DBNull.Value);
         command.Parameters.AddWithValue("$offset", offset);
         command.Parameters.AddWithValue("$limit", limit);
+        if (status is not null)
+        {
+            RegisterReviewFingerprint(database);
+            command.Parameters.AddWithValue("$status", status);
+            command.Parameters.AddWithValue("$snapshot", false);
+        }
         return command;
     }
 }

@@ -30,6 +30,7 @@ internal static class DatabaseMigrations
         new("0016-intake-destinations"),
         new("0017-release-tags"),
         new("0018-maintenance-resets"),
+        new("0019-duplicate-review-decisions"),
     ];
 
     public static int Apply(string dataDirectory)
