@@ -1,5 +1,5 @@
-import { Tags } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Check, Minus, Tags } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { getCsrfToken } from './api';
 import { Select } from './Select';
@@ -30,39 +30,75 @@ const releaseFields = [
 type ReleaseField = typeof releaseFields[number]['value'];
 type SelectedRelease = Release & { fileId: string };
 
-export function useReleaseSelection(scope: string, visibleIds: string[]) {
-  const [stored, setStored] = useState<{ scope: string; ids: string[] } | null>(null);
+const maxBatchFiles = 5000;
+
+export function useReleaseSelection(scope: string, eligibleIds: string[], persistent = false) {
+  const [stored, setStored] = useState<{ scope: string; ids: Set<string> } | null>(null);
   if (stored && stored.scope !== scope) setStored(null);
-  const enabled = stored?.scope === scope;
-  const selected = enabled ? stored.ids.filter(id => visibleIds.includes(id)) : [];
+  const enabled = persistent || stored?.scope === scope;
+  const eligible = new Set(eligibleIds);
+  const selected = new Set(stored?.scope === scope ? [...stored.ids].filter(id => eligible.has(id)) : []);
+
+  function update(change: (ids: Set<string>) => void) {
+    setStored(previous => {
+      const ids = new Set(previous?.scope === scope ? previous.ids : []);
+      change(ids);
+      return { scope, ids };
+    });
+  }
+
   return {
     enabled, selected,
-    start: () => setStored({ scope, ids: [] }),
+    start: () => setStored({ scope, ids: new Set() }),
     stop: () => setStored(null),
-    selectAll: () => setStored({ scope, ids: visibleIds }),
-    toggle: (id: string) => setStored({ scope, ids: selected.includes(id) ? selected.filter(item => item !== id) : [...selected, id] }),
+    select: (ids: string[]) => update(current => ids.forEach(id => current.add(id))),
+    remove: (id: string) => { if (selected.has(id)) update(current => current.delete(id)); },
+    toggle: (ids: string[]) => update(current => {
+      if (ids.every(id => current.has(id))) ids.forEach(id => current.delete(id));
+      else ids.forEach(id => current.add(id));
+    }),
   };
 }
 
-export function ReleaseSelectionActions({ selection, rootId, onSignedOut, onSaved }: {
-  selection: ReturnType<typeof useReleaseSelection>; rootId: string; onSignedOut: () => void; onSaved: () => void;
+export function ReleaseSelectionActions({ selection, pageIds, rootId, onSignedOut, onSaved, persistent = false }: {
+  selection: ReturnType<typeof useReleaseSelection>; pageIds: string[]; rootId: string; onSignedOut: () => void;
+  onSaved: () => void; persistent?: boolean;
 }) {
   const [targets, setTargets] = useState<string[] | null>(null);
   const ids = selection.selected;
   if (!selection.enabled) return <Button variant="secondary" icon={Tags} onClick={selection.start}>Select releases</Button>;
-  return <div className="action-row">
-    <span role="status" className="text-sm text-muted">{ids.length} selected on this page</span>
-    <Button variant="secondary" onClick={selection.selectAll}>Select this page</Button>
-    <Button variant="secondary" icon={Tags} onClick={() => setTargets(ids)} disabled={ids.length === 0}>Edit selected tags</Button>
-    <Button variant="ghost" onClick={() => { setTargets(null); selection.stop(); }}>Cancel selection</Button>
+  return <>
+    <Button variant="secondary" icon={Tags} onClick={() => setTargets([...ids])}
+      disabled={ids.size === 0 || ids.size > maxBatchFiles}>Edit selected tags</Button>
+    <Button variant="ghost" onClick={() => selection.select(pageIds)} disabled={!pageIds.some(id => !ids.has(id))}>Select this page</Button>
+    <Button variant="ghost" onClick={selection.stop} disabled={persistent && ids.size === 0}>
+      {persistent ? 'Clear selection' : 'Cancel selection'}
+    </Button>
+    <span role="status" className="w-28 text-sm text-muted tabular-nums">{ids.size.toLocaleString()} selected</span>
+    {ids.size > maxBatchFiles && <p role="alert" className="m-0 text-sm text-warning">Select up to 5,000 files per batch.</p>}
     {targets && <BulkReleaseTagsDialog rootId={rootId} fileIds={targets} onSignedOut={onSignedOut}
       onClose={() => setTargets(null)} onSaved={() => { setTargets(null); selection.stop(); onSaved(); }} />}
-  </div>;
+  </>;
 }
 
-export function SelectReleaseCheckbox({ path, checked, onChange }: { path: string; checked: boolean; onChange: () => void }) {
-  return <label className="grid size-11 shrink-0 place-items-center desktop:size-8">
-    <input type="checkbox" aria-label={`Select ${path}`} checked={checked} onChange={onChange} />
+export function SelectReleaseCheckbox({ label, checked, onChange, disabled = false }: {
+  label: string; checked: boolean | 'mixed'; onChange: () => void; disabled?: boolean;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  useLayoutEffect(() => {
+    if (input.current) input.current.indeterminate = checked === 'mixed';
+  }, [checked]);
+
+  return <label className="grid size-11 shrink-0 place-items-center has-enabled:cursor-pointer">
+    <input ref={input} className="peer sr-only" type="checkbox" aria-label={label} checked={checked === true}
+      disabled={disabled} onChange={onChange} />
+    <span aria-hidden="true" className="grid size-5 place-items-center rounded-full border border-control bg-field
+      peer-checked:border-accent peer-checked:bg-accent peer-checked:text-accent-ink
+      peer-indeterminate:border-accent peer-indeterminate:text-accent-readable peer-disabled:opacity-45
+      peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent">
+      {checked === true && <Check className="size-3.5" strokeWidth={3} />}
+      {checked === 'mixed' && <Minus className="size-3.5" strokeWidth={3} />}
+    </span>
   </label>;
 }
 
@@ -156,10 +192,12 @@ function BulkReleaseTagsDialog({ rootId, fileIds, onSignedOut, onClose, onSaved 
   </Modal>;
 }
 
-export function EditReleaseTags(props: EditorProps) {
+export function EditReleaseTags({ iconOnly, ...props }: EditorProps & { iconOnly?: boolean }) {
   const [open, setOpen] = useState(false);
   return <>
-    <Button variant="ghost" icon={Tags} onClick={() => setOpen(true)}>Edit release tags</Button>
+    <Button variant="ghost" icon={Tags} aria-label="Edit release tags" title="Edit release tags" onClick={() => setOpen(true)}>
+      {!iconOnly && 'Edit release tags'}
+    </Button>
     {open && <ReleaseTagsDialog {...props} onClose={() => setOpen(false)} />}
   </>;
 }

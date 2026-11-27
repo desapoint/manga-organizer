@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace MangaOrganizer.Server;
 
 internal sealed record MetadataChange(int? ProviderId, string? Title, string? Kind, string? AlternateTitle, string? Summary,
-    string? Status, int? TotalChapters, int? TotalVolumes, bool UseEditedFields = false, SeriesTag?[]? Tags = null, bool UseProviderTags = false);
+    string? Status, int? TotalChapters, int? TotalVolumes, bool UseEditedFields = false, SeriesTag?[]? Tags = null, bool UseProviderTags = false,
+    bool RemoveAniListLink = false, int? ExpectedAniListId = null);
 internal sealed record CoverageChange(string? ContentId, string? Volume, string[]? Chapters, bool WholeVolume = false);
 internal sealed record AssociationConfirmation(string? FileId, string? ContentId);
 
@@ -73,7 +74,10 @@ internal static class MetadataEndpoints
         {
             if (!await antiforgery.IsRequestValidAsync(context)) return Results.BadRequest();
             if (!LibraryEndpoints.IsSeriesKey(seriesKey) || !store.TryGetRoot(root, out _)) return Results.NotFound();
-            if (change.Kind is not (null or "manga" or "doujin")) return Results.BadRequest();
+            if (change.Kind is not (null or "manga" or "doujin") ||
+                change.RemoveAniListLink && (change.ProviderId is not null || change.UseProviderTags || change.ExpectedAniListId is <= 0) ||
+                !change.RemoveAniListLink && change.ExpectedAniListId is not null)
+                return Results.BadRequest();
 
             if (!SeriesTag.TryNormalize(change.Tags, out var tags) || change.UseProviderTags && tags is not null)
                 return Results.BadRequest(new { message = SeriesTag.InvalidMessage });
@@ -121,8 +125,10 @@ internal static class MetadataEndpoints
 
             if (tags is not null) metadata = metadata with { ManualTags = tags };
             return store.SaveMetadata(root, seriesKey.ToLowerInvariant(), metadata, published == true, change.UseProviderTags,
-                linkOnly) is { } saved
-                ? Results.Ok(saved) : Results.NotFound();
+                linkOnly, change.RemoveAniListLink, change.ExpectedAniListId) is { } saved
+                ? Results.Ok(saved) : change.RemoveAniListLink
+                    ? Results.Conflict(new { message = "The series or its AniList link changed. Reopen the editor to review the current link." })
+                    : Results.NotFound();
         }).WithMetadata(new RequestSizeLimitAttribute(128 * 1024));
 
         series.MapPut("/coverage", async (Guid root, string seriesKey, CoverageChange change, bool? published, LibraryStore store,

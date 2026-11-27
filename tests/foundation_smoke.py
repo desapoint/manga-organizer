@@ -836,6 +836,20 @@ def verify_external_metadata(executable, fixture):
                 restored = json.loads(browser.request(url + "/metadata?published=true", 200, method="PUT", token=browser.csrf(),
                     body={**edit, "useProviderTags": True}))
                 assert restored["tags"] == original_tags and not restored.get("hasManualTags")
+                status = {"chapter": "1", "completed": True}
+                browser.request(url + "/chapter-progress?published=true", 204, method="PUT", token=browser.csrf(), body=status)
+                unlink = {**edit, "removeAniListLink": True, "expectedAniListId": 123}
+                browser.request(url + "/metadata", 400, method="PUT", body=unlink)
+                browser.request(url + "/metadata", 409, method="PUT", token=browser.csrf(),
+                                body={**unlink, "expectedAniListId": 456})
+                removed = json.loads(browser.request(url + "/metadata", 200, method="PUT", token=browser.csrf(), body=unlink))
+                assert removed["providerId"] is None and removed["providerDetails"] is None
+                assert removed["tags"] == original_tags and removed["title"] == edit["title"]
+                browser.scan(root_id)
+                (published,) = browser.series(root_id, "?view=library&search=My+corrected+title")["items"]
+                assert published["fileCount"] == 1 and "aniList" not in published
+                chapters = json.loads(browser.request(url + "/chapters?published=true", 200))["items"]
+                assert chapters[0]["chapter"] == "1" and chapters[0]["completed"]
         finally:
             service.shutdown()
             server.join(timeout=5)
@@ -1487,6 +1501,50 @@ def verify_numbered_and_manual_intake_groups(owner, root, path):
     owner.scan(root)
 
 
+def verify_intake_folder_bulk_tags(owner, root, path):
+    counts = {"Parent A": 52, "Parent B": 2}
+    name = "Folder Tags Fixture"
+    for directory, count in counts.items():
+        (path / directory).mkdir()
+        for number in range(count):
+            archive = path / directory / f"{name} Ch.{number + 1:03}.pdf"
+            archive.write_bytes(f"{directory} fixture {number}".encode())
+
+    owner.scan(root)
+    (series,) = owner.series(root, "?view=all&search=Folder+Tags+Fixture")["items"]
+    folders_url = f"{LIBRARY_ROOTS}/{root}/series/{series['key']}/release-folders"
+    Browser(owner.url).request(folders_url, 401)
+    owner.request(folders_url + "?view=library", 400)
+    folders = json.loads(owner.request(folders_url + "?view=all", 200))
+    assert {folder["directory"]: len(folder["fileIds"]) for folder in folders} == counts
+    all_ids = set(id for folder in folders for id in folder["fileIds"])
+    assert len(all_ids) == 54
+    page_url = "?view=all&seriesKey=" + series["key"]
+    first = owner.files(root, page_url)
+    last = owner.files(root, page_url + "&offset=50")
+    assert len(first["items"]) == 50 and len(last["items"]) == 4
+    assert {file["id"] for file in first["items"] + last["items"]} == all_ids
+
+    ids = folders[0]["fileIds"]
+    versions = f"/api/versions/{root}"
+    selection = {"fileIds": ids}
+    preview = json.loads(owner.request(versions + "/batch-preview", 200, method="POST", token=owner.csrf(), body=selection))
+    assert len(preview) == 52 and all(row["relativePath"].startswith("Parent A/") for row in preview)
+    targets = [{"fileId": row["fileId"], "contentId": row["contentId"], "relativePath": row["relativePath"],
+                "revision": row["tags"]["revision"]} for row in preview]
+    owner.request(versions + "/batch", 204, method="PUT", token=owner.csrf(),
+                  body={"targets": targets, "field": "language", "value": "en"})
+    after = json.loads(owner.request(versions + "/batch-preview", 200, method="POST", token=owner.csrf(),
+                                     body={"fileIds": ids + folders[1]["fileIds"]}))
+    assert all(row["tags"]["language"] == ("en" if row["fileId"] in ids else None) for row in after)
+    for directory in counts:
+        folder = path / directory
+        for file in folder.iterdir():
+            file.unlink()
+        folder.rmdir()
+    owner.scan(root)
+
+
 def verify_bulk_release_tags(owner, root, files):
     url = f"/api/versions/{root}"
     selection = {"fileIds": [item["id"] for item in files]}
@@ -1650,6 +1708,7 @@ def smoke(start, media):
         verify_catalog_visibility(first, roots[-1]["id"], media / "intake")
         verify_intake_file_split(first, roots[-1]["id"], media / "intake")
         verify_numbered_and_manual_intake_groups(first, roots[-1]["id"], media / "intake")
+        verify_intake_folder_bulk_tags(first, roots[-1]["id"], media / "intake")
         verify_maintenance(first)
         roots = first.roots()
         inventory = first.files(roots[0]["id"], "?limit=100")

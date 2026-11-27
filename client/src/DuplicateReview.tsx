@@ -10,7 +10,7 @@ import type { Chapter, CoverageFile, CoverageState } from './duplicateCoverage';
 import { formatSize } from './library';
 import { Select } from './Select';
 import { FileCover } from './SeriesCover';
-import { ActionLink, Button, Modal, SearchField, SectionHeader } from './ui';
+import { ActionLink, Button, SearchField, SectionHeader } from './ui';
 
 type Review = { files: CoverageFile[]; expected: Chapter[]; canReviewQuarantine: boolean };
 type Compared = { candidate: CoverageFile; kind: string; reason: string };
@@ -28,10 +28,6 @@ const display = {
 };
 const states = Object.keys(coverageLabels) as CoverageState[];
 const filters = [{ value: 'all', label: 'All chapters' }, ...states.map(value => ({ value, label: coverageLabels[value] }))];
-
-export function DuplicateReviewDialog(props: ReviewProps & { onClose: () => void }) {
-  return <Modal title="Compare this file" wide onClose={props.onClose}><DuplicateReview {...props} /></Modal>;
-}
 
 export function DuplicateReview({ rootId, seriesKey, fileId, version, quickReview, onSignedOut, onChanged }: ReviewProps) {
   const [loaded, setReview] = useState<Review | null>(null);

@@ -120,6 +120,31 @@ internal sealed partial class LibraryStore
         return true;
     }
 
+    public IReadOnlyList<IntakeReleaseFolder> ReadIntakeReleaseFolders(Guid root, string series, string? view)
+    {
+        using var database = OpenCoverDatabase();
+        using var command = database.CreateCommand();
+        command.Parameters.AddWithValue("$root", root);
+        command.Parameters.AddWithValue("$series", series);
+        command.CommandText = """
+            SELECT f.relative_path, CASE WHEN f.content_id IS NOT NULL THEN f.id END
+            FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
+            WHERE f.root_id = $root AND f.series_key = $series AND folder.kind IN ('import', 'both')
+            """ + CatalogVisibility(view) + " ORDER BY f.relative_path;";
+        var folders = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        using var rows = command.ExecuteReader();
+        while (rows.Read())
+        {
+            var path = rows.GetString(0);
+            var separator = path.LastIndexOf('/');
+            var directory = separator < 0 ? "" : path[..separator];
+            if (!folders.TryGetValue(directory, out var ids))
+                folders.Add(directory, ids = []);
+            if (!rows.IsDBNull(1)) ids.Add(rows.GetString(1));
+        }
+        return folders.Select(folder => new IntakeReleaseFolder(folder.Key, folder.Value)).ToArray();
+    }
+
     public IReadOnlyList<SelectedRelease>? ReadReleaseTagsBatch(Guid root, IReadOnlyList<string> fileIds)
     {
         using var database = OpenDatabase();
