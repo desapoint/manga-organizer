@@ -10,7 +10,7 @@ import { FileMove } from './FileOperations';
 import { EditReleaseTags, ReleaseSelectionActions, SelectReleaseCheckbox, useReleaseSelection } from './ReleaseTagsEditor';
 import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
-import { EditionCoverage, SeriesChapterList, VolumeReleasePicker } from './EditionCoverage';
+import { EditionCoverage, SeriesChapterList, SeriesVolumeList } from './EditionCoverage';
 import { FileCover, SeriesCover } from './SeriesCover';
 import { duplicateFoldersHref, duplicateToolsHref, formatSize, isReadableArchive, organizeToolsHref, ROOTS_URL,
   seriesHref, seriesReaderHref } from './library';
@@ -335,7 +335,6 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
   const [dialog, setDialog] = useState<'info' | 'cover' | null>(null);
   const [selectedView, setView] = useState<SeriesView | null>(null);
   const [volume, setVolume] = useState<string | null>(null);
-  const [readingVolume, setReadingVolume] = useState<string | null>(null);
   const catalog = { ...inventory, version: `${inventory.version}:${revision}` };
   const onDataChanged = () => setRevision(value => value + 1);
   const { rootId, version, onSignedOut } = catalog;
@@ -381,7 +380,8 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
         <ActionLink variant="secondary" href={organizeToolsHref(rootId, seriesKey)}>Review files in Tools</ActionLink></div>}
       {series && detailsError && <p role="alert" className="m-0 text-danger">{detailsError}</p>}
       {series && details && <section aria-label="Reading and collection progress" className="surface grid gap-4 p-4 sm:grid-cols-3">
-        <CollectionTotal label="Read chapters · indexed" value={details.readChapters} total={details.availableChapters} />
+        <CollectionTotal label="Read chapters · released" value={details.readCatalogChapters}
+          total={metadata?.totalChapters ?? details.availableChapters} />
         <CollectionTotal label="Indexed chapters · released" value={details.availableChapters} total={metadata?.totalChapters ?? null} />
         <CollectionTotal label="Indexed volumes · released" value={details.indexedVolumes} total={metadata?.totalVolumes ?? null} />
       </section>}
@@ -397,25 +397,12 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
           </>}
           {view === 'chapters' && <>
             {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all chapters</Button></div>}
-            <SeriesChapterList {...seriesTools} rootId={rootId} seriesKey={seriesKey}
-              chapters={details?.chapters.filter(chapter => !volume || chapter.volume === volume) ?? []} />
-            {details && details.availableChapters > details.chapters.length && <p className="m-0 p-4 text-sm text-muted">Showing the first {details.chapters.length.toLocaleString()} chapters. All indexed files are in Files.</p>}
+            <SeriesChapterList key={volume ?? 'all-chapters'} {...seriesTools} rootId={rootId} seriesKey={seriesKey} volume={volume} />
           </>}
-          {view === 'volumes' && (details?.volumes.length ? <ul aria-label="Indexed volumes" role="list" className="m-0 list-none divide-y divide-line p-0">
-            {details.volumes.map(number => <li key={number} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
-              <strong>Volume {number}</strong>
-              <div className="action-row">
-                {details.readableVolumes.includes(number) &&
-                  <Button variant="secondary" icon={BookOpen} onClick={() => setReadingVolume(number)}>Read volume</Button>}
-                {details.chapters.some(chapter => chapter.volume === number) &&
-                  <Button variant="ghost" onClick={() => { setVolume(number); setView('chapters'); }}>View chapters</Button>}
-                <Button variant="ghost" onClick={() => { setVolume(number); setView('files'); }}>View files</Button>
-              </div>
-            </li>)}
-          </ul> : <p className="m-0 p-4 text-sm text-muted">No indexed volumes for this series.</p>)}
+          {view === 'volumes' && details && <SeriesVolumeList {...seriesTools} details={details} rootId={rootId} seriesKey={seriesKey}
+            onBrowse={(kind, number) => { setVolume(number); setView(kind); }} />}
         </div>
       </section>}
-      {readingVolume && <VolumeReleasePicker {...seriesTools} rootId={rootId} seriesKey={seriesKey} volume={readingVolume} onClose={() => setReadingVolume(null)} />}
       {series && <SeriesCollectionMembership rootId={rootId} seriesKey={seriesKey} onSignedOut={onSignedOut} />}
       {dialog === 'info' && <Modal title="More info" onClose={() => setDialog(null)}>
         <div className="grid gap-4">

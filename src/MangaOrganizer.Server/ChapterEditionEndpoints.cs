@@ -12,6 +12,16 @@ internal static class ChapterEditionEndpoints
     public static void MapChapterEditions(this RouteGroupBuilder library)
     {
         var series = library.MapGroup("/{root:guid}/series/{seriesKey}");
+        series.MapGet("/chapters", (Guid root, string seriesKey, string? volume, string? search, int? offset, int? limit, bool? published,
+            LibraryStore store, HttpContext context) =>
+        {
+            if (!ReaderEndpoints.TryOwner(context, out var owner)) return Results.Unauthorized();
+            if (!LibraryEndpoints.IsSeriesKey(seriesKey) || volume is not null && !BookNumbers.IsNumber(volume)
+                || search is { Length: > 25 } || !LibraryEndpoints.IsValidPage(offset, limit)) return Results.BadRequest();
+            var catalog = store.ReadChapterCatalog(root, seriesKey.ToLowerInvariant(), owner, published == true,
+                volume is null ? null : BookNumbers.Canonical(volume), search?.Trim() ?? "", offset ?? 0, limit ?? 50);
+            return catalog is not null ? Results.Ok(catalog) : Results.NotFound();
+        });
         series.MapGet("/chapter-releases", (Guid root, string seriesKey, string? volume, string? chapter, bool? published, LibraryStore store, HttpContext context) =>
             ReaderEndpoints.TryOwner(context, out var owner) && IsChapter(seriesKey, volume, chapter)
             && store.ReadChapterReleases(root, seriesKey.ToLowerInvariant(), NormalizeVolume(volume), BookNumbers.Canonical(chapter!), owner, published == true) is { } list
