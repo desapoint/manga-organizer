@@ -43,7 +43,7 @@ These are required acceptance scenarios for the owner-approved expansion. Existi
 | A35 | An Import folder’s saved target applies to every eligible release. Confirmed series and AniList/manual metadata gate the reviewed move. Ineligible, lost-target and conflicting files remain in intake. | MO-017 | Preview, mixed batch, no-clobber and restart cases |
 | A36 | Scan all or selected libraries and show per-root results. Clear eligible cache, rebuild it from the library and preserve metadata and media. | MO-018 | Queue and cache integration and authorization tests |
 | A37 | Preview catalog, progress and configuration reset separately. Assert the selected data changes and media, trash/recovery bytes and references survive. Test cancellation, failure, restart and backup restore. | MO-019 | Allowlist, backup fence, interrupted reset and retained-reference tests |
-| A38 | Open the metadata queue and confirm a clear AniList suggestion inline. Manually search or enter metadata for ambiguous or missing matches. Provider failure, rate limits and stale confirmations preserve existing assignments. | MO-020 | Provider fixtures and keyboard/mobile queue tests |
+| A38 | Open the metadata queue and confirm a clear AniList suggestion inline. Manually search or enter metadata for ambiguous or missing matches. Repeated scans and queue visits reuse cached proposals. A successful scan enqueues only newly published unresolved series, and Rescan this page touches only visible rows. Provider failure, rate limits and stale confirmations preserve existing assignments. | MO-020 | Provider fixtures and keyboard/mobile queue tests |
 
 ## Platform qualification
 

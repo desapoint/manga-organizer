@@ -7,17 +7,19 @@ import { CatalogInventory, SeriesPage } from './CatalogInventory';
 import { Collections } from './Collections';
 import { FileOperationHistory } from './FileOperations';
 import { ROOTS_URL, scanIsActive } from './library';
-import type { FolderRole, LibraryRoot, SeriesLocation } from './library';
+import type { FolderRole, LibraryRoot, SeriesLocation, toolsLocation } from './library';
 import { LibrarySettings } from './LibrarySettings';
 import { Overview } from './Overview';
 import { ScanStatus } from './ScanStatus';
 import { Select } from './Select';
+import { ToolsHub } from './ToolsHub';
 import { ActionLink, Button, PageHeader } from './ui';
 
-export type CatalogView = FolderRole | 'settings' | 'overview' | 'collections';
+export type CatalogView = FolderRole | 'settings' | 'overview' | 'collections' | 'tools';
 
-export function Catalog({ view, title, section, onSignedOut, series, children }: {
-  view: CatalogView; title: string; section: string; onSignedOut: () => void; series?: SeriesLocation | null; children?: ReactNode;
+export function Catalog({ view, title, section, onSignedOut, series, tools, children }: {
+  view: CatalogView; title: string; section: string; onSignedOut: () => void; series?: SeriesLocation | null;
+  tools: ReturnType<typeof toolsLocation>; children?: ReactNode;
 }) {
   const [roots, setRoots] = useState<LibraryRoot[] | null>(null);
   const [selectedId, setSelectedId] = useState('');
@@ -91,6 +93,9 @@ export function Catalog({ view, title, section, onSignedOut, series, children }:
       managedFolders={seriesRoot?.managed ? roots?.filter(root => root.managed) ?? [] : []}
       onInventoryChanged={() => setRefresh(value => value + 1)} />;
   }
+
+  if (tools) return <ToolsHub route={tools} roots={roots} version={`${inventoryVersion}:${refresh}`} onSignedOut={onSignedOut}
+    onChanged={() => setRefresh(value => value + 1)} />;
 
   return (
     <section className="workspace-page" aria-labelledby="catalog-heading">

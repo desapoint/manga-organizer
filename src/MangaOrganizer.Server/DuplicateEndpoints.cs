@@ -7,6 +7,17 @@ internal static class DuplicateEndpoints
 {
     public static void MapDuplicateReview(this RouteGroupBuilder operations)
     {
+        operations.MapGet("/duplicates/series", (Guid? root, string? kind, string? search, int? offset, int? limit, LibraryStore store) =>
+            ValidQueue(kind, offset, limit) && (search?.Length ?? 0) <= 300
+                ? Results.Ok(store.ReadDuplicateSeries(root, kind, search?.Trim() ?? "", offset ?? 0, limit ?? 50))
+                : Results.BadRequest());
+
+        operations.MapGet("/duplicates/{root:guid}/series/{series}/queue",
+            (Guid root, string series, string? kind, int? offset, int? limit, LibraryStore store) =>
+                LibraryEndpoints.IsSeriesKey(series) && ValidQueue(kind, offset, limit)
+                    ? Results.Ok(store.ReadDuplicateQueue(root, series.ToLowerInvariant(), kind, offset ?? 0, limit ?? 50))
+                    : Results.BadRequest());
+
         operations.MapGet("/duplicates/{root:guid}/series/{series}", (Guid root, string series, LibraryStore store) =>
             LibraryEndpoints.IsSeriesKey(series) && store.ReadSeriesDuplicateReview(root, series.ToLowerInvariant()) is { } review
                 ? Results.Ok(review) : Results.NotFound());
@@ -38,4 +49,7 @@ internal static class DuplicateEndpoints
     }
 
     private static bool IsFileId(string? id) => id is { Length: 32 } && id.All(char.IsAsciiHexDigit);
+
+    private static bool ValidQueue(string? kind, int? offset, int? limit) =>
+        kind is null or "bytes" or "chapter" or "volume" && LibraryEndpoints.IsValidPage(offset, limit);
 }

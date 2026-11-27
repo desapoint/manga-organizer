@@ -3,13 +3,13 @@ import { useEffect, useState } from 'react';
 import { ChapterCoverage } from './ChapterCoverage';
 import { CollectionForm, emptyFilters, SeriesCollectionMembership, TagRulesFields, useTagNames } from './CollectionControls';
 import type { TagRules } from './CollectionControls';
-import { DuplicateReview, DuplicateReviewDialog } from './DuplicateReview';
+import { DuplicateReviewDialog } from './DuplicateReview';
 import { FileMove } from './FileOperations';
 import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
 import { EditionCoverage, SeriesChapterList, VolumeReleasePicker } from './EditionCoverage';
 import { FileCover, SeriesCover } from './SeriesCover';
-import { formatSize, isReadableArchive, ROOTS_URL, seriesHref, seriesReaderHref } from './library';
+import { duplicateToolsHref, formatSize, isReadableArchive, ROOTS_URL, seriesHref, seriesReaderHref } from './library';
 import { Select } from './Select';
 import { ActionLink, Button, Modal, PageHeader, SearchField, SectionHeader, SegmentedControl } from './ui';
 
@@ -28,6 +28,7 @@ type CatalogEntry = {
   chapter: string | null;
   hasCover: boolean;
   seriesCoverKey: string | null;
+  seriesKey: string;
 };
 
 export type Series = { rootId: string; key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean };
@@ -140,7 +141,8 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
       {file.contentId && <div className="action-row col-span-full">
         {readable && <ActionLink variant="ghost" icon={BookOpen} href={onInspect ? `#read/${file.contentId}/intake` :
           seriesKey ? seriesReaderHref(file.contentId, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>}
-        <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare this file</Button>
+        {onInspect ? <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare this file</Button> :
+          <ActionLink variant="ghost" href={duplicateToolsHref({ rootId, seriesKey: file.seriesKey }, file.id)}>Compare in Tools</ActionLink>}
         {coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>Set chapter coverage</Button>}
         {managedFolders.length > 0 && <Button variant="ghost" onClick={() => setShowMove(true)}>Move or rename</Button>}
         {showDuplicates && <DuplicateReviewDialog rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
@@ -237,8 +239,7 @@ export function CoverGrid({ series, coverVersion }: { series: Series[]; coverVer
   );
 }
 
-const seriesViews = [{ value: 'chapters', label: 'Chapters' }, { value: 'volumes', label: 'Volumes' }, { value: 'files', label: 'Files' },
-  { value: 'duplicates', label: 'Duplicates' }] as const;
+const seriesViews = [{ value: 'chapters', label: 'Chapters' }, { value: 'volumes', label: 'Volumes' }, { value: 'files', label: 'Files' }] as const;
 type SeriesView = typeof seriesViews[number]['value'];
 
 function CollectionTotal({ label, value, total }: { label: string; value: number; total: number | null }) {
@@ -293,6 +294,7 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
             <Button variant="secondary" icon={Info} onClick={() => setDialog('info')}>More info</Button>
             <MetadataDialogAction rootId={rootId} seriesKey={seriesKey} title={title} metadata={metadata}
               onChange={catalog.onDataChanged} onSignedOut={onSignedOut} />
+            <ActionLink variant="ghost" href={duplicateToolsHref({ rootId, seriesKey })}>Review duplicates in Tools</ActionLink>
           </div>}
           {reading?.pageIndex != null && <p className="m-0 text-sm text-muted wrap-anywhere">
             Page {reading.pageIndex + 1} of {reading.pageCount} · {reading.relativePath.split('/').at(-1)}</p>}
@@ -303,12 +305,12 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
       {page && !series && <p>This series is no longer in the selected library folder.</p>}
       {moved && <p role="status" className="m-0 text-sm text-positive">File change completed. See File operation history in Settings for recovery.</p>}
       {series && detailsError && <p role="alert" className="m-0 text-danger">{detailsError}</p>}
-      {series && details && view !== 'duplicates' && <section aria-label="Reading and collection progress" className="surface grid gap-4 p-4 sm:grid-cols-3">
+      {series && details && <section aria-label="Reading and collection progress" className="surface grid gap-4 p-4 sm:grid-cols-3">
         <CollectionTotal label="Read chapters · indexed" value={details.readChapters} total={details.availableChapters} />
         <CollectionTotal label="Indexed chapters · released" value={details.availableChapters} total={metadata?.totalChapters ?? null} />
         <CollectionTotal label="Indexed volumes · released" value={details.indexedVolumes} total={metadata?.totalVolumes ?? null} />
       </section>}
-      {series && view !== 'duplicates' && <EditionCoverage {...seriesTools} volume={details?.volumes.length === 1 ? details.volumes[0] : undefined}
+      {series && <EditionCoverage {...seriesTools} volume={details?.volumes.length === 1 ? details.volumes[0] : undefined}
         onBrowse={number => { setVolume(number); setView('chapters'); }} />}
       {series && <section className="grid min-w-0 gap-3" aria-label="Series inventory">
         <SegmentedControl label="Series views" options={seriesViews} value={view} onChange={value => { setVolume(null); setView(value); }} />
@@ -317,8 +319,6 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
             {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all files</Button></div>}
             <FileInventory key={volume ?? 'all-files'} {...catalog} seriesKey={seriesKey} volume={volume ?? undefined} />
           </>}
-          {view === 'duplicates' && <DuplicateReview rootId={rootId} seriesKey={seriesKey} version={version}
-            onSignedOut={onSignedOut} onChanged={() => { catalog.onDataChanged(); catalog.onMoved(); }} />}
           {view === 'chapters' && <>
             {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all chapters</Button></div>}
             <SeriesChapterList {...seriesTools} rootId={rootId} seriesKey={seriesKey}

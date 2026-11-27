@@ -1267,6 +1267,18 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     assert review["source"]["volumeArchive"]
     comparisons = {item["candidate"]["relativePath"]: item for item in review["comparisons"]}
     (series,) = owner.series(root, "?search=Safety+Fixture")["items"]
+    index = f"{operations}/duplicates/series"
+    listed = json.loads(owner.request(f"{index}?search=Safety+Fixture&kind=bytes&limit=1", 200))
+    assert listed == {"total": 1, "items": [{
+        "rootId": root, "seriesKey": series["key"], "title": "Safety Fixture", "candidateFiles": 4,
+    }]}
+    assert json.loads(owner.request(f"{index}?search=Safety+Fixture&kind=volume", 200)) == {"total": 0, "items": []}
+    owner.request(f"{index}?kind=unknown", 400)
+    queue = f"{operations}/duplicates/{root}/series/{series['key']}/queue"
+    first = json.loads(owner.request(f"{queue}?limit=2", 200))
+    second = json.loads(owner.request(f"{queue}?limit=2&offset=2", 200))
+    assert first["total"] == second["total"] == 4
+    assert {item["relativePath"] for item in first["items"] + second["items"]} == {volume.name, chapter.name, copy.name, alias.name}
     owner.request(f"{LIBRARY_ROOTS}/{root}/series/{series['key']}/edition-volumes", 204, method="PUT", token=owner.csrf(),
                   body={"edition": "Safety fixture", "volume": "1", "chapters": ["1", "24"], "contentIds": []})
     series_review = json.loads(owner.request(f"{operations}/duplicates/{root}/series/{series['key']}", 200))
@@ -1321,6 +1333,9 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     (candidate,) = unresolved["comparisons"]
     assert candidate["kind"] == "same-volume" and not candidate["canQuarantine"]
     assert candidate["candidate"]["relativePath"] == alternate.name and candidate["candidate"]["format"] == "zip"
+    narrowed = json.loads(owner.request(f"{queue}?kind=volume", 200))
+    assert narrowed["total"] == 2
+    assert {item["relativePath"] for item in narrowed["items"]} == {unassigned.name, alternate.name}
     evidence = json.loads(owner.request(f"{operations}/duplicates/{root}/{files[unassigned.name]['id']}/archive", 200))
     assert evidence["imagePages"] == 2
     assert {field["label"]: field["value"] for field in evidence["comicInfo"]} == {
