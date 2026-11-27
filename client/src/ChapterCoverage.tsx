@@ -56,7 +56,7 @@ export function ChapterCoverage({ url, contentId, volumeHint, chapterHint, onSav
         <label className="grid gap-1">Volume label (optional)<input name="volume" maxLength={13} defaultValue={start.volume} /></label>
         <label className="grid gap-1">Chapters in this file<input name="chapters" maxLength={6000} defaultValue={start.chapters} placeholder="1, 1.5, 2" /></label>
         {start.source && <p className="m-0 text-sm text-muted">Detected from {start.source === 'archive' ? 'chapter folders in the archive' : 'the chapter range in the filename'}.</p>}
-        <p className="m-0 text-sm text-muted">List the individual chapters you verified. Clearing a manual assignment restores any detected coverage.</p>
+        <p className="m-0 text-sm text-muted">Enter a volume by itself for a whole-volume file, or list the chapters you verified. Clear both fields to restore detected coverage.</p>
         <Button type="submit" disabled={busy} className="justify-self-start">Save coverage</Button>
       </form>}
       {saved && <p role="status" className="m-0 text-positive">Chapter coverage saved.</p>}

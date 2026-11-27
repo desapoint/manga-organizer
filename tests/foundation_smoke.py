@@ -207,6 +207,8 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP VIEW library_file_numbered;
+            DROP VIEW active_inferred_volume_chapters;
             DROP TABLE import_file_split;
             DROP TABLE metadata_suggestion;
             DROP TABLE release_tag;
@@ -1390,8 +1392,9 @@ def verify_routed_intake(owner, media, source, target):
     ready = media / "primary" / "Routed Release Vol.01.pdf"
     pending = media / "primary" / "Waiting Release Vol.01.pdf"
     destination = media / "archive" / ready.name
-    unnumbered = media / "primary" / "Unnumbered Fixture.pdf"
-    unnumbered.write_bytes(b"Confirmed series without chapter or volume")
+    unnumbered = media / "primary" / "Unnumbered Fixture.cbz"
+    with ZipFile(unnumbered, "w") as archive:
+        archive.writestr("01.png", synthetic_png(90, 110, 140))
     ready.write_bytes(b"Confirmed routed fixture")
     pending.write_bytes(b"Unconfirmed routed fixture")
     owner.scan(source_id)
@@ -1419,10 +1422,33 @@ def verify_routed_intake(owner, media, source, target):
     ready_item = owner.files(source_id, "?search=Routed+Release")["items"][0]
     assert ready_item["intakePath"] == "Routed Release/Routed Release Vol.1.pdf"
     no_number = indexed[unnumbered.name]
-    owner.request(f"{LIBRARY_ROOTS}/{source_id}/series/{no_number['seriesKey']}/metadata", 200, method="PUT", token=owner.csrf(),
+    volume_url = f"{LIBRARY_ROOTS}/{source_id}/series/{no_number['seriesKey']}"
+    owner.request(volume_url + "/metadata", 200, method="PUT", token=owner.csrf(),
                   body={"title": "Unnumbered Fixture", "kind": "manga"})
-    preview({**ready_plan, "fileId": no_number["id"], "targetPath": unnumbered.name}, 409)
-    unnumbered.unlink()
+    draft = {**ready_plan, "fileId": no_number["id"], "targetPath": unnumbered.name}
+    preview(draft, 409)
+    whole_volume = {"contentId": no_number["contentId"], "volume": "07", "chapters": []}
+    owner.request(volume_url + "/coverage", 204, method="PUT", token=owner.csrf(), body=whole_volume)
+    owner.scan(source_id)
+    (volume_item,) = owner.files(source_id, f"?seriesKey={no_number['seriesKey']}&volume=7")["items"]
+    assert volume_item["volume"] == "7" and volume_item["chapter"] is None
+    assert volume_item["intakePath"] == "Unnumbered Fixture/Unnumbered Fixture Vol.7.cbz"
+    details = json.loads(owner.request(volume_url + "/details?published=true", 200))
+    assert details["volumes"] == details["readableVolumes"] == ["7"] and details["availableChapters"] == 0
+    (release,) = json.loads(owner.request(volume_url + "/volume-releases?volume=7&published=true", 200))
+    assert release["contentId"] == no_number["contentId"] and release["unresolvedVolume"]
+    owner.request(volume_url + "/coverage", 204, method="PUT", token=owner.csrf(), body={**whole_volume, "volume": ""})
+    preview(draft, 409)
+    owner.request(volume_url + "/coverage", 204, method="PUT", token=owner.csrf(), body=whole_volume)
+    volume_target = media / "archive" / volume_item["intakePath"]
+    volume_plan = preview({**draft, "targetPath": volume_item["intakePath"]})
+    owner.request(f"{operations}/{volume_plan['id']}/apply", 200, method="POST", token=owner.csrf())
+    assert not unnumbered.exists() and volume_target.is_file()
+    (transferred,) = owner.files(target_id, f"?seriesKey={no_number['seriesKey']}&volume=7&view=library")["items"]
+    assert transferred["contentId"] == volume_item["contentId"]
+    volume_target.unlink()
+    volume_target.parent.rmdir()
+    owner.scan(target_id)
     mixed = json.loads(owner.request(f"{operations}/batch-preview", 200, method="POST", token=owner.csrf(),
                                      body={"items": [ready_plan, pending_plan]}))
     assert mixed[0]["plan"]["target"].endswith(ready.name) and mixed[1]["plan"] is None

@@ -103,7 +103,7 @@ internal sealed partial class LibraryStore
             scope += " AND " + GroupVolumeMatch;
         }
         const string sources = """
-            FROM library_file f LEFT JOIN library_content c ON c.id = f.content_id
+            FROM library_file_numbered f LEFT JOIN library_content c ON c.id = f.content_id
             LEFT JOIN series_metadata_binding binding ON binding.root_id = f.root_id AND binding.series_key = f.series_key
             LEFT JOIN content_metadata cm ON cm.content_id = f.content_id
             LEFT JOIN series_metadata linked ON linked.id = cm.metadata_id AND linked.series_key = f.series_key
@@ -129,7 +129,7 @@ internal sealed partial class LibraryStore
             """ + " " + MissingMetadata + "), f.series_key, " + ConfirmedSeries + ", f.series_title IS NOT NULL, " + IntakeNumbered
             + ", " + FinishedOneShot + """
             , json_extract(m.provider_details, '$.StartYear'),
-                (SELECT inferred.volume FROM inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id),
+                (SELECT inferred.volume FROM active_inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id),
                 (SELECT json_group_array(json_array(chapter.volume, chapter.chapter) ORDER BY CAST(chapter.chapter AS REAL), chapter.chapter)
                     FROM content_chapter chapter WHERE chapter.content_id = f.content_id)
             """

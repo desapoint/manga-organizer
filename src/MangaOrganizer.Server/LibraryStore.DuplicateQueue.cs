@@ -10,7 +10,7 @@ internal sealed partial class LibraryStore
     private const string ScopedDuplicateCoverage = """
         WITH scoped AS (
             SELECT f.id, f.root_id, f.series_key, f.series_title, f.content_id, f.relative_path, f.volume_hint, f.chapter_hint
-            FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
+            FROM library_file_numbered f JOIN library_folder folder ON folder.root_id = f.root_id
             WHERE f.content_id IS NOT NULL AND ($root IS NULL OR f.root_id = $root)
                 AND ($series IS NULL OR f.series_key = $series)
         ), chapter_labels AS (
@@ -18,13 +18,13 @@ internal sealed partial class LibraryStore
             FROM scoped f JOIN content_chapter c ON c.content_id = f.content_id
             UNION
             SELECT f.id, f.root_id, f.series_key, c.value, inferred.volume
-            FROM scoped f JOIN inferred_volume_chapters inferred ON inferred.content_id = f.content_id, json_each(inferred.chapters) c
+            FROM scoped f JOIN active_inferred_volume_chapters inferred ON inferred.content_id = f.content_id, json_each(inferred.chapters) c
             WHERE NOT EXISTS(SELECT 1 FROM content_chapter manual WHERE manual.content_id = f.content_id)
             UNION
             SELECT f.id, f.root_id, f.series_key, f.chapter_hint, COALESCE(f.volume_hint, '') FROM scoped f
             WHERE f.chapter_hint IS NOT NULL
                 AND NOT EXISTS(SELECT 1 FROM content_chapter manual WHERE manual.content_id = f.content_id)
-                AND NOT EXISTS(SELECT 1 FROM inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
+                AND NOT EXISTS(SELECT 1 FROM active_inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
         )
         """;
 

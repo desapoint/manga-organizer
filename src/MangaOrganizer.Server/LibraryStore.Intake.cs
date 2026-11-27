@@ -7,12 +7,12 @@ internal sealed partial class LibraryStore
     private const string IntakeNumbered = """
         (f.volume_hint IS NOT NULL OR f.chapter_hint IS NOT NULL
             OR EXISTS(SELECT 1 FROM content_chapter chapter WHERE chapter.content_id = f.content_id)
-            OR EXISTS(SELECT 1 FROM inferred_volume_chapters volume WHERE volume.content_id = f.content_id)
+            OR EXISTS(SELECT 1 FROM active_inferred_volume_chapters volume WHERE volume.content_id = f.content_id)
             OR (
         """ + " " + FinishedOneShot + "))";
 
     private const string IntakeTransferCandidates = """
-        SELECT 1 FROM library_file f JOIN library_intake_target route ON route.source_root = f.root_id
+        SELECT 1 FROM library_file_numbered f JOIN library_intake_target route ON route.source_root = f.root_id
         JOIN library_folder source ON source.root_id = route.source_root
         JOIN library_folder target ON target.root_id = route.target_root
         JOIN library_root source_status ON source_status.id = source.root_id
