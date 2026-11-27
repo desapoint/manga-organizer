@@ -185,7 +185,7 @@ internal sealed partial class LibraryStore
         var directory = path[..Math.Max(0, path.LastIndexOf('/'))];
         if (ArchivePages.Supports(Path.GetExtension(path)[1..].ToLowerInvariant()) &&
             cache.FindArchive(operation.Sha256, path, operation.Size, modified) is null &&
-            CoverArt.FindArchiveCover(cache, root, path, operation.Size, modified, CancellationToken.None) is { } archive)
+            CoverArt.InspectArchiveCover(cache, root, path, operation.Size, modified, null, CancellationToken.None)?.Cover is { } archive)
         {
             cache.RememberArchive(operation.Sha256, archive);
         }
@@ -276,7 +276,8 @@ internal sealed partial class LibraryStore
                 """;
             command.ExecuteNonQuery();
             command.CommandText = """
-                UPDATE library_file SET root_id = $root, relative_path = $path, modified_at = $modified
+                UPDATE library_file SET root_id = $root, relative_path = $path, modified_at = $modified,
+                    scan_stamp = NULL, scan_chapters = NULL, scan_chapter_source = NULL
                 WHERE id = $file AND content_id = $content;
                 """;
             if (command.ExecuteNonQuery() == 0)

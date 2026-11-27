@@ -27,6 +27,8 @@ internal sealed partial class LibraryStore
         }
         command.CommandText = """
             DELETE FROM artwork.archive_cover;
+            DELETE FROM artwork.archive_without_pages;
+            DELETE FROM library_sidecar_stamp;
             DELETE FROM artwork.folder_cover;
             DELETE FROM artwork.image;
             PRAGMA artwork.incremental_vacuum;
@@ -95,7 +97,7 @@ internal sealed partial class LibraryStore
         }
     }
 
-    private static void StageCovers(SqliteConnection database, string root, ScanProgress scan, CancellationToken cancellationToken)
+    private static void StageCovers(SqliteConnection database, LibraryRoot root, ScanProgress scan, CancellationToken cancellationToken)
     {
         using var transaction = database.BeginTransaction(deferred: true);
         using var query = database.CreateCommand();
@@ -106,9 +108,13 @@ internal sealed partial class LibraryStore
             WITH directories AS (
                 SELECT directory, COUNT(DISTINCT series_key) = 1 AS unambiguous FROM scan_file GROUP BY directory
             )
-            SELECT f.series_key, f.directory, d.unambiguous, f.relative_path, f.extension, f.size, f.modified_at, h.sha256, f.series_title
+            SELECT f.series_key, f.directory, d.unambiguous, f.relative_path, f.extension, f.size, f.modified_at,
+                h.sha256, f.series_title, h.stamp, cover.entry, image.sha256, no_pages.archive_sha IS NOT NULL
             FROM scan_file f JOIN directories d USING(directory)
             LEFT JOIN scan_hash h ON h.relative_path = f.relative_path
+            LEFT JOIN artwork.archive_cover cover ON cover.archive_sha = h.sha256
+            LEFT JOIN artwork.image image ON image.sha256 = cover.image_sha
+            LEFT JOIN artwork.archive_without_pages no_pages ON no_pages.archive_sha = h.sha256
             ORDER BY f.series_key, f.relative_path;
             """;
         using var insert = database.CreateCommand();
@@ -123,10 +129,23 @@ internal sealed partial class LibraryStore
 
         using var rememberSidecar = database.CreateCommand();
         rememberSidecar.Transaction = transaction;
-        rememberSidecar.CommandText = "INSERT INTO scan_sidecar VALUES ($series, $path, $image);";
+        rememberSidecar.CommandText = "INSERT INTO scan_sidecar VALUES ($series, $path, $image, $stamp);";
         var candidateSeries = rememberSidecar.Parameters.Add("$series", SqliteType.Text);
         var candidatePath = rememberSidecar.Parameters.Add("$path", SqliteType.Text);
         var candidateImage = rememberSidecar.Parameters.Add("$image", SqliteType.Blob);
+        var candidateStamp = rememberSidecar.Parameters.Add("$stamp", SqliteType.Text);
+
+        using var findSidecar = database.CreateCommand();
+        findSidecar.Transaction = transaction;
+        findSidecar.CommandText = """
+            SELECT cover.image_sha FROM library_sidecar_stamp saved
+            JOIN artwork.folder_cover cover USING(root_id, relative_path)
+            JOIN artwork.image image ON image.sha256 = cover.image_sha
+            WHERE saved.root_id = $root AND saved.relative_path = $path AND saved.stamp = $stamp;
+            """;
+        findSidecar.Parameters.AddWithValue("$root", root.Id);
+        var sidecarPath = findSidecar.Parameters.Add("$path", SqliteType.Text);
+        var sidecarStamp = findSidecar.Parameters.Add("$stamp", SqliteType.Text);
 
         var cache = new CoverCache(database, transaction);
         string? currentKey = null;
@@ -155,11 +174,16 @@ internal sealed partial class LibraryStore
                     scan.BeginFile(relativePath);
                     var fileSize = rows.GetInt64(5);
                     var modifiedAt = rows.GetDateTimeOffset(6);
-                    var cover = cache.FindArchive(archiveDigest, relativePath, fileSize, modifiedAt);
-                    if (cover is null)
+                    if (rows.GetBoolean(12) && rows.IsDBNull(11)) continue;
+                    var cover = rows.IsDBNull(11)
+                        ? cache.FindArchive(archiveDigest, relativePath, fileSize, modifiedAt)
+                        : new CoverSource(relativePath, fileSize, modifiedAt, rows.GetString(10), rows.GetFieldValue<byte[]>(11));
+                    if (cover is null && CoverArt.InspectArchiveCover(cache, root.Path, relativePath, fileSize, modifiedAt,
+                        ReadText(rows, 9), cancellationToken) is { } inspected)
                     {
-                        cover = CoverArt.FindArchiveCover(cache, root, relativePath, fileSize, modifiedAt, cancellationToken);
+                        cover = inspected.Cover;
                         if (cover is not null) cache.RememberArchive(archiveDigest, cover);
+                        else cache.RememberArchiveWithoutPages(archiveDigest);
                     }
                     if (cover is not null)
                     {
@@ -177,18 +201,27 @@ internal sealed partial class LibraryStore
         PublishCandidate();
         transaction.Commit();
 
+        byte[]? ReuseSidecar(string relativePath, string stamp)
+        {
+            if (scan.Full) return null;
+            sidecarPath.Value = relativePath;
+            sidecarStamp.Value = stamp;
+            return findSidecar.ExecuteScalar() as byte[];
+        }
+
         void PublishCandidate()
         {
             if (currentKey is null) return;
 
             CoverSource? firstSidecar = null;
             candidateSeries.Value = currentKey;
-            foreach (var sidecar in directories.SelectMany(directory => CoverArt.FindSidecars(root, directory, cache)))
+            foreach (var sidecar in directories.SelectMany(directory => CoverArt.FindSidecars(root.Path, directory, cache, ReuseSidecar)))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 firstSidecar ??= sidecar;
                 candidatePath.Value = sidecar.RelativePath;
                 candidateImage.Value = sidecar.Sha256;
+                candidateStamp.Value = (object?)sidecar.Stamp ?? DBNull.Value;
                 rememberSidecar.ExecuteNonQuery();
             }
 

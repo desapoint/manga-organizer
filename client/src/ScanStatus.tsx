@@ -6,9 +6,9 @@ function phaseDetails(scan: ScanSnapshot) {
     case 'discovering': return { title: 'Finding files', detail: `${scan.discoveredFiles.toLocaleString()} found` };
     case 'hashing': return {
       title: 'Verifying file identities',
-      detail: `${scan.processedFiles.toLocaleString()} of ${scan.discoveredFiles.toLocaleString()} checked · ${formatSize(scan.bytesRead)} read`,
-      value: scan.totalBytes ? scan.bytesRead : scan.processedFiles,
-      total: scan.totalBytes || scan.discoveredFiles,
+      detail: `${scan.processedFiles.toLocaleString()} of ${scan.discoveredFiles.toLocaleString()} checked · ${scan.hashedFiles.toLocaleString()} hashed · ${scan.reusedFiles.toLocaleString()} reused · ${formatSize(scan.bytesRead)} read`,
+      value: scan.processedFiles,
+      total: scan.discoveredFiles,
     };
     case 'covers': return {
       title: 'Looking for covers',
@@ -25,7 +25,15 @@ function phaseDetails(scan: ScanSnapshot) {
 
 export function ScanStatus({ root }: { root: LibraryRoot }) {
   const scan = root.scanProgress;
-  if (!scan) return <p className="scan-state" role="status">{scanLabels[root.state]}</p>;
+  if (!scan) {
+    const last = root.lastScan;
+    const seconds = last && (last.elapsedMilliseconds / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 });
+    return <div className="grid gap-1">
+      <p className="scan-state" role="status">{scanLabels[root.state]}</p>
+      {last && <p className="m-0 text-sm text-muted">{last.full ? 'Full verification' : 'Quick scan'} · {last.hashedFiles.toLocaleString()} hashed
+        {' · '}{last.reusedFiles.toLocaleString()} reused · {formatSize(last.bytesRead)} read · {seconds} s</p>}
+    </div>;
+  }
 
   const { title, detail, value, total } = phaseDetails(scan);
   return (

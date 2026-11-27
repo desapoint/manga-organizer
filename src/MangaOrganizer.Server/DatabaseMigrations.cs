@@ -39,6 +39,7 @@ internal static class DatabaseMigrations
         new("0025-series-cover-preferences"),
         new("0026-canonical-series-identity"),
         new("0027-series-release-metadata"),
+        new("0028-incremental-scan"),
     ];
 
     public static int Apply(string dataDirectory)

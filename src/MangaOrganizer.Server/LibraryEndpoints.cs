@@ -120,7 +120,7 @@ internal static class LibraryEndpoints
             return CoverResult(context, store.ReadFileCover(id, fileId.ToLowerInvariant()));
         });
 
-        library.MapPost("/{id:guid}/scan", async (Guid id, LibraryStore store, LibraryScanQueue scans,
+        library.MapPost("/{id:guid}/scan", async (Guid id, bool? full, LibraryStore store, LibraryScanQueue scans,
             HttpContext context, IAntiforgery antiforgery) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
@@ -131,7 +131,7 @@ internal static class LibraryEndpoints
             {
                 return Results.NotFound();
             }
-            return scans.Queue(root) is { } queued ? Results.Accepted(value: queued) : Results.Conflict();
+            return scans.Queue(root, full == true) is { } queued ? Results.Accepted(value: queued) : Results.Conflict();
         });
     }
 

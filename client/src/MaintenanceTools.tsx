@@ -5,6 +5,7 @@ import { formatSize, scanIsActive } from './library';
 import type { LibraryRoot } from './library';
 import { MaintenanceResets } from './MaintenanceResets';
 import { ScanStatus } from './ScanStatus';
+import { Select } from './Select';
 import { Button, SectionHeader } from './ui';
 
 type ScanResult = { rootId: string; state: 'queued' | 'busy' | 'missing' };
@@ -13,6 +14,7 @@ const requestLabels = { queued: 'Scan requested', busy: 'Already scanning or in 
 export function MaintenanceTools({ roots, onSignedOut, onChanged }: {
   roots: LibraryRoot[] | null; onSignedOut: () => void; onChanged: () => void;
 }) {
+  const [mode, setMode] = useState<'quick' | 'full'>('quick');
   const [selection, setSelection] = useState<string[]>([]);
   const [results, setResults] = useState<ScanResult[]>([]);
   const [pending, setPending] = useState<'scan' | 'artwork' | null>(null);
@@ -43,7 +45,7 @@ export function MaintenanceTools({ roots, onSignedOut, onChanged }: {
     setError('');
     setNotice('');
     try {
-      const outcome = await request<ScanResult[]>('scans', { allLibraries, rootIds: allLibraries ? [] : selected });
+      const outcome = await request<ScanResult[]>('scans', { allLibraries, rootIds: allLibraries ? [] : selected, full: mode === 'full' });
       if (outcome) {
         setResults(outcome);
         const count = outcome.filter(result => result.state === 'queued').length;
@@ -99,7 +101,9 @@ export function MaintenanceTools({ roots, onSignedOut, onChanged }: {
             </li>;
           })}
         </ul>
-        <div className="action-row">
+        <div className="action-row items-end">
+          <Select label="Scan mode" value={mode} options={[{ value: 'quick', label: 'Quick scan' },
+            { value: 'full', label: 'Full verification' }]} onChange={setMode} />
           <Button icon={ScanSearch} disabled={!selected.length || pending !== null} onClick={() => void scan(false)}>Rescan selected</Button>
           <Button variant="secondary" disabled={!scanReady || pending !== null} onClick={() => void scan(true)}>Rescan all libraries</Button>
         </div>

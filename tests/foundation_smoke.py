@@ -76,8 +76,9 @@ class Browser:
     def series(self, root_id, query=""):
         return json.loads(self.request(f"{LIBRARY_ROOTS}/{root_id}/series{query}", 200))
 
-    def scan(self, root_id, expected_state="complete"):
-        self.request(f"{LIBRARY_ROOTS}/{root_id}/scan", 202, method="POST", token=self.csrf())
+    def scan(self, root_id, expected_state="complete", *, full=False):
+        path = f"{LIBRARY_ROOTS}/{root_id}/scan" + ("?full=true" if full else "")
+        self.request(path, 202, method="POST", token=self.csrf())
         for _ in range(80):
             root = next(root for root in self.roots() if root["id"] == root_id)
             if root["state"] not in {"queued", "scanning"}:
@@ -210,6 +211,11 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE library_sidecar_stamp;
+            ALTER TABLE library_file DROP COLUMN scan_stamp;
+            ALTER TABLE library_file DROP COLUMN scan_chapters;
+            ALTER TABLE library_file DROP COLUMN scan_chapter_source;
+            ALTER TABLE library_root DROP COLUMN last_scan;
             DROP TABLE series_cover_preference;
             DROP TABLE series_release_metadata;
             DROP TABLE series_identity_alias;
@@ -433,6 +439,12 @@ def synthetic_png(red, green, blue, width=12, height=18):
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(pixels)) + chunk(b"IEND", b"")
 
 
+def fixed_size_png(image, size):
+    # Pad within a valid ancillary chunk and keep the PNG end marker last.
+    text = b"Note\0" + b"x" * (size - len(image) - 17)
+    tag = b"tEXt"
+    return image[:-12] + struct.pack(">I", len(text)) + tag + text + struct.pack(">I", zlib.crc32(tag + text)) + image[-12:]
+
 def webp_dimensions(image):
     assert image[:4] == b"RIFF" and image[8:12] == b"WEBP"
     if image[12:16] == b"VP8X":
@@ -556,7 +568,7 @@ def verify_cover_art(owner, root_id, path):
     (src / "Éclipse v04.cbz").write_bytes(first_archive.read_bytes())
     (src / "cover.jpg").write_bytes(jpeg)
     (src / "cover-1.webp").write_bytes(webp)
-    (src / "cover-2.png").write_bytes(later_page)
+    (src / "cover-2.png").write_bytes(fixed_size_png(later_page, 256))
     owner.scan(root_id)
     assert any(root["id"] == root_id and root["hasCovers"] for root in owner.roots())
     (series,) = owner.series(root_id, "?search=eclipse&coverOnly=true")["items"]
@@ -586,7 +598,14 @@ def verify_cover_art(owner, root_id, path):
     owner.scan(root_id)
     assert webp_dimensions(owner.request(url, 200)) == (19, 30)
     (src / "cover-1.webp").unlink()
-    (src / "cover-2.png").unlink()
+    local_png = src / "cover-2.png"
+    previous = local_png.stat()
+    replacement = synthetic_png(45, 70, 130, 12, 18)
+    local_png.write_bytes(fixed_size_png(replacement, previous.st_size))
+    os.utime(local_png, ns=(previous.st_atime_ns, previous.st_mtime_ns))
+    owner.scan(root_id)
+    assert webp_dimensions(owner.request(url, 200)) == (12, 18)
+    local_png.unlink()
     owner.scan(root_id)
     assert owner.request(url, 200) == archive_covers[0]
     all_series = owner.series(root_id, "?sort=files")["items"]
@@ -613,6 +632,7 @@ def verify_live_scan(owner, root_id, path):
     assert root["state"] == "complete" and root["scanProgress"] is None
     for snapshot in snapshots:
         assert 0 <= snapshot["verifiedFiles"] <= snapshot["processedFiles"] <= snapshot["discoveredFiles"]
+        assert snapshot["hashedFiles"] + snapshot["reusedFiles"] == snapshot["verifiedFiles"]
         assert 0 <= snapshot["bytesRead"] <= snapshot["totalBytes"]
         assert 0 <= snapshot["coversFound"] <= snapshot["seriesChecked"] <= snapshot["seriesTotal"]
     probe.unlink()
@@ -1016,6 +1036,23 @@ def verify_reader(owner, peer, root_id, path):
     assert new_book["progress"]["revision"] == 0 and new_file["contentId"] != identity
 
 
+def supports_quick_scan(path):
+    if os.name == "nt":
+        import ctypes
+
+        kernel = ctypes.windll.kernel32
+        volume = ctypes.create_unicode_buffer(512)
+        filesystem = ctypes.create_unicode_buffer(16)
+        return bool(kernel.GetVolumePathNameW(str(path), volume, len(volume))
+                    and kernel.GetDriveTypeW(volume) == 3
+                    and kernel.GetVolumeInformationW(volume, None, 0, None, None, None, filesystem, len(filesystem))
+                    and filesystem.value == "NTFS")
+
+    types = {"ef53", "58465342", "9123683e", "1021994"}
+    result = subprocess.run(["stat", "-f", "-c", "%t", path], check=True, text=True, capture_output=True)
+    return Path("/proc/sys/kernel/random/boot_id").is_file() and result.stdout.strip() in types
+
+
 def scan_library(owner, media):
     primary, archive = owner.roots()
     assert primary["state"] == archive["state"] == "idle"
@@ -1031,6 +1068,17 @@ def scan_library(owner, media):
     first_scan = owner.scan(root_id)
     assert first_scan["fileCount"] == 53 and first_scan["lastScannedAt"]
     assert first_scan["skippedLinks"] == (1 if os.name == "nt" else 2)
+    cold = first_scan["lastScan"]
+    assert not cold["full"] and cold["hashedFiles"] == 53 and cold["reusedFiles"] == 0 and cold["bytesRead"] > 0
+    warm = owner.scan(root_id)["lastScan"]
+    reuse = supports_quick_scan(primary_path)
+    assert not warm["full"] and warm["reusedFiles"] == (53 if reuse else 0), warm
+    assert warm["hashedFiles"] == (0 if reuse else 53), warm
+    assert warm["bytesRead"] == (0 if reuse else cold["bytesRead"]), warm
+    first_scan = owner.scan(root_id, full=True)
+    full = first_scan["lastScan"]
+    assert full["full"] and full["hashedFiles"] == 53 and full["reusedFiles"] == 0
+    assert full["bytesRead"] == cold["bytesRead"] and full["elapsedMilliseconds"] >= 0
     first_page = owner.files(root_id)
     final_page = owner.files(root_id, "?offset=50")
     assert first_page["total"] == final_page["total"] == 53
@@ -1102,7 +1150,11 @@ def verify_file_identity(owner, media):
     replacement = b"!" + source_bytes[1:]
     moved.write_bytes(replacement)
     os.utime(moved, ns=(previous.st_atime_ns, previous.st_mtime_ns))
-    owner.scan(archive["id"])
+    changed_scan = owner.scan(archive["id"])["lastScan"]
+    assert changed_scan["hashedFiles"] >= 1
+    if supports_quick_scan(moved.parent):
+        assert changed_scan["hashedFiles"] == 1 and changed_scan["reusedFiles"] == 1
+        assert changed_scan["bytesRead"] == len(replacement)
     replaced = entries(archive)[moved.name]
     assert replaced["id"] == after_move["id"] and replaced["contentId"] != identity
     assert replaced["sha256"] == sha256(replacement).hexdigest()

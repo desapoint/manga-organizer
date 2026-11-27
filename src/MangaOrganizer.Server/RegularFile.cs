@@ -49,6 +49,58 @@ internal static class RegularFile
             return null;
         });
 
+    private static readonly Lazy<string?> LinuxBootId = new(() =>
+    {
+        try
+        {
+            return Guid.TryParse(File.ReadAllText("/proc/sys/kernel/random/boot_id").Trim(), out var id)
+                ? id.ToString("N") : null;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    });
+
+    // Called only on a validated, open regular file. The caller validates it again before accepting the result.
+    public static string? ScanStamp(SafeFileHandle handle)
+    {
+        if (OperatingSystem.IsLinux())
+        {
+            if (LinuxBootId.Value is not { } boot) return null;
+            var descriptor = handle.DangerousGetHandle().ToInt32();
+            if (StatFileSystem(descriptor, out var fs) != 0 ||
+                fs.Type is not (0xEF53 or 0x58465342 or 0x9123683E or 0x01021994) ||
+                !ReadLinuxStat(descriptor, "", 0x1000, out var info) || info.Inode == 0)
+                return null;
+            return FormattableString.Invariant(
+                $"linux/1/{boot}/{fs.Id}/{info.DeviceMajor}/{info.DeviceMinor}/{info.Inode}/{info.Size}/{info.ModifiedSeconds}/{info.ModifiedNanoseconds}/{info.ChangeSeconds}/{info.ChangeNanoseconds}");
+        }
+        if (!OperatingSystem.IsWindows() || !GetFileInformationByHandle(handle, out var windows) ||
+            !GetFileInformationByHandleEx(handle, 0, out var basic, (uint)Marshal.SizeOf<WindowsBasicInformation>()) || basic.ChangeTime <= 0)
+            return null;
+
+        // Remote shares cannot return a local volume GUID. Restrict reuse to local NTFS.
+        var volumePath = new System.Text.StringBuilder(512);
+        var length = GetFinalPathNameByHandle(handle, volumePath, (uint)volumePath.Capacity, 0x9);
+        if (length == 0) return null;
+        // A short buffer still gets the required path length. Use a long-path buffer for such files.
+        if (length >= volumePath.Capacity)
+        {
+            volumePath = new System.Text.StringBuilder((int)length);
+            length = GetFinalPathNameByHandle(handle, volumePath, (uint)volumePath.Capacity, 0x9);
+            if (length == 0 || length >= volumePath.Capacity) return null;
+        }
+        var path = volumePath.ToString();
+        var volumeEnd = path.IndexOf('}');
+        if (volumeEnd < 0 || !path.StartsWith(@"\\?\Volume{", StringComparison.OrdinalIgnoreCase)) return null;
+        var format = new System.Text.StringBuilder(16);
+        if (!GetVolumeInformationByHandle(handle, IntPtr.Zero, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, format, (uint)format.Capacity)
+            || !format.ToString().Equals("NTFS", StringComparison.OrdinalIgnoreCase)) return null;
+        return FormattableString.Invariant(
+            $"windows/1/{path[..(volumeEnd + 1)]}/{windows.IndexHigh}/{windows.IndexLow}/{windows.SizeHigh}/{windows.SizeLow}/{basic.CreationTime}/{basic.LastWriteTime}/{basic.ChangeTime}");
+    }
+
     private static T? ReadWindows<T>(string path, DateTime modifiedAt, Func<SafeFileHandle, T?> read) where T : class
     {
         const uint genericRead = 0x80000000;
@@ -134,6 +186,23 @@ internal static class RegularFile
             ModifiedSeconds == other.ModifiedSeconds && ModifiedNanoseconds == other.ModifiedNanoseconds;
     }
 
+    [StructLayout(LayoutKind.Explicit, Size = 120)]
+    private struct LinuxFileSystem
+    {
+        [FieldOffset(0)] public long Type;
+        [FieldOffset(56)] public long Id;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WindowsBasicInformation
+    {
+        public long CreationTime;
+        public long LastAccessTime;
+        public long LastWriteTime;
+        public long ChangeTime;
+        public uint Attributes;
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     private struct WindowsFileInformation
     {
@@ -152,6 +221,22 @@ internal static class RegularFile
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetFileInformationByHandle(SafeFileHandle handle, out WindowsFileInformation information);
+
+    [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetFileInformationByHandleEx(SafeFileHandle handle, int informationClass,
+        out WindowsBasicInformation information, uint length);
+
+    [DllImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW", ExactSpelling = true, CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint GetFinalPathNameByHandle(SafeFileHandle handle, System.Text.StringBuilder path, uint length, uint flags);
+
+    [DllImport("kernel32.dll", EntryPoint = "GetVolumeInformationByHandleW", ExactSpelling = true, CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetVolumeInformationByHandle(SafeFileHandle handle, IntPtr name, uint nameLength,
+        IntPtr serial, IntPtr componentLength, IntPtr flags, System.Text.StringBuilder format, uint formatLength);
+
+    [DllImport("libc", EntryPoint = "fstatfs")]
+    private static extern int StatFileSystem(int descriptor, out LinuxFileSystem info);
 
     [DllImport("libc", EntryPoint = "open")]
     private static extern int OpenLinux([MarshalAs(UnmanagedType.LPUTF8Str)] string path, int flags);

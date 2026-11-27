@@ -23,7 +23,7 @@ internal sealed partial class LibraryStore
     private const string SelectedSource = "lower(source_root) IN (SELECT value FROM json_each($roots))";
     private const string SelectedState = """
         lower(id) IN (SELECT value FROM json_each($roots))
-        AND (state <> 'idle' OR file_count <> 0 OR last_attempt_at IS NOT NULL OR last_scanned_at IS NOT NULL OR skipped_links <> 0)
+        AND (state <> 'idle' OR file_count <> 0 OR last_attempt_at IS NOT NULL OR last_scanned_at IS NOT NULL OR last_scan IS NOT NULL OR skipped_links <> 0)
         """;
     private const string ExclusiveContent = """
         content_id IN (SELECT f.content_id FROM library_file f WHERE lower(f.root_id) IN (SELECT value FROM json_each($roots)))
@@ -39,7 +39,7 @@ internal sealed partial class LibraryStore
         new("import_file_split", "Import grouping decisions", "file_id IN (SELECT id FROM library_file WHERE " + SelectedRoot + ")", "file_id"),
         new("library_file", "Indexed files", SelectedRoot, "root_id, relative_path"),
         new("library_root", "Folder scan records", SelectedState, "id",
-            "state = 'idle', file_count = 0, last_attempt_at = NULL, last_scanned_at = NULL, skipped_links = 0"),
+            "state = 'idle', file_count = 0, last_attempt_at = NULL, last_scanned_at = NULL, last_scan = NULL, skipped_links = 0"),
     ];
 
     private static readonly ResetStep[] ProgressReset =

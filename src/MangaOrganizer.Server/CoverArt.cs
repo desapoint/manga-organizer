@@ -3,7 +3,9 @@ using System.Security.Cryptography;
 
 namespace MangaOrganizer.Server;
 
-internal sealed record CoverSource(string RelativePath, long Size, DateTimeOffset ModifiedAt, string? ArchiveEntry, byte[] Sha256);
+internal sealed record CoverSource(string RelativePath, long Size, DateTimeOffset ModifiedAt, string? ArchiveEntry, byte[] Sha256, string? Stamp = null);
+
+internal sealed record ArchiveCoverInspection(CoverSource? Cover);
 
 internal static class CoverArt
 {
@@ -42,7 +44,8 @@ internal static class CoverArt
             int.TryParse(stem.AsSpan(6), NumberStyles.None, CultureInfo.InvariantCulture, out var number) && number > 0 ? number : null;
     }
 
-    public static IEnumerable<CoverSource> FindSidecars(string root, string directory, CoverCache cache)
+    public static IEnumerable<CoverSource> FindSidecars(string root, string directory, CoverCache cache,
+        Func<string, string, byte[]?>? cachedSidecar = null)
     {
         foreach (var file in Sidecars(new DirectoryInfo(Path.Combine(root, directory))))
         {
@@ -51,11 +54,17 @@ internal static class CoverArt
             {
                 var size = file.Length;
                 DateTimeOffset modified = file.LastWriteTimeUtc;
-                if (ReadSidecar(file, size, modified) is { } image && cache.Store(image) is { } digest)
+                var path = Path.GetRelativePath(root, file.FullName).Replace(Path.DirectorySeparatorChar, '/');
+                cover = RegularFile.Read(file, size, modified.UtcDateTime, handle =>
                 {
-                    var path = Path.GetRelativePath(root, file.FullName).Replace(Path.DirectorySeparatorChar, '/');
-                    cover = new(path, size, modified, null, digest);
-                }
+                    var stamp = cachedSidecar is null ? null : RegularFile.ScanStamp(handle);
+                    if (stamp is not null && cachedSidecar?.Invoke(path, stamp) is { } saved)
+                        return new CoverSource(path, size, modified, null, saved, stamp);
+
+                    using var stream = new FileStream(handle, FileAccess.Read);
+                    return stream.Length == size && RasterImage.Read(stream, size, RasterImage.MaxCoverBytes) is { } image
+                        && cache.Store(image) is { } digest ? new CoverSource(path, size, modified, null, digest, stamp) : null;
+                });
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException)
             {
@@ -65,34 +74,44 @@ internal static class CoverArt
         }
     }
 
-    public static CoverSource? FindArchiveCover(CoverCache cache, string root, string relativePath, long size, DateTimeOffset modifiedAt,
-        CancellationToken cancellationToken)
+    public static ArchiveCoverInspection? InspectArchiveCover(CoverCache cache, string root, string relativePath, long size,
+        DateTimeOffset modifiedAt, string? stamp, CancellationToken cancellationToken)
     {
         var file = MediaFiles.Resolve(root, relativePath);
         if (file is null) return null;
 
-        return WithArchive(file, size, modifiedAt, stream =>
+        try
         {
-            using var archive = ArchivePages.Open(stream);
-            if (archive is null) return null;
-
-            var pages = ArchivePages.Entries(archive).ToArray();
-            var designated = ComicInfoCover(archive);
-            var candidates = new List<ComicEntry>();
-            if (designated is >= 0 && designated < pages.Length) candidates.Add(pages[designated.Value]);
-            candidates.AddRange(pages.Where(IsNamedCover));
-            candidates.AddRange(pages.Take(24));
-            foreach (var entry in candidates.Distinct())
+            return RegularFile.Read(file, size, modifiedAt.UtcDateTime, handle =>
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (ArchivePages.Read(entry, RasterImage.MaxCoverBytes) is { } image && cache.Store(image) is { } digest)
-                {
-                    return new CoverSource(relativePath, size, modifiedAt, entry.FullName, digest);
-                }
-            }
+                if (stamp is not null && RegularFile.ScanStamp(handle) != stamp) return null;
+                using var stream = new FileStream(handle, FileAccess.Read);
+                if (stream.Length != size) return null;
+                using var archive = ArchivePages.Open(stream);
+                if (archive is null) return null;
 
+                var pages = ArchivePages.Entries(archive).ToArray();
+                if (pages.Length == 0) return new ArchiveCoverInspection(null);
+
+                var designated = ComicInfoCover(archive);
+                var candidates = new List<ComicEntry>();
+                if (designated is >= 0 && designated < pages.Length) candidates.Add(pages[designated.Value]);
+                candidates.AddRange(pages.Where(IsNamedCover));
+                candidates.AddRange(pages.Take(24));
+                foreach (var entry in candidates.Distinct())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (ArchivePages.Read(entry, RasterImage.MaxCoverBytes) is { } image && cache.Store(image) is { } digest)
+                        return new ArchiveCoverInspection(new(relativePath, size, modifiedAt, entry.FullName, digest));
+                }
+
+                return null;
+            });
+        }
+        catch (Exception error) when (ArchivePages.IsUnreadable(error))
+        {
             return null;
-        });
+        }
     }
 
     internal static bool IsNamedCover(ComicEntry entry) =>

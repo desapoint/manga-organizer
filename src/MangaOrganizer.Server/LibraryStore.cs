@@ -7,7 +7,7 @@ namespace MangaOrganizer.Server;
 internal sealed record LibraryRoot(Guid Id, string Path);
 internal sealed record LibraryRootStatus(Guid Id, string Path, string State, long FileCount,
     DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks, string? Name, string Kind, bool HasCovers,
-    bool Managed, ScanSnapshot? ScanProgress = null, Guid? IntakeTargetId = null);
+    bool Managed, ScanSnapshot? ScanProgress = null, Guid? IntakeTargetId = null, ScanSnapshot? LastScan = null);
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt,
     string? ContentId, string? Sha256, long? IndexedLocations, string? Volume, string? Chapter, bool HasCover,
     string? SeriesCoverKey, string? SeriesTitle, bool HasSeriesMetadata, string SeriesKey, bool AssociationConfirmed, bool HasSeriesSuggestion,
@@ -71,7 +71,7 @@ internal sealed partial class LibraryStore
 
                     JOIN series_cover_preference pref ON pref.series_id = m.id
                     WHERE file.root_id = r.id
-                ), f.managed, route.target_root
+                ), f.managed, route.target_root, r.last_scan
             FROM library_folder f JOIN library_root r ON r.id = f.root_id
             LEFT JOIN library_intake_target route ON route.source_root = f.root_id
             ORDER BY f.rowid;
@@ -84,7 +84,8 @@ internal sealed partial class LibraryStore
                 row.IsDBNull(4) ? null : row.GetDateTimeOffset(4),
                 row.IsDBNull(5) ? null : row.GetDateTimeOffset(5), row.GetInt64(6),
                 row.IsDBNull(7) ? null : row.GetString(7), row.GetString(8), row.GetBoolean(9), row.GetBoolean(10),
-                IntakeTargetId: row.IsDBNull(11) ? null : row.GetGuid(11)));
+                IntakeTargetId: row.IsDBNull(11) ? null : row.GetGuid(11),
+                LastScan: row.IsDBNull(12) ? null : JsonSerializer.Deserialize<ScanSnapshot>(row.GetString(12))));
         }
         return result;
     }
@@ -232,7 +233,8 @@ internal sealed partial class LibraryStore
                 relative_path TEXT PRIMARY KEY,
                 sha256 BLOB,
                 detected_chapters TEXT,
-                chapter_source TEXT
+                chapter_source TEXT,
+                stamp TEXT
             );
             CREATE TEMP TABLE scan_cover (
                 series_key TEXT PRIMARY KEY,
@@ -245,7 +247,8 @@ internal sealed partial class LibraryStore
             CREATE TEMP TABLE scan_sidecar (
                 series_key TEXT NOT NULL,
                 relative_path TEXT PRIMARY KEY,
-                image_sha BLOB NOT NULL
+                image_sha BLOB NOT NULL,
+                stamp TEXT
             );
             """;
         command.ExecuteNonQuery();
@@ -254,10 +257,10 @@ internal sealed partial class LibraryStore
         var (count, skippedLinks) = StageFiles(database, root.Path, scan, cancellationToken);
         if (count > 0)
         {
-            StageHashes(database, root.Path, scan, cancellationToken);
+            StageHashes(database, root, scan, cancellationToken);
             StageKnownSeries(database, root.Id);
             StageIntakeSplits(database, root.Id);
-            StageCovers(database, root.Path, scan, cancellationToken);
+            StageCovers(database, root, scan, cancellationToken);
         }
         LibraryScanner.RequireRoot(root.Path);
         cancellationToken.ThrowIfCancellationRequested();
@@ -268,7 +271,8 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$id", root.Id);
         command.CommandText = "SELECT file_count FROM library_root WHERE id = $id;";
         var previousCount = (long)command.ExecuteScalar()!;
-        if (count == 0 && previousCount > 0)
+        var published = count != 0 || previousCount == 0;
+        if (!published)
         {
             command.CommandText = "UPDATE library_root SET state = 'emptyReview' WHERE id = $id;";
         }
@@ -287,27 +291,53 @@ internal sealed partial class LibraryStore
                     GROUP BY c.id
                     HAVING COUNT(DISTINCT s.volume_hint) = 1 AND COUNT(DISTINCT h.detected_chapters) = 1
                     ON CONFLICT(content_id) DO NOTHING;
-                INSERT INTO library_file(root_id, relative_path, extension, size, modified_at, content_id, series_key, series_title, volume_hint, chapter_hint)
-                    SELECT $id, s.relative_path, s.extension, s.size, s.modified_at, c.id, s.series_key, s.series_title, s.volume_hint, s.chapter_hint
+                INSERT INTO library_file(root_id, relative_path, extension, size, modified_at, content_id, series_key,
+                    series_title, volume_hint, chapter_hint, scan_stamp, scan_chapters, scan_chapter_source)
+                    SELECT $id, s.relative_path, s.extension, s.size, s.modified_at, c.id, s.series_key, s.series_title,
+                        s.volume_hint, s.chapter_hint, h.stamp, h.detected_chapters, h.chapter_source
                     FROM scan_file s LEFT JOIN scan_hash h ON h.relative_path = s.relative_path
                     LEFT JOIN library_content c ON c.sha256 = h.sha256 WHERE 1
                     ON CONFLICT(root_id, relative_path) DO UPDATE SET
                         extension = excluded.extension, size = excluded.size, modified_at = excluded.modified_at,
                         content_id = excluded.content_id, series_key = excluded.series_key, series_title = excluded.series_title,
-                        volume_hint = excluded.volume_hint, chapter_hint = excluded.chapter_hint;
+                        volume_hint = excluded.volume_hint, chapter_hint = excluded.chapter_hint, scan_stamp = excluded.scan_stamp,
+                        scan_chapters = excluded.scan_chapters, scan_chapter_source = excluded.scan_chapter_source
+                    WHERE (library_file.extension, library_file.size, library_file.modified_at, library_file.content_id,
+                           library_file.series_key, library_file.series_title, library_file.volume_hint, library_file.chapter_hint,
+                           library_file.scan_stamp, library_file.scan_chapters, library_file.scan_chapter_source)
+                        IS NOT (excluded.extension, excluded.size, excluded.modified_at, excluded.content_id, excluded.series_key,
+                                excluded.series_title, excluded.volume_hint, excluded.chapter_hint, excluded.scan_stamp,
+                                excluded.scan_chapters, excluded.scan_chapter_source);
                 DELETE FROM import_file_split WHERE EXISTS (
                     SELECT 1 FROM library_file f WHERE f.id = import_file_split.file_id AND f.root_id = $id
                         AND f.content_id IS NOT import_file_split.content_id);
                 DELETE FROM library_file WHERE root_id = $id AND relative_path NOT IN (SELECT relative_path FROM scan_file);
-                DELETE FROM library_series_cover WHERE root_id = $id;
+                DELETE FROM library_series_cover WHERE root_id = $id AND series_key NOT IN (SELECT series_key FROM scan_cover);
                 INSERT INTO library_series_cover(root_id, series_key, relative_path, size, modified_at, archive_entry, sha256)
-                    SELECT $id, series_key, relative_path, size, modified_at, archive_entry, sha256 FROM scan_cover;
-                DELETE FROM artwork.folder_cover WHERE root_id = $id OR root_id NOT IN (SELECT root_id FROM library_folder);
+                    SELECT $id, series_key, relative_path, size, modified_at, archive_entry, sha256 FROM scan_cover WHERE 1
+                    ON CONFLICT(root_id, series_key) DO UPDATE SET relative_path = excluded.relative_path, size = excluded.size,
+                        modified_at = excluded.modified_at, archive_entry = excluded.archive_entry, sha256 = excluded.sha256
+                    WHERE (library_series_cover.relative_path, library_series_cover.size, library_series_cover.modified_at,
+                           library_series_cover.archive_entry, library_series_cover.sha256)
+                        IS NOT (excluded.relative_path, excluded.size, excluded.modified_at, excluded.archive_entry, excluded.sha256);
+                DELETE FROM artwork.folder_cover WHERE (root_id = $id AND relative_path NOT IN (SELECT relative_path FROM scan_sidecar))
+                    OR root_id NOT IN (SELECT root_id FROM library_folder);
                 INSERT INTO artwork.folder_cover(root_id, series_key, relative_path, image_sha)
-                    SELECT $id, series_key, relative_path, image_sha FROM scan_sidecar;
+                    SELECT $id, series_key, relative_path, image_sha FROM scan_sidecar WHERE 1
+                    ON CONFLICT(root_id, relative_path) DO UPDATE SET series_key = excluded.series_key, image_sha = excluded.image_sha
+                    WHERE (folder_cover.series_key, folder_cover.image_sha) IS NOT (excluded.series_key, excluded.image_sha);
+                DELETE FROM library_sidecar_stamp WHERE (root_id = $id AND relative_path NOT IN (
+                    SELECT relative_path FROM scan_sidecar WHERE stamp IS NOT NULL)) OR root_id NOT IN (SELECT root_id FROM library_folder);
+                INSERT INTO library_sidecar_stamp(root_id, relative_path, stamp)
+                    SELECT $id, relative_path, stamp FROM scan_sidecar WHERE stamp IS NOT NULL
+                    ON CONFLICT(root_id, relative_path) DO UPDATE SET stamp = excluded.stamp WHERE library_sidecar_stamp.stamp <> excluded.stamp;
                 DELETE FROM artwork.archive_cover AS cover WHERE NOT EXISTS (
                     SELECT 1 FROM library_content c JOIN library_file f ON f.content_id = c.id JOIN library_folder folder ON folder.root_id = f.root_id
                     WHERE c.sha256 = cover.archive_sha
+                );
+                DELETE FROM artwork.archive_without_pages AS miss WHERE NOT EXISTS (
+                    SELECT 1 FROM library_content c JOIN library_file f ON f.content_id = c.id JOIN library_folder folder ON folder.root_id = f.root_id
+                    WHERE c.sha256 = miss.archive_sha
                 );
                 DELETE FROM artwork.image WHERE sha256 NOT IN (
                     SELECT image_sha FROM artwork.archive_cover
@@ -315,14 +345,21 @@ internal sealed partial class LibraryStore
                     UNION SELECT cover.sha256 FROM library_series_cover cover JOIN library_folder folder ON folder.root_id = cover.root_id
                 );
                 PRAGMA artwork.incremental_vacuum(128);
-                UPDATE library_root SET state = 'complete', file_count = $count,
-                    last_scanned_at = $now, skipped_links = $skipped WHERE id = $id;
+                """;
+        }
+        command.ExecuteNonQuery();
+        if (published)
+        {
+            command.CommandText = """
+                UPDATE library_root SET state = 'complete', file_count = $count, last_scanned_at = $now,
+                    skipped_links = $skipped, last_scan = $scan WHERE id = $id;
                 """;
             command.Parameters.AddWithValue("$count", count);
             command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);
             command.Parameters.AddWithValue("$skipped", skippedLinks);
+            command.Parameters.AddWithValue("$scan", JsonSerializer.Serialize(scan.Snapshot() with { Phase = "complete" }));
+            command.ExecuteNonQuery();
         }
-        command.ExecuteNonQuery();
         cancellationToken.ThrowIfCancellationRequested();
         transaction.Commit();
     }

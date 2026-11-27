@@ -32,6 +32,9 @@ internal sealed class CoverCache(SqliteConnection database, SqliteTransaction? t
                 image_sha BLOB NOT NULL REFERENCES image(sha256),
                 entry TEXT NOT NULL
             ) WITHOUT ROWID;
+            CREATE TABLE IF NOT EXISTS artwork.archive_without_pages (
+                archive_sha BLOB PRIMARY KEY CHECK (length(archive_sha) = 32)
+            ) WITHOUT ROWID;
             CREATE TABLE IF NOT EXISTS artwork.folder_cover (
                 root_id TEXT NOT NULL,
                 series_key TEXT NOT NULL,
@@ -93,6 +96,15 @@ internal sealed class CoverCache(SqliteConnection database, SqliteTransaction? t
         command.Parameters.AddWithValue("$archive", archiveDigest);
         using var rows = command.ExecuteReader();
         return rows.Read() ? new(path, size, modified, rows.GetString(0), rows.GetFieldValue<byte[]>(1)) : null;
+    }
+
+    public void RememberArchiveWithoutPages(byte[] archiveDigest)
+    {
+        using var command = database.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "INSERT OR IGNORE INTO artwork.archive_without_pages VALUES ($archive);";
+        command.Parameters.AddWithValue("$archive", archiveDigest);
+        command.ExecuteNonQuery();
     }
 
     public void RememberArchive(byte[] archiveDigest, CoverSource cover)
