@@ -42,7 +42,9 @@ class Browser:
         headers = {"X-Setup-Token": setup_token} if setup_token is not None else {}
         if token is not None:
             headers["X-CSRF-Token"] = token
-        if body is not None:
+        if isinstance(body, bytes):
+            headers["Content-Type"] = "application/octet-stream"
+        elif body is not None:
             headers["Content-Type"] = "application/json"
             body = json.dumps(body).encode()
         request = Request(self.url + path, data=body, headers=headers, method=method)
@@ -208,6 +210,9 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE series_cover_preference;
+            DROP TABLE series_release_metadata;
+            DROP TABLE series_identity_alias;
             DROP VIEW library_file_numbered;
             DROP VIEW active_inferred_volume_chapters;
             DROP TABLE import_file_split;
@@ -725,6 +730,28 @@ def verify_external_metadata(executable, fixture):
                 assert tagged["total"] == 1, tagged
                 assert browser.series(root_id, "?includeTag=Doujinshi&includeTag=Adventure")["total"] == 0
                 assert browser.series(root_id, "?search=My+corrected+title&excludeTag=Doujinshi")["total"] == 0
+                personal_tags = [{"name": "Doujinshi", "spoiler": False},
+                                 {"name": " Slow burn ", "spoiler": False},
+                                 {"name": "Quiet ending", "spoiler": False},
+                                 {"name": "quiet ending", "spoiler": True}]
+                expected_tags = [{"name": "Doujinshi", "spoiler": False},
+                                 {"name": "Slow burn", "spoiler": False},
+                                 {"name": "Quiet ending", "spoiler": True}]
+                original_tags = result["providerDetails"]["tags"]
+                change = {**edit, "summary": result["summary"], "tags": personal_tags}
+                browser.request(url + "/metadata", 400, method="PUT", body=change)
+                browser.request(url + "/metadata", 400, method="PUT", token=browser.csrf(),
+                                body={**edit, "tags": [{"name": " ", "spoiler": False}]})
+                saved_tags = json.loads(browser.request(url + "/metadata", 200, method="PUT",
+                                                       token=browser.csrf(), body=change))
+                assert saved_tags["tags"] == expected_tags and saved_tags["hasManualTags"]
+                assert saved_tags["providerDetails"]["tags"] == original_tags
+                assert json.loads(browser.request(f"{LIBRARY_ROOTS}/{root_id}/tags", 200)) == ["Doujinshi", "Slow burn"]
+                assert browser.series(root_id, "?includeTag=slow+burn&view=library")["total"] == 1
+                assert browser.series(root_id, "?search=My+corrected+title&excludeTag=Slow+burn&view=library")["total"] == 0
+                refreshed = json.loads(browser.request(url + "/metadata", 200, method="PUT", token=browser.csrf(),
+                    body={**edit, "providerId": 123, "useEditedFields": True, "summary": result["summary"]}))
+                assert refreshed["tags"] == expected_tags
                 browser.request(f"{LIBRARY_ROOTS}/{root_id}/series?includeTag=Doujinshi&excludeTag=doujinshi", 400)
                 Browser(address).request(collections, 401)
                 browser.request(collections, 400, method="POST", body={"name": "Favorites"})
@@ -766,6 +793,15 @@ def verify_external_metadata(executable, fixture):
                 assert json.loads(browser.request(f"{collections}/{manual['id']}/series", 200))["total"] == 0
                 browser.request(f"{collections}/{manual['id']}", 204, method="DELETE", token=browser.csrf())
                 assert browser.series(root_id, "?includeTag=doujinshi")["total"] == 1
+                stored = json.loads(browser.request(url + "/details?published=true", 200))["metadata"]
+                assert stored["tags"] == expected_tags
+                assert json.loads(browser.request(f"{collections}/tags", 200)) == ["Doujinshi", "Slow burn"]
+                cleared = json.loads(browser.request(url + "/metadata?published=true", 200, method="PUT", token=browser.csrf(),
+                    body={**edit, "tags": []}))
+                assert cleared["tags"] == [] and cleared["hasManualTags"]
+                restored = json.loads(browser.request(url + "/metadata?published=true", 200, method="PUT", token=browser.csrf(),
+                    body={**edit, "useProviderTags": True}))
+                assert restored["tags"] == original_tags and not restored.get("hasManualTags")
         finally:
             service.shutdown()
             server.join(timeout=5)
@@ -784,8 +820,14 @@ def verify_same_provider_group(browser, root, path):
     urls = [f"{LIBRARY_ROOTS}/{root}/series/{key}" for key in keys]
     progress = {"chapter": "2", "volume": "2", "completed": True}
     browser.request(urls[1] + "/chapter-progress", 204, method="PUT", token=browser.csrf(), body=progress)
-    for url in urls:
-        browser.request(url + "/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 789})
+    browser.request(urls[0] + "/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 789})
+    customized = {"title": "Shared work fixture revised", "summary": "Preserved catalog description", "kind": "manga",
+                  "totalChapters": 4, "totalVolumes": 2}
+    saved = json.loads(browser.request(urls[0] + "/metadata", 200, method="PUT", token=browser.csrf(), body=customized))
+    attached = json.loads(browser.request(urls[1] + "/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 789}))
+    assert attached == saved and attached["providerId"] == 789
+    picker = json.loads(browser.request("/api/file-associations/series?search=Shared+work+fixture&limit=1", 200))
+    assert picker["total"] == 1 and picker["items"][0]["title"] == customized["title"]
     (card,) = browser.series(root, "?view=library&search=Shared+work+fixture")["items"]
     assert card["fileCount"] == 2 and card["key"] in keys and card["hasCover"]
     browser.request(f"{LIBRARY_ROOTS}/{root}/series/{card['coverSeriesKey']}/cover", 200)
@@ -807,6 +849,95 @@ def verify_same_provider_group(browser, root, path):
                     token=browser.csrf(), body={**progress, "completed": False})
     details = json.loads(browser.request(urls[1] + "/details?published=true", 200))
     assert details["readCatalogChapters"] == 0 and details["readChapters"] == 0
+
+    other_file = next(file for file in indexed.values() if file["seriesKey"] != card["key"])
+    canonical = f"{LIBRARY_ROOTS}/{root}/series/{card['key']}"
+    identity = other_file["contentId"]
+    coverage = canonical + "/coverage"
+    browser.request(f"{coverage}?contentId={identity}", 404)
+    assert json.loads(browser.request(f"{coverage}?contentId={identity}&published=true", 200)) == []
+    change = {"contentId": identity, "volume": "7", "chapters": ["5", "5.5"]}
+    browser.request(coverage + "?published=true", 400, method="PUT", body=change)
+    browser.request(coverage + "?published=true", 204, method="PUT", token=browser.csrf(), body=change)
+    (assigned,) = browser.files(root, f"?view=library&seriesKey={card['key']}&volume=7")["items"]
+    assert assigned["contentId"] == identity and assigned["volume"] == "7"
+    if other_file["volume"]:
+        assert browser.files(root, f"?view=library&seriesKey={card['key']}&volume={other_file['volume']}")["total"] == 0
+    volumes = json.loads(browser.request(canonical + "/volume-releases?published=true&volume=7", 200))
+    assert [release["contentId"] for release in volumes] == [identity]
+    for label in ("5", "5.5"):
+        releases = json.loads(browser.request(canonical + f"/chapter-releases?published=true&volume=7&chapter={label}", 200))
+        assert [release["contentId"] for release in releases] == [identity]
+
+    chapter_url = "/release-metadata?volume=7&chapter=5.5"
+    volume_url = "/release-metadata?volume=7"
+    chapter_details = {"title": "The Turning Point", "summary": "Kept once for all releases."}
+    volume_details = {"title": "Collected edition", "summary": None}
+    browser.request(urls[0] + chapter_url, 400, method="PUT", body=chapter_details)
+    browser.request(urls[0] + chapter_url, 204, method="PUT", token=browser.csrf(), body=chapter_details)
+    browser.request(urls[1] + volume_url, 204, method="PUT", token=browser.csrf(), body=volume_details)
+    assert json.loads(browser.request(urls[1] + chapter_url, 200)) == chapter_details
+    assert json.loads(browser.request(urls[0] + volume_url, 200)) == volume_details
+    matching = json.loads(browser.request(urls[1] + "/chapters?published=true&search=turning", 200))
+    assert matching["total"] == 1 and matching["items"][0]["title"] == chapter_details["title"]
+    details = json.loads(browser.request(urls[0] + "/details?published=true", 200))
+    assert details["volumeTitles"] == {"7": volume_details["title"]}
+
+    choices = json.loads(browser.request(canonical + "/cover-options?published=true&limit=1", 200))
+    assert choices["total"] == 2 and len(choices["items"]) == 1
+    page = json.loads(browser.request(canonical + "/cover-options?published=true&limit=1&offset=1", 200))
+    chosen = page["items"][0]
+    assert choices["items"][0]["id"] != chosen["id"]
+    image_url = canonical + f"/cover-options/{chosen['id']}?published=true"
+    selected = browser.request(image_url, 200)
+    browser.request(canonical + "/cover-preference?published=true", 204, method="PUT", token=browser.csrf(),
+                    body={"candidateId": chosen["id"]})
+    assert all(browser.request(url + "/cover", 200) == selected for url in urls)
+    browser.scan(root)
+    assert browser.request(canonical + "/cover", 200) == selected
+    upload = canonical + "/cover-upload?published=true"
+    image = synthetic_png(68, 90, 150, width=31, height=47)
+    browser.request(upload, 400, method="PUT", body=image)
+    browser.request(upload, 400, method="PUT", token=browser.csrf(), body=b"Not an image" * 4)
+    browser.request(upload, 204, method="PUT", token=browser.csrf(), body=image)
+    for url in urls:
+        assert webp_dimensions(browser.request(url + "/cover", 200)) == (31, 47)
+    browser.request("/api/maintenance/artwork-cache/clear", 200, method="POST", token=browser.csrf())
+    assert webp_dimensions(browser.request(canonical + "/cover", 200)) == (31, 47)
+    browser.scan(root)
+    browser.request(canonical + "/cover-preference?published=true", 204, method="DELETE", token=browser.csrf())
+    options = json.loads(browser.request(canonical + "/cover-options?published=true", 200))
+    assert options["preferredLabel"] is None and webp_dimensions(browser.request(canonical + "/cover", 200)) != (31, 47)
+
+    new = path / "Separate attachment fixture Ch.9.cbz"
+    with ZipFile(new, "w") as archive:
+        archive.writestr("01.png", synthetic_png(9, 90, 150))
+    browser.scan(root)
+    (new_file,) = browser.files(root, "?search=Separate+attachment+fixture")["items"]
+    association = f"/api/file-associations/{root}/files/{new_file['id']}"
+    args = {"contentId": new_file["contentId"], "seriesKey": new_file["seriesKey"], "metadataId": picker["items"][0]["id"]}
+    preview = json.loads(browser.request(association + "/preview", 200, method="POST", token=browser.csrf(), body=args))
+    browser.request(association, 204, method="PUT", token=browser.csrf(), body=dict(args, revision=preview["revision"]))
+    browser.scan(root)
+    (card,) = browser.series(root, "?view=library&search=Shared+work+fixture")["items"]
+    assert card["fileCount"] == 3
+    assert json.loads(browser.request(canonical + "/details?published=true", 200))["metadata"] == saved
+
+    secondary = next(item["id"] for item in browser.roots() if item["id"] != root)
+    name = "Remote folder fixture Ch.10.cbz"
+    with ZipFile(path.parent / "archive" / name, "w") as archive:
+        archive.writestr("01.png", synthetic_png(47, 90, 101))
+    browser.scan(secondary)
+    (peer,) = browser.series(secondary, "?search=Remote+folder+fixture")["items"]
+    peer_url = f"{LIBRARY_ROOTS}/{secondary}/series/{peer['key']}"
+    assert json.loads(browser.request(peer_url + "/metadata", 200, method="PUT", token=browser.csrf(),
+                                      body={"providerId": 789})) == saved
+    assert json.loads(browser.request(peer_url + chapter_url, 200)) == chapter_details
+    gallery = json.loads(browser.request(canonical + "/cover-options?published=true", 200))
+    (remote_cover,) = [item for item in gallery["items"] if item["label"] == name]
+    browser.request(canonical + "/cover-preference?published=true", 204, method="PUT", token=browser.csrf(),
+                    body={"candidateId": remote_cover["id"]})
+    assert browser.request(canonical + "/cover", 200) == browser.request(peer_url + "/cover", 200)
 
 
 def verify_reader(owner, peer, root_id, path):
@@ -1262,7 +1393,9 @@ def verify_numbered_and_manual_intake_groups(owner, root, path):
     files = owner.files(root, "?seriesKey=" + group["key"])["items"]
     assert [file["chapter"] for file in files] == ["1", "2"] and all(not file["associationConfirmed"] for file in files)
     metadata = f"{LIBRARY_ROOTS}/{root}/series/{group['key']}/metadata"
-    owner.request(metadata, 200, method="PUT", token=owner.csrf(), body={"title": "Frost Path", "kind": "doujin"})
+    local_tags = [{"name": "Winter", "spoiler": False}, {"name": "Frozen clue", "spoiler": True}]
+    owner.request(metadata, 200, method="PUT", token=owner.csrf(),
+                  body={"title": "Frost Path", "kind": "doujin", "tags": local_tags})
     (published,) = owner.series(root, "?view=library&search=Frost+Path")["items"]
     assert published["fileCount"] == 2 and "aniList" not in published
 
@@ -1276,7 +1409,11 @@ def verify_numbered_and_manual_intake_groups(owner, root, path):
     })
     appended = owner.files(root, "?view=library&seriesKey=" + group["key"])["items"]
     assert [file["chapter"] for file in appended] == ["1", "2", "3"]
-    assert json.loads(owner.request(metadata.rsplit("/", 1)[0] + "/details?published=true", 200))["metadata"]["kind"] == "doujin"
+    details = json.loads(owner.request(metadata.rsplit("/", 1)[0] + "/details?published=true", 200))["metadata"]
+    assert details["kind"] == "doujin" and details["tags"] == local_tags
+    tags = json.loads(owner.request(f"{LIBRARY_ROOTS}/{root}/tags", 200))
+    assert "Winter" in tags and "Frozen clue" not in tags
+    assert owner.series(root, "?view=library&search=Frost+Path&includeTag=winter")["total"] == 1
     owner.request(route, 409, method="POST", token=owner.csrf(),
                   body={"seriesKeys": [group["key"], key], "title": "New title"})
     for name in releases:

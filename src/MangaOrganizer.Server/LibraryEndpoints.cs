@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace MangaOrganizer.Server;
 
 internal sealed record IntakeTargetChange(Guid? TargetRoot);
-internal sealed record IntakeGroupChange(string[]? SeriesKeys, string? Title, string? TargetSeriesKey, bool Confirm, string? Kind);
+internal sealed record IntakeGroupChange(string[]? SeriesKeys, string? Title, string? TargetSeriesKey, bool Confirm, string? Kind, SeriesTag?[]? Tags = null);
 
 internal static class LibraryEndpoints
 {
@@ -12,6 +12,7 @@ internal static class LibraryEndpoints
     {
         var library = api.MapGroup("/library/roots").RequireAuthorization();
         library.MapSeriesMetadata();
+        library.MapSeriesCovers();
         library.MapChapterEditions();
         api.MapCollections();
         library.MapGet("", (LibraryStore store, LibraryScanQueue scans) => Results.Ok(store.ReadRoots()
@@ -98,15 +99,20 @@ internal static class LibraryEndpoints
             if (selected.Length != keys.Length || (target is null && string.IsNullOrEmpty(title))
                 || (target is not null && !selected.Contains(target, StringComparer.Ordinal))) return Results.BadRequest();
 
-            var error = store.GroupIntakeSeries(id, selected, title ?? "", target, change.Confirm, change.Kind ?? "manga");
+            if (!SeriesTag.TryNormalize(change.Tags, out var tags))
+                return Results.BadRequest(new { message = SeriesTag.InvalidMessage });
+            if (tags is not null && (!change.Confirm || target is not null)) return Results.BadRequest();
+
+            var error = store.GroupIntakeSeries(id, selected, title ?? "", target, change.Confirm, change.Kind ?? "manga", tags);
             return error is null ? Results.NoContent() : Results.Conflict(new { message = error });
-        }).WithMetadata(new RequestSizeLimitAttribute(8192));
+        }).WithMetadata(new RequestSizeLimitAttribute(128 * 1024));
 
         library.MapGet("/{id:guid}/tags", (Guid id, LibraryStore store) =>
             store.TryGetRoot(id, out _) ? Results.Ok(store.ReadSeriesTags(id)) : Results.NotFound());
 
         library.MapGet("/{id:guid}/series/{seriesKey}/cover", (Guid id, string seriesKey, LibraryStore store, HttpContext context) =>
-            IsSeriesKey(seriesKey) ? CoverResult(context, store.ReadCover(id, seriesKey.ToLowerInvariant())) : Results.NotFound());
+            IsSeriesKey(seriesKey) && store.ReadCover(id, seriesKey.ToLowerInvariant()) is { } cover
+                ? SeriesCoverResult(context, cover) : Results.NotFound());
 
         library.MapGet("/{id:guid}/files/{fileId}/cover", (Guid id, string fileId, LibraryStore store, HttpContext context) =>
         {
@@ -134,7 +140,15 @@ internal static class LibraryEndpoints
     private static bool IsCatalogView(string? view) =>
         view is null or "all" or "library" or "attention" or "unassociated" or "association" or "series" or "metadata" or "cover" or "close";
 
-    private static IResult CoverResult(HttpContext context, byte[]? cover)
+    private static IResult SeriesCoverResult(HttpContext context, SeriesCoverPicture cover)
+    {
+        if (cover.ProviderUrl is not { } url) return CoverResult(context, cover.Data);
+        context.Response.Headers.CacheControl = "private, max-age=120";
+        context.Response.Headers["Referrer-Policy"] = "no-referrer";
+        return Results.Redirect(url);
+    }
+
+    internal static IResult CoverResult(HttpContext context, byte[]? cover)
     {
         if (cover is null) return Results.NotFound();
         context.Response.Headers.CacheControl = "private, max-age=120";

@@ -5,6 +5,7 @@ import { getCsrfToken } from './api';
 import type { Series } from './CatalogInventory';
 import { ROOTS_URL } from './library';
 import { Select } from './Select';
+import { draftForTags, SeriesTagFields, tagsFromDraft } from './SeriesTags';
 import { Button, Modal } from './ui';
 
 const kinds = [{ value: 'manga', label: 'Manga' }, { value: 'doujin', label: 'Doujin' }] as const;
@@ -19,6 +20,7 @@ export function IntakeGroupingDialog({ rootId, series, onClose, onSaved, onSigne
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<'manga' | 'doujin'>('manga');
   const [confirm, setConfirm] = useState(false);
+  const [tags, setTags] = useState(() => draftForTags([]));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const saved = series.filter(item => item.hasMetadata);
@@ -29,11 +31,12 @@ export function IntakeGroupingDialog({ rootId, series, onClose, onSaved, onSigne
     setBusy(true);
     setError('');
     try {
+      const manualTags = confirm && !target ? tagsFromDraft(tags) : [];
       const response = await fetch(ROOTS_URL + '/' + rootId + '/group-series', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
         body: JSON.stringify({ seriesKeys: series.map(item => item.key), title: title.trim(), kind,
-          targetSeriesKey: target?.key, confirm }),
+          targetSeriesKey: target?.key, confirm, tags: manualTags.length > 0 ? manualTags : undefined }),
       });
       if (response.status === 401) return onSignedOut();
       if (!response.ok) {
@@ -63,7 +66,10 @@ export function IntakeGroupingDialog({ rootId, series, onClose, onSaved, onSigne
           <input type="checkbox" checked={confirm} onChange={event => setConfirm(event.target.checked)} />
           {target ? 'Confirm the selected files for this series' : 'Confirm with manual metadata'}
         </label>
-        {confirm && !target && <Select label="Publication type" value={kind} onChange={setKind} options={kinds} />}
+        {confirm && !target && <>
+          <Select label="Publication type" value={kind} onChange={setKind} options={kinds} />
+          <SeriesTagFields draft={tags} onChange={setTags} disabled={busy} />
+        </>}
         {!target && <p className="m-0 text-sm text-muted">You can link the grouped series to AniList from its Import row.</p>}
         {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
         <Button type="submit" icon={Group} className="justify-self-start" disabled={busy || (!target && !title.trim())}>

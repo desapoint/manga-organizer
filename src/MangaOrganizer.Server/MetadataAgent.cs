@@ -19,8 +19,7 @@ internal sealed record MetadataMatch(int ProviderId, string Title, string? Alter
 }
 
 internal sealed record AniListDetails(string? CoverUrl, string? Format, string? CountryOfOrigin, int? StartYear, int? EndYear,
-    string[] Genres, AniListTag[] Tags, AniListCredit[] Credits);
-internal sealed record AniListTag(string Name, bool Spoiler);
+    string[] Genres, SeriesTag[] Tags, AniListCredit[] Credits);
 internal sealed record AniListCredit(string Name, string? Role);
 
 internal sealed class MetadataLookupException(string message, DateTimeOffset? retryAt = null) : Exception(message)
@@ -155,7 +154,7 @@ internal sealed partial class MetadataAgent : IDisposable
         var doujin = allTags.Any(tag => string.Equals(tag.Name, "Doujinshi", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(tag.Name, "Doujin", StringComparison.OrdinalIgnoreCase));
         var tags = allTags.Where(tag => !string.IsNullOrWhiteSpace(tag.Name))
-            .Select(tag => new AniListTag(Truncate(tag.Name, 100)!, tag.IsMediaSpoiler == true || tag.IsGeneralSpoiler == true))
+            .Select(tag => new SeriesTag(Truncate(tag.Name, 100)!, tag.IsMediaSpoiler == true || tag.IsGeneralSpoiler == true))
             .DistinctBy(tag => tag.Name, StringComparer.OrdinalIgnoreCase).Take(64).ToArray();
         var credits = (media.Staff?.Edges ?? []).OfType<ProviderCredit>().Where(credit => !string.IsNullOrWhiteSpace(credit.Node?.Name?.Full))
             .Select(credit => new AniListCredit(Truncate(credit.Node?.Name?.Full, 150)!, Truncate(credit.Role, 100)))
@@ -187,7 +186,7 @@ internal sealed partial class MetadataAgent : IDisposable
     [GeneratedRegex(@"</?(?:p|i|b|em|strong|u|s|del|sup|sub)\s*>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex DescriptionFormatting();
 
-    private static string? CoverUrl(string? value)
+    internal static string? CoverUrl(string? value)
     {
         return value is { Length: <= 2048 } && Uri.TryCreate(value, UriKind.Absolute, out var url) &&
             url.Scheme == Uri.UriSchemeHttps && url.IsDefaultPort && url.UserInfo.Length == 0 &&

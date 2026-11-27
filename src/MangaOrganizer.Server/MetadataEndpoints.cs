@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace MangaOrganizer.Server;
 
 internal sealed record MetadataChange(int? ProviderId, string? Title, string? Kind, string? AlternateTitle, string? Summary,
-    string? Status, int? TotalChapters, int? TotalVolumes, bool UseEditedFields = false);
+    string? Status, int? TotalChapters, int? TotalVolumes, bool UseEditedFields = false, SeriesTag?[]? Tags = null, bool UseProviderTags = false);
 internal sealed record CoverageChange(string? ContentId, string? Volume, string[]? Chapters, bool WholeVolume = false);
 internal sealed record AssociationConfirmation(string? FileId, string? ContentId);
 
@@ -19,9 +19,9 @@ internal static class MetadataEndpoints
             return LibraryEndpoints.IsSeriesKey(seriesKey) && store.ReadSeriesDetails(root, seriesKey.ToLowerInvariant(), owner, published == true) is { } details
                 ? Results.Ok(details) : Results.NotFound();
         });
-        series.MapGet("/coverage", (Guid root, string seriesKey, string? contentId, LibraryStore store) =>
+        series.MapGet("/coverage", (Guid root, string seriesKey, string? contentId, bool? published, LibraryStore store) =>
             LibraryEndpoints.IsSeriesKey(seriesKey) && IsContentId(contentId) &&
-                store.ReadCoverage(root, seriesKey.ToLowerInvariant(), contentId!.ToLowerInvariant()) is { } coverage
+                store.ReadCoverage(root, seriesKey.ToLowerInvariant(), contentId!.ToLowerInvariant(), published == true) is { } coverage
                 ? Results.Ok(coverage) : Results.NotFound());
         series.MapPost("/association", async (Guid root, string seriesKey, AssociationConfirmation change, LibraryStore store,
             HttpContext context, IAntiforgery antiforgery) =>
@@ -47,7 +47,7 @@ internal static class MetadataEndpoints
             if (string.IsNullOrWhiteSpace(title) || title.Length > 300) return Results.BadRequest();
             try
             {
-                return Results.Ok(await agent.Search(title.Trim(), cancellationToken));
+                return Results.Ok((await agent.Search(title.Trim(), cancellationToken)).Select(match => match.ToMetadata()).ToArray());
             }
             catch (MetadataLookupException error)
             {
@@ -75,6 +75,9 @@ internal static class MetadataEndpoints
             if (!LibraryEndpoints.IsSeriesKey(seriesKey) || !store.TryGetRoot(root, out _)) return Results.NotFound();
             if (change.Kind is not (null or "manga" or "doujin")) return Results.BadRequest();
 
+            if (!SeriesTag.TryNormalize(change.Tags, out var tags) || change.UseProviderTags && tags is not null)
+                return Results.BadRequest(new { message = SeriesTag.InvalidMessage });
+
             SeriesMetadata? edited = null;
             if (change.ProviderId is null || change.UseEditedFields)
             {
@@ -90,10 +93,16 @@ internal static class MetadataEndpoints
             }
 
             SeriesMetadata metadata;
+            var linkOnly = change.ProviderId is not null && !change.UseEditedFields;
             if (change.ProviderId is { } providerId)
             {
                 if (providerId <= 0) return Results.BadRequest();
-                try
+                var linked = linkOnly ? store.ReadLinkedProviderMetadata(providerId) : null;
+                if (linked is not null)
+                {
+                    metadata = linked;
+                }
+                else try
                 {
                     var match = await agent.Read(providerId, cancellationToken);
                     if (match is null) return Results.NotFound();
@@ -110,10 +119,13 @@ internal static class MetadataEndpoints
                 metadata = edited!;
             }
 
-            return store.SaveMetadata(root, seriesKey.ToLowerInvariant(), metadata, published == true) is { } saved ? Results.Ok(saved) : Results.NotFound();
-        }).WithMetadata(new RequestSizeLimitAttribute(32 * 1024));
+            if (tags is not null) metadata = metadata with { ManualTags = tags };
+            return store.SaveMetadata(root, seriesKey.ToLowerInvariant(), metadata, published == true, change.UseProviderTags,
+                linkOnly) is { } saved
+                ? Results.Ok(saved) : Results.NotFound();
+        }).WithMetadata(new RequestSizeLimitAttribute(128 * 1024));
 
-        series.MapPut("/coverage", async (Guid root, string seriesKey, CoverageChange change, LibraryStore store,
+        series.MapPut("/coverage", async (Guid root, string seriesKey, CoverageChange change, bool? published, LibraryStore store,
             HttpContext context, IAntiforgery antiforgery) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context)) return Results.BadRequest();
@@ -130,7 +142,7 @@ internal static class MetadataEndpoints
 
             var distinct = chapters.Select(BookNumbers.Canonical).Distinct(StringComparer.Ordinal).ToArray();
             return store.SaveCoverage(root, seriesKey.ToLowerInvariant(), change.ContentId!.ToLowerInvariant(),
-                volume.Length == 0 ? "" : BookNumbers.Canonical(volume), distinct, change.WholeVolume) ? Results.NoContent() : Results.NotFound();
+                volume.Length == 0 ? "" : BookNumbers.Canonical(volume), distinct, change.WholeVolume, published == true) ? Results.NoContent() : Results.NotFound();
         }).WithMetadata(new RequestSizeLimitAttribute(16 * 1024));
     }
 

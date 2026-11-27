@@ -2,24 +2,31 @@ namespace MangaOrganizer.Server;
 
 internal sealed partial class LibraryStore
 {
-    // A title guess or another file's metadata does not confirm this file's association.
-    private const string ConfirmedSeries = """
-        EXISTS (SELECT 1 FROM content_metadata link JOIN series_metadata metadata ON metadata.id = link.metadata_id
-            WHERE link.content_id = f.content_id AND metadata.series_key = f.series_key)
+    private static string LinkedSeriesScope(string file, string metadata) => $$"""
+        ({{metadata}}.series_key = {{file}}.series_key OR EXISTS (
+            SELECT 1 FROM series_metadata_binding alias WHERE alias.root_id = {{file}}.root_id
+                AND alias.series_key = {{file}}.series_key AND alias.metadata_id = {{metadata}}.id
+        ))
         """;
 
-    private const string LibraryVisibility = """
+    // A title guess or another file's metadata does not confirm this file's association.
+    private static string ConfirmedSeries => """
+        EXISTS (SELECT 1 FROM content_metadata link JOIN series_metadata metadata ON metadata.id = link.metadata_id
+            WHERE link.content_id = f.content_id AND
+        """ + " " + LinkedSeriesScope("f", "metadata") + ")";
+
+    private static string LibraryVisibility => """
          AND EXISTS (SELECT 1 FROM library_folder role WHERE role.root_id = f.root_id AND role.kind IN ('library', 'both'))
          AND
         """ + " " + ConfirmedSeries;
 
-    private const string MissingMetadata = """
+    private static string MissingMetadata => """
         NOT EXISTS (SELECT 1 FROM series_metadata_binding binding WHERE binding.root_id = f.root_id AND binding.series_key = f.series_key)
         AND 1 <> (
             SELECT COUNT(DISTINCT link.metadata_id) FROM library_file peer JOIN content_metadata link ON link.content_id = peer.content_id
-            JOIN series_metadata metadata ON metadata.id = link.metadata_id AND metadata.series_key = f.series_key
-            WHERE peer.root_id = f.root_id AND peer.series_key = f.series_key)
-        """;
+            JOIN series_metadata metadata ON metadata.id = link.metadata_id
+            WHERE peer.root_id = f.root_id AND peer.series_key = f.series_key AND
+        """ + " " + LinkedSeriesScope("peer", "metadata") + ")";
 
     private const string MissingCover = """
         NOT EXISTS (SELECT 1 FROM library_series_cover cover WHERE cover.root_id = f.root_id AND cover.series_key = f.series_key)

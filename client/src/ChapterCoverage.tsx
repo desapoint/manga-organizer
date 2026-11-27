@@ -3,8 +3,9 @@ import type { FormEvent } from 'react';
 import { getCsrfToken } from './api';
 import { Button } from './ui';
 
-export function ChapterCoverage({ url, contentId, volumeHint, chapterHint, onSaved, onSignedOut }: {
+export function ChapterCoverage({ url, contentId, volumeHint, chapterHint, onSaved, onSignedOut, published = false }: {
   url: string; contentId: string; volumeHint: string | null; chapterHint: string | null; onSaved: () => void; onSignedOut: () => void;
+  published?: boolean;
 }) {
   const [start, setStart] = useState<{ volume: string; chapters: string; source?: string } | null>(null);
   const [error, setError] = useState('');
@@ -14,7 +15,7 @@ export function ChapterCoverage({ url, contentId, volumeHint, chapterHint, onSav
   useEffect(() => {
     const request = new AbortController();
     async function load() {
-      const response = await fetch(url + '?' + new URLSearchParams({ contentId }), { signal: request.signal });
+      const response = await fetch(url + '?' + new URLSearchParams({ contentId, published: String(published) }), { signal: request.signal });
       if (response.status === 401) return onSignedOut();
       if (!response.ok) throw new Error();
       const chapters = await response.json() as { volume: string | null; chapter: string; source?: string }[];
@@ -24,7 +25,7 @@ export function ChapterCoverage({ url, contentId, volumeHint, chapterHint, onSav
     }
     void load().catch(() => { if (!request.signal.aborted) setError('Could not load chapter coverage.'); });
     return () => request.abort();
-  }, [url, contentId, volumeHint, chapterHint, onSignedOut]);
+  }, [url, contentId, volumeHint, chapterHint, onSignedOut, published]);
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,7 +36,7 @@ export function ChapterCoverage({ url, contentId, volumeHint, chapterHint, onSav
     setError('');
     setSaved(false);
     try {
-      const response = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
+      const response = await fetch(url + (published ? '?published=true' : ''), { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
         body: JSON.stringify({ contentId, volume, chapters, wholeVolume: volume.length > 0 && chapters.length === 0 }) });
       if (response.status === 401) return onSignedOut();
       if (!response.ok) {

@@ -52,6 +52,16 @@ internal sealed class CoverCache(SqliteConnection database, SqliteTransaction? t
         command.Parameters.AddWithValue("$digest", digest);
         if (command.ExecuteScalar() is not null) return digest;
 
+        var encoded = Encode(image);
+        if (encoded is null) return null;
+        command.CommandText = "INSERT OR IGNORE INTO artwork.image(sha256, data) VALUES ($digest, $data);";
+        command.Parameters.AddWithValue("$data", encoded);
+        command.ExecuteNonQuery();
+        return digest;
+    }
+
+    public static byte[]? Encode(RasterImage image)
+    {
         using var bitmap = SKBitmap.Decode(image.Bytes);
         if (bitmap is null) return null;
         var scale = Math.Min(1d, (double)MaxEdge / Math.Max(bitmap.Width, bitmap.Height));
@@ -60,12 +70,7 @@ internal sealed class CoverCache(SqliteConnection database, SqliteTransaction? t
         using var resized = scale < 1 ? bitmap.Resize(size, new SKSamplingOptions(SKCubicResampler.Mitchell)) : null;
         if (scale < 1 && resized is null) return null;
         using var encoded = (resized ?? bitmap).Encode(SKEncodedImageFormat.Webp, 88);
-        if (encoded is null) return null;
-
-        command.CommandText = "INSERT OR IGNORE INTO artwork.image(sha256, data) VALUES ($digest, $data);";
-        command.Parameters.AddWithValue("$data", encoded.ToArray());
-        command.ExecuteNonQuery();
-        return digest;
+        return encoded?.ToArray();
     }
 
     public byte[]? Read(byte[] digest)

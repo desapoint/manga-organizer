@@ -65,9 +65,10 @@ internal sealed partial class LibraryStore
             return false;
 
         command.Parameters.AddWithValue("$target", plan.Key);
+        command.Parameters.AddWithValue("$targetId", plan.Preview.Target.Id);
         command.Parameters.AddWithValue("$title", plan.Preview.Target.Title);
         command.CommandText = """
-            INSERT INTO content_metadata(content_id, metadata_id) VALUES ($content, $metadata)
+            INSERT INTO content_metadata(content_id, metadata_id) VALUES ($content, $targetId)
             ON CONFLICT (content_id) DO UPDATE SET metadata_id = excluded.metadata_id;
             DELETE FROM import_file_split WHERE content_id = $content;
             UPDATE library_file SET series_key = $target, series_title = $title
@@ -116,7 +117,7 @@ internal sealed partial class LibraryStore
 
         command.CommandText = """
             SELECT m.id, m.title, m.alternate_title, m.kind, m.provider_id, m.series_key, m.updated_at
-            """ + AvailableAssociationSeries + " AND m.id = $metadata;";
+            """ + AvailableAssociationSeries + " AND m.id = COALESCE((SELECT series_id FROM series_identity_alias WHERE previous_id = $metadata), $metadata);";
         AssociationSeries target;
         string key;
         string updated;
@@ -129,6 +130,7 @@ internal sealed partial class LibraryStore
         }
 
         command.Parameters.AddWithValue("$targetKey", key);
+        command.Parameters.AddWithValue("$chosenId", target.Id);
         command.CommandText = """
             WITH affected AS (
                 SELECT DISTINCT f.root_id FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
@@ -136,10 +138,10 @@ internal sealed partial class LibraryStore
             )
             SELECT EXISTS(
                 SELECT 1 FROM affected a JOIN series_metadata_binding b ON b.root_id = a.root_id
-                WHERE b.series_key = $targetKey AND b.metadata_id <> $metadata
+                WHERE b.series_key = $targetKey AND b.metadata_id <> $chosenId
                 UNION ALL
                 SELECT 1 FROM affected a JOIN library_file f ON f.root_id = a.root_id JOIN content_metadata cm ON cm.content_id = f.content_id
-                WHERE f.series_key = $targetKey AND f.content_id <> $content AND cm.metadata_id <> $metadata
+                WHERE f.series_key = $targetKey AND f.content_id <> $content AND cm.metadata_id <> $chosenId
             );
             """;
         if ((long)command.ExecuteScalar()! != 0) return null;

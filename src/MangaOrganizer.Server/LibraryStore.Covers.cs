@@ -36,21 +36,23 @@ internal sealed partial class LibraryStore
         return cleared;
     }
 
-    public byte[]? ReadCover(Guid rootId, string seriesKey)
+    public SeriesCoverPicture? ReadCover(Guid rootId, string seriesKey)
     {
         using var database = OpenCoverDatabase();
         using var command = database.CreateCommand();
+        command.Parameters.AddWithValue("$root", rootId);
+        command.Parameters.AddWithValue("$series", seriesKey);
+        if (GroupExists(command) && ReadPreferredCover(command) is { } preferred) return preferred;
+
         command.CommandText = """
             SELECT folder.path, cover.relative_path, cover.size, cover.modified_at, cover.archive_entry, cover.sha256, image.data
             FROM library_series_cover cover JOIN library_folder folder ON folder.root_id = cover.root_id
             LEFT JOIN artwork.image image ON image.sha256 = cover.sha256
-            WHERE cover.root_id = $id AND cover.series_key = $seriesKey;
+            WHERE cover.root_id = $root AND cover.series_key = $series;
             """;
-        command.Parameters.AddWithValue("$id", rootId);
-        command.Parameters.AddWithValue("$seriesKey", seriesKey);
         using var rows = command.ExecuteReader();
         if (!rows.Read()) return null;
-        if (!rows.IsDBNull(6)) return rows.GetFieldValue<byte[]>(6);
+        if (!rows.IsDBNull(6)) return new(rows.GetFieldValue<byte[]>(6), null);
 
         // Populate older series cover records on their first request after an upgrade.
         var path = rows.GetString(0);
@@ -58,7 +60,8 @@ internal sealed partial class LibraryStore
             rows.IsDBNull(4) ? null : rows.GetString(4), rows.GetFieldValue<byte[]>(5));
         rows.Close();
         var cache = new CoverCache(database);
-        return CoverArt.Read(path, source) is { } original && cache.Store(original) is { } digest ? cache.Read(digest) : null;
+        return CoverArt.Read(path, source) is { } original && cache.Store(original) is { } digest
+            && cache.Read(digest) is { } data ? new(data, null) : null;
     }
 
     public byte[]? ReadFileCover(Guid rootId, string fileId)

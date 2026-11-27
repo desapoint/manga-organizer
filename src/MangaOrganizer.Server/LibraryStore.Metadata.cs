@@ -6,42 +6,46 @@ using Microsoft.Data.Sqlite;
 namespace MangaOrganizer.Server;
 
 internal sealed record SeriesMetadata(string Title, string Kind, string? AlternateTitle, string? Summary, string? Status,
-    int? TotalChapters, int? TotalVolumes, int? ProviderId, AniListDetails? ProviderDetails)
+    int? TotalChapters, int? TotalVolumes, int? ProviderId, AniListDetails? ProviderDetails,
+    [property: JsonIgnore] SeriesTag[]? ManualTags = null)
 {
+    public SeriesTag[] Tags => ManualTags ?? ProviderDetails?.Tags ?? [];
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool HasManualTags => ManualTags is not null;
     public string? ProviderUrl => ProviderId is { } id ? MetadataAgent.ListingUrl(id) : null;
 }
 internal sealed record SeriesChapter(string? Volume, string Chapter,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Source = null);
 internal sealed record LibraryChapter(string? Volume, string Chapter, string? ContentId, int ReadableFiles, bool Completed,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PreferredContentId = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Missing = false);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Missing = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Title = null);
 internal sealed record SeriesReading(string ContentId, string RelativePath, int? PageIndex, int? PageCount, bool HasFinishedFile);
 internal sealed record VolumeReading(string Volume, string ContentId, int ReleaseCount);
 internal sealed record SeriesDetails(SeriesMetadata? Metadata, int AvailableChapters, int ReadChapters, IReadOnlyList<string> Volumes,
     IReadOnlyList<LibraryChapter> Chapters, SeriesReading? Reading, int IndexedVolumes, IReadOnlyList<string> ReadableVolumes,
-    IReadOnlyList<VolumeReading> VolumeReading, int ReadCatalogChapters);
+    IReadOnlyList<VolumeReading> VolumeReading, int ReadCatalogChapters, IReadOnlyDictionary<string, string> VolumeTitles);
 
 internal sealed partial class LibraryStore
 {
-    private const string MetadataIdForGroup = """
+    private static string MetadataIdForGroup => """
         COALESCE(
-            (SELECT binding.metadata_id FROM series_metadata_binding binding JOIN series_metadata confirmed ON confirmed.id = binding.metadata_id
-                WHERE binding.root_id = $root AND binding.series_key = $series AND confirmed.series_key = $series),
+            (SELECT binding.metadata_id FROM series_metadata_binding binding
+                WHERE binding.root_id = $root AND binding.series_key = $series),
             (SELECT CASE WHEN COUNT(DISTINCT cm.metadata_id) = 1 THEN MIN(cm.metadata_id) END
                 FROM library_file f JOIN content_metadata cm ON cm.content_id = f.content_id
                 JOIN series_metadata confirmed ON confirmed.id = cm.metadata_id
-                WHERE f.root_id = $root AND f.series_key = $series AND confirmed.series_key = $series)
-        )
-        """;
+                WHERE f.root_id = $root AND f.series_key = $series AND
+        """ + " " + LinkedSeriesScope("f", "confirmed") + "))";
 
-    private const string FinishedOneShot = """
+    private static string FinishedOneShot => """
         f.chapter_hint IS NULL AND EXISTS (
             SELECT 1 FROM content_metadata association JOIN series_metadata metadata ON metadata.id = association.metadata_id
-            WHERE association.content_id = f.content_id AND metadata.series_key = f.series_key AND metadata.provider_id IS NOT NULL
-                AND metadata.status = 'FINISHED' COLLATE NOCASE AND metadata.total_chapters = 1)
-        """;
+            WHERE association.content_id = f.content_id AND metadata.provider_id IS NOT NULL
+                AND metadata.status = 'FINISHED' COLLATE NOCASE AND metadata.total_chapters = 1 AND
+        """ + " " + LinkedSeriesScope("f", "metadata") + ")";
 
-    private const string GroupCoverage = $$"""
+    private static string GroupCoverage => $$"""
         SELECT f.content_id, c.volume, c.chapter FROM library_file f JOIN content_chapter c ON c.content_id = f.content_id
         WHERE f.root_id = $root AND {{GroupSeriesKeys}}
         UNION
@@ -158,9 +162,15 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$released", metadata?.TotalChapters ?? 0);
         command.CommandText = ChapterCatalog(published) + " SELECT COUNT(*) FROM catalog WHERE completed;";
         var catalogRead = Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+        command.CommandText = "SELECT volume, title FROM series_release_metadata WHERE series_id = $work AND chapter = '' AND title IS NOT NULL;";
+        var volumeTitles = new Dictionary<string, string>();
+        using (var rows = command.ExecuteReader())
+        {
+            while (rows.Read()) volumeTitles.Add(rows.GetString(0), rows.GetString(1));
+        }
         return new(metadata, chapters.Count, readChapters, listedVolumes,
             chapters.OrderBy(chapter => Numeric(chapter.Volume)).ThenBy(chapter => Numeric(chapter.Chapter)).Take(500).ToArray(),
-            ReadSeriesReading(command, visible), indexedVolumes, volumeReading.Select(volume => volume.Volume).ToArray(), volumeReading, catalogRead);
+            ReadSeriesReading(command, visible), indexedVolumes, volumeReading.Select(volume => volume.Volume).ToArray(), volumeReading, catalogRead, volumeTitles);
     }
 
     private static SeriesReading? ReadSeriesReading(SqliteCommand command, string visible)
@@ -199,14 +209,14 @@ internal sealed partial class LibraryStore
         return first is null ? null : first with { HasFinishedFile = finishedFile };
     }
 
-    public SeriesMetadata? SaveMetadata(Guid root, string seriesKey, SeriesMetadata metadata, bool published)
+    public SeriesMetadata? SaveMetadata(Guid root, string seriesKey, SeriesMetadata metadata, bool published, bool useProviderTags, bool linkOnly)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
         using var command = GroupCommand(database, transaction, root, seriesKey, published);
         if (!GroupExists(command, published) || GroupHasActiveIntakeTransfer(command)) return null;
 
-        var saved = WriteMetadata(command, metadata, attachFiles: !published);
+        var saved = WriteMetadata(command, metadata, attachFiles: !published, useProviderTags: useProviderTags, linkOnly: linkOnly);
         transaction.Commit();
         return saved;
     }
@@ -221,7 +231,7 @@ internal sealed partial class LibraryStore
         command.CommandText = """
             INSERT INTO content_metadata(content_id, metadata_id)
             SELECT f.content_id, metadata.id FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
-            JOIN series_metadata metadata ON metadata.series_key = f.series_key AND metadata.id = (
+            JOIN series_metadata metadata ON metadata.id = (
             """ + " " + MetadataIdForGroup + """
             )
             WHERE f.root_id = $root AND f.series_key = $series AND f.id = $file AND f.content_id = $content
@@ -240,15 +250,27 @@ internal sealed partial class LibraryStore
         return linked;
     }
 
-    private static SeriesMetadata WriteMetadata(SqliteCommand command, SeriesMetadata metadata, bool attachFiles = true)
+    private static SeriesMetadata WriteMetadata(SqliteCommand command, SeriesMetadata metadata, bool attachFiles = true, bool useProviderTags = false, bool linkOnly = false)
     {
-        if (metadata.ProviderId is null && ReadMetadata(command) is { ProviderId: not null } existing)
+        command.CommandText = "SELECT " + MetadataIdForGroup;
+        var previousId = command.ExecuteScalar() as string;
+        var existing = ReadMetadata(command);
+        var existingProviderId = metadata.ProviderId is { } provider ? FindProviderSeriesId(command, provider) : null;
+        if (existingProviderId is { } linkedId && (linkOnly || linkedId != previousId))
+        {
+            command.Parameters.AddWithValue("$id", linkedId);
+            var linked = ReadMetadataById(command, "$id")!;
+            BindMetadataToGroup(command, previousId, attachFiles);
+            return linked;
+        }
+
+        if (metadata.ProviderId is null && existing is { ProviderId: not null })
         {
             metadata = metadata with { ProviderId = existing.ProviderId, ProviderDetails = existing.ProviderDetails };
         }
+        metadata = metadata with { ManualTags = useProviderTags ? null : metadata.ManualTags ?? existing?.ManualTags };
 
-        command.CommandText = "SELECT " + MetadataIdForGroup;
-        var id = command.ExecuteScalar() as string ?? Guid.NewGuid().ToString("N");
+        var id = previousId ?? Guid.NewGuid().ToString("N");
         command.Parameters.AddWithValue("$id", id);
         command.Parameters.AddWithValue("$title", metadata.Title);
         command.Parameters.AddWithValue("$kind", metadata.Kind);
@@ -260,35 +282,84 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$provider", (object?)metadata.ProviderId ?? DBNull.Value);
         var providerDetails = metadata.ProviderDetails is { } details ? JsonSerializer.Serialize(details) : null;
         command.Parameters.AddWithValue("$providerDetails", (object?)providerDetails ?? DBNull.Value);
+        var manualTags = metadata.ManualTags is { } tags ? JsonSerializer.Serialize(tags) : null;
+        command.Parameters.AddWithValue("$manualTags", (object?)manualTags ?? DBNull.Value);
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);
-        command.Parameters.AddWithValue("$attachFiles", attachFiles);
         command.CommandText = """
             INSERT INTO series_metadata(id, series_key, title, alternate_title, kind, summary, status, total_chapters, total_volumes,
-                provider_id, provider_details, updated_at)
-                VALUES ($id, $series, $title, $alternate, $kind, $summary, $status, $chapters, $volumes, $provider, $providerDetails, $now)
+                provider_id, provider_details, manual_tags, updated_at)
+                VALUES ($id, $series, $title, $alternate, $kind, $summary, $status, $chapters, $volumes, $provider, $providerDetails, $manualTags, $now)
             ON CONFLICT(id) DO UPDATE SET title = excluded.title, kind = excluded.kind, alternate_title = excluded.alternate_title,
                 summary = excluded.summary, status = excluded.status, total_chapters = excluded.total_chapters,
                 total_volumes = excluded.total_volumes, provider_id = excluded.provider_id,
-                provider_details = excluded.provider_details, updated_at = excluded.updated_at;
-            INSERT INTO series_metadata_binding(root_id, series_key, metadata_id) VALUES ($root, $series, $id)
-            ON CONFLICT(root_id, series_key) DO UPDATE SET metadata_id = excluded.metadata_id;
-            INSERT INTO content_metadata(content_id, metadata_id)
-                SELECT DISTINCT content_id, $id FROM library_file
-                WHERE root_id = $root AND series_key = $series AND content_id IS NOT NULL AND $attachFiles
-            ON CONFLICT(content_id) DO UPDATE SET metadata_id = excluded.metadata_id
-                WHERE EXISTS (SELECT 1 FROM series_metadata previous
-                    WHERE previous.id = content_metadata.metadata_id AND previous.series_key = $series);
+                provider_details = excluded.provider_details, manual_tags = excluded.manual_tags, updated_at = excluded.updated_at;
             """;
         command.ExecuteNonQuery();
+        BindMetadataToGroup(command, previousId, attachFiles);
         return metadata;
     }
 
-    private static SeriesMetadata? ReadMetadata(SqliteCommand command)
+    private static void BindMetadataToGroup(SqliteCommand command, string? previousId, bool attachFiles)
     {
         command.CommandText = """
-            SELECT title, kind, alternate_title, summary, status, total_chapters, total_volumes, provider_id, provider_details
-            FROM series_metadata WHERE id =
-            """ + " " + MetadataIdForGroup;
+            INSERT INTO series_metadata_binding(root_id, series_key, metadata_id) VALUES ($root, $series, $id)
+            ON CONFLICT(root_id, series_key) DO UPDATE SET metadata_id = excluded.metadata_id;
+            """;
+        command.ExecuteNonQuery();
+        if (attachFiles || previousId is not null && previousId != (string)command.Parameters["$id"].Value!)
+            AttachSeriesMetadata(command, previousId, attachFiles);
+    }
+
+    private static void AttachSeriesMetadata(SqliteCommand command, string? previousId = null, bool attachNew = true)
+    {
+        command.Parameters.AddWithValue("$previousMetadata", (object?)previousId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$attachNew", attachNew);
+        command.CommandText = """
+            INSERT INTO content_metadata(content_id, metadata_id)
+                SELECT DISTINCT f.content_id,
+            """ + " " + MetadataIdForGroup + """
+             FROM library_file f
+            WHERE f.root_id = $root AND f.series_key = $series AND f.content_id IS NOT NULL
+                AND ($attachNew OR EXISTS (SELECT 1 FROM content_metadata link WHERE link.content_id = f.content_id
+                    AND link.metadata_id = $previousMetadata))
+            ON CONFLICT(content_id) DO UPDATE SET metadata_id = excluded.metadata_id
+            WHERE content_metadata.metadata_id = $previousMetadata;
+            """;
+        command.ExecuteNonQuery();
+    }
+
+    private const string MetadataColumns = """
+        m.title, m.kind, m.alternate_title, m.summary, m.status, m.total_chapters, m.total_volumes,
+        m.provider_id, m.provider_details, m.manual_tags
+        """;
+
+    public SeriesMetadata? ReadLinkedProviderMetadata(int provider)
+    {
+        using var database = OpenDatabase();
+        using var command = database.CreateCommand();
+        var id = FindProviderSeriesId(command, provider);
+        if (id is null) return null;
+        command.Parameters.AddWithValue("$id", id);
+        return ReadMetadataById(command, "$id");
+    }
+
+    private static string? FindProviderSeriesId(SqliteCommand command, int provider)
+    {
+        command.Parameters.AddWithValue("$linkedProvider", provider);
+        command.CommandText = "SELECT id FROM series_metadata WHERE provider_id = $linkedProvider;";
+        return command.ExecuteScalar() as string;
+    }
+
+    private static SeriesMetadata? ReadMetadata(SqliteCommand command) => ReadMetadataById(command, MetadataIdForGroup);
+
+    private static SeriesMetadata? ReadMetadataById(SqliteCommand command, string id)
+    {
+        command.CommandText = "SELECT " + MetadataColumns + " FROM series_metadata m WHERE m.id = " + id;
+        return ReadMetadataRow(command);
+    }
+
+    private static SeriesMetadata? ReadMetadataRow(SqliteCommand command)
+    {
         using var rows = command.ExecuteReader();
         if (!rows.Read()) return null;
 
@@ -297,16 +368,19 @@ internal sealed partial class LibraryStore
         var summary = ReadText(rows, 3);
         return new(rows.GetString(0), rows.GetString(1), ReadText(rows, 2),
             providerId.HasValue ? MetadataAgent.PlainDescription(summary) : summary, ReadText(rows, 4),
-            ReadInt(rows, 5), ReadInt(rows, 6), providerId, details);
+            ReadInt(rows, 5), ReadInt(rows, 6), providerId, details, ReadManualTags(rows, 9));
     }
 
-    public bool SaveCoverage(Guid root, string seriesKey, string contentId, string volume, IReadOnlyList<string> chapters, bool wholeVolume)
+    private static SeriesTag[]? ReadManualTags(SqliteDataReader rows, int index) =>
+        ReadText(rows, index) is { } json ? JsonSerializer.Deserialize<SeriesTag[]>(json) : null;
+
+    public bool SaveCoverage(Guid root, string seriesKey, string contentId, string volume, IReadOnlyList<string> chapters, bool wholeVolume, bool published)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
-        using var command = GroupCommand(database, transaction, root, seriesKey);
+        using var command = GroupCommand(database, transaction, root, seriesKey, published);
         command.Parameters.AddWithValue("$content", contentId);
-        if (!ContentInGroup(command)) return false;
+        if (!ContentInGroup(command, published)) return false;
 
         command.CommandText = """
             SELECT 1 FROM file_operation WHERE content_id = $content AND state IN ('applying', 'restoring') LIMIT 1;
@@ -331,13 +405,13 @@ internal sealed partial class LibraryStore
         return true;
     }
 
-    public IReadOnlyList<SeriesChapter>? ReadCoverage(Guid root, string seriesKey, string contentId)
+    public IReadOnlyList<SeriesChapter>? ReadCoverage(Guid root, string seriesKey, string contentId, bool published)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: true);
-        using var command = GroupCommand(database, transaction, root, seriesKey);
+        using var command = GroupCommand(database, transaction, root, seriesKey, published);
         command.Parameters.AddWithValue("$content", contentId);
-        if (!ContentInGroup(command)) return null;
+        if (!ContentInGroup(command, published)) return null;
 
         command.CommandText = """
             SELECT volume, chapter, NULL FROM content_chapter WHERE content_id = $content
@@ -388,15 +462,18 @@ internal sealed partial class LibraryStore
     private static string? ReadText(SqliteDataReader rows, int index) => rows.IsDBNull(index) ? null : rows.GetString(index);
     private static int? ReadInt(SqliteDataReader rows, int index) => rows.IsDBNull(index) ? null : rows.GetInt32(index);
 
-    private static void StageKnownSeries(SqliteConnection database)
+    private static void StageKnownSeries(SqliteConnection database, Guid root)
     {
         using var command = database.CreateCommand();
         command.CommandText = """
             UPDATE scan_file AS f SET series_key = m.series_key
             FROM scan_hash h JOIN library_content c ON c.sha256 = h.sha256
             JOIN content_metadata cm ON cm.content_id = c.id JOIN series_metadata m ON m.id = cm.metadata_id
-            WHERE f.relative_path = h.relative_path;
+            WHERE f.relative_path = h.relative_path AND NOT EXISTS (
+                SELECT 1 FROM series_metadata_binding alias
+                WHERE alias.root_id = $root AND alias.series_key = f.series_key AND alias.metadata_id = m.id);
             """;
+        command.Parameters.AddWithValue("$root", root);
         command.ExecuteNonQuery();
     }
 }

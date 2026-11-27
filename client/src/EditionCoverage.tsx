@@ -47,6 +47,62 @@ async function saveSeries(url: string, data: object, onSignedOut: () => void) {
   }
 }
 
+type ReleaseLabel = { volume?: string | null; chapter?: string };
+type ReleaseMetadata = { title: string | null; summary: string | null };
+const releaseLabel = ({ volume, chapter }: ReleaseLabel) => chapter ? `chapter ${chapter}${volume ? ` (volume ${volume})` : ''}` : `volume ${volume}`;
+
+function ReleaseMetadataDialog({ url, label, onSignedOut, onChange, onClose }: Pick<SeriesTools, 'url' | 'onSignedOut' | 'onChange'> & {
+  label: ReleaseLabel; onClose: () => void;
+}) {
+  const path = url + '/release-metadata?' + new URLSearchParams({ volume: label.volume ?? '', chapter: label.chapter ?? '' });
+  const [draft, setDraft] = useState<ReleaseMetadata | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    const request = new AbortController();
+    void (async () => {
+      const response = await fetch(path, { signal: request.signal });
+      if (response.status === 401) return onSignedOut();
+      if (!response.ok) throw new Error();
+      const metadata = await response.json() as ReleaseMetadata;
+      if (!request.signal.aborted) setDraft(metadata);
+    })().catch(() => { if (!request.signal.aborted) setError('Could not load these details.'); });
+    return () => request.abort();
+  }, [path, onSignedOut]);
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!draft) return;
+    setBusy(true);
+    setError('');
+    try {
+      await saveSeries(path, draft, onSignedOut);
+      onChange();
+      onClose();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not save these details.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <Modal title={`Edit ${releaseLabel(label)} details`} onClose={() => { if (!busy) onClose(); }}>
+    {!draft && !error && <p role="status">Loading details…</p>}
+    {error && <p role="alert" className="text-danger">{error}</p>}
+    {draft && <form onSubmit={save}>
+      <label className="grid gap-1">Title
+        <input value={draft.title ?? ''} maxLength={300} disabled={busy}
+          onChange={event => setDraft({ ...draft, title: event.target.value })} />
+      </label>
+      <label className="grid gap-1">Summary
+        <textarea className="rounded-lg border border-control bg-field p-3" value={draft.summary ?? ''} maxLength={8000} disabled={busy}
+          onChange={event => setDraft({ ...draft, summary: event.target.value })} />
+      </label>
+      <Button type="submit" disabled={busy} className="justify-self-start">Save details</Button>
+    </form>}
+  </Modal>;
+}
+
 function VolumeReleasePicker({ volume, rootId, seriesKey, url, version, onSignedOut, onClose, published }: Omit<SeriesTools, 'onChange'> & {
   volume: string; rootId: string; seriesKey: string; onClose: () => void;
 }) {
@@ -74,6 +130,7 @@ export function SeriesVolumeList({ details, rootId, seriesKey, onBrowse, ...tool
 }) {
   const [limit, setLimit] = useState(50);
   const [releaseVolume, setReleaseVolume] = useState<string | null>(null);
+  const [editing, setEditing] = useState<ReleaseLabel | null>(null);
   const released = Array.from({ length: details.metadata?.totalVolumes ?? 0 }, (_, index) => String(index + 1));
   const volumes = [...new Set([...details.volumes, ...released])].sort((a, b) => Number(a) - Number(b));
   const readings = new Map(details.volumeReading.map(item => [item.volume, item]));
@@ -84,7 +141,9 @@ export function SeriesVolumeList({ details, rootId, seriesKey, onBrowse, ...tool
       {volumes.slice(0, limit).map(volume => {
         const reading = readings.get(volume);
         return <li key={volume} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
-          <strong>Volume {volume}</strong>
+          <div className="grid min-w-0"><strong>Volume {volume}</strong>
+            {details.volumeTitles[volume] && <span className="wrap-anywhere text-sm text-muted">{details.volumeTitles[volume]}</span>}
+          </div>
           <div className="action-row">
             {reading && <ActionLink variant="secondary" icon={BookOpen} href={seriesReaderHref(reading.contentId, rootId, seriesKey)}>Read volume</ActionLink>}
             {reading && reading.releaseCount > 1 && <Button variant="ghost"
@@ -92,6 +151,7 @@ export function SeriesVolumeList({ details, rootId, seriesKey, onBrowse, ...tool
             <LinkVolumeChapters {...tools} volume={volume} />
             <Button variant="ghost" onClick={() => onBrowse('chapters', volume)}>View chapters</Button>
             <Button variant="ghost" onClick={() => onBrowse('files', volume)}>View files</Button>
+            {details.metadata && <Button variant="ghost" icon={Pencil} aria-label={`Edit volume ${volume} details`} onClick={() => setEditing({ volume })} />}
           </div>
         </li>;
       })}
@@ -99,6 +159,7 @@ export function SeriesVolumeList({ details, rootId, seriesKey, onBrowse, ...tool
     {limit < volumes.length && <div className="p-4"><Button variant="secondary" onClick={() => setLimit(value => value + 50)}>Show more volumes</Button></div>}
     {releaseVolume && <VolumeReleasePicker {...tools} volume={releaseVolume} rootId={rootId} seriesKey={seriesKey}
       onClose={() => setReleaseVolume(null)} />}
+    {editing && <ReleaseMetadataDialog {...tools} label={editing} onClose={() => setEditing(null)} />}
   </>;
 }
 
@@ -149,10 +210,11 @@ function ReleasePicker({ chapter, rootId, seriesKey, url, version, onSignedOut, 
   </Modal>;
 }
 
-export function SeriesChapterList({ volume, rootId, seriesKey, url, version, onSignedOut, onChange, published }: SeriesTools & {
-  volume: string | null; rootId: string; seriesKey: string;
+export function SeriesChapterList({ volume, rootId, seriesKey, url, version, onSignedOut, onChange, published, canEditDetails }: SeriesTools & {
+  volume: string | null; rootId: string; seriesKey: string; canEditDetails: boolean;
 }) {
   const [chosen, setChosen] = useState<Chapter | null>(null);
+  const [editing, setEditing] = useState<ReleaseLabel | null>(null);
   const [filter, setFilter] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -176,7 +238,7 @@ export function SeriesChapterList({ volume, rootId, seriesKey, url, version, onS
   return <>
     <label className="grid max-w-xs gap-1 p-4">Find a chapter
       <input value={filter} maxLength={25} onChange={event => { setFilter(event.target.value); query.setOffset(0); }}
-        placeholder="Chapter or volume number" />
+        placeholder="Title, chapter or volume number" />
     </label>
     {error && <p role="alert" className="px-4 text-danger">{error}</p>}
     {query.error && <div className="action-row px-4 pb-4"><p role="alert" className="m-0 text-danger">Could not load chapters.</p>
@@ -185,7 +247,9 @@ export function SeriesChapterList({ volume, rootId, seriesKey, url, version, onS
     {query.page?.items.length ? <ul aria-label="Series chapters" role="list" className="m-0 list-none divide-y divide-line p-0">
       {query.page.items.map(chapter => <li key={`${chapter.volume ?? ''}:${chapter.chapter}`}
         className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
-        <div className="grid"><strong>Chapter {chapter.chapter}</strong><span className="text-sm text-muted">
+        <div className="grid min-w-0"><strong>Chapter {chapter.chapter}</strong>
+          {chapter.title && <span className="wrap-anywhere">{chapter.title}</span>}
+          <span className="text-sm text-muted">
           {chapter.volume ? `Volume ${chapter.volume} · ` : ''}{chapter.completed ? 'Read' : 'Unread'}
           {chapter.missing ? ' · Missing local file' : chapter.readableFiles === 0 && ' · No readable file'}
         </span></div>
@@ -196,11 +260,13 @@ export function SeriesChapterList({ volume, rootId, seriesKey, url, version, onS
             chapter.contentId && <ActionLink variant="ghost" icon={BookOpen} href={seriesReaderHref(chapter.contentId, rootId, seriesKey)}>Read file</ActionLink>}
           <Button variant="ghost" icon={chapter.completed ? undefined : Check} disabled={busy}
             onClick={() => void mark(chapter)}>{chapter.completed ? 'Mark unread' : 'Mark read'}</Button>
+          {canEditDetails && <Button variant="ghost" icon={Pencil} aria-label={`Edit ${releaseLabel(chapter)} details`} onClick={() => setEditing(chapter)} />}
         </div>
       </li>)}
-    </ul> : query.page && <p className="m-0 p-4 text-sm text-muted">{filter || volume ? 'No matching chapter numbers.' : 'No chapter numbers are known for this series.'}</p>}
+    </ul> : query.page && <p className="m-0 p-4 text-sm text-muted">{filter || volume ? 'No matching chapters.' : 'No chapter numbers are known for this series.'}</p>}
     {query.page && <div className="px-4"><PageControls label="Chapter pages" offset={query.offset}
       count={query.page.items.length} total={query.page.total} onChange={query.setOffset} /></div>}
+    {editing && <ReleaseMetadataDialog url={url} onSignedOut={onSignedOut} onChange={onChange} label={editing} onClose={() => setEditing(null)} />}
     {chosen && <ReleasePicker chapter={chosen} rootId={rootId} seriesKey={seriesKey} url={url} published={published}
       version={version} onSignedOut={onSignedOut} onChange={onChange} onClose={() => setChosen(null)} />}
   </>;

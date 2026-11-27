@@ -210,10 +210,10 @@ function SplitIntakeFile({ rootId, file, onSignedOut, onChange }: {
   </>;
 }
 
-function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut, selection, onAssociationChanged, importGroupSize }:
+function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut, selection, onAssociationChanged, importGroupSize, onCoverageChanged }:
   Pick<InventoryProps, 'rootId' | 'version'> & {
   file: CatalogEntry; seriesKey?: string; onInspect?: Inspect; onSignedOut: () => void; management?: FileManagement;
-  selection: ReturnType<typeof useReleaseSelection>; onAssociationChanged?: () => void; importGroupSize?: number;
+  selection: ReturnType<typeof useReleaseSelection>; onAssociationChanged?: () => void; importGroupSize?: number; onCoverageChanged?: () => void;
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
   const [move, setMove] = useState<'organize' | 'transfer' | null>(null);
@@ -222,7 +222,9 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
   const readable = file.contentId && isReadableArchive(file.extension);
-  const coverageUrl = management && `${ROOTS_URL}/${rootId}/series/${file.seriesKey}/coverage`;
+  const saveCoverage = onCoverageChanged ?? management?.onDataChanged;
+  const coverageUrl = saveCoverage && ROOTS_URL + '/' + rootId + '/series/' + (seriesKey ?? file.seriesKey) + '/coverage';
+  const coverageLabel = onCoverageChanged ? 'Assign volume or chapters' : 'Set chapter coverage';
   const transferTarget = file.intakePath ? management?.intakeTarget : undefined;
   const updateAssociation = onAssociationChanged ?? management?.onDataChanged;
   return (
@@ -263,17 +265,17 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
         {updateAssociation && (importGroupSize ?? 0) > 1 &&
           <SplitIntakeFile rootId={rootId} file={file} onSignedOut={onSignedOut} onChange={updateAssociation} />}
         {management && <EditReleaseTags rootId={rootId} fileId={file.id} onSignedOut={onSignedOut} />}
-        {coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>Set chapter coverage</Button>}
+        {coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>{coverageLabel}</Button>}
         {management?.intakeTarget && file.associationConfirmed && !file.intakePath &&
           <span className="text-sm text-muted">Set a chapter or volume before transfer.</span>}
         {transferTarget && <Button variant="secondary" onClick={() => setMove('transfer')}>Transfer to library</Button>}
         {!!management?.managedFolders.length && <Button variant="ghost" onClick={() => setMove('organize')}>Move or rename</Button>}
         {showDuplicates && management && <DuplicateReviewDialog rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
           onClose={() => setShowDuplicates(false)} onChanged={management.onMoved} />}
-        {showCoverage && coverageUrl && management && <Modal title="Set chapter coverage" onClose={() => setShowCoverage(false)}>
+        {showCoverage && coverageUrl && saveCoverage && <Modal title={coverageLabel} onClose={() => setShowCoverage(false)}>
           <p className="m-0 mb-3 text-sm"><code>{file.relativePath}</code></p>
           <ChapterCoverage url={coverageUrl} contentId={file.contentId} volumeHint={file.volume}
-            chapterHint={file.chapter} onSaved={management.onDataChanged} onSignedOut={onSignedOut} />
+            chapterHint={file.chapter} onSaved={saveCoverage} onSignedOut={onSignedOut} published={!!onCoverageChanged} />
         </Modal>}
         {move && management && (move === 'organize' || transferTarget) && <Modal
           title={move === 'transfer' ? 'Review intake transfer' : 'Move or rename file'} wide onClose={() => { if (!moving) setMove(null); }}>
@@ -287,9 +289,9 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
 }
 
 export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut, management, onInspect, search = '', catalogView = 'all',
-  onAssociationChanged, importGroupSize }: InventoryProps & {
+  onAssociationChanged, importGroupSize, onCoverageChanged }: InventoryProps & {
   seriesKey?: string; volume?: string; management?: FileManagement; onInspect?: Inspect; search?: string; catalogView?: CatalogView;
-  onAssociationChanged?: () => void; importGroupSize?: number;
+  onAssociationChanged?: () => void; importGroupSize?: number; onCoverageChanged?: () => void;
 }) {
   const params = new URLSearchParams({ search, view: catalogView });
   if (seriesKey) params.set('seriesKey', seriesKey);
@@ -313,7 +315,7 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
           <ul className="catalog-files" role="list" aria-label={label}>
             {page.items.map(file => <FileRow key={file.id} file={file} rootId={rootId} seriesKey={seriesKey} version={version}
               onInspect={onInspect} onSignedOut={onSignedOut} management={management} selection={selection}
-              onAssociationChanged={onAssociationChanged} importGroupSize={importGroupSize} />)}
+              onAssociationChanged={onAssociationChanged} importGroupSize={importGroupSize} onCoverageChanged={onCoverageChanged} />)}
           </ul>
           {page.total > PAGE_SIZE && (
             <div className="border-t border-line p-3">
@@ -420,15 +422,18 @@ function CollectionTotal({ label, value, total }: { label: string; value: number
   </div>;
 }
 
-export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: InventoryProps & {
-  seriesKey: string; coverVersion: string; rootPath?: string;
+export function SeriesPage({ seriesKey, coverVersion, rootPath, onInventoryChanged, ...inventory }: InventoryProps & {
+  seriesKey: string; coverVersion: string; rootPath?: string; onInventoryChanged: () => void;
 }) {
   const [revision, setRevision] = useState(0);
   const [dialog, setDialog] = useState<'info' | 'cover' | null>(null);
   const [selectedView, setView] = useState<SeriesView | null>(null);
   const [volume, setVolume] = useState<string | null>(null);
   const catalog = { ...inventory, version: `${inventory.version}:${revision}` };
-  const onDataChanged = () => setRevision(value => value + 1);
+  const onDataChanged = () => {
+    setRevision(value => value + 1);
+    onInventoryChanged();
+  };
   const { rootId, version, onSignedOut } = catalog;
   const { page, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut, { seriesKey, view: 'library' });
   const series = page?.items[0];
@@ -487,11 +492,12 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
           {view === 'files' && <>
             <div className="action-row p-3"><ActionLink variant="ghost" href={organizeToolsHref(rootId, seriesKey)}>Organize series in Tools</ActionLink></div>
             {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all files</Button></div>}
-            <FileInventory key={volume ?? 'all-files'} {...catalog} seriesKey={seriesKey} volume={volume ?? undefined} catalogView="library" />
+            <FileInventory key={volume ?? 'all-files'} {...catalog} seriesKey={seriesKey} volume={volume ?? undefined} catalogView="library" onCoverageChanged={onDataChanged} />
           </>}
           {view === 'chapters' && <>
             {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all chapters</Button></div>}
-            <SeriesChapterList key={volume ?? 'all-chapters'} {...seriesTools} rootId={rootId} seriesKey={seriesKey} volume={volume} />
+            <SeriesChapterList key={volume ?? 'all-chapters'} {...seriesTools} rootId={rootId} seriesKey={seriesKey} volume={volume}
+              canEditDetails={!!details?.metadata} />
           </>}
           {view === 'volumes' && details && <SeriesVolumeList {...seriesTools} details={details} rootId={rootId} seriesKey={seriesKey}
             onBrowse={(kind, number) => { setVolume(number); setView(kind); }} />}
@@ -632,6 +638,7 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
     onDataChanged: () => {
       setCatalogRevision(value => value + 1);
       setItem(null);
+      onInventoryChanged();
     }, onMoved: () => {
       setNotice('File change completed. A verified recovery copy is in Organize under File operation history.');
       onInventoryChanged();
@@ -686,7 +693,8 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
           onCancel={() => setSaveFilters(false)} onSaved={collection => { setSaveFilters(false); setNotice(`Created collection “${collection.name}”.`); }} />
       </Modal>}
       {view === 'files' ? <FileInventory key={`${catalogView}:${query}`} {...catalog} onInspect={onInspect}
-        management={intake ? catalog : undefined} search={query} catalogView={catalogView} /> :
+        management={intake ? catalog : undefined} search={query} catalogView={catalogView}
+        onCoverageChanged={intake ? undefined : catalog.onDataChanged} /> :
         <GroupedInventory key={JSON.stringify([view, catalogView, query, sort, coverOnly, rules.includeTags, rules.excludeTags])}
           {...catalog} scanComplete={scanComplete} onInspect={onInspect} catalogView={catalogView}
           coverVersion={coverVersion} coverGrid={view === 'covers'} search={query} sort={sort} coverOnly={coverOnly && hasCovers} rules={rules} />}
