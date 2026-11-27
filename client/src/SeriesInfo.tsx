@@ -36,6 +36,8 @@ export type Details = {
   availableChapters: number;
   readChapters: number;
   volumes: string[];
+  indexedVolumes: number;
+  readableVolumes: string[];
   chapters: { volume: string | null; chapter: string; contentId: string | null; readableFiles: number; completed: boolean; preferredContentId?: string }[];
   reading: { contentId: string; relativePath: string; pageIndex: number | null; pageCount: number | null; hasFinishedFile: boolean } | null;
 };

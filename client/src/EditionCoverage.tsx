@@ -7,7 +7,8 @@ import type { Details } from './SeriesInfo';
 import { ActionLink, Button, Modal, SectionHeader } from './ui';
 
 type Chapter = Details['chapters'][number];
-type Release = { contentId: string; relativePath: string; format: string; pageIndex: number | null; pageCount: number | null; unresolvedVolume: boolean; preferred: boolean };
+type Release = { contentId: string; relativePath: string; format: string; pageIndex: number | null; pageCount: number | null;
+  unresolvedVolume: boolean; preferred: boolean };
 type EditionVolume = {
   id: string; edition: string; volume: string; chapters: string[]; contentIds: string[];
   available: string[]; state: 'complete' | 'partial' | 'missing' | 'unknown';
@@ -43,6 +44,28 @@ async function saveSeries(url: string, data: object, onSignedOut: () => void) {
     const failure = await response.json().catch(() => null) as { message?: string } | null;
     throw new Error(failure?.message ?? 'Could not save this series change.');
   }
+}
+
+export function VolumeReleasePicker({ volume, rootId, seriesKey, url, version, onSignedOut, onClose }: Omit<SeriesTools, 'onChange'> & {
+  volume: string; rootId: string; seriesKey: string; onClose: () => void;
+}) {
+  const { items, error } = useSeriesList<Release>(url + '/volume-releases?' + new URLSearchParams({ volume }), version, onSignedOut);
+  return <Modal title={`Read volume ${volume}`} onClose={onClose}>
+    {error && <p role="alert" className="text-danger">Could not load volume files.</p>}
+    {!items && !error && <p role="status">Loading volume files…</p>}
+    {items?.length === 0 && <p>No readable volume archive is indexed. Check the volume’s files for individual chapters or other formats.</p>}
+    {items && items.length > 0 && <ul className="m-0 grid list-none divide-y divide-line p-0" role="list">
+      {items.map(file => <li key={file.contentId} className="flex flex-wrap items-center justify-between gap-2 py-3">
+        <div className="min-w-0 wrap-anywhere">
+          <code>{file.relativePath}</code>
+          <p className="m-0 text-sm text-muted">{file.format.toUpperCase()}{file.unresolvedVolume && ' · Chapter coverage unknown'}
+            {file.pageIndex !== null && ` · Page ${file.pageIndex + 1} of ${file.pageCount}`}</p>
+        </div>
+        <ActionLink href={seriesReaderHref(file.contentId, rootId, seriesKey)} icon={BookOpen} variant="secondary"
+          onClick={onClose}>{file.pageIndex === null ? 'Open file' : 'Resume file'}</ActionLink>
+      </li>)}
+    </ul>}
+  </Modal>;
 }
 
 function ReleasePicker({ chapter, rootId, seriesKey, url, version, onSignedOut, onChange, onClose }: SeriesTools & {
@@ -125,6 +148,7 @@ export function SeriesChapterList({ chapters, rootId, seriesKey, url, version, o
         className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
         <div className="grid"><strong>Chapter {chapter.chapter}</strong><span className="text-sm text-muted">
           {chapter.volume ? `Volume ${chapter.volume} · ` : ''}{chapter.completed ? 'Read' : 'Unread'}
+          {chapter.readableFiles === 0 && ' · No readable file'}
         </span></div>
         <div className="action-row">
           {chapter.preferredContentId && chapter.readableFiles > 1 && <ActionLink icon={BookOpen} variant="secondary"

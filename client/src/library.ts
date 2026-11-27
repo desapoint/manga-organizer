@@ -47,6 +47,10 @@ export function scanIsActive(root: LibraryRoot) {
   return root.state === 'queued' || root.state === 'scanning';
 }
 
+export function isReadableArchive(format: string) {
+  return ['cbz', 'zip', 'cbr', 'rar'].includes(format);
+}
+
 export function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KiB`;

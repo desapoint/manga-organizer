@@ -35,17 +35,19 @@ internal static class LibraryEndpoints
             }
         });
 
-        library.MapGet("/{id:guid}/files", (Guid id, int? offset, int? limit, string? seriesKey, string? search, LibraryStore store) =>
+        library.MapGet("/{id:guid}/files", (Guid id, int? offset, int? limit, string? seriesKey, string? search, string? volume, LibraryStore store) =>
         {
             if (!store.TryGetRoot(id, out _))
             {
                 return Results.NotFound();
             }
-            if (!IsValidPage(offset, limit) || (seriesKey is not null && !IsSeriesKey(seriesKey)) || search is { Length: > 160 })
+            if (!IsValidPage(offset, limit) || (seriesKey is not null && !IsSeriesKey(seriesKey)) || search is { Length: > 160 } ||
+                (volume is not null && (seriesKey is null || !BookNumbers.IsNumber(volume))))
             {
                 return Results.BadRequest();
             }
-            return Results.Ok(store.ReadFiles(id, offset ?? 0, limit ?? 50, seriesKey?.ToLowerInvariant(), search?.Trim() ?? ""));
+            return Results.Ok(store.ReadFiles(id, offset ?? 0, limit ?? 50, seriesKey?.ToLowerInvariant(), search?.Trim() ?? "",
+                volume is null ? null : BookNumbers.Canonical(volume)));
         });
 
         library.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, string? search, string? sort, bool? coverOnly, string? seriesKey, LibraryStore store, HttpContext context) =>

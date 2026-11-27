@@ -73,20 +73,28 @@ internal sealed partial class LibraryStore
         return result;
     }
 
-    public CatalogPage<CatalogEntry> ReadFiles(Guid id, int offset, int limit, string? seriesKey, string search)
+    public CatalogPage<CatalogEntry> ReadFiles(Guid id, int offset, int limit, string? seriesKey, string search, string? volume)
     {
         using var database = OpenCoverDatabase();
         RegisterTitleSearch(database);
         using var transaction = database.BeginTransaction(deferred: true);
         using var command = database.CreateCommand();
         command.Transaction = transaction;
-        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$root", id);
         command.Parameters.AddWithValue("$search", search);
         if (seriesKey is not null)
         {
-            command.Parameters.AddWithValue("$seriesKey", seriesKey);
+            command.Parameters.AddWithValue("$series", seriesKey);
         }
-        var scope = " WHERE f.root_id = $id" + (seriesKey is null ? "" : " AND f.series_key = $seriesKey");
+        var scope = " WHERE f.root_id = $root" + (seriesKey is null ? "" : " AND f.series_key = $series");
+        var volumeCoverage = "";
+        if (volume is not null && seriesKey is not null)
+        {
+            AddWorkKey(command, id, seriesKey);
+            command.Parameters.AddWithValue("$volume", volume);
+            volumeCoverage = "WITH covered AS (" + GroupCoverage + ") ";
+            scope += " AND " + GroupVolumeMatch;
+        }
         const string sources = """
             FROM library_file f LEFT JOIN library_content c ON c.id = f.content_id
             LEFT JOIN series_metadata_binding binding ON binding.root_id = f.root_id AND binding.series_key = f.series_key
@@ -98,9 +106,9 @@ internal sealed partial class LibraryStore
                 OR title_contains(COALESCE(m.title, ''), $search) OR title_contains(COALESCE(m.alternate_title, ''), $search))
             """;
         if (search.Length > 0) scope += " " + searchFilter;
-        command.CommandText = "SELECT COUNT(*) " + sources + scope;
+        command.CommandText = volumeCoverage + "SELECT COUNT(*) " + sources + scope;
         var total = (long)command.ExecuteScalar()!;
-        command.CommandText = """
+        command.CommandText = volumeCoverage + """
             SELECT f.id, f.relative_path, f.extension, f.size, f.modified_at, c.id, lower(hex(c.sha256)),
                 CASE WHEN c.id IS NOT NULL THEN (
                     SELECT COUNT(*) FROM library_file location

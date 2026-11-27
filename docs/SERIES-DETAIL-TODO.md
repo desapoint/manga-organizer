@@ -18,12 +18,12 @@ The interactive mockup illustrates the library detail page. Open the HTML locall
 
 ## Chapters, volumes and files
 
-- [ ] Open and resume a playable volume even when chapter assignments are unresolved. **View files** keeps the selected volume filter applied before pagination. [Volume navigation](TOOLS-AND-INTAKE.md#volume-navigation)
+- [x] Open and resume an indexed volume archive even when chapter assignments are unresolved. **View files** applies the selected volume filter before pagination. Keep known release counts visible when no corresponding chapters or volumes have been indexed, with reading controls only for supported local releases. [Volume navigation](TOOLS-AND-INTAKE.md#volume-navigation)
 
-- [ ] Group related information into Chapters, Volumes and Files sections or tabs. Put secondary metadata in More info. Keep file playback, manual coverage and reviewed rename or move actions available from Files on storage that permits them.
+- [ ] Group related information into Chapters, Volumes and Files sections or tabs. Put secondary metadata in More info. Keep file playback, metadata editing and reading status in Library. Link to Tools for coverage assignment and reviewed file operations as those modules take ownership.
 - [ ] Support chapter search and release-order sorting, with filters for volume, availability, read state and chapter type when supported by the data. Keep pagination for large series. Show fractional chapters, prologues and named extras in the correct release order with stable identities.
 - [ ] Show available formats and release attributes, with explicit chapter completion and preferred content already available from PRs #26 and #30. Extend the picker to canonical chapter IDs, strict/flexible preferences and fast release choice. [Release selection](READING-CONTINUITY.md#release-selection)
-- [ ] Keep the Files view useful for administration. Show per-file thumbnails and identities, variants, unresolved coverage, real scan state and management actions. Use verified catalog data for any collection-health figures.
+- [ ] Keep Files useful for inspection and reading. Show per-file thumbnails and identities, variants, unresolved coverage and real scan state. Route file management to Tools. Use verified catalog data for collection-health figures.
 
 ## Data and verification
 
