@@ -6,6 +6,7 @@ import { CollectionForm, emptyFilters, SeriesCollectionMembership, TagRulesField
 import type { TagRules } from './CollectionControls';
 import { DuplicateReviewDialog } from './DuplicateReview';
 import { FileMove } from './FileOperations';
+import { EditReleaseTags } from './ReleaseTagsEditor';
 import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
 import { EditionCoverage, SeriesChapterList, VolumeReleasePicker } from './EditionCoverage';
@@ -195,6 +196,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
           <ActionLink variant="ghost" href={duplicateToolsHref({ rootId, seriesKey: file.seriesKey }, file.id)}>Compare in Tools</ActionLink>}
         {management && !file.associationConfirmed && <FileAssociationAction file={file} rootId={rootId}
           onChange={management.onDataChanged} onSignedOut={onSignedOut} />}
+        {management && <EditReleaseTags rootId={rootId} fileId={file.id} onSignedOut={onSignedOut} />}
         {coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>Set chapter coverage</Button>}
         {transferTarget && <Button variant="secondary" onClick={() => setMove('transfer')}>Transfer to library</Button>}
         {!!management?.managedFolders.length && <Button variant="ghost" onClick={() => setMove('organize')}>Move or rename</Button>}

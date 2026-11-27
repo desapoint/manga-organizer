@@ -7,7 +7,7 @@ internal sealed record DuplicateQueueFile(string FileId, string RelativePath, st
 
 internal sealed partial class LibraryStore
 {
-    private const string DuplicateQueue = """
+    private const string ScopedDuplicateCoverage = """
         WITH scoped AS (
             SELECT f.id, f.root_id, f.series_key, f.series_title, f.content_id, f.relative_path, f.volume_hint, f.chapter_hint
             FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
@@ -25,7 +25,11 @@ internal sealed partial class LibraryStore
             WHERE f.chapter_hint IS NOT NULL
                 AND NOT EXISTS(SELECT 1 FROM content_chapter manual WHERE manual.content_id = f.content_id)
                 AND NOT EXISTS(SELECT 1 FROM inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
-        ), repeated_chapters AS (
+        )
+        """;
+
+    private const string DuplicateQueue = ScopedDuplicateCoverage + """
+        , repeated_chapters AS (
             SELECT DISTINCT a.id FROM chapter_labels a JOIN chapter_labels b USING (root_id, series_key, chapter)
             WHERE a.id <> b.id AND (a.volume = b.volume OR a.volume = '' OR b.volume = '')
         ), repeated_volumes AS (

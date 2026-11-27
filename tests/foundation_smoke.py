@@ -206,6 +206,7 @@ def verify_web_setup(executable, fixture, media):
         database.executescript("""
             DROP TABLE schema_migration;
             DROP TABLE metadata_suggestion;
+            DROP TABLE release_tag;
             DROP TABLE library_intake_target;
             DROP TABLE edition_volume_release;
             DROP TABLE edition_volume_manifest;
@@ -995,6 +996,12 @@ def verify_catalog_visibility(owner, root, path):
     assert files("library", f"seriesKey={parchment}")[0] == 0
     assert first in files("attention", "search=Published+Parchment")[1]
     assert pending in files("association", "search=Pending+Signal")[1]
+    ordinary = files("association", "search=Pending+Signal")[1][pending]
+    version = f"/api/versions/{root}/files/{ordinary['id']}"
+    change = {"contentId": ordinary["contentId"], "revision": 0, "language": "ja",
+              "color": "black-and-white", "censorship": "uncensored"}
+    owner.request(version, 400, method="PUT", body=change)
+    owner.request(version, 204, method="PUT", token=owner.csrf(), body=change)
     assert "03.cbz" in files("series", "search=03.cbz")[1]
     assert pending in files("metadata", "search=Pending+Signal")[1]
     owner.request(url + "/details?published=true", 404)
@@ -1035,6 +1042,7 @@ def verify_catalog_visibility(owner, root, path):
     assert total == 2 and page[later]["id"] == release["id"]
     assert page[later]["associationConfirmed"]
     assert files("attention", f"seriesKey={parchment}")[0] == 0
+    assert json.loads(owner.request(version, 200))["tags"]["language"] == "ja"
 
 
 def verify_maintenance(owner):
@@ -1459,6 +1467,8 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     assert review["source"]["volumeArchive"]
     comparisons = {item["candidate"]["relativePath"]: item for item in review["comparisons"]}
     (series,) = owner.series(root, "?search=Safety+Fixture")["items"]
+    versions = "/api/versions"
+    assert json.loads(owner.request(versions + "/series?search=Safety+Fixture", 200))["total"] == 0
     index = f"{operations}/duplicates/series"
     listed = json.loads(owner.request(f"{index}?search=Safety+Fixture&kind=bytes&limit=1", 200))
     assert listed == {"total": 1, "items": [{
@@ -1512,12 +1522,15 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
 
     unassigned = directory / "Safety Fixture Vol.02.cbz"
     alternate = directory / "Safety Fixture Vol.02 [Alternate].zip"
+    translated = directory / "Safety Fixture Vol.01 Ch.1 [Translated].cbz"
     for path, count in ((unassigned, 2), (alternate, 3)):
         with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
             for page in range(count):
                 archive.writestr(f"{page + 1}.png", synthetic_png(125, 25, page + 5))
             archive.writestr("ComicInfo.xml", "<ComicInfo><Series>Safety Fixture</Series><Volume>2</Volume>"
                              "<Publisher>Fixture press</Publisher><PageCount>50</PageCount></ComicInfo>")
+    with ZipFile(translated, "w") as archive:
+        archive.writestr("01.png", synthetic_png(192, 140, 122))
     owner.scan(root)
     files = {item["relativePath"]: item for item in owner.files(root)["items"]}
     unresolved = compare(unassigned)
@@ -1535,7 +1548,30 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     }
     quarantine(unassigned, alternate, 409)
 
-    for path in (volume, chapter, copy, alias, unrelated_chapter, unassigned, alternate):
+    page = json.loads(owner.request(versions + "/series?search=Safety+Fixture&limit=1", 200))
+    assert page["total"] == 1 and page["items"][0]["releaseCount"] == 4
+    version_series = f"{versions}/{root}/series/{series['key']}"
+    rows = json.loads(owner.request(version_series, 200))["items"]
+    assert {file["reason"] for file in rows} == {"span", "volume"}
+    assert len({file["contentId"] for file in rows}) == 4
+    release = next(file for file in rows if file["relativePath"] == alternate.name)
+    release_url = f"{versions}/{root}/files/{release['fileId']}"
+    tags = {"contentId": release["contentId"], "revision": 0, "language": "en-US", "color": "full-color",
+            "censorship": "mixed", "edition": "Digital edition", "group": "Fixture group"}
+    owner.request(release_url, 400, method="PUT", token=owner.csrf(), body={**tags, "language": "en @invalid"})
+    owner.request(release_url, 409, method="PUT", token=owner.csrf(), body={**tags, "contentId": uuid4().hex})
+    owner.request(release_url, 204, method="PUT", token=owner.csrf(), body=tags)
+    owner.request(release_url, 409, method="PUT", token=owner.csrf(), body=tags)
+    owner.scan(root)
+    filtered = json.loads(owner.request(version_series + "?language=en-US&color=full-color&censorship=mixed&edition=digital"
+                                       "&group=fixture&reviewed=true&limit=1", 200))
+    assert filtered["total"] == 1 and filtered["items"][0]["tags"] == {
+        "language": "en-us", "color": "full-color", "censorship": "mixed", "edition": "Digital edition",
+        "group": "Fixture group", "revision": 1,
+    }
+    assert json.loads(owner.request(f"{operations}/duplicates/series?search=Safety+Fixture&kind=bytes", 200))["total"] == 1
+
+    for path in (volume, chapter, copy, alias, unrelated_chapter, unassigned, alternate, translated):
         path.unlink()
     owner.scan(root)
 

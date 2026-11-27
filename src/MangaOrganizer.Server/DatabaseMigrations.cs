@@ -28,6 +28,7 @@ internal static class DatabaseMigrations
         new("0014-preferred-chapter-release"),
         new("0015-metadata-suggestions"),
         new("0016-intake-destinations"),
+        new("0017-release-tags"),
     ];
 
     public static int Apply(string dataDirectory)

@@ -3,6 +3,7 @@ import { CoverageMark } from './CoverageMark';
 import { fileName, filePattern } from './duplicateCoverage';
 import type { CoverageFile } from './duplicateCoverage';
 import { formatSize } from './library';
+import { EditReleaseTags } from './ReleaseTagsEditor';
 import { FileCover } from './SeriesCover';
 import { Button } from './ui';
 
@@ -38,6 +39,7 @@ function FileEvidence({ file, color, note, onSignedOut, version }: {
     </div>
     <code className="text-xs text-muted wrap-anywhere">{file.fullPath}</code>
     {note && <p className="m-0 text-xs text-muted">{note}</p>}
+    {file.sha256 && <div className="action-row"><EditReleaseTags rootId={rootId} fileId={fileId} onSignedOut={onSignedOut} /></div>}
     <details open={Boolean(evidence?.comicInfo.length)} className="border-t border-line">
       <summary className="min-h-9 cursor-pointer py-2 text-xs font-semibold">ComicInfo and indexed hash</summary>
       {evidence?.comicInfo.length ? <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 text-xs">
