@@ -47,7 +47,8 @@ class Browser:
             body = json.dumps(body).encode()
         request = Request(self.url + path, data=body, headers=headers, method=method)
         try:
-            response = self.opener.open(request, timeout=5)
+            # Allow scan polling and provider pacing on hosted Windows runners.
+            response = self.opener.open(request, timeout=15)
         except HTTPError as error:
             response = error
         with response:
