@@ -31,30 +31,37 @@ internal static class DatabaseMigrations
     public static int Apply(string dataDirectory)
     {
         using var database = ServerStore.CreateConnection(dataDirectory);
+        UpgradeBackup.RequireOrdinaryPath(database.DataSource);
         database.Open();
         using var transaction = database.BeginTransaction(deferred: false);
         using var command = database.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            CREATE TABLE IF NOT EXISTS schema_migration (
-                version INTEGER PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE,
-                applied_at TEXT NOT NULL
-            );
+            SELECT name FROM sqlite_schema WHERE type = 'table' AND substr(name, 1, 7) <> 'sqlite_' ORDER BY name;
             """;
-        command.ExecuteNonQuery();
-        command.CommandText = "SELECT version, name FROM schema_migration ORDER BY version;";
-        var applied = 0;
+        var tables = new List<string>();
         using (var rows = command.ExecuteReader())
         {
-            while (rows.Read())
-            {
-                if (applied >= Migrations.Length || rows.GetInt64(0) != applied + 1 || rows.GetString(1) != Migrations[applied].Name)
-                {
-                    throw new InvalidOperationException("The database migration history is incompatible with this version of Manga Organizer.");
-                }
-                applied++;
-            }
+            while (rows.Read()) tables.Add(rows.GetString(0));
+        }
+        var hasHistory = tables.Contains("schema_migration", StringComparer.OrdinalIgnoreCase);
+        var applied = hasHistory ? ReadHistory(command) : 0;
+        if (applied == Migrations.Length) return applied;
+        if (tables.Count > 0)
+        {
+            var snapshot = UpgradeBackup.Create(dataDirectory, command, tables, applied, Migrations.Length);
+            Console.WriteLine($"Verified pre-upgrade backup saved in {snapshot}");
+        }
+        if (!hasHistory)
+        {
+            command.CommandText = """
+                CREATE TABLE schema_migration (
+                    version INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL UNIQUE,
+                    applied_at TEXT NOT NULL
+                );
+                """;
+            command.ExecuteNonQuery();
         }
 
         for (var index = applied; index < Migrations.Length; index++)
@@ -76,6 +83,22 @@ internal static class DatabaseMigrations
 
         transaction.Commit();
         return Migrations.Length;
+    }
+
+    private static int ReadHistory(SqliteCommand command)
+    {
+        command.CommandText = "SELECT version, name FROM schema_migration ORDER BY version;";
+        var applied = 0;
+        using var rows = command.ExecuteReader();
+        while (rows.Read())
+        {
+            if (applied >= Migrations.Length || rows.GetInt64(0) != applied + 1 || rows.GetString(1) != Migrations[applied].Name)
+            {
+                throw new InvalidOperationException("The database migration history is incompatible with this version of Manga Organizer.");
+            }
+            applied++;
+        }
+        return applied;
     }
 
     private static string ReadSql(string name)

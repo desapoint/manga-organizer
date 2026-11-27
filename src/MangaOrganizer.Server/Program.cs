@@ -16,7 +16,8 @@ var builder = WebUi.CreateBuilder(migrationOnly ? [] : args);
 var dataDirectory = Path.GetFullPath(builder.Configuration["MANGA_ORGANIZER_DATA_DIR"] ?? Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify),
     "MangaOrganizer"));
-Directory.CreateDirectory(dataDirectory);
+using var dataLease = AcquireDataLease(dataDirectory);
+if (dataLease is null) return;
 try
 {
     var schemaVersion = DatabaseMigrations.Apply(dataDirectory);
@@ -26,7 +27,7 @@ try
         return;
     }
 }
-catch (Exception error) when (error is SqliteException or IOException or InvalidOperationException)
+catch (Exception error) when (error is SqliteException or IOException or InvalidOperationException or UnauthorizedAccessException)
 {
     Console.Error.WriteLine($"Database migration failed: {error.Message}");
     Environment.ExitCode = 1;
@@ -142,5 +143,22 @@ api.MapDelete("/session", async (HttpContext context, IAntiforgery antiforgery) 
 }).RequireAuthorization();
 
 await app.RunAsync();
+
+static FileStream? AcquireDataLease(string directory)
+{
+    try
+    {
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, ".server.lock");
+        UpgradeBackup.RequireOrdinaryPath(path);
+        return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+    }
+    catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+    {
+        Console.Error.WriteLine("Could not lock the server data directory. Check its permissions and stop any other Manga Organizer process using it.");
+        Environment.ExitCode = 1;
+        return null;
+    }
+}
 
 internal sealed record SignIn(string? Password);
