@@ -41,27 +41,25 @@ internal sealed partial class LibraryStore
                 AND metadata.status = 'FINISHED' COLLATE NOCASE AND metadata.total_chapters = 1)
         """;
 
-    private const string GroupCoverage = """
+    private const string GroupCoverage = $$"""
         SELECT f.content_id, c.volume, c.chapter FROM library_file f JOIN content_chapter c ON c.content_id = f.content_id
-        WHERE f.root_id = $root AND f.series_key = $series
+        WHERE f.root_id = $root AND {{GroupSeriesKeys}}
         UNION
         SELECT f.content_id, inferred.volume, chapter.value
         FROM library_file f JOIN active_inferred_volume_chapters inferred ON inferred.content_id = f.content_id, json_each(inferred.chapters) chapter
-        WHERE f.root_id = $root AND f.series_key = $series
+        WHERE f.root_id = $root AND {{GroupSeriesKeys}}
             AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = f.content_id)
         UNION
         SELECT f.content_id, COALESCE(f.volume_hint, ''), f.chapter_hint FROM library_file_numbered f
-        WHERE f.root_id = $root AND f.series_key = $series AND f.content_id IS NOT NULL AND f.chapter_hint IS NOT NULL
+        WHERE f.root_id = $root AND {{GroupSeriesKeys}} AND f.content_id IS NOT NULL AND f.chapter_hint IS NOT NULL
             AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = f.content_id)
             AND NOT EXISTS (SELECT 1 FROM active_inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
         UNION
         SELECT f.content_id, COALESCE(f.volume_hint, ''), '1' FROM library_file_numbered f
-        WHERE f.root_id = $root AND f.series_key = $series AND f.content_id IS NOT NULL
+        WHERE f.root_id = $root AND {{GroupSeriesKeys}} AND f.content_id IS NOT NULL
             AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = f.content_id)
             AND NOT EXISTS (SELECT 1 FROM active_inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
-            AND
-        """ + " " + FinishedOneShot + """
-
+            AND {{FinishedOneShot}}
         """;
 
     internal static void BackfillBookNumbers(SqliteConnection database, SqliteCommand command)
@@ -76,17 +74,17 @@ internal sealed partial class LibraryStore
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: true);
-        using var command = GroupCommand(database, transaction, root, seriesKey);
+        using var command = GroupCommand(database, transaction, root, seriesKey, published);
         if (!GroupExists(command, published)) return null;
 
         var metadata = ReadMetadata(command);
         command.Parameters.AddWithValue("$owner", owner);
-        AddWorkKey(command, root, seriesKey);
+        AddWorkKey(command, root);
         var visible = SeriesVisibility(published);
         var coverage = ScopedGroupCoverage(published);
         command.CommandText = "WITH readable_files AS (" + ReadableGroupFiles + visible + """
             ), readable AS (SELECT DISTINCT content_id FROM readable_files)
-            SELECT coverage.volume, coverage.chapter, COALESCE(chapter.completed, local.completed, MAX(COALESCE(p.completed, 0))),
+            SELECT coverage.volume, coverage.chapter, COALESCE(chapter.completed, local.completed, related_status.completed, MAX(COALESCE(p.completed, 0))),
                 COUNT(readable.content_id), MIN(readable.content_id),
                 MAX(CASE WHEN readable.content_id = COALESCE(preferred.content_id, preferred_local.content_id) THEN readable.content_id END)
             FROM (
@@ -101,6 +99,8 @@ internal sealed partial class LibraryStore
                 AND preferred.volume = coverage.volume AND preferred.chapter = coverage.chapter
             LEFT JOIN preferred_chapter_release preferred_local ON preferred_local.owner_id = $owner AND preferred_local.work_key = $localWork
                 AND preferred_local.volume = coverage.volume AND preferred_local.chapter = coverage.chapter
+            """ + " " + RelatedChapterState + """
+
             GROUP BY coverage.volume, coverage.chapter;
             """;
         var chapters = new List<LibraryChapter>();
@@ -117,7 +117,9 @@ internal sealed partial class LibraryStore
         }
 
         command.CommandText = """
-            SELECT DISTINCT volume_hint FROM library_file_numbered f WHERE root_id = $root AND series_key = $series AND volume_hint IS NOT NULL
+            SELECT DISTINCT volume_hint FROM library_file_numbered f WHERE root_id = $root AND
+            """ + " " + GroupSeriesKeys + """
+                 AND volume_hint IS NOT NULL
                 AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = f.content_id)
                 AND NOT EXISTS (SELECT 1 FROM active_inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
             """ + visible;
@@ -146,7 +148,7 @@ internal sealed partial class LibraryStore
             while (rows.Read()) volumeReading.Add(new(rows.GetString(0), rows.GetString(1), rows.GetInt32(2)));
         }
         var indexedVolumes = volumes.Count;
-        command.CommandText = "SELECT DISTINCT volume FROM edition_volume_manifest WHERE work_key IN ($work, $localWork);";
+        command.CommandText = "SELECT DISTINCT volume FROM edition_volume_manifest WHERE work_key IN (" + GroupWorkKeys + ");";
         using (var rows = command.ExecuteReader())
         {
             while (rows.Read()) volumes.Add(rows.GetString(0));
@@ -167,7 +169,9 @@ internal sealed partial class LibraryStore
             SELECT f.content_id, f.relative_path, f.series_title, p.page_index, p.page_count, COALESCE(p.completed, 0)
             FROM library_file f JOIN library_root r ON r.id = f.root_id
             LEFT JOIN reading_progress p ON p.owner_id = $owner AND p.content_id = f.content_id
-            WHERE f.root_id = $root AND f.series_key = $series AND r.state <> 'unavailable'
+            WHERE f.root_id = $root AND
+            """ + " " + GroupSeriesKeys + """
+                 AND r.state <> 'unavailable'
               AND f.content_id IS NOT NULL AND f.extension IN ('cbz', 'zip', 'cbr', 'rar')
             """ + visible + """
 
@@ -199,7 +203,7 @@ internal sealed partial class LibraryStore
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
-        using var command = GroupCommand(database, transaction, root, seriesKey);
+        using var command = GroupCommand(database, transaction, root, seriesKey, published);
         if (!GroupExists(command, published) || GroupHasActiveIntakeTransfer(command)) return null;
 
         var saved = WriteMetadata(command, metadata, attachFiles: !published);
@@ -352,12 +356,12 @@ internal sealed partial class LibraryStore
         return result.OrderBy(chapter => Numeric(chapter.Chapter)).ToArray();
     }
 
-    private static SqliteCommand GroupCommand(SqliteConnection database, SqliteTransaction transaction, Guid root, string seriesKey)
+    private static SqliteCommand GroupCommand(SqliteConnection database, SqliteTransaction transaction, Guid root, string seriesKey, bool published = false)
     {
         var command = database.CreateCommand();
         command.Transaction = transaction;
         command.Parameters.AddWithValue("$root", root);
-        command.Parameters.AddWithValue("$series", seriesKey);
+        BindSeriesGroup(command, seriesKey, published);
         return command;
     }
 
@@ -370,12 +374,12 @@ internal sealed partial class LibraryStore
         return command.ExecuteScalar() is not null;
     }
 
-    private static bool ContentInGroup(SqliteCommand command)
+    private static bool ContentInGroup(SqliteCommand command, bool published = false)
     {
         command.CommandText = """
             SELECT 1 FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
-            WHERE f.root_id = $root AND f.series_key = $series AND f.content_id = $content LIMIT 1;
-            """;
+            WHERE f.root_id = $root AND f.content_id = $content AND
+            """ + " " + GroupSeriesKeys + SeriesVisibility(published) + " LIMIT 1;";
         return command.ExecuteScalar() is not null;
     }
 

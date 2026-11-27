@@ -74,7 +74,7 @@ internal sealed partial class LibraryStore
         if (files.Count == 0) return null;
         if (compareFolders) return new(managed, files.Values.ToArray(), []);
 
-        AddWorkKey(command, root, series);
+        AddWorkKey(command, root);
         command.CommandText = """
             SELECT DISTINCT manifest.volume, chapter.value
             FROM edition_volume_manifest manifest, json_each(manifest.chapters) chapter

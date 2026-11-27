@@ -7,6 +7,7 @@ import type { TagRules } from './CollectionControls';
 import { DuplicateReviewDialog } from './DuplicateReview';
 import { FileAssociationEditor } from './FileAssociationEditor';
 import { FileMove } from './FileOperations';
+import { IntakeGroupingDialog } from './IntakeGrouping';
 import { IntakeSeriesMatch, ReviewIntakeMatches } from './IntakeSeriesMatch';
 import type { IntakeAniListMatch } from './IntakeSeriesMatch';
 import { EditReleaseTags, ReleaseSelectionActions, SelectReleaseCheckbox, useReleaseSelection } from './ReleaseTagsEditor';
@@ -44,7 +45,7 @@ type CatalogEntry = {
 };
 
 export type Series = { rootId: string; key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean;
-  aniList?: IntakeAniListMatch; lookupQueued?: boolean };
+  aniList?: IntakeAniListMatch; lookupQueued?: boolean; coverSeriesKey?: string };
 type Page<T> = { total: number; items: T[]; lookupQueued?: boolean };
 type InventoryProps = { rootId: string; version: string; onSignedOut: () => void };
 type FileManagement = { onDataChanged: () => void; managedFolders: LibraryRoot[]; intakeTarget?: LibraryRoot; onMoved: () => void };
@@ -325,15 +326,16 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
   );
 }
 
-function SeriesRow({ series, onInspect, coverVersion, catalogView, ...inventory }: InventoryActions & {
+function SeriesRow({ series, onInspect, coverVersion, catalogView, selection, ...inventory }: InventoryActions & {
   series: Series; onInspect?: Inspect; coverVersion: string; catalogView: CatalogView;
+  selection?: { checked: boolean; disabled: boolean; toggle: () => void };
 }) {
   const [open, setOpen] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
   const filesId = useId();
   const rowClass = 'grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl p-3 hover:bg-nav-hover sm:gap-3 sm:px-4';
   const contents = <>
-    {series.hasCover ? <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available={series.hasCover} revision={coverVersion} className="h-14 w-10 rounded-md" /> :
+    {series.hasCover ? <SeriesCover rootId={inventory.rootId} seriesKey={series.coverSeriesKey ?? series.key} available={series.hasCover} revision={coverVersion} className="h-14 w-10 rounded-md" /> :
       <span className="grid size-8 place-items-center rounded-lg bg-nav-active text-nav-icon"><Library className="size-4" aria-hidden="true" /></span>}
     <span className="wrap-anywhere">
       <span className="block font-semibold">{series.title}</span>
@@ -344,6 +346,10 @@ function SeriesRow({ series, onInspect, coverVersion, catalogView, ...inventory 
 
   if (onInspect) return <li className="surface">
     <div className="flex min-w-0 flex-wrap items-center gap-2 p-3 sm:px-4">
+      {selection && <label className="grid min-h-11 min-w-9 place-items-center">
+        <input type="checkbox" aria-label={"Select " + series.title} checked={selection.checked}
+          disabled={selection.disabled} onChange={selection.toggle} />
+      </label>}
       {series.hasCover ? <Button variant="ghost" className="shrink-0 p-0" aria-label={`Enlarge cover for ${series.title}`}
         onClick={() => setCoverOpen(true)}>
         <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available revision={coverVersion} className="h-14 w-10 rounded-md" />
@@ -392,7 +398,7 @@ export function CoverGrid({ series, coverVersion }: { series: Series[]; coverVer
       {series.map(item => (
         <li key={item.rootId + item.key} className="min-w-0">
           <a href={seriesHref(item.rootId, item.key)} className="group grid gap-2 rounded-xl border border-transparent p-1 text-start text-ink no-underline hover:bg-panel">
-            <SeriesCover rootId={item.rootId} seriesKey={item.key} available={item.hasCover} revision={coverVersion}
+            <SeriesCover rootId={item.rootId} seriesKey={item.coverSeriesKey ?? item.key} available={item.hasCover} revision={coverVersion}
               className="aspect-[2/3] rounded-lg" />
             <span className="line-clamp-2 min-h-10 px-1 text-sm font-semibold wrap-anywhere" title={item.title}>{item.title}</span>
             <span className="px-1 pb-1 text-xs text-muted">{item.fileCount.toLocaleString()} {item.fileCount === 1 ? 'file' : 'files'}</span>
@@ -439,7 +445,7 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
       <ActionLink href="#library" variant="ghost" icon={ArrowLeft} className="justify-self-start">Back to library</ActionLink>
       <div className="surface grid min-w-0 gap-4 bg-linear-to-br from-nav-active/45 to-panel p-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-6 sm:p-6">
         {series?.hasCover && <Button variant="ghost" className="w-24 justify-self-start p-0 sm:w-37" aria-label="Enlarge cover" onClick={() => setDialog('cover')}>
-          <SeriesCover rootId={rootId} seriesKey={seriesKey} available revision={coverVersion} className="aspect-[2/3] w-full rounded-lg" />
+          <SeriesCover rootId={rootId} seriesKey={series?.coverSeriesKey ?? seriesKey} available revision={coverVersion} className="aspect-[2/3] w-full rounded-lg" />
         </Button>}
         <div className="grid min-w-0 gap-3">
           <PageHeader id="series-heading" section="Library" title={title} />
@@ -500,7 +506,7 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
         </div>
       </Modal>}
       {dialog === 'cover' && <Modal title={title} onClose={() => setDialog(null)}>
-        <SeriesCover rootId={rootId} seriesKey={seriesKey} available revision={coverVersion}
+        <SeriesCover rootId={rootId} seriesKey={series?.coverSeriesKey ?? seriesKey} available revision={coverVersion}
           className="rounded-lg [&_img]:max-h-[70dvh] [&_img]:object-contain" />
       </Modal>}
     </section>
@@ -514,6 +520,8 @@ function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, se
   const { rootId, version, onSignedOut } = inventory;
   const [lookupRevision, setLookupRevision] = useState(0);
   const [matchReview, setMatchReview] = useState<Series[] | null>(null);
+  const [selected, setSelected] = useState<Series[] | null>(null);
+  const [grouping, setGrouping] = useState(false);
   const filters = new URLSearchParams({ search, sort, coverOnly: String(coverOnly), view: catalogView });
   rules.includeTags.forEach(tag => filters.append('includeTag', tag));
   rules.excludeTags.forEach(tag => filters.append('excludeTag', tag));
@@ -531,6 +539,16 @@ function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, se
     <>
       {error && <InventoryError retry={retry}>Could not load the inventory.</InventoryError>}
       {!page && !error && <p role="status">Loading inventory…</p>}
+      {onInspect && page && (page.items.length > 0 || selected) && <div className="action-row">
+        <Button variant="secondary" onClick={() => setSelected(current => current ? null : [])}>
+          {selected ? 'Cancel selection' : 'Select series to group'}
+        </Button>
+        {selected && <Button disabled={selected.length < 2} onClick={() => setGrouping(true)}>
+          Group selected ({selected.length})
+        </Button>}
+      </div>}
+      {grouping && selected && <IntakeGroupingDialog rootId={rootId} series={selected} onSignedOut={onSignedOut}
+        onClose={() => setGrouping(false)} onSaved={() => { setGrouping(false); setSelected(null); inventory.onDataChanged(); }} />}
       {closeMatches.length > 0 && <Button variant="secondary" className="justify-self-start"
         onClick={() => setMatchReview(closeMatches)}>Review close matches ({closeMatches.length})</Button>}
       {matchReview && <ReviewIntakeMatches series={matchReview} onSignedOut={onSignedOut}
@@ -545,7 +563,12 @@ function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, se
           {coverGrid ? <CoverGrid series={page.items} coverVersion={coverVersion} /> : (
             <ul className="m-0 grid list-none gap-2 p-0" role="list" aria-label="Series groups">
               {page.items.map(series => <SeriesRow key={series.key} series={series} catalogView={catalogView}
-                onInspect={onInspect} coverVersion={coverVersion} {...inventory} />)}
+                onInspect={onInspect} coverVersion={coverVersion} {...inventory} selection={selected ? {
+                  checked: selected.some(item => item.key === series.key),
+                  disabled: selected.length >= 50 && !selected.some(item => item.key === series.key),
+                  toggle: () => setSelected(current => current?.some(item => item.key === series.key)
+                    ? current.filter(item => item.key !== series.key) : [...(current ?? []), series]),
+                } : undefined} />)}
             </ul>
           )}
           <PageControls label="Series pages" offset={offset} count={page.items.length} total={page.total} onChange={setOffset} />

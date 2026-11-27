@@ -57,7 +57,7 @@ internal sealed partial class LibraryStore
     private static string ScopedGroupCoverage(bool published) => published
         ? "SELECT coverage.* FROM (" + GroupCoverage + """
             ) coverage WHERE coverage.content_id IN (
-                SELECT f.content_id FROM library_file f WHERE f.root_id = $root AND f.series_key = $series
-            """ + SeriesVisibility(true) + ")"
+                SELECT f.content_id FROM library_file f WHERE f.root_id = $root AND
+            """ + " " + GroupSeriesKeys + SeriesVisibility(true) + ")"
         : GroupCoverage;
 }

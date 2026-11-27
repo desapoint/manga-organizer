@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace MangaOrganizer.Server;
 
 internal sealed record IntakeTargetChange(Guid? TargetRoot);
+internal sealed record IntakeGroupChange(string[]? SeriesKeys, string? Title, string? TargetSeriesKey, bool Confirm, string? Kind);
 
 internal static class LibraryEndpoints
 {
@@ -83,6 +84,23 @@ internal static class LibraryEndpoints
                 ? Results.Ok(store.ReadSeries(id, offset ?? 0, limit ?? 50, filters, sort, seriesKey?.ToLowerInvariant(), view: view))
                 : Results.BadRequest();
         });
+
+        library.MapPost("/{id:guid}/group-series", async (Guid id, IntakeGroupChange change, LibraryStore store,
+            HttpContext context, IAntiforgery antiforgery) =>
+        {
+            var title = change.Title?.Trim();
+            if (!await antiforgery.IsRequestValidAsync(context) || change.SeriesKeys is not { Length: >= 2 and <= 50 } keys
+                || keys.Any(key => key is null || !IsSeriesKey(key)) || title is { Length: > 300 }
+                || change.Kind is not (null or "manga" or "doujin"))
+                return Results.BadRequest();
+            var selected = keys.Select(key => key.ToLowerInvariant()).Distinct(StringComparer.Ordinal).ToArray();
+            var target = change.TargetSeriesKey?.ToLowerInvariant();
+            if (selected.Length != keys.Length || (target is null && string.IsNullOrEmpty(title))
+                || (target is not null && !selected.Contains(target, StringComparer.Ordinal))) return Results.BadRequest();
+
+            var error = store.GroupIntakeSeries(id, selected, title ?? "", target, change.Confirm, change.Kind ?? "manga");
+            return error is null ? Results.NoContent() : Results.Conflict(new { message = error });
+        }).WithMetadata(new RequestSizeLimitAttribute(8192));
 
         library.MapGet("/{id:guid}/tags", (Guid id, LibraryStore store) =>
             store.TryGetRoot(id, out _) ? Results.Ok(store.ReadSeriesTags(id)) : Results.NotFound());

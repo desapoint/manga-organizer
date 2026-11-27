@@ -7,15 +7,14 @@ internal sealed partial class LibraryStore
     private const string VerifiedChapterLabels = """
         SELECT DISTINCT manifest.volume, chapter.value AS chapter
         FROM edition_volume_manifest manifest, json_each(manifest.chapters) chapter
-        WHERE manifest.work_key IN ($work, $localWork)
-        """;
+        WHERE manifest.work_key IN (
+        """ + " " + GroupWorkKeys + ")";
 
     private static string ChapterCatalog(bool published) => "WITH RECURSIVE coverage AS MATERIALIZED (" + ScopedGroupCoverage(published)
-        + "), readable_files AS (" + ReadableGroupFiles + SeriesVisibility(published) + """
+        + "), readable_files AS (" + ReadableGroupFiles + SeriesVisibility(published) + $$"""
         ), readable AS (SELECT DISTINCT content_id FROM readable_files),
         verified AS (
-        """ + " " + VerifiedChapterLabels + """
-
+            {{VerifiedChapterLabels}}
         ), identified AS MATERIALIZED (
             SELECT volume, chapter FROM coverage
             UNION
@@ -32,8 +31,19 @@ internal sealed partial class LibraryStore
         catalog AS (
             SELECT label.volume, label.chapter, COUNT(readable.content_id) AS readable_count, MIN(readable.content_id) AS content_id,
                 COUNT(c.content_id) = 0 AS missing,
-                COALESCE(status.completed, local.completed, unnumbered.completed, old_number.completed, MAX(COALESCE(p.completed, 0))) AS completed,
-                MAX(CASE WHEN readable.content_id = COALESCE(pref.content_id, local_pref.content_id) THEN readable.content_id END) AS preferred
+                COALESCE(status.completed, local.completed, unnumbered.completed, old_number.completed, (
+                    SELECT MAX(related.completed) FROM chapter_completion related
+                    WHERE related.owner_id = $owner AND related.work_key IN (
+            {{GroupWorkKeys}}
+                    ) AND related.chapter = label.chapter
+                        AND (related.volume = label.volume OR n.occurrences = 1 AND related.volume = '')
+                ), MAX(COALESCE(p.completed, 0))) AS completed,
+                MAX(CASE WHEN readable.content_id = COALESCE(pref.content_id, local_pref.content_id, (
+                    SELECT MIN(other.content_id) FROM preferred_chapter_release other
+                    WHERE other.owner_id = $owner AND other.work_key IN (
+            {{GroupWorkKeys}}
+                    ) AND other.volume = label.volume AND other.chapter = label.chapter
+                )) THEN readable.content_id END) AS preferred
             FROM labels label JOIN numbering n ON n.chapter = label.chapter
             LEFT JOIN coverage c ON c.volume = label.volume AND c.chapter = label.chapter
             LEFT JOIN readable ON readable.content_id = c.content_id
@@ -59,11 +69,11 @@ internal sealed partial class LibraryStore
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: true);
-        using var command = GroupCommand(database, transaction, root, series);
+        using var command = GroupCommand(database, transaction, root, series, published);
         if (!GroupExists(command, published)) return null;
 
         var metadata = ReadMetadata(command);
-        AddWorkKey(command, root, series);
+        AddWorkKey(command, root);
         command.Parameters.AddWithValue("$owner", owner);
         command.Parameters.AddWithValue("$released", metadata?.TotalChapters ?? 0);
         command.Parameters.AddWithValue("$filterVolume", (object?)volume ?? DBNull.Value);

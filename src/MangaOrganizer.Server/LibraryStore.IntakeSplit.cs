@@ -60,9 +60,11 @@ internal sealed partial class LibraryStore
 
     private static void StageIntakeSplits(SqliteConnection database, Guid root)
     {
+        database.CreateFunction<string, string, string?>("selected_title_chapter", SeriesSuggestions.ChapterForSelectedTitle, isDeterministic: true);
         using var command = database.CreateCommand();
         command.CommandText = """
-            UPDATE scan_file AS f SET series_key = previous.series_key, series_title = previous.series_title
+            UPDATE scan_file AS f SET series_key = previous.series_key, series_title = previous.series_title,
+                chapter_hint = COALESCE(f.chapter_hint, CASE WHEN f.volume_hint IS NULL THEN selected_title_chapter(f.relative_path, previous.series_title) END)
             FROM scan_hash h JOIN library_content content ON content.sha256 = h.sha256
             JOIN import_file_split split ON split.content_id = content.id
             JOIN library_file previous ON previous.id = split.file_id AND previous.root_id = $root

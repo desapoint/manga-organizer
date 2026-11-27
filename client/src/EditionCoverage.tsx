@@ -114,7 +114,7 @@ function ReleasePicker({ chapter, rootId, seriesKey, url, version, onSignedOut, 
     setBusy(true);
     setPreferenceError('');
     try {
-      await saveSeries(url + '/chapter-preference', { volume: chapter.volume, chapter: chapter.chapter,
+      await saveSeries(url + '/chapter-preference' + (published ? '?published=true' : ''), { volume: chapter.volume, chapter: chapter.chapter,
         contentId: file.preferred ? null : file.contentId }, onSignedOut);
       onChange();
     } catch (reason) {
@@ -164,7 +164,7 @@ export function SeriesChapterList({ volume, rootId, seriesKey, url, version, onS
     setBusy(true);
     setError('');
     try {
-      await saveSeries(url + '/chapter-progress', { volume: chapter.volume, chapter: chapter.chapter, completed: !chapter.completed }, onSignedOut);
+      await saveSeries(url + '/chapter-progress' + (published ? '?published=true' : ''), { volume: chapter.volume, chapter: chapter.chapter, completed: !chapter.completed }, onSignedOut);
       onChange();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not save chapter progress.');
@@ -212,7 +212,7 @@ const statusClasses = {
   missing: 'border-danger/45 bg-danger/10 text-danger', unknown: 'border-line bg-inset text-muted',
 } as const;
 
-function ManifestEditor({ initial, volume: initialVolume, url, version, onChange, onSignedOut, onClose }: SeriesTools & {
+function ManifestEditor({ initial, volume: initialVolume, url, version, onChange, onSignedOut, onClose, published }: SeriesTools & {
   initial?: EditionVolume; volume?: string; onClose: () => void;
 }) {
   const [edition, setEdition] = useState(initial?.edition ?? (initialVolume ? 'Default' : ''));
@@ -223,14 +223,14 @@ function ManifestEditor({ initial, volume: initialVolume, url, version, onChange
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const valid = /^\d{1,6}(\.\d{1,6})?$/.test(volume.trim());
-  const files = useSeriesList<Release>(valid ? url + '/edition-candidates?' + new URLSearchParams({ volume: volume.trim() }) : '', version, onSignedOut);
+  const files = useSeriesList<Release>(valid ? url + '/edition-candidates?' + new URLSearchParams({ volume: volume.trim(), published: String(!!published) }) : '', version, onSignedOut);
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError('');
     try {
-      await saveSeries(url + '/edition-volumes', { edition, volume: volume.trim(), chapters: chapters.split(',').map(item => item.trim()).filter(Boolean),
+      await saveSeries(url + '/edition-volumes' + (published ? '?published=true' : ''), { edition, volume: volume.trim(), chapters: chapters.split(',').map(item => item.trim()).filter(Boolean),
         contentIds: ids, fullVolumeContentId: full }, onSignedOut);
       onChange();
       onClose();

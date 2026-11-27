@@ -33,17 +33,17 @@ internal static class ChapterEditionEndpoints
             && store.ReadVolumeReleases(root, seriesKey.ToLowerInvariant(), BookNumbers.Canonical(volume), owner, published == true) is { } list
                 ? Results.Ok(list) : Results.NotFound());
 
-        series.MapPut("/chapter-progress", async (Guid root, string seriesKey, ChapterCompletion change, LibraryStore store,
+        series.MapPut("/chapter-progress", async (Guid root, string seriesKey, ChapterCompletion change, bool? published, LibraryStore store,
             HttpContext context, IAntiforgery antiforgery) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context) || !IsChapter(seriesKey, change.Volume, change.Chapter))
                 return Results.BadRequest();
             if (!ReaderEndpoints.TryOwner(context, out var owner)) return Results.Unauthorized();
             return store.SaveChapterCompletion(root, seriesKey.ToLowerInvariant(), NormalizeVolume(change.Volume),
-                BookNumbers.Canonical(change.Chapter!), owner, change.Completed) ? Results.NoContent() : Results.NotFound();
+                BookNumbers.Canonical(change.Chapter!), owner, change.Completed, published == true) ? Results.NoContent() : Results.NotFound();
         }).WithMetadata(new RequestSizeLimitAttribute(4096));
 
-        series.MapPut("/chapter-preference", async (Guid root, string seriesKey, ChapterPreference preference, LibraryStore store,
+        series.MapPut("/chapter-preference", async (Guid root, string seriesKey, ChapterPreference preference, bool? published, LibraryStore store,
             HttpContext context, IAntiforgery antiforgery) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context) || !IsChapter(seriesKey, preference.Volume, preference.Chapter)
@@ -51,19 +51,19 @@ internal static class ChapterEditionEndpoints
                 return Results.BadRequest();
             if (!ReaderEndpoints.TryOwner(context, out var owner)) return Results.Unauthorized();
             return store.SavePreferredChapterRelease(root, seriesKey.ToLowerInvariant(), NormalizeVolume(preference.Volume),
-                BookNumbers.Canonical(preference.Chapter!), owner, preference.ContentId?.ToLowerInvariant())
+                BookNumbers.Canonical(preference.Chapter!), owner, preference.ContentId?.ToLowerInvariant(), published == true)
                 ? Results.NoContent() : Results.NotFound();
         }).WithMetadata(new RequestSizeLimitAttribute(4096));
 
         series.MapGet("/edition-volumes", (Guid root, string seriesKey, bool? published, LibraryStore store) =>
             LibraryEndpoints.IsSeriesKey(seriesKey) && store.ReadEditionVolumes(root, seriesKey.ToLowerInvariant(), published == true) is { } list
                 ? Results.Ok(list) : Results.NotFound());
-        series.MapGet("/edition-candidates", (Guid root, string seriesKey, string? volume, LibraryStore store) =>
+        series.MapGet("/edition-candidates", (Guid root, string seriesKey, string? volume, bool? published, LibraryStore store) =>
             LibraryEndpoints.IsSeriesKey(seriesKey) && volume is not null && BookNumbers.IsNumber(volume)
-            && store.ReadEditionCandidates(root, seriesKey.ToLowerInvariant(), BookNumbers.Canonical(volume)) is { } list
+            && store.ReadEditionCandidates(root, seriesKey.ToLowerInvariant(), BookNumbers.Canonical(volume), published == true) is { } list
                 ? Results.Ok(list) : Results.NotFound());
 
-        series.MapPut("/edition-volumes", async (Guid root, string seriesKey, EditionVolumeChange change, LibraryStore store,
+        series.MapPut("/edition-volumes", async (Guid root, string seriesKey, EditionVolumeChange change, bool? published, LibraryStore store,
             HttpContext context, IAntiforgery antiforgery) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context)) return Results.BadRequest();
@@ -78,7 +78,7 @@ internal static class ChapterEditionEndpoints
 
             return store.SaveEditionManifest(root, seriesKey.ToLowerInvariant(), edition, BookNumbers.Canonical(change.Volume),
                 chapters.Select(BookNumbers.Canonical).Distinct().ToArray(),
-                ids.Select(id => id.ToLowerInvariant()).Distinct().ToArray(), change.FullVolumeContentId?.ToLowerInvariant())
+                ids.Select(id => id.ToLowerInvariant()).Distinct().ToArray(), change.FullVolumeContentId?.ToLowerInvariant(), published == true)
                 ? Results.NoContent() : Results.Conflict(new { message = "Check the indexed releases. A full-volume assignment requires an unresolved volume file." });
         }).WithMetadata(new RequestSizeLimitAttribute(40 * 1024));
     }

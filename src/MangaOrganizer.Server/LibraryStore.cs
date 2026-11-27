@@ -91,13 +91,13 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$search", search);
         if (seriesKey is not null)
         {
-            command.Parameters.AddWithValue("$series", seriesKey);
+            BindSeriesGroup(command, seriesKey, view == "library");
         }
-        var scope = " WHERE f.root_id = $root" + (seriesKey is null ? "" : " AND f.series_key = $series") + CatalogVisibility(view);
+        var scope = " WHERE f.root_id = $root" + (seriesKey is null ? "" : " AND " + GroupSeriesKeys) + CatalogVisibility(view);
         var volumeCoverage = "";
         if (volume is not null && seriesKey is not null)
         {
-            AddWorkKey(command, id, seriesKey);
+            AddWorkKey(command, id);
             command.Parameters.AddWithValue("$volume", volume);
             volumeCoverage = "WITH covered AS (" + ScopedGroupCoverage(view == "library") + ") ";
             scope += " AND " + GroupVolumeMatch;
@@ -200,7 +200,10 @@ internal sealed partial class LibraryStore
                 series_title TEXT,
                 directory TEXT NOT NULL,
                 volume_hint TEXT,
-                chapter_hint TEXT
+                chapter_hint TEXT,
+                creator_series_key TEXT,
+                creator_series_title TEXT,
+                creator_chapter TEXT
             );
             CREATE TEMP TABLE scan_hash (
                 relative_path TEXT PRIMARY KEY,
@@ -308,7 +311,7 @@ internal sealed partial class LibraryStore
         using var transaction = database.BeginTransaction(deferred: true);
         using var insert = database.CreateCommand();
         insert.Transaction = transaction;
-        insert.CommandText = "INSERT INTO scan_file VALUES ($path, $extension, $size, $modified, $seriesKey, $seriesTitle, $directory, $volume, $chapter);";
+        insert.CommandText = "INSERT INTO scan_file VALUES ($path, $extension, $size, $modified, $seriesKey, $seriesTitle, $directory, $volume, $chapter, $creatorKey, $creatorTitle, $creatorChapter);";
         var relativePath = insert.Parameters.Add("$path", SqliteType.Text);
         var extension = insert.Parameters.Add("$extension", SqliteType.Text);
         var size = insert.Parameters.Add("$size", SqliteType.Integer);
@@ -318,6 +321,9 @@ internal sealed partial class LibraryStore
         var directory = insert.Parameters.Add("$directory", SqliteType.Text);
         var volume = insert.Parameters.Add("$volume", SqliteType.Text);
         var chapter = insert.Parameters.Add("$chapter", SqliteType.Text);
+        var creatorKey = insert.Parameters.Add("$creatorKey", SqliteType.Text);
+        var creatorTitle = insert.Parameters.Add("$creatorTitle", SqliteType.Text);
+        var creatorChapter = insert.Parameters.Add("$creatorChapter", SqliteType.Text);
         insert.Prepare();
 
         long count = 0;
@@ -334,10 +340,26 @@ internal sealed partial class LibraryStore
             var hints = BookNumbers.FromPath(file.RelativePath);
             volume.Value = (object?)hints.Volume ?? DBNull.Value;
             chapter.Value = (object?)hints.Chapter ?? DBNull.Value;
+            var creatorRelease = hints.Volume is null && hints.Chapter is null
+                ? SeriesSuggestions.NumberedCreatorRelease(file.RelativePath) : null;
+            creatorKey.Value = (object?)creatorRelease?.Key ?? DBNull.Value;
+            creatorTitle.Value = (object?)creatorRelease?.Title ?? DBNull.Value;
+            creatorChapter.Value = (object?)creatorRelease?.Chapter ?? DBNull.Value;
             insert.ExecuteNonQuery();
             count++;
             scan.Discovered(file.Size);
         }, cancellationToken);
+        insert.CommandText = """
+            WITH numbered AS (
+                SELECT creator_series_key, MIN(creator_series_title) AS title FROM scan_file
+                WHERE creator_series_key IS NOT NULL
+                GROUP BY creator_series_key HAVING COUNT(DISTINCT creator_chapter) >= 2
+            )
+            UPDATE scan_file AS f SET series_key = numbered.creator_series_key, series_title = numbered.title,
+                chapter_hint = f.creator_chapter
+            FROM numbered WHERE f.creator_series_key = numbered.creator_series_key;
+            """;
+        insert.ExecuteNonQuery();
         transaction.Commit();
         return (count, skippedLinks);
     }
