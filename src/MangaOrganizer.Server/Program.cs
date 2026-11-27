@@ -133,6 +133,7 @@ api.MapLibrary(dataDirectory);
 api.MapReader();
 api.MapFileOperations();
 api.MapMetadataQueue();
+api.MapMaintenance();
 
 api.MapDelete("/session", async (HttpContext context, IAntiforgery antiforgery) =>
 {
