@@ -6,7 +6,7 @@ Manga Organizer uses an editorial, dark-first interface. The `INK//SHELF` direct
 
 Tailwind holds the theme tokens. Ink uses `#101015` canvas, `#141319` sidebar, `#1B1A22` surfaces, `#24222C` overlays, `#302D39` borders, `#F6F3FA` primary text and `#A6A2B6` secondary text. Violet `#BDA5FA` is the default accent. Mint `#96E2C5` and coral `#FFA5A2` are alternatives. Warning uses `#F4C478` and danger uses `#FF7D92`. Paper uses warm surfaces and charcoal text with darker semantic accents for legibility. Store appearance preferences in the current browser.
 
-Use a persistent 232px desktop sidebar with an icon-only compact mode and accessible labels. On phones, use bottom navigation for Overview, Library and Import intake. More contains Settings and sign-out. Respect safe areas and maintain 44px touch targets for primary actions. Keep destinations, status labels and outline focus consistent on both layouts.
+Use a persistent 232px desktop sidebar with an icon-only compact mode and accessible labels. Put management modules in an expandable Tools submenu in the sidebar, including in compact mode. On phones, use bottom navigation for Overview, Library and Import intake. More contains the Tools submenu, Collections, Settings and sign-out. Respect safe areas and maintain 44px touch targets for primary actions. Keep destinations, status labels and outline focus consistent on both layouts.
 
 ## Functional screens
 
