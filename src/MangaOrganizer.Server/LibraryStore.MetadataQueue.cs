@@ -5,9 +5,9 @@ namespace MangaOrganizer.Server;
 
 internal sealed record MetadataProposal(MetadataMatch Match, string? MatchingTitle);
 internal sealed record MetadataQueueItem(Guid RootId, string SeriesKey, string Title, bool HasCover, bool Queued, string? Revision,
-    IReadOnlyList<MetadataProposal>? Candidates, string? Message, bool ConflictingMetadata);
+    IReadOnlyList<MetadataProposal>? Candidates, string? Message, bool ConflictingMetadata, bool PagePriority);
 internal sealed record MetadataWork(string SeriesKey, string Title, string Revision);
-internal sealed record MetadataQueueLocation(Guid RootId, string SeriesKey);
+internal sealed record MetadataQueueLocation(Guid RootId, string SeriesKey, bool AlreadyQueued = false);
 
 internal sealed partial class LibraryStore
 {
@@ -31,7 +31,8 @@ internal sealed partial class LibraryStore
             LEFT JOIN library_content content ON content.sha256 = h.sha256
             LEFT JOIN content_metadata cm ON cm.content_id = content.id
             WHERE s.series_title IS NOT NULL AND h.sha256 IS NOT NULL
-                AND NOT EXISTS (SELECT 1 FROM library_file old WHERE old.root_id = $id AND old.series_key = s.series_key)
+                AND NOT EXISTS (SELECT 1 FROM library_file old WHERE old.root_id = $id AND old.series_key = s.series_key
+                    AND old.content_id IS NOT NULL)
                 AND NOT EXISTS (SELECT 1 FROM series_metadata_binding binding WHERE binding.root_id = $id AND binding.series_key = s.series_key)
             GROUP BY s.series_key
             HAVING COUNT(DISTINCT cm.metadata_id) = 0
@@ -58,7 +59,7 @@ internal sealed partial class LibraryStore
         command.CommandText = filtered + """
             SELECT f.root_id, f.series_key, f.title,
                 EXISTS(SELECT 1 FROM library_series_cover c WHERE c.root_id = f.root_id AND c.series_key = f.series_key),
-                COALESCE(s.queued, 0), s.revision, s.candidates, s.message, f.conflict
+                COALESCE(s.queued, 0), s.revision, s.candidates, s.message, f.conflict, COALESCE(s.priority, 0)
             FROM filtered f LEFT JOIN metadata_suggestion s ON s.series_key = f.series_key
             ORDER BY f.title COLLATE NOCASE, f.root_id, f.series_key LIMIT $limit OFFSET $offset;
             """;
@@ -68,7 +69,7 @@ internal sealed partial class LibraryStore
         {
             var candidates = ReadText(rows, 6) is { } json ? JsonSerializer.Deserialize<MetadataProposal[]>(json) : null;
             items.Add(new(rows.GetGuid(0), rows.GetString(1), rows.GetString(2), rows.GetBoolean(3), rows.GetBoolean(4),
-                ReadText(rows, 5), candidates, ReadText(rows, 7), rows.GetBoolean(8)));
+                ReadText(rows, 5), candidates, ReadText(rows, 7), rows.GetBoolean(8), rows.GetBoolean(9)));
         }
         return new(total, items);
     }
@@ -81,19 +82,27 @@ internal sealed partial class LibraryStore
         command.Transaction = transaction;
         var root = command.Parameters.Add("$queueRoot", SqliteType.Text);
         var series = command.Parameters.Add("$queueSeries", SqliteType.Text);
+        var alreadyQueued = command.Parameters.Add("$alreadyQueued", SqliteType.Integer);
         command.CommandText = "WITH unresolved AS (" + UnresolvedSeries + """
             )
-            INSERT INTO metadata_suggestion(series_key, title, revision, queued, requested_at)
-            SELECT series_key, title, lower(hex(randomblob(16))), 1, unixepoch() FROM unresolved WHERE NOT conflict
-            ON CONFLICT(series_key) DO UPDATE SET title = excluded.title, queued = 1, requested_at = excluded.requested_at,
-                retry_at = NULL, message = NULL
-            WHERE metadata_suggestion.queued = 0;
+            INSERT INTO metadata_suggestion(series_key, title, revision, queued, requested_at, priority)
+            SELECT unresolved.series_key, unresolved.title, lower(hex(randomblob(16))), 1, unixepoch(), 1
+            FROM unresolved LEFT JOIN metadata_suggestion current USING (series_key)
+            WHERE NOT conflict AND (NOT $alreadyQueued OR current.queued = 1)
+            ON CONFLICT(series_key) DO UPDATE SET
+                title = CASE WHEN metadata_suggestion.queued THEN metadata_suggestion.title ELSE excluded.title END,
+                requested_at = CASE WHEN metadata_suggestion.queued THEN metadata_suggestion.requested_at ELSE excluded.requested_at END,
+                retry_at = CASE WHEN metadata_suggestion.queued THEN metadata_suggestion.retry_at END,
+                message = CASE WHEN metadata_suggestion.queued THEN metadata_suggestion.message END,
+                queued = 1, priority = 1
+            WHERE metadata_suggestion.queued = 0 OR metadata_suggestion.priority = 0;
             """;
         var changed = 0;
         foreach (var item in visible)
         {
             root.Value = item.RootId;
             series.Value = item.SeriesKey;
+            alreadyQueued.Value = item.AlreadyQueued;
             changed += command.ExecuteNonQuery();
         }
         transaction.Commit();
@@ -113,7 +122,7 @@ internal sealed partial class LibraryStore
                         SELECT 1 FROM series_metadata_binding binding WHERE binding.root_id = f.root_id AND binding.series_key = s.series_key)
                     GROUP BY f.root_id HAVING COUNT(f.content_id) > 0 AND COUNT(DISTINCT (
                         SELECT cm.metadata_id FROM content_metadata cm WHERE cm.content_id = f.content_id)) = 0)
-            ORDER BY s.requested_at, s.series_key LIMIT 1;
+            ORDER BY s.priority DESC, s.requested_at, s.series_key LIMIT 1;
             """;
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         using var rows = command.ExecuteReader();
@@ -127,7 +136,7 @@ internal sealed partial class LibraryStore
         command.CommandText = """
             UPDATE metadata_suggestion SET candidates = COALESCE($candidates, candidates), message = $message,
                 revision = CASE WHEN $candidates IS NULL THEN revision ELSE lower(hex(randomblob(16))) END,
-                queued = $queued, retry_at = $retry
+                queued = $queued, retry_at = $retry, priority = CASE WHEN $queued THEN priority ELSE 0 END
             WHERE series_key = $series AND revision = $revision AND queued = 1;
             """;
         command.Parameters.AddWithValue("$series", work.SeriesKey);

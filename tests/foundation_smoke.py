@@ -2,6 +2,7 @@
 
 import argparse
 from base64 import b64decode
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing, contextmanager
 from hashlib import sha256
 from http.cookiejar import CookieJar
@@ -611,7 +612,10 @@ def verify_series_metadata(owner, root_id, path):
     assert dict(after, reading=details["reading"]) == details
 
 
-def verify_external_metadata(executable, fixture, media):
+def verify_external_metadata(executable, fixture):
+    media = fixture / "metadata-media"
+    (media / "primary").mkdir(parents=True)
+    (media / "archive").mkdir()
     (media / "primary" / "Issue 01.pdf").write_bytes(b"Unique synthetic issue for matching tests")
     cover = "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/fixture.jpg"
     media_result = {"id": 123, "title": {"english": "Synthetic provider title", "native": "本"},
@@ -658,6 +662,12 @@ def verify_external_metadata(executable, fixture, media):
                 browser.sign_in(password)
                 root_id = browser.roots()[0]["id"]
                 browser.scan(root_id)
+                for _ in range(50):
+                    suggestions = json.loads(browser.request("/api/metadata-suggestions", 200))["items"]
+                    if not any(row["queued"] for row in suggestions):
+                        break
+                    time.sleep(0.1)
+                assert not any(row["queued"] for row in suggestions)
                 (series,) = browser.series(root_id, "?search=Issue+01")["items"]
                 url = f"{LIBRARY_ROOTS}/{root_id}/series/{series['key']}"
                 result, fallback = json.loads(browser.request(f"{url}/metadata/search?title=Issue+01", 200))
@@ -1734,12 +1744,17 @@ def verify_metadata_queue(executable, fixture):
     for index, name in enumerate(("Alpha Shelf Vol.01", "Alpha Shelf Vol.02", "Beta Shelf Vol.01", "Gamma Shelf Vol.01")):
         (media / "primary" / f"{name}.pdf").write_bytes(f"Queue fixture {index}".encode())
     calls = []
+    page_started = threading.Event()
+    release_page = threading.Event()
 
     class Provider(BaseHTTPRequestHandler):
         def do_POST(self):
             variables = json.loads(self.rfile.read(int(self.headers["Content-Length"])))["variables"]
             title = variables.get("title")
             calls.append((title, time.monotonic()))
+            if title and title.startswith("Page Window") and not page_started.is_set():
+                page_started.set()
+                release_page.wait(timeout=8)
             if title == "Rate Shelf" and sum(name == title for name, _ in calls) == 1:
                 self.send_response(429)
                 self.send_header("Retry-After", "4")
@@ -1828,7 +1843,67 @@ def verify_metadata_queue(executable, fixture):
                 assert rows["Rate Shelf"]["candidates"][0]["match"]["providerId"] == 24
                 assert [name for name, _ in calls][4:] == ["Rate Shelf", "Rate Shelf"]
                 assert calls[-1][1] - calls[-2][1] >= 3.5
+
+                archive = next(folder["id"] for folder in browser.roots() if folder["id"] != root)
+                (media / "archive" / "Beta Shelf Vol.03.pdf").write_bytes(b"Different release, same normalized title")
+                browser.scan(archive)
+                archive_beta = json.loads(browser.request(f"{queue}?root={archive}&limit=1", 200))["items"][0]
+                assert archive_beta["candidates"] == rows["Beta Shelf"]["candidates"] and not archive_beta["queued"]
+                assert len(calls) == 6
+
+                identity_title = "Recovered Identity Shelf"
+                identity_path = f"{identity_title} Vol.01.pdf"
+                (media / "primary" / identity_path).write_bytes(b"Identity becomes available on the next scan")
+                # Reproduce a published path whose previous scan could not hash its contents.
+                with closing(sqlite3.connect(data / "organizer.sqlite")) as database, database:
+                    database.execute("""
+                        INSERT INTO library_file(root_id, relative_path, extension, size, modified_at, series_key, series_title)
+                            SELECT root_id, ?, 'pdf', 10, modified_at, ?, ?
+                            FROM library_file WHERE lower(root_id) = ? LIMIT 1
+                        """, (identity_path, sha256(b"series\0recovered identity shelf").hexdigest(), identity_title, root))
+                browser.scan(root)
+                assert settled(browser, 5)[identity_title]["candidates"] == []
+                assert [name for name, _ in calls][6:] == [identity_title]
+
+                priority_titles = {"Page Window Apple", "Page Window Birch", "Page Window Cedar"}
+                for title in priority_titles:
+                    (media / "primary" / f"{title} Vol.01.pdf").write_bytes(title.encode())
+                browser.scan(root)
+                assert page_started.wait(timeout=8)
+                running = calls[-1][0]
+                wanted = max(priority_titles - {running}, key=lambda title: sha256(("series\0" + title.lower()).encode()).digest())
+                page = json.loads(browser.request(queue + "?" + urlencode({"search": wanted, "limit": 1}), 200))
+                (row,) = page["items"]
+                assert row["title"] == wanted and row["queued"] and not row["pagePriority"]
+                visible = {"items": [{"rootId": row["rootId"], "seriesKey": row["seriesKey"], "alreadyQueued": True}]}
+
+                def prioritize():
+                    return json.loads(browser.request(queue + "/refresh", 202, method="POST", token=browser.csrf(), body=visible))
+
+                assert prioritize() == {"queued": 1}
+                assert prioritize() == {"queued": 0}
+                assert json.loads(browser.request(queue + "?" + urlencode({"search": wanted}), 200))["items"][0]["pagePriority"]
+                release_page.set()
+                settled(browser, 8)
+                assert [name for name, _ in calls][7:] == [running, wanted, *(priority_titles - {running, wanted})]
+                # A browser with an outdated queued row can only prioritize it, so completion wins this race.
+                assert prioritize() == {"queued": 0}
+
+            with start_app(executable, data, media, None, metadata_service=lookup) as address:
+                wait_for_server(address)
+
+                def manual_search(query):
+                    browser = Browser(address)
+                    browser.sign_in(password)
+                    url = f"{LIBRARY_ROOTS}/{root}/series/{alpha['seriesKey']}/metadata/search?"
+                    assert json.loads(browser.request(url + urlencode({"title": query}), 200)) == []
+
+                with ThreadPoolExecutor(max_workers=2) as requests:
+                    list(requests.map(manual_search, ["User Lookup One", "User Lookup Two"]))
+                assert {name for name, _ in calls[-2:]} == {"User Lookup One", "User Lookup Two"}
+                assert calls[-1][1] - calls[-2][1] >= 2.8
         finally:
+            release_page.set()
             service.shutdown()
             thread.join()
 
@@ -1956,7 +2031,7 @@ if __name__ == "__main__":
         if target.app:
             executable = str(target.app.resolve())
             verify_web_setup(executable, Path(fixture), media)
-            verify_external_metadata(executable, Path(fixture), media)
+            verify_external_metadata(executable, Path(fixture))
             verify_metadata_queue(executable, Path(fixture))
             verify_maintenance_resets(executable, Path(fixture))
             data_dir = Path(fixture) / "data"
