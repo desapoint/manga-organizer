@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { CoverageMark } from './CoverageMark';
 import { fileName, filePattern } from './duplicateCoverage';
 import type { CoverageFile } from './duplicateCoverage';
@@ -9,8 +10,8 @@ import { Button } from './ui';
 
 type ArchiveEvidence = { imagePages: number; comicInfo: { label: string; value: string }[] };
 
-function FileEvidence({ file, color, note, onSignedOut, version }: {
-  file: CoverageFile; color: string | undefined; note?: string; onSignedOut: () => void; version: string;
+function FileEvidence({ file, color, note, onSignedOut, version, actions }: {
+  file: CoverageFile; color: string | undefined; note?: string; onSignedOut: () => void; version: string; actions?: ReactNode;
 }) {
   const [evidence, setEvidence] = useState<ArchiveEvidence | null>();
   const { rootId, fileId } = file;
@@ -39,7 +40,7 @@ function FileEvidence({ file, color, note, onSignedOut, version }: {
     </div>
     <code className="text-xs text-muted wrap-anywhere">{file.fullPath}</code>
     {note && <p className="m-0 text-xs text-muted">{note}</p>}
-    {file.sha256 && <div className="action-row"><EditReleaseTags rootId={rootId} fileId={fileId} onSignedOut={onSignedOut} /></div>}
+    {file.sha256 && <div className="action-row">{actions}<EditReleaseTags rootId={rootId} fileId={fileId} onSignedOut={onSignedOut} /></div>}
     <details open={Boolean(evidence?.comicInfo.length)} className="border-t border-line">
       <summary className="min-h-9 cursor-pointer py-2 text-xs font-semibold">ComicInfo and indexed hash</summary>
       {evidence?.comicInfo.length ? <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 text-xs">
@@ -50,14 +51,15 @@ function FileEvidence({ file, color, note, onSignedOut, version }: {
   </article>;
 }
 
-export function DuplicateFileEvidence({ files, colors, notes, version, onSignedOut }: {
+export function DuplicateFileEvidence({ files, colors, notes, version, onSignedOut, fileActions }: {
   files: CoverageFile[]; colors: Map<string, string>; notes?: Map<string, string>; version: string; onSignedOut: () => void;
+  fileActions?: (file: CoverageFile) => ReactNode;
 }) {
   const [limit, setLimit] = useState(6);
   return <div className="grid gap-3">
     <div className="grid gap-3 sm:grid-cols-2">
       {files.slice(0, limit).map(file => <FileEvidence key={file.fileId} file={file} color={colors.get(file.fileId)}
-        note={notes?.get(file.fileId)} version={version} onSignedOut={onSignedOut} />)}
+        note={notes?.get(file.fileId)} version={version} onSignedOut={onSignedOut} actions={fileActions?.(file)} />)}
     </div>
     {limit < files.length && <Button variant="secondary" className="justify-self-start" onClick={() => setLimit(value => value + 6)}>Show more files</Button>}
   </div>;

@@ -147,7 +147,7 @@ internal sealed partial class LibraryStore
             WHERE id = $id AND state NOT IN ('queued', 'scanning')
                 AND EXISTS (SELECT 1 FROM library_folder WHERE root_id = $id)
                 AND NOT EXISTS (SELECT 1 FROM file_operation op WHERE op.state IN ('applying', 'restoring')
-                    AND $id IN (op.source_root, op.target_root));
+                    AND ($id IN (op.source_root, op.target_root) OR op.state = 'applying' AND $id = op.quarantine_keep_root));
             """;
         command.Parameters.AddWithValue("$id", id);
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);

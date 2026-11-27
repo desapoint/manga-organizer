@@ -32,6 +32,7 @@ internal static class DatabaseMigrations
         new("0018-maintenance-resets"),
         new("0019-duplicate-review-decisions"),
         new("0020-metadata-page-priority"),
+        new("0021-quarantine-retained-location"),
     ];
 
     public static int Apply(string dataDirectory)

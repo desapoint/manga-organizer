@@ -88,6 +88,10 @@ export function duplicateToolsHref(location?: SeriesLocation, fileId?: string) {
   return '#tools/duplicates' + (location ? `/${location.rootId}/${location.seriesKey}` : '') + (fileId ? `/${fileId}` : '');
 }
 
+export function duplicateFoldersHref(location: SeriesLocation) {
+  return duplicateToolsHref(location) + '/folders';
+}
+
 export function organizeToolsHref(rootId?: string, seriesKey?: string) {
   return '#tools/organize' + (rootId ? `/${rootId}` : '') + (seriesKey ? `/${seriesKey}` : '');
 }
@@ -104,8 +108,10 @@ export function toolsLocation(hash: string) {
   if (versions) return { module: 'versions' as const, series: versions[1] && versions[2] ? { rootId: versions[1], seriesKey: versions[2] } : null };
   const organize = /^#tools\/organize(?:\/([a-f0-9-]{36})(?:\/([a-f0-9]{64}))?)?$/i.exec(hash);
   if (organize) return { module: 'organize' as const, rootId: organize[1], seriesKey: organize[2] };
-  const match = /^#tools\/duplicates(?:\/([a-f0-9-]{36})\/([a-f0-9]{64})(?:\/([a-f0-9]{32}))?)?$/i.exec(hash);
+  const match = /^#tools\/duplicates(?:\/([a-f0-9-]{36})\/([a-f0-9]{64})(?:\/([a-f0-9]{32}|folders))?)?$/i.exec(hash);
   if (!match) return null;
-  const [, rootId, seriesKey, fileId] = match;
-  return { module: 'duplicates' as const, series: rootId && seriesKey ? { rootId, seriesKey } : null, fileId };
+  const [, rootId, seriesKey, detail] = match;
+  const folders = detail?.toLowerCase() === 'folders';
+  return { module: 'duplicates' as const, series: rootId && seriesKey ? { rootId, seriesKey } : null,
+    fileId: folders ? undefined : detail, folders };
 }

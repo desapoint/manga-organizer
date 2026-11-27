@@ -84,7 +84,8 @@ internal sealed partial class LibraryStore
         command.Parameters.Clear();
         command.CommandText = """
             SELECT CASE WHEN EXISTS (SELECT 1 FROM file_operation op WHERE op.state IN ('applying', 'restoring')
-                AND $id IN (op.source_root, op.target_root)) THEN 'applying' ELSE r.state END
+                AND ($id IN (op.source_root, op.target_root) OR op.state = 'applying' AND $id = op.quarantine_keep_root))
+                THEN 'applying' ELSE r.state END
             FROM library_folder f JOIN library_root r ON r.id = f.root_id WHERE f.root_id = $id;
             """;
         command.Parameters.AddWithValue("$id", id);

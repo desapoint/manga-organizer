@@ -1510,6 +1510,7 @@ def verify_managed_files(start, media, *, shared_permissions=False, data_directo
         owner.scan(primary["id"])
 
         review_duplicates(owner, primary["id"], original.parent, shared_permissions=shared_permissions)
+        verify_folder_duplicate_removal(owner, media, primary["id"], archive["id"])
 
         changed = preview("Changed.cbz")
         old = original.stat()
@@ -1690,6 +1691,55 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     for path in (volume, chapter, copy, alias, unrelated_chapter, unassigned, alternate, translated):
         path.unlink()
     owner.scan(root)
+
+
+def verify_folder_duplicate_removal(owner, media, source_root, retained_root):
+    source = media / "primary" / "Folder Fixture"
+    retained = media / "archive" / "Folder Fixture"
+    source.mkdir()
+    retained.mkdir()
+    source.chmod(0o777)
+    retained.chmod(0o777)
+    filename = "Folder Fixture Ch.01.cbz"
+    another = source / "Folder Fixture Ch.02.cbz"
+    for index, path in enumerate((source / filename, another)):
+        with ZipFile(path, "w") as archive:
+            archive.writestr("01.png", synthetic_png(120, 31 + index, 80))
+    contents = (source / filename).read_bytes()
+    (retained / filename).write_bytes(contents)
+    owner.scan(source_root)
+    owner.scan(retained_root)
+    (series,) = owner.series(source_root, "?search=Folder+Fixture")["items"]
+    operations = "/api/file-operations"
+    url = f"{operations}/duplicates/{source_root}/series/{series['key']}"
+    local = json.loads(owner.request(url, 200))["files"]
+    assert {file["rootId"] for file in local} == {source_root}
+    files = json.loads(owner.request(url + "/folder-files", 200))
+    assert len(files) == 3 and {file["rootId"] for file in files} == {source_root, retained_root}
+    left = next(file for file in files if file["rootId"] == source_root and file["relativePath"].endswith(filename))
+    right = next(file for file in files if file["rootId"] == retained_root)
+    distinct = next(file for file in local if file["fileId"] != left["fileId"])
+    body = {"rootId": source_root, "sourceFile": left["fileId"], "keepRootId": retained_root, "keepFile": right["fileId"]}
+    endpoint = operations + "/quarantine-preview"
+    owner.request(endpoint, 409, method="POST", token=owner.csrf(), body={**body, "sourceFile": distinct["fileId"]})
+    first = json.loads(owner.request(endpoint, 200, method="POST", token=owner.csrf(), body=body))
+    moved = retained / "Missing.cbz"
+    (retained / filename).rename(moved)
+    owner.request(f"{operations}/{first['id']}/apply", 409, method="POST", token=owner.csrf())
+    assert (source / filename).read_bytes() == contents
+    moved.rename(retained / filename)
+    second = json.loads(owner.request(endpoint, 200, method="POST", token=owner.csrf(), body=body))
+    operation = f"{operations}/{second['id']}"
+    result = json.loads(owner.request(operation + "/apply", 200, method="POST", token=owner.csrf()))
+    assert result["state"] == "completed" and not (source / filename).exists() and another.exists()
+    assert (retained / filename).read_bytes() == contents
+    (retained / filename).unlink()
+    result = json.loads(owner.request(operation + "/restore", 200, method="POST", token=owner.csrf()))
+    assert result["state"] == "restored" and (source / filename).read_bytes() == contents
+    (source / filename).unlink()
+    another.unlink()
+    retained.rmdir()
+    owner.scan(source_root)
 
 
 def verify_duplicate_decisions(owner, root, series, chapter):

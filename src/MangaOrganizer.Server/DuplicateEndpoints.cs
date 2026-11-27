@@ -45,6 +45,10 @@ internal static class DuplicateEndpoints
             LibraryEndpoints.IsSeriesKey(series) && store.ReadSeriesDuplicateReview(root, series.ToLowerInvariant()) is { } review
                 ? Results.Ok(review) : Results.NotFound());
 
+        operations.MapGet("/duplicates/{root:guid}/series/{series}/folder-files", (Guid root, string series, LibraryStore store) =>
+            LibraryEndpoints.IsSeriesKey(series) && store.ReadSeriesDuplicateReview(root, series.ToLowerInvariant(), compareFolders: true) is { } review
+                ? Results.Ok(review.Files) : Results.NotFound());
+
         operations.MapGet("/duplicates/{root:guid}/{fileId}", (Guid root, string fileId, ManagedFileOperations manager) =>
             IsFileId(fileId) && manager.ReviewDuplicates(root, fileId.ToLowerInvariant()) is { } comparison ? Results.Ok(comparison) : Results.NotFound());
 
@@ -58,7 +62,8 @@ internal static class DuplicateEndpoints
                 return Results.BadRequest();
             try
             {
-                return Results.Ok(manager.PreviewQuarantine(request.RootId, request.SourceFile!.ToLowerInvariant(), request.KeepFile!.ToLowerInvariant()));
+                return Results.Ok(manager.PreviewQuarantine(request.RootId, request.SourceFile!.ToLowerInvariant(),
+                    request.KeepRootId ?? request.RootId, request.KeepFile!.ToLowerInvariant()));
             }
             catch (FileOperationException error)
             {

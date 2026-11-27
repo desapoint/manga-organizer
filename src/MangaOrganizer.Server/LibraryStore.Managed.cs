@@ -8,7 +8,8 @@ internal sealed record ManagedFile(string Id, string RelativePath, string Conten
 internal sealed record FileOperation(Guid Id, string State, Guid SourceRoot, Guid TargetRoot, string SourceBase, string TargetBase,
     string SourcePath, string TargetPath, string FileId, string ContentId, long Size, byte[] Sha256, string SeriesKey,
     string? SeriesTitle, string? Volume, string? Chapter, string? Message, FileOperationCover[] Covers,
-    string? QuarantineKeepFile = null, string? QuarantineKeepPath = null, bool IntakeTransfer = false);
+    string? QuarantineKeepFile = null, string? QuarantineKeepPath = null, bool IntakeTransfer = false,
+    Guid? QuarantineKeepRoot = null, string? QuarantineKeepBase = null);
 internal sealed record FileOperationCover(string SourcePath, string TargetPath, long Size, byte[] Sha256, bool Published = false);
 
 internal sealed partial class LibraryStore
@@ -16,7 +17,7 @@ internal sealed partial class LibraryStore
     private const string OperationColumns = """
         id, state, source_root, target_root, source_base, target_base, source_path, target_path,
         file_id, content_id, size, sha256, series_key, series_title, volume_hint, chapter_hint, message,
-        cover_plan, quarantine_keep_file, quarantine_keep_path, intake_transfer
+        cover_plan, quarantine_keep_file, quarantine_keep_path, intake_transfer, quarantine_keep_root, quarantine_keep_base
         """;
 
     public ManagedFile? ReadManagedFile(Guid root, string fileId)
@@ -95,9 +96,11 @@ internal sealed partial class LibraryStore
         command.CommandText = """
             INSERT INTO file_operation(id, state, source_root, target_root, source_base, target_base, source_path,
                 target_path, file_id, content_id, size, sha256, series_key, series_title, volume_hint, chapter_hint,
-                created_at, updated_at, cover_plan, quarantine_keep_file, quarantine_keep_path, intake_transfer)
+                created_at, updated_at, cover_plan, quarantine_keep_file, quarantine_keep_path, intake_transfer,
+                quarantine_keep_root, quarantine_keep_base)
             VALUES($id, 'planned', $sourceRoot, $targetRoot, $sourceBase, $targetBase, $sourcePath,
-                $targetPath, $file, $content, $size, $sha256, $series, $title, $volume, $chapter, $now, $now, $covers, $keepFile, $keepPath, $intake);
+                $targetPath, $file, $content, $size, $sha256, $series, $title, $volume, $chapter, $now, $now,
+                $covers, $keepFile, $keepPath, $intake, $keepRoot, $keepBase);
             """;
         command.Parameters.AddWithValue("$id", operation.Id);
         command.Parameters.AddWithValue("$sourceRoot", operation.SourceRoot);
@@ -116,6 +119,8 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$keepFile", (object?)operation.QuarantineKeepFile ?? DBNull.Value);
         command.Parameters.AddWithValue("$keepPath", (object?)operation.QuarantineKeepPath ?? DBNull.Value);
         command.Parameters.AddWithValue("$intake", operation.IntakeTransfer);
+        command.Parameters.AddWithValue("$keepRoot", (object?)operation.QuarantineKeepRoot ?? DBNull.Value);
+        command.Parameters.AddWithValue("$keepBase", (object?)operation.QuarantineKeepBase ?? DBNull.Value);
         command.ExecuteNonQuery();
     }
 
@@ -140,6 +145,9 @@ internal sealed partial class LibraryStore
                 AND EXISTS (SELECT 1 FROM library_folder f WHERE f.root_id = op.source_root AND f.path = op.source_base AND f.managed = 1)
                 AND EXISTS (SELECT 1 FROM library_folder f WHERE f.root_id = op.target_root AND f.path = op.target_base AND f.managed = 1)
                 AND NOT EXISTS (SELECT 1 FROM library_root r WHERE r.id IN (op.source_root, op.target_root) AND r.state IN ('queued', 'scanning'))
+                AND ($restore = 1 OR op.quarantine_keep_root IS NULL OR EXISTS (
+                    SELECT 1 FROM library_folder f JOIN library_root r ON r.id = f.root_id
+                    WHERE f.root_id = op.quarantine_keep_root AND f.path = op.quarantine_keep_base AND r.state = 'complete'))
                 AND ($restore = 1 OR op.intake_transfer = 0 AND (
                     op.source_root = op.target_root OR EXISTS (
                         SELECT 1 FROM library_folder f WHERE f.root_id = op.source_root AND f.kind <> 'import'))
@@ -313,7 +321,8 @@ internal sealed partial class LibraryStore
         rows.GetGuid(3), rows.GetString(4), rows.GetString(5), rows.GetString(6), rows.GetString(7), rows.GetString(8), rows.GetString(9),
         rows.GetInt64(10), rows.GetFieldValue<byte[]>(11), rows.GetString(12), ReadText(rows, 13), ReadText(rows, 14),
         ReadText(rows, 15), ReadText(rows, 16), JsonSerializer.Deserialize<FileOperationCover[]>(rows.GetString(17)) ?? [],
-        ReadText(rows, 18), ReadText(rows, 19), rows.GetBoolean(20));
+        ReadText(rows, 18), ReadText(rows, 19), rows.GetBoolean(20),
+        rows.IsDBNull(21) ? null : rows.GetGuid(21), ReadText(rows, 22));
 
     private static void AddSeriesParameters(SqliteCommand command, FileOperation operation)
     {

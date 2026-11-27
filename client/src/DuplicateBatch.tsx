@@ -11,7 +11,23 @@ const MAX_MARKED_FILES = 50;
 type Pair = { source: CoverageFile; keep: CoverageFile };
 type Preview = Pair & { plan?: Operation; error?: string };
 type BatchResult = { id: string; result: Operation | null; error: string | null };
-export type DuplicateScope = { kind: 'file'; file: CoverageFile } | { kind: 'chapter'; chapter: CoverageChapter };
+export type DuplicateScope = { kind: 'file'; file: CoverageFile } | { kind: 'chapter'; chapter: CoverageChapter } |
+  { kind: 'copies'; pairs: Pair[] };
+
+export function exactCopyPairs(sources: CoverageFile[], retained: CoverageFile[]): Pair[] {
+  const byHash = new Map<string, CoverageFile[]>();
+  for (const file of retained) {
+    if (!file.sha256) continue;
+    const group = byHash.get(file.sha256) ?? [];
+    group.push(file);
+    byHash.set(file.sha256, group);
+  }
+  return sources.flatMap(source => {
+    const keep = source.sha256 && byHash.get(source.sha256)?.find(file =>
+      file.fileId !== source.fileId && file.size === source.size && matchingCoverage(source, file));
+    return keep ? [{ source, keep }] : [];
+  });
+}
 
 function quarantineCandidates(files: CoverageFile[], nearby: CoverageChapter[], rootId: string, focus?: CoverageFile) {
   const coveredFiles = new Set(nearby.flatMap(chapter => chapter.files.map(file => file.fileId)));
@@ -39,7 +55,8 @@ export function DuplicateBatch({ scope, files, chapters, colors, version, rootId
   const file = scope.kind === 'file' ? scope.file : undefined;
   const chapter = scope.kind === 'chapter' ? scope.chapter : undefined;
   const volume = file && isBundle(file);
-  const [marked, setMarked] = useState<string[]>([]);
+  const [marked, setMarked] = useState<string[]>(() => scope.kind === 'copies'
+    ? scope.pairs.slice(0, MAX_MARKED_FILES).map(item => item.source.fileId) : []);
   const [previews, setPreviews] = useState<Preview[] | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [results, setResults] = useState<BatchResult[] | null>(null);
@@ -48,7 +65,7 @@ export function DuplicateBatch({ scope, files, chapters, colors, version, rootId
   const keys = new Set(file?.chapters.map(chapterKey));
   const covered = chapters.filter(chapter => keys.has(chapter.key));
   const reviewFiles = chapter ? chapter.files.filter(item => !isBundle(item)) : files;
-  const candidates = canReview ? quarantineCandidates(reviewFiles, covered, file?.rootId ?? rootId, file) : [];
+  const candidates = !canReview ? [] : scope.kind === 'copies' ? scope.pairs : quarantineCandidates(reviewFiles, covered, file?.rootId ?? rootId, file);
   const volumeFiles = file && volume ? [file, ...files.filter(other => other.fileId !== file.fileId && sameVolume(file, other))] : [];
   const ids = previews?.flatMap(item => item.plan ? [item.plan.id] : []) ?? [];
 
@@ -59,7 +76,7 @@ export function DuplicateBatch({ scope, files, chapters, colors, version, rootId
     for (const pair of candidates.filter(item => marked.includes(item.source.fileId))) {
       try {
         const plan = await postFileOperation('/quarantine-preview', onSignedOut, {
-          rootId: pair.source.rootId, sourceFile: pair.source.fileId, keepFile: pair.keep.fileId,
+          rootId: pair.source.rootId, sourceFile: pair.source.fileId, keepRootId: pair.keep.rootId, keepFile: pair.keep.fileId,
         });
         if (!plan) break;
         items.push({ ...pair, plan });
@@ -122,7 +139,7 @@ export function DuplicateBatch({ scope, files, chapters, colors, version, rootId
       {error && <p role="alert" className="m-0 text-danger">{error}</p>}
       {!previews && <>
         {candidates.length ? <>
-          <p className="m-0 text-sm text-muted">Mark copies for quarantine. Each one keeps the listed file with the same indexed bytes and coverage.</p>
+          <p className="m-0 text-sm text-muted">Select the copies to remove from the library. Each one moves to recoverable quarantine and keeps the listed matching file in place.</p>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" onClick={() => setMarked(candidates.slice(0, MAX_MARKED_FILES).map(item => item.source.fileId))}>Mark exact copies</Button>
             {marked.length > 0 && <Button variant="ghost" onClick={() => setMarked([])}>Clear marks</Button>}
@@ -137,7 +154,7 @@ export function DuplicateBatch({ scope, files, chapters, colors, version, rootId
               </label>
             </li>)}
           </ul>
-          <Button icon={ShieldCheck} className="justify-self-start" disabled={busy || !marked.length} onClick={() => void preview()}>Preview {marked.length} marked</Button>
+          <Button icon={ShieldCheck} className="justify-self-start" disabled={busy || !marked.length} onClick={() => void preview()}>Preview removal of {marked.length} {marked.length === 1 ? 'copy' : 'copies'}</Button>
         </> : <p className="m-0 text-sm text-muted">{canReview ? 'No exact copies with matching whole-file coverage in this review.' : 'Quarantine is available in scanned folders with managed file operations enabled.'}</p>}
       </>}
       {previews && <section aria-label="Confirm quarantine" className="grid gap-3">

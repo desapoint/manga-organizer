@@ -5,7 +5,7 @@ internal sealed record DuplicateFileView(Guid RootId, string FileId, string Rela
 internal sealed record DuplicateComparison(DuplicateFileView Candidate, string Kind, bool CanQuarantine, string Reason,
     IReadOnlyList<SeriesChapter> Shared, IReadOnlyList<SeriesChapter> SourceOnly, IReadOnlyList<SeriesChapter> CandidateOnly);
 internal sealed record DuplicateReview(DuplicateFileView Source, IReadOnlyList<DuplicateComparison> Comparisons, bool CanReviewQuarantine);
-internal sealed record QuarantineRequest(Guid RootId, string? SourceFile, string? KeepFile);
+internal sealed record QuarantineRequest(Guid RootId, string? SourceFile, string? KeepFile, Guid? KeepRootId = null);
 
 internal sealed partial class ManagedFileOperations
 {
@@ -21,42 +21,44 @@ internal sealed partial class ManagedFileOperations
         return new(FileView(source), comparisons, source.Managed && source.State == "complete");
     }
 
-    public FileOperationView PreviewQuarantine(Guid root, string sourceId, string keepId)
+    public FileOperationView PreviewQuarantine(Guid root, string sourceId, Guid keepRoot, string keepId)
     {
-        var (source, keep) = QuarantineFiles(root, sourceId, keepId);
+        var (source, keep) = QuarantineFiles(root, sourceId, keepRoot, keepId);
         VerifyExactCopy(source, keep);
         var id = Guid.NewGuid();
         var targetPath = QuarantineDirectory + "/" + id.ToString("N") + ".recovery";
         var operation = new FileOperation(id, "planned", root, root, source.RootPath, source.RootPath,
             source.RelativePath, targetPath, source.FileId, source.ContentId, source.Size, source.Sha256, source.SeriesKey,
-            source.SeriesTitle, source.VolumeHint, source.ChapterHint, null, [], keep.FileId, keep.RelativePath);
+            source.SeriesTitle, source.VolumeHint, source.ChapterHint, null, [], keep.FileId, keep.RelativePath,
+            QuarantineKeepRoot: keep.RootId, QuarantineKeepBase: keep.RootPath);
         ValidateRoots(operation);
         ValidateTargetParents(Target(operation), operation.TargetBase);
         store.RecordFileOperation(operation);
         return View(operation);
     }
 
-    private (DuplicateFile Source, DuplicateFile Keep) QuarantineFiles(Guid root, string sourceId, string keepId)
+    private (DuplicateFile Source, DuplicateFile Keep) QuarantineFiles(Guid root, string sourceId, Guid keepRoot, string keepId)
     {
         var source = store.ReadDuplicateFile(root, sourceId);
-        var keep = store.ReadDuplicateFile(root, keepId);
+        var keep = store.ReadDuplicateFile(keepRoot, keepId);
         if (source is null || keep is null || source.FileId == keep.FileId)
-            throw new FileOperationException("The original and retained files must both be present in the managed folder.");
+            throw new FileOperationException("The original and retained files must both be present at their indexed locations.");
         return (source, keep);
     }
 
     private void VerifyQuarantine(FileOperation operation)
     {
         if (operation.QuarantineKeepFile is not { } keepFile) return;
-        var (source, keep) = QuarantineFiles(operation.SourceRoot, operation.FileId, keepFile);
+        var (source, keep) = QuarantineFiles(operation.SourceRoot, operation.FileId, operation.QuarantineKeepRoot ?? operation.SourceRoot, keepFile);
         if (source.ContentId != operation.ContentId || source.RelativePath != operation.SourcePath ||
-            keep.RelativePath != operation.QuarantineKeepPath)
+            keep.RelativePath != operation.QuarantineKeepPath || keep.RootPath != (operation.QuarantineKeepBase ?? operation.SourceBase))
             throw new FileOperationException("The selected files changed since preview. Review the pair again.");
         VerifyExactCopy(source, keep);
     }
 
     private static void VerifyExactCopy(DuplicateFile source, DuplicateFile keep)
     {
+        LibraryScanner.RequireRoot(keep.RootPath);
         var comparison = Compare(source, keep, Identity(source));
         if (!comparison.CanQuarantine) throw new FileOperationException(comparison.Reason);
         var retained = MediaFiles.Resolve(keep.RootPath, keep.RelativePath);
@@ -107,10 +109,10 @@ internal sealed partial class ManagedFileOperations
             {
                 reason = "The original has hardlink aliases and is protected.";
             }
-            else if (!source.Managed || source.State != "complete"
-                || source.RootId != candidate.RootId || source.SeriesKey != candidate.SeriesKey)
+            else if (!source.Managed || source.State != "complete" ||
+                candidate.State != "complete" || source.SeriesKey != candidate.SeriesKey)
             {
-                reason = "Quarantine requires two verified paths in the same scanned, managed series folder.";
+                reason = "Quarantine requires two scanned copies of the same series and managed access on the folder to remove from.";
             }
             else if (source.VolumeHint != candidate.VolumeHint || source.ChapterHint != candidate.ChapterHint
                 || source.Format != candidate.Format || sourceOnly.Length > 0 || candidateOnly.Length > 0)
