@@ -17,6 +17,8 @@ Reviewed 2026-11-24 Toronto. Extends [original documentation audit](../UPSTREAM-
 
 ## Selection inventory
 
+Current Organizer approval lives in the [parent feature register](../FEATURE-SELECTION.csv). The `C-MO` rows in the [canonical selection register](CANONICAL-SELECTION.csv) and their [parent crosswalk](PARENT-SELECTION-CROSSWALK.csv) record scoped owner decisions. They carry no upstream atomic membership or parity claim. Existing upstream candidates and their historical evidence and decisions remain intact. [Implementation backlog](../EXPANDED-BACKLOG.md)
+
 [Atomic feature register (356 rows)](ATOMIC-FEATURES.csv) is supplemental to the original parent matrix. Evidence L = targeted implementation logic observed, C = code declaration/route/setting inspected (not complete behavior), T = source-tree path candidate, not confirmed. Each item has a proposed acceptance criterion and pending owner decision. All current atomic evidence paths are pinned; two formerly ambiguous references were resolved in pass 3. Use the pinned report for context and line ranges. A parent is not approved by adding subfeatures. Required extension outcome remains unchanged. Automated extraction uses simple patterns in one focused file per project, not exhaustive route/config enumeration; dynamic/indirect routes, generated settings, comments and consumers need further review.
 
 ## Key cross-project findings and conflicts

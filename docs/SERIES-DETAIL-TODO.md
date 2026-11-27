@@ -18,12 +18,16 @@ The interactive mockup illustrates the library detail page. Open the HTML locall
 
 ## Chapters, volumes and files
 
+- [ ] Open and resume a playable volume even when chapter assignments are unresolved. **View files** keeps the selected volume filter applied before pagination. [Volume navigation](TOOLS-AND-INTAKE.md#volume-navigation)
+
 - [ ] Group related information into Chapters, Volumes and Files sections or tabs. Put secondary metadata in More info. Keep file playback, manual coverage and reviewed rename or move actions available from Files on storage that permits them.
 - [ ] Support chapter search and release-order sorting, with filters for volume, availability, read state and chapter type when supported by the data. Keep pagination for large series. Show fractional chapters, prologues and named extras in the correct release order with stable identities.
-- [ ] Show available formats and variants, and let readers open a playable release. Add explicit read and unread controls once the primary server can record chapter-level state across devices, including when a chapter has several files or shares a volume file with other chapters.
+- [ ] Show available formats and release attributes, with explicit chapter completion and preferred content already available from PRs #26 and #30. Extend the picker to canonical chapter IDs, strict/flexible preferences and fast release choice. [Release selection](READING-CONTINUITY.md#release-selection)
 - [ ] Keep the Files view useful for administration. Show per-file thumbnails and identities, variants, unresolved coverage, real scan state and management actions. Use verified catalog data for any collection-health figures.
 
 ## Data and verification
+
+The expanded series work includes canonical chapter counts, independent volume membership, release evidence and durable duplicate decisions. Group these changes by the dependencies in the backlog. [Implementation backlog](EXPANDED-BACKLOG.md)
 
 - [ ] Reuse the existing cover, inventory, catalog, progress and managed-operation contracts. Add versioned migrations for any new metadata fields, release ordering or chapter-level progress records.
 - [ ] Verify layouts and dialog keyboard behavior, missing metadata and covers, unknown release totals, file variants, reading handoff, and that reviewed file actions still revalidate and preserve recovery. Scope any release-manifest source or expanded metadata ingestion separately.

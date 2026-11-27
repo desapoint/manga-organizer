@@ -57,6 +57,8 @@ The catalog records file locations and SHA-256 identities in SQLite. Rescans rec
 - [Proposed architecture and deployment](docs/ARCHITECTURE.md)
 - [Approved implementation baseline and feature scope](docs/IMPLEMENTATION-DECISIONS.md)
 - [Roadmap and acceptance gates](docs/ROADMAP.md)
+- [Expanded implementation backlog and PR sequence](docs/EXPANDED-BACKLOG.md)
+- [Expanded acceptance and platform qualification](docs/EXPANDED-ACCEPTANCE.md)
 - [Contributing and audit protocol](CONTRIBUTING.md)
 
 The project targets a main library, one queue and a shared WebUI. One Windows or Linux server hosts the main library and validates reading progress for Android, Windows and Linux clients. The project also requires Mihon-compatible extension downloads, physical file organization and duplicate handling. Clients may optionally upload local files or subscribe to additional server libraries. [Audit completion ledger](docs/source-audit/COMPLETION-LEDGER.md)

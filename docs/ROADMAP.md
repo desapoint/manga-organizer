@@ -36,12 +36,23 @@ Track the responsive series layout, More info dialog, library coverage and chapt
 
 - [ ] Add opt-in automatic series matching with high-confidence criteria, provenance and manual review for ambiguous results. Keep confirmed matches and local overrides stable across scans.
 - [ ] Support multiple metadata providers with per-server provider priority and per-series overrides. Record the source of imported metadata and let owners choose which provider to use when results conflict.
-- [ ] Let owners set preferred title and metadata languages, plus preferred languages for reading local releases. Support per-series overrides and keep publication origin distinct from release language.
+- [ ] Let owners set preferred title and metadata languages. Reading language, publication language and release attributes are tracked in the expanded release and preference work below.
 - [ ] Support multiple alternate titles with language labels, use them in local search, and let owners choose the display title and which alternates appear in series details.
 - [ ] Match volume files that only have a volume number using verified edition-specific volume-to-chapter manifests. Review gaps and conflicting editions. An aggregate AniList chapter or volume count cannot supply this mapping.
 
+## Expanded catalog, duplicate and reader work
+
+1. Design stable chapter identity and release records now. Ship and qualify the verified pre-upgrade backup gate before applying the additive chapter and release migrations. [Upgrade recovery](UPGRADE-RECOVERY.md) · [Identity and migration](RELEASE-IDENTITY.md)
+2. Persist release provenance and manual overrides. Add bulk correction, a library-wide duplicate queue, persistent alternatives and full coverage previews. [Duplicate review](DUPLICATE-AND-TRASH.md#findings-and-persistent-alternatives)
+3. Qualify managed-trash admission and restore before enabling configurable expiration and confirmed manual purge on supported storage. [Trash lifecycle](DUPLICATE-AND-TRASH.md#trash-records-and-lifecycle)
+4. Add deterministic release preferences, verified chapter boundaries, cross-release page matching and the in-reader selector. [Selection and continuity](READING-CONTINUITY.md)
+
+The backlog defines dependencies, PR boundaries, tests and existing implementation per task. Gather hosted and real-platform evidence as each slice lands. [Implementation backlog](EXPANDED-BACKLOG.md) · [Qualification requirements](EXPANDED-ACCEPTANCE.md)
+
+The Tools follow-up starts with playable volume actions and filtered file navigation, followed by the Duplicates and Versions modules, intake eligibility and per-folder target routing, and guarded maintenance actions. The confirmed Library admission and reset rules are documented separately. [Tools and intake](TOOLS-AND-INTAKE.md)
+
 ## Decisions
 
-The remaining candidates, including scheduled acquisition, torrent and Usenet integrations, advanced duplicate classification, household accounts, offline reading and external reader or tracker integrations, are deferred. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [Feature selection](FEATURE-SELECTION.csv)
+The remaining candidates, including scheduled acquisition, torrent and Usenet integrations, automated media cleanup outside managed trash, household accounts, offline reading and external reader or tracker integrations, are deferred. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [Feature selection](FEATURE-SELECTION.csv)
 
-The next import-to-reading MVP is tracked in the dedicated implementation plan. [Next MVP](NEXT-MVP.md)
+The import-to-reading MVP is the implementation baseline for this expansion. [MVP baseline](NEXT-MVP.md)

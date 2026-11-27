@@ -24,7 +24,7 @@ flowchart TD
 
 Modules: catalog, scanner, file organizer, duplicate index and resolution planner, import planner, policy/scoring, queue, reader, auth, progress, integrations, diagnostics, backups. Start modular monolith; Suwayomi is the proposed isolated extension service, optional external clients. Versioned adapter contracts: metadata lookup; source search/list/fetch; extension install/configure; indexer search; download submit/status/cancel; import plan/commit; progress and notifications.
 
-Use stable work, edition, volume and chapter identities with exact decimal and part numbering. Store physical file locations separately from verified content hashes. Link content to each verified chapter and its page coverage. Different hashes can be variants of the same chapter. Preserve logical IDs and user progress across file moves, and record release provenance with associations. Users have independent progress, bookmarks and permissions. Jobs support retries and use idempotency keys. [Catalog identity and association](CATALOG-ASSOCIATION.md)
+Use stable work and chapter IDs with exact numbering, edition-specific mappings and volume membership. Store physical locations, verified content identity and release records separately. Version release coverage and page boundaries independently. Preserve progress during moves and retain provenance with associations. Users have independent progress and permissions, and jobs support retries and idempotency keys. [Catalog identity](RELEASE-IDENTITY.md) · [Reader mapping](READING-CONTINUITY.md)
 
 ## WebUI design requirements
 
@@ -38,7 +38,7 @@ Use the INK//SHELF palette, shared shell, and screen patterns for the functional
 
 ## File organization and duplicate management (required)
 
-See [FILE-ORGANIZATION.md](FILE-ORGANIZATION.md). One physical-file inventory and fingerprint index shared by scanning, importing, renaming and deduplication. Separate file identity (path and filesystem object), content identity (hashes and ordered page manifests), and bibliographic identity (work/edition/chapter/coverage). A read-only scan produces proposals; a permission-checked executor revalidates identity, coverage, mount and target state before any mutation. Journal operations, stage cross-filesystem copies, preserve references, quarantine where permitted and support recovery. Neither Windows remote client nor another worker may mutate server files independently.
+One physical-file inventory and fingerprint index serves scanning, importing, renaming and deduplication. Read-only discovery proposes actions. The primary’s executor revalidates identity, resulting coverage, mounts and destination state before mutations. Journal operations and stage cross-filesystem copies. The expanded executor publishes to managed trash, supports restore and limits expiration to committed, deliberately trashed entries. The primary remains the sole mutation authority. [Inventory and file operations](FILE-ORGANIZATION.md) · [Trash and duplicate rules](DUPLICATE-AND-TRASH.md)
 
 ## Proposed Unraid library layout
 
@@ -56,7 +56,7 @@ Windows: installer/portable proposal, AppData config, chosen roots, loopback def
 
 ## Safety
 
-Dry-run adoption/rename, managed roots opt-in, stage/verify before atomic publish; never overwrite ambiguous files; protect seeding hardlinks and page provenance, durable jobs. Reject archive traversal/bombs, symlink escapes, oversized resources. Missing or unexpectedly empty mount fences mutations, never mass delete. Quarantine/restore, consistent DB+secrets+version backup, restore/rollback tests. Nonroot, scoped auth, CSRF/host validation, encrypted integration secrets, masked logs, outbound URL validation, per-source limits. Authorized content only. License review before external datasets/models or upstream code.
+Preview adoption and rename, opt in each managed root, and verify staging before no-clobber publication. Protect hardlinks and page provenance with durable jobs. Reject traversal, oversized resources and symlink escapes. Missing and unexpectedly empty mounts fence mutations. Require consistent database, config and identity backups and rehearsal for incompatible upgrades. Run non-root where supported, use scoped auth and CSRF/host validation, protect secrets, mask logs, validate outbound URLs and enforce source limits. Review licenses before using external data, models or code. [Upgrade recovery](UPGRADE-RECOVERY.md)
 
 ## Pass 7 packaging constraints
 

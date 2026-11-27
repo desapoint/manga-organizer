@@ -29,7 +29,7 @@ Reader settings offer Fit page, Fit width and Original size. Zoom ranges from 50
 
 The MVP saves page position automatically as pages load. Finishing a file is a separate action. For series counters, a finished file counts its verified or explicitly numbered chapters once. Reopening an archive whose bytes changed creates a separate reading identity once scanned.
 
-The server validates the authenticated account, chapter or edition, content version and page or position before accepting an update. Store progress against a stable logical chapter and a page anchor so a rename, move or verified equivalent repack preserves the resume point. If the content changes and the position cannot be mapped safely, retain the previous anchor for review.
+The server validates the account, content version and physical page on progress updates. The expanded contract adds a canonical chapter and logical anchor while preserving per-content resume. A verified correspondence can carry a position across release changes. Changed content with unresolved correspondence retains the previous anchor for review. [Logical progress and release switching](READING-CONTINUITY.md#switching-inside-the-reader)
 
 Use server-issued revisions and idempotent update IDs as the initial synchronization design. A retry records an event once, and a stale update after reconnect cannot silently replace a newer accepted position. A deliberate backward move on the current revision remains valid. Keep resume position and completion as separate state. The exact conflict UI, download-for-offline support and progress from device-only content before it is linked to a server edition remain separate design choices. [Reader data contracts](source-audit/READER-DATA-CONTRACTS.md)
 
@@ -38,6 +38,8 @@ Use server-issued revisions and idempotent update IDs as the initial synchroniza
 A client may keep its own files and explicitly send selected items to the primary. The server stages the upload, validates the archive and destination, and checks for exact duplicates and edition or coverage conflicts. Publication uses an authorized managed root and the same confirmation and revalidation rules as other imports. A completed upload leaves the original on the device. Failed or retried uploads preserve existing library files and result in at most one catalog entry and managed copy for the approved import. Local progress can be associated with a server entry after the edition, chapter and page mapping are verified. [File organization and duplicate rules](FILE-ORGANIZATION.md)
 
 ## Acceptance cases
+
+The expanded preferences, strict fallback, in-volume range and release-switch tests are tracked with their platform requirements. [Expanded acceptance](EXPANDED-ACCEPTANCE.md)
 
 | Scenario | Pass condition |
 |---|---|

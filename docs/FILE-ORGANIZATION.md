@@ -2,7 +2,7 @@
 
 Physical organization and duplicate handling are required outcomes F69/F70 for standalone Windows and the Unraid WebUI. The first implementation builds the read-only inventory described below.
 
-The approved scope adds basic catalog corrections, exact duplicate review and reviewed managed changes after backup/restore and storage qualification. Repack and similarity detection, automated repair, seeding integration and automatic cleanup are deferred. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection)
+The current implementation includes exact-copy review, reviewed moves and recoverable quarantine. The expanded owner selection adds release-aware comparison and managed trash behind storage qualification, backup and restore gates. Unattended deletion of active library files, automatic repair and seeding integration remain outside this scope. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [Expanded duplicate and trash specification](DUPLICATE-AND-TRASH.md)
 
 ## Read-only catalog
 
@@ -20,7 +20,7 @@ During a scan, the WebUI shows files discovered, bytes read while verifying hash
 
 When a reviewed move would collide with an existing release, allow the owner to keep both using a numbered destination visible in the preview. Preserve each chapter or language variant as a separate file. Allow a reviewed move to bring along source folder artwork, retaining distinct destination cover images with names such as `cover-1.jpg` and `cover-2.jpg`. The planned paths and content must be revalidated at confirmation.
 
-An import intake folder is inventoried in its own WebUI view. The owner approved automatic movement from intake to a managed library once the file has an unambiguous metadata and volume or chapter association, or an owner supplies the association manually. Resolve the work, edition, intended library and applicable volume or chapter before moving a file. Ambiguous matches, changed sources, unavailable storage and destination conflicts keep the intake file in place.
+An import intake folder is inventoried in its own WebUI view. The expanded workflow requires a confirmed series, AniList or owner-entered metadata, and a valid mapped target library. The first slice previews and confirms intake transfers. Previously selected unattended movement remains a later path behind qualification and the same admission rules. Ambiguous or changed sources, unqualified storage and destination conflicts keep the file in intake. [Tools and intake](TOOLS-AND-INTAKE.md#intake-issues-and-destination)
 
 The reader must allow eligible files to open from intake or a library when their format is supported, including files with no metadata association. File movement uses the existing verified backup and restore, storage qualification, no-overwrite, revalidation and journal requirements. The current intake inventory provides discovery and configuration. The association and managed movement workflow is scheduled with the organizer's metadata and import operations. [Approved scope](IMPLEMENTATION-DECISIONS.md#owner-feature-selection) · [Reader formats](REMOTE-READING.md#reader-formats)
 
@@ -74,11 +74,11 @@ Proposed staged matching: indexed file facts -> size and cheap archive manifest 
 
 ## 3. Duplicate manager UX and resolution
 
-Proposed dedicated Duplicates screen: scope by library/series/root, filter by class, confidence, language, format, status, size and estimated reclaimable space; group side by side with paths, hashes, page count, resolution/quality, source/group, edition, chapter coverage, file health, timestamps, bookmarks/progress dependencies and seeding/link status. Open sample pages or full visual comparison locally. Show why the match exists and the evidence missing. Candidate totals and actual potential savings distinguish hardlinks, copies and storage pools.
+The series coverage map, file-scoped comparator, compact archive evidence and reviewed batch quarantine are present. The expanded workflow adds a library-wide unresolved queue, multi-label findings, persistent alternatives and reasons, sample pages and release-aware filters. [Workflow and acceptance](DUPLICATE-AND-TRASH.md#findings-and-persistent-alternatives)
 
-Proposed configurable keep preference: complete/valid first, exact edition/language, coverage, preferred group/source, official/digital release if known, quality/resolution, metadata completeness, desired root/format, then deterministic tie-break. User overrides always win. File size alone is not quality. Never prefer a partial file over a complete one, remove the only good copy, or silently merge distinct translations/editions.
+Show reliable identity, integrity and retained coverage when recommending a keep choice. Expose language, edition, officiality, group and quality evidence. Keep owner decisions explicit. The separate reader policy governs automatic selection for reading. [Release-selection policy](READING-CONTINUITY.md#release-selection)
 
-Actions: keep both, ignore/whitelist, select preferred copy, relink database references, merge series records (with collision review), rename/move, quarantine redundant file, restore, or explicitly permanently delete from quarantine. Batch actions and preview supported. Suggested default: scan automatically if enabled, suggest exact-copy resolution, execute only after review, quarantine with configurable retention (no automatic purge by default). Near duplicates, edition differences, coverage overlaps and uncertain matches require manual review even if automated exact-copy handling is later approved.
+The approved trash lifecycle includes a configurable 30-day default for deliberate trash entries, protected and extended retention, batch restore and confirmed permanent purge or emptying. Preview and revalidate each change. Legacy quarantine and unresolved findings do not qualify for expiration without explicit admission. See the lifecycle and its acceptance criteria for exact transitions and storage accounting. [Managed trash](DUPLICATE-AND-TRASH.md#trash-records-and-lifecycle)
 
 ## 4. Mutation and NAS safety
 
@@ -136,7 +136,7 @@ These requirements are proposed breakdowns of the required outcomes, not separat
 4. Decimal, split, specials, omnibus and volume/chapter overlaps; no lost unique coverage; wrong series/edition and unknown chapter mappings fail closed.
 5. Bulk rename with collision, case-only change, reserved names, long/UNC paths, same-root and cross-filesystem move; target modified after preview blocks operation. Verify metadata/progress and external reader visibility.
 6. Protected read-only root, symlink escape, archive bomb, corrupt archive, no free space, file locked, permission denied, unavailable NAS/mount replacement, cancellation/restart mid-import, interrupted cross-filesystem move; no original data lost.
-7. Quarantine and restore, restore collision, retention disabled, batch preview and audit export. Seeder-owned hardlinks remain intact; duplicate space estimate reports uncertainty.
+7. Rehearse current quarantine restore and collisions. Qualify managed trash, retention disabled and enabled, explicit purge and the restore/purge race separately. Keep seeder-owned hardlinks intact and report uncertainty in space estimates. [Expanded storage cases](EXPANDED-ACCEPTANCE.md)
 8. Repeated scans and imports idempotent; large library background scan bounded and pausable; no unauthorized user can see or mutate unrelated library files.
 
 Media changes and release qualification remain gated on feature selection, source review and target-platform testing.
