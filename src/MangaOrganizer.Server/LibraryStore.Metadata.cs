@@ -209,14 +209,18 @@ internal sealed partial class LibraryStore
         return first is null ? null : first with { HasFinishedFile = finishedFile };
     }
 
-    public SeriesMetadata? SaveMetadata(Guid root, string seriesKey, SeriesMetadata metadata, bool published, bool useProviderTags, bool linkOnly)
+    public SeriesMetadata? SaveMetadata(Guid root, string seriesKey, SeriesMetadata metadata, bool published, bool useProviderTags, bool linkOnly,
+        bool removeAniListLink, int? expectedAniListId)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
         using var command = GroupCommand(database, transaction, root, seriesKey, published);
         if (!GroupExists(command, published) || GroupHasActiveIntakeTransfer(command)) return null;
 
-        var saved = WriteMetadata(command, metadata, attachFiles: !published, useProviderTags: useProviderTags, linkOnly: linkOnly);
+        if (removeAniListLink && ReadMetadata(command)?.ProviderId != expectedAniListId) return null;
+
+        var saved = WriteMetadata(command, metadata, attachFiles: !published, useProviderTags: useProviderTags, linkOnly: linkOnly,
+            removeAniListLink: removeAniListLink);
         transaction.Commit();
         return saved;
     }
@@ -250,7 +254,8 @@ internal sealed partial class LibraryStore
         return linked;
     }
 
-    private static SeriesMetadata WriteMetadata(SqliteCommand command, SeriesMetadata metadata, bool attachFiles = true, bool useProviderTags = false, bool linkOnly = false)
+    private static SeriesMetadata WriteMetadata(SqliteCommand command, SeriesMetadata metadata, bool attachFiles = true, bool useProviderTags = false,
+        bool linkOnly = false, bool removeAniListLink = false)
     {
         command.CommandText = "SELECT " + MetadataIdForGroup;
         var previousId = command.ExecuteScalar() as string;
@@ -264,11 +269,12 @@ internal sealed partial class LibraryStore
             return linked;
         }
 
-        if (metadata.ProviderId is null && existing is { ProviderId: not null })
+        if (!removeAniListLink && metadata.ProviderId is null && existing is { ProviderId: not null })
         {
             metadata = metadata with { ProviderId = existing.ProviderId, ProviderDetails = existing.ProviderDetails };
         }
-        metadata = metadata with { ManualTags = useProviderTags ? null : metadata.ManualTags ?? existing?.ManualTags };
+        var previousTags = removeAniListLink ? existing?.Tags : existing?.ManualTags;
+        metadata = metadata with { ManualTags = useProviderTags ? null : metadata.ManualTags ?? previousTags };
 
         var id = previousId ?? Guid.NewGuid().ToString("N");
         command.Parameters.AddWithValue("$id", id);

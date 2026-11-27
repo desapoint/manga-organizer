@@ -1,6 +1,6 @@
 import { ExternalLink, Search, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { getCsrfToken } from './api';
 import { ROOTS_URL } from './library';
 import { Select } from './Select';
@@ -108,14 +108,15 @@ function metadataFields(metadata: Metadata | null, title: string) {
   };
 }
 
-function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }: {
-  title: string; metadata: Metadata | null; suggestion?: Metadata;
+function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadProvider, save }: {
+  title: string; metadata: Metadata | null; suggestion?: Metadata; linkSuggestion?: boolean;
   loadProvider: (id: number) => Promise<Metadata>;
   save: (values: object) => Promise<void>;
 }) {
   const [fields, setFields] = useState(() => metadataFields(metadata, title));
   const [hasKind, setHasKind] = useState(metadata !== null);
-  const [providerId, setProviderId] = useState<number | null>(null);
+  const [draftLink, setDraftLink] = useState<Metadata | undefined>(() => linkSuggestion ? suggestion : undefined);
+  const [removeMatch, setRemoveMatch] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -123,7 +124,13 @@ function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }:
   const [tagMode, setTagMode] = useState<'preserve' | 'manual' | 'provider'>('preserve');
   const [providerTags, setProviderTags] = useState(metadata?.providerDetails?.tags);
 
-  const sourceId = suggestion?.providerId ?? metadata?.providerId;
+  const linked = metadata?.providerId ? metadata : undefined;
+  const match = removeMatch ? undefined : draftLink ?? suggestion ?? linked;
+  const sourceId = match?.providerId;
+  const statusText = removeMatch ? 'Saving will keep local metadata and remove the AniList match.' :
+    draftLink ? 'Saving will link this series to AniList.' : linked ? 'Saving will keep this AniList link.' :
+    suggestion ? 'This is a suggestion. Saving now will keep the metadata local.' : 'Saving will keep these details on this server.';
+
 
   function update<K extends keyof typeof fields>(field: K, value: (typeof fields)[K]) {
     setFields(current => ({ ...current, [field]: value }));
@@ -145,7 +152,7 @@ function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }:
     setError('');
     setNotice('');
     try {
-      const source = suggestion ?? await loadProvider(sourceId);
+      const source = suggestion?.providerId === sourceId ? suggestion : await loadProvider(sourceId);
       const incoming = metadataFields(source, title);
       setFields(current => replace ? incoming : {
         title: current.title.trim() ? current.title : incoming.title,
@@ -161,7 +168,7 @@ function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }:
       const hasTagOverride = tagMode === 'manual' || (tagMode === 'preserve' && metadata?.hasManualTags);
       if (replace || !hasTagOverride || tagsFromDraft(tagDraft).length === 0) useLinkedTags(sourceTags);
       setHasKind(true);
-      setProviderId(sourceId);
+      setDraftLink(source);
       setNotice('Review the updated fields and save to apply them.');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not load AniList metadata.');
@@ -179,10 +186,12 @@ function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }:
         ...fields,
         totalChapters: Number(fields.totalChapters) || null,
         totalVolumes: Number(fields.totalVolumes) || null,
-        providerId,
-        useEditedFields: providerId !== null,
-        tags: tagMode === 'manual' ? tagsFromDraft(tagDraft) : undefined,
-        useProviderTags: tagMode === 'provider',
+        providerId: removeMatch ? null : draftLink?.providerId ?? null,
+        useEditedFields: !removeMatch && !!draftLink?.providerId,
+        tags: tagMode === 'manual' || (removeMatch && tagMode === 'provider') ? tagsFromDraft(tagDraft) : undefined,
+        useProviderTags: tagMode === 'provider' && !removeMatch,
+        removeAniListLink: removeMatch,
+        expectedAniListId: removeMatch ? linked?.providerId ?? null : undefined,
       });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not save series metadata.');
@@ -193,6 +202,25 @@ function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }:
 
   return (
     <form onSubmit={handleSave} className="grid gap-3">
+      {(match || removeMatch || metadata) && <section aria-label="AniList match" className="grid gap-2 rounded-lg border border-line bg-inset p-3">
+        <div className="grid gap-1 min-w-0">
+          <strong className="text-sm">{removeMatch ? 'Match removed for this save' :
+            draftLink ? 'AniList match selected' : linked ? 'Linked to AniList' :
+            suggestion ? 'Suggested AniList match' : 'Local metadata'}</strong>
+          {match && <span className="text-sm wrap-anywhere">{match.title}</span>}
+          <p className="m-0 text-sm text-muted">{statusText}
+            {removeMatch && linked && ' This applies to the shared series and all its files.'}</p>
+        </div>
+        {(match || removeMatch) && <div className="action-row">
+          {match?.providerUrl && <ActionLink variant="ghost" icon={ExternalLink} href={match.providerUrl}
+            target="_blank" rel="noreferrer">Open in AniList</ActionLink>}
+          {match && !draftLink && !linked && <Button variant="secondary" disabled={busy} onClick={() => setDraftLink(match)}>
+            Link on save
+          </Button>}
+          {match && <Button variant="ghost" disabled={busy} onClick={() => { setRemoveMatch(true); setNotice(''); }}>Remove match</Button>}
+          {removeMatch && <Button variant="secondary" disabled={busy} onClick={() => setRemoveMatch(false)}>Undo removal</Button>}
+        </div>}
+      </section>}
       <label className="grid gap-1">Series title<input name="title" required maxLength={300} value={fields.title}
         onChange={event => update('title', event.target.value)} /></label>
       <label className="grid gap-1">Alternate title<input name="alternateTitle" maxLength={300} value={fields.alternateTitle}
@@ -209,7 +237,7 @@ function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }:
       <label className="grid gap-1">Summary<textarea name="summary" rows={3} maxLength={6000} value={fields.summary}
         onChange={event => update('summary', event.target.value)} className="min-w-0 rounded-lg border border-control bg-field p-3 text-base text-ink" /></label>
       <SeriesTagFields draft={tagDraft} onChange={updateTags} disabled={busy} />
-      {providerTags && <Button variant="secondary" className="justify-self-start" disabled={busy}
+      {providerTags && match && <Button variant="secondary" className="justify-self-start" disabled={busy}
         onClick={() => useLinkedTags(providerTags)}>Use AniList tags</Button>}
       {notice && <p role="status" className="m-0 text-sm text-muted">{notice}</p>}
       {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
@@ -262,7 +290,9 @@ export function MetadataDialogAction({ actionLabel = 'Edit metadata', ...props }
   </>;
 }
 
-function MetadataDraftDialog({ onClose, suggestion, ...props }: EditorProps & { onClose: () => void; suggestion?: Metadata }) {
+function MetadataDraftDialog({ onClose, suggestion, linkSuggestion, ...props }: EditorProps & {
+  onClose: () => void; suggestion?: Metadata; linkSuggestion?: boolean;
+}) {
   const [coversOpen, setCoversOpen] = useState(false);
   async function loadProvider(id: number) {
     const response = await fetch(metadataUrl(props) + '/metadata/anilist/' + id);
@@ -270,7 +300,7 @@ function MetadataDraftDialog({ onClose, suggestion, ...props }: EditorProps & { 
   }
 
   return <Modal title="Edit series metadata" onClose={onClose}>
-    <SeriesMetadataForm title={props.title} metadata={props.metadata} suggestion={suggestion} loadProvider={loadProvider}
+    <SeriesMetadataForm title={props.title} metadata={props.metadata} suggestion={suggestion} linkSuggestion={linkSuggestion} loadProvider={loadProvider}
       save={async values => { await saveMetadata(props, values); onClose(); props.onChange(); }} />
     {props.metadata && <details className="mt-4 border-t border-line" onToggle={event => setCoversOpen(event.currentTarget.open)}>
       <summary className="min-h-11 cursor-pointer py-3 font-semibold">Series cover</summary>
@@ -292,7 +322,7 @@ export function AniListSearchAction({ iconOnly, ...props }: AniListSearchProps &
       <AniListSearch {...props} onChange={() => { setOpen(false); props.onChange(); }}
         onReview={(metadata, suggestion) => { setOpen(false); setDraft({ metadata, suggestion }); }} />
     </Modal>}
-    {draft && <MetadataDraftDialog {...props} {...draft} onClose={() => setDraft(null)} />}
+    {draft && <MetadataDraftDialog {...props} {...draft} linkSuggestion onClose={() => setDraft(null)} />}
   </>;
 }
 
@@ -431,7 +461,9 @@ export function MetadataDescription({ metadata }: { metadata: Metadata }) {
   </div>;
 }
 
-export function SeriesInfo({ onChange, suggestion, ...context }: SeriesContext & { onChange: () => void; suggestion?: Metadata }) {
+export function SeriesInfo({ onChange, suggestion, actions, ...context }: SeriesContext & {
+  onChange: () => void; suggestion?: Metadata; actions?: ReactNode;
+}) {
   const { details, error } = useSeriesDetails(context);
   const metadata = details?.metadata ?? null;
   return <section className="grid min-w-0 gap-4 border-t border-line p-4" aria-label="Series details">
@@ -448,6 +480,9 @@ export function SeriesInfo({ onChange, suggestion, ...context }: SeriesContext &
           ...details.chapters.map(({ volume, chapter }) => `${volume ? `Vol. ${volume} · ` : ''}Ch. ${chapter}`)]} />
       </details>}
     </>}
-    {details && <MetadataDialogAction {...context} metadata={metadata} suggestion={suggestion} onChange={onChange} />}
+    <div className="action-row">
+      {details && <MetadataDialogAction {...context} metadata={metadata} suggestion={suggestion} onChange={onChange} />}
+      {actions}
+    </div>
   </section>;
 }

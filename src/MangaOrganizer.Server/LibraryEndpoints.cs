@@ -71,6 +71,11 @@ internal static class LibraryEndpoints
                 volume is null ? null : BookNumbers.Canonical(volume), view));
         });
 
+        library.MapGet("/{id:guid}/series/{key}/release-folders", (Guid id, string key, string? view, LibraryStore store) =>
+            IsSeriesKey(key) && IsCatalogView(view) && view is not ("library" or "unassociated")
+                ? Results.Ok(store.ReadIntakeReleaseFolders(id, key.ToLowerInvariant(), view))
+                : Results.BadRequest());
+
         library.MapGet("/{id:guid}/series", (Guid id, int? offset, int? limit, string? search, string? sort, bool? coverOnly, string? seriesKey, string? view, LibraryStore store, HttpContext context) =>
         {
             if (!store.TryGetRoot(id, out _))

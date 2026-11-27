@@ -8,12 +8,15 @@ internal sealed record VersionQuery(Guid? Root, int? Offset, int? Limit, string?
     string? Color, string? Censorship, string? Edition, string? Group, bool? Reviewed);
 internal sealed record ReleaseTagChange(string? ContentId, string? Language, string? Color, string? Censorship,
     string? Edition, string? Group, int Revision);
+internal sealed record IntakeReleaseFolder(string Directory, IReadOnlyList<string> FileIds);
 internal sealed record ReleaseTagSelection(string?[]? FileIds);
 internal sealed record ReleaseTagTarget(string FileId, string ContentId, string RelativePath, int Revision);
 internal sealed record ReleaseTagBatch(ReleaseTagTarget?[]? Targets, string? Field, string? Value);
 
 internal static partial class VersionEndpoints
 {
+    private const int MaxBatchFiles = 5000;
+
     public static void MapVersions(this RouteGroupBuilder api)
     {
         var versions = api.MapGroup("/versions").RequireAuthorization();
@@ -46,18 +49,18 @@ internal static partial class VersionEndpoints
         versions.MapPost("/{root:guid}/batch-preview", async (Guid root, ReleaseTagSelection input, LibraryStore store,
             HttpContext context, IAntiforgery antiforgery) =>
         {
-            if (!await antiforgery.IsRequestValidAsync(context) || input.FileIds is not { Length: >= 1 and <= 50 }
+            if (!await antiforgery.IsRequestValidAsync(context) || input.FileIds is not { Length: >= 1 and <= MaxBatchFiles }
                 || !input.FileIds.All(IsFileId) || input.FileIds.Distinct(StringComparer.OrdinalIgnoreCase).Count() != input.FileIds.Length)
                 return Results.BadRequest();
 
             var files = store.ReadReleaseTagsBatch(root, input.FileIds.Select(id => id!.ToLowerInvariant()).ToArray());
             return files is not null ? Results.Ok(files) : BatchConflict();
-        }).WithMetadata(new RequestSizeLimitAttribute(8192));
+        }).WithMetadata(new RequestSizeLimitAttribute(256 * 1024));
 
         versions.MapPut("/{root:guid}/batch", async (Guid root, ReleaseTagBatch input, LibraryStore store,
             HttpContext context, IAntiforgery antiforgery) =>
         {
-            if (!await antiforgery.IsRequestValidAsync(context) || input.Targets is not { Length: >= 1 and <= 50 }
+            if (!await antiforgery.IsRequestValidAsync(context) || input.Targets is not { Length: >= 1 and <= MaxBatchFiles }
                 || !input.Targets.All(target => target is not null && IsFileId(target.FileId) && IsFileId(target.ContentId)
                     && !string.IsNullOrEmpty(target.RelativePath) && target.Revision >= 0)
                 || input.Targets.Select(target => target!.FileId).Distinct(StringComparer.OrdinalIgnoreCase).Count() != input.Targets.Length
@@ -68,7 +71,7 @@ internal static partial class VersionEndpoints
                 target!.FileId.ToLowerInvariant(), target.ContentId.ToLowerInvariant(), target.RelativePath, target.Revision)).ToArray();
             return store.SaveReleaseTagsBatch(root, targets, input.Field!, Clean(input.Value))
                 ? Results.NoContent() : BatchConflict();
-        }).WithMetadata(new RequestSizeLimitAttribute(2 * 1024 * 1024));
+        }).WithMetadata(new RequestSizeLimitAttribute(8 * 1024 * 1024));
     }
 
     private static IResult BatchConflict() =>

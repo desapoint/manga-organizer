@@ -163,9 +163,15 @@
   .scan-state { @apply mt-3.5 mb-1; }
   .catalog-summary { @apply flex-wrap text-sm text-muted; }
   .catalog-files { @apply m-0 list-none p-0; }
-  .catalog-columns, .catalog-files > li {
+  .catalog-columns, .catalog-files > li:not(.catalog-folder-heading) {
     @apply grid items-baseline gap-x-3 gap-y-1.5 border-b border-line px-4 py-3 text-sm text-detail;
     grid-template-columns: minmax(0, 1fr) 4rem 6rem 7rem;
+  }
+  .catalog-columns.with-file-actions, .catalog-files.with-file-actions > li:not(.catalog-folder-heading) {
+    grid-template-columns: minmax(0, 1fr) 4rem 6rem 7rem 2.75rem;
+  }
+  .catalog-folder-heading {
+    @apply flex min-w-0 items-center gap-3 border-b border-line bg-panel px-4 text-sm font-semibold text-label;
   }
   .catalog-columns { @apply font-semibold text-label; }
   .catalog-files > li:last-child { @apply border-b-0; }
@@ -179,7 +185,8 @@
 
   @media (max-width: 36rem) {
     .catalog-columns { @apply hidden; }
-    .catalog-files > li { grid-template-columns: 3rem max-content 1fr; }
+    .catalog-files > li:not(.catalog-folder-heading) { grid-template-columns: 3rem max-content 1fr; }
+    .catalog-files.with-file-actions > li:not(.catalog-folder-heading) { grid-template-columns: 3rem max-content minmax(0, 1fr) 2.75rem; }
     .catalog-files .file-path { @apply col-span-full; }
     .catalog-files time { @apply text-end; }
   }
