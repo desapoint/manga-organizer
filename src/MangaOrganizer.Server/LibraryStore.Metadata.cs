@@ -25,10 +25,12 @@ internal sealed partial class LibraryStore
 {
     private const string MetadataIdForGroup = """
         COALESCE(
-            (SELECT binding.metadata_id FROM series_metadata_binding binding WHERE binding.root_id = $root AND binding.series_key = $series),
+            (SELECT binding.metadata_id FROM series_metadata_binding binding JOIN series_metadata confirmed ON confirmed.id = binding.metadata_id
+                WHERE binding.root_id = $root AND binding.series_key = $series AND confirmed.series_key = $series),
             (SELECT CASE WHEN COUNT(DISTINCT cm.metadata_id) = 1 THEN MIN(cm.metadata_id) END
                 FROM library_file f JOIN content_metadata cm ON cm.content_id = f.content_id
-                WHERE f.root_id = $root AND f.series_key = $series)
+                JOIN series_metadata confirmed ON confirmed.id = cm.metadata_id
+                WHERE f.root_id = $root AND f.series_key = $series AND confirmed.series_key = $series)
         )
         """;
 
@@ -269,7 +271,9 @@ internal sealed partial class LibraryStore
             INSERT INTO content_metadata(content_id, metadata_id)
                 SELECT DISTINCT content_id, $id FROM library_file
                 WHERE root_id = $root AND series_key = $series AND content_id IS NOT NULL AND $attachFiles
-            ON CONFLICT(content_id) DO UPDATE SET metadata_id = excluded.metadata_id;
+            ON CONFLICT(content_id) DO UPDATE SET metadata_id = excluded.metadata_id
+                WHERE EXISTS (SELECT 1 FROM series_metadata previous
+                    WHERE previous.id = content_metadata.metadata_id AND previous.series_key = $series);
             """;
         command.ExecuteNonQuery();
         return metadata;

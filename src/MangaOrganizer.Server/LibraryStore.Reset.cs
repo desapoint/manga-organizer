@@ -36,6 +36,7 @@ internal sealed partial class LibraryStore
         new("content_metadata", "Series associations for files exclusive to the selected folders", ExclusiveContent, "content_id"),
         new("series_metadata_binding", "Series bindings for selected folders", SelectedRoot, "root_id, series_key"),
         new("library_series_cover", "Indexed series covers", SelectedRoot, "root_id, series_key"),
+        new("import_file_split", "Import file splits", "file_id IN (SELECT id FROM library_file WHERE " + SelectedRoot + ")", "file_id"),
         new("library_file", "Indexed files", SelectedRoot, "root_id, relative_path"),
         new("library_root", "Folder scan records", SelectedState, "id",
             "state = 'idle', file_count = 0, last_attempt_at = NULL, last_scanned_at = NULL, skipped_links = 0"),

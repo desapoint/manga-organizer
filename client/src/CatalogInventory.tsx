@@ -1,5 +1,5 @@
-import { ArrowLeft, BookOpen, ChevronRight, Info, Library, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ArrowLeft, BookOpen, ChevronRight, Info, Library, Split, X } from 'lucide-react';
+import { useEffect, useId, useState } from 'react';
 import { getCsrfToken } from './api';
 import { ChapterCoverage } from './ChapterCoverage';
 import { CollectionForm, emptyFilters, SeriesCollectionMembership, TagRulesFields, useTagNames } from './CollectionControls';
@@ -7,9 +7,11 @@ import type { TagRules } from './CollectionControls';
 import { DuplicateReviewDialog } from './DuplicateReview';
 import { FileAssociationEditor } from './FileAssociationEditor';
 import { FileMove } from './FileOperations';
+import { IntakeSeriesMatch, ReviewIntakeMatches } from './IntakeSeriesMatch';
+import type { IntakeAniListMatch } from './IntakeSeriesMatch';
 import { EditReleaseTags, ReleaseSelectionActions, SelectReleaseCheckbox, useReleaseSelection } from './ReleaseTagsEditor';
 import type { LibraryRoot } from './library';
-import { MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
+import { AniListSearchAction, MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
 import { EditionCoverage, SeriesChapterList, SeriesVolumeList } from './EditionCoverage';
 import { FileCover, SeriesCover } from './SeriesCover';
 import { duplicateFoldersHref, duplicateToolsHref, formatSize, isReadableArchive, organizeToolsHref, ROOTS_URL,
@@ -37,10 +39,13 @@ type CatalogEntry = {
   hasSeriesMetadata: boolean;
   associationConfirmed: boolean;
   hasSeriesSuggestion: boolean;
+  filenameEvidence?: { title: string; alternateTitle: string | null; event: string | null; creator: string | null; notes: string[] } | null;
+  intakePath?: string | null;
 };
 
-export type Series = { rootId: string; key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean };
-type Page<T> = { total: number; items: T[] };
+export type Series = { rootId: string; key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean;
+  aniList?: IntakeAniListMatch; lookupQueued?: boolean };
+type Page<T> = { total: number; items: T[]; lookupQueued?: boolean };
 type InventoryProps = { rootId: string; version: string; onSignedOut: () => void };
 type FileManagement = { onDataChanged: () => void; managedFolders: LibraryRoot[]; intakeTarget?: LibraryRoot; onMoved: () => void };
 type InventoryActions = InventoryProps & FileManagement;
@@ -49,12 +54,13 @@ type Inspect = (item: Inspection) => void;
 type InventoryView = 'covers' | 'series' | 'files';
 type SeriesSort = 'title' | 'recent' | 'files';
 const intakeViews = [
+  { value: 'all', label: 'All scanned files' },
   { value: 'attention', label: 'Needs attention' },
+  { value: 'close', label: 'Close AniList matches' },
   { value: 'association', label: 'Unconfirmed association' },
   { value: 'series', label: 'No series suggestion' },
   { value: 'metadata', label: 'Missing metadata' },
   { value: 'cover', label: 'Missing cover' },
-  { value: 'all', label: 'All files' },
 ] as const;
 type CatalogView = typeof intakeViews[number]['value'] | 'library' | 'unassociated';
 
@@ -153,14 +159,60 @@ function FileAssociationAction({ file, rootId, onSignedOut, onChange }: {
   return file.hasSeriesMetadata ? <>
     <Button variant="secondary" title={`Confirm association with ${title}`} disabled={busy} onClick={confirm}>Confirm association</Button>
     {error && <span role="alert" className="text-sm text-danger">{error}</span>}
-  </> : <MetadataDialogAction rootId={rootId} seriesKey={file.seriesKey} title={title} metadata={null}
-    onChange={onChange} onSignedOut={onSignedOut} actionLabel="Assign series metadata" />;
+  </> : <>
+    <AniListSearchAction rootId={rootId} seriesKey={file.seriesKey} title={title} onSignedOut={onSignedOut} onChange={onChange} />
+    <MetadataDialogAction rootId={rootId} seriesKey={file.seriesKey} title={title} metadata={null}
+    onChange={onChange} onSignedOut={onSignedOut} actionLabel="Assign series metadata" />
+  </>;
 }
 
-function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut, selection, onAssociationChanged }:
+function SplitIntakeFile({ rootId, file, onSignedOut, onChange }: {
+  rootId: string; file: CatalogEntry; onSignedOut: () => void; onChange: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function split() {
+    setBusy(true);
+    setError('');
+    try {
+      const response = await fetch(`${ROOTS_URL}/${rootId}/series/${file.seriesKey}/split-file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
+        body: JSON.stringify({ fileId: file.id, contentId: file.contentId }),
+      });
+      if (response.status === 401) return onSignedOut();
+      if (!response.ok) {
+        const problem = await response.json().catch(() => null) as { message?: string } | null;
+        throw new Error(problem?.message ?? 'Could not split this file.');
+      }
+      setOpen(false);
+      onChange();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not split this file.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <>
+    <Button variant="ghost" icon={Split} onClick={() => { setError(''); setOpen(true); }}>Split from this series</Button>
+    {open && <Modal title="Split file from series" onClose={() => { if (!busy) setOpen(false); }}>
+      <div className="grid gap-3">
+        <p className="m-0 text-sm wrap-anywhere"><code>{file.relativePath}</code></p>
+        <p className="m-0 text-sm text-muted">Review this file as a separate group in Import. The file stays at its current path.</p>
+        {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
+        <Button variant="secondary" icon={Split} disabled={busy} onClick={() => void split()}>Split file</Button>
+      </div>
+    </Modal>}
+  </>;
+}
+
+function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut, selection, onAssociationChanged, importGroupSize }:
   Pick<InventoryProps, 'rootId' | 'version'> & {
   file: CatalogEntry; seriesKey?: string; onInspect?: Inspect; onSignedOut: () => void; management?: FileManagement;
-  selection: ReturnType<typeof useReleaseSelection>; onAssociationChanged?: () => void;
+  selection: ReturnType<typeof useReleaseSelection>; onAssociationChanged?: () => void; importGroupSize?: number;
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
   const [move, setMove] = useState<'organize' | 'transfer' | null>(null);
@@ -170,7 +222,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   const name = file.relativePath.slice(separator + 1);
   const readable = file.contentId && isReadableArchive(file.extension);
   const coverageUrl = management && `${ROOTS_URL}/${rootId}/series/${file.seriesKey}/coverage`;
-  const transferTarget = file.associationConfirmed ? management?.intakeTarget : undefined;
+  const transferTarget = file.intakePath ? management?.intakeTarget : undefined;
   const updateAssociation = onAssociationChanged ?? management?.onDataChanged;
   return (
     <li>
@@ -184,6 +236,8 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
             text-inherit wrap-anywhere hover:text-accent-readable hover:underline desktop:min-h-0"
             onClick={() => onInspect({ kind: 'file', file })}>{name}</button> : name}
           {separator >= 0 && <small>{file.relativePath.slice(0, separator)}</small>}
+          {management && file.filenameEvidence && <small>{[file.filenameEvidence.alternateTitle, file.filenameEvidence.event,
+            file.filenameEvidence.creator, ...file.filenameEvidence.notes].filter(Boolean).join(' · ')}</small>}
           {(file.volume || file.chapter) && <small>{file.volume && `Vol. ${file.volume}`}{file.volume && file.chapter && ' · '}
             {file.chapter && `Ch. ${file.chapter}`}</small>}
           {file.indexedLocations === null && <small>Content identity unavailable</small>}
@@ -200,13 +254,17 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
           seriesKey ? seriesReaderHref(file.contentId, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>}
         {!onAssociationChanged && (onInspect ? <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare this file</Button> :
           <ActionLink variant="ghost" href={duplicateToolsHref({ rootId, seriesKey: file.seriesKey }, file.id)}>Compare in Tools</ActionLink>)}
-        {updateAssociation && !file.associationConfirmed && <FileAssociationAction file={file} rootId={rootId}
+        {updateAssociation && importGroupSize === undefined && !file.associationConfirmed && <FileAssociationAction file={file} rootId={rootId}
           onChange={updateAssociation} onSignedOut={onSignedOut} />}
-        {updateAssociation && <FileAssociationEditor key={file.contentId + file.seriesKey} rootId={rootId} fileId={file.id}
+        {updateAssociation && importGroupSize === undefined && <FileAssociationEditor key={file.contentId + file.seriesKey} rootId={rootId} fileId={file.id}
           contentId={file.contentId} seriesKey={file.seriesKey} relativePath={file.relativePath} confirmed={file.associationConfirmed}
           onSignedOut={onSignedOut} onSaved={updateAssociation} />}
+        {updateAssociation && (importGroupSize ?? 0) > 1 &&
+          <SplitIntakeFile rootId={rootId} file={file} onSignedOut={onSignedOut} onChange={updateAssociation} />}
         {management && <EditReleaseTags rootId={rootId} fileId={file.id} onSignedOut={onSignedOut} />}
         {coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>Set chapter coverage</Button>}
+        {management?.intakeTarget && file.associationConfirmed && !file.intakePath &&
+          <span className="text-sm text-muted">Set a chapter or volume before transfer.</span>}
         {transferTarget && <Button variant="secondary" onClick={() => setMove('transfer')}>Transfer to library</Button>}
         {!!management?.managedFolders.length && <Button variant="ghost" onClick={() => setMove('organize')}>Move or rename</Button>}
         {showDuplicates && management && <DuplicateReviewDialog rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
@@ -219,7 +277,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
         {move && management && (move === 'organize' || transferTarget) && <Modal
           title={move === 'transfer' ? 'Review intake transfer' : 'Move or rename file'} wide onClose={() => { if (!moving) setMove(null); }}>
           <FileMove rootId={rootId} fileId={file.id} relativePath={file.relativePath} folders={management.managedFolders}
-            intakeTarget={move === 'transfer' ? transferTarget : undefined}
+            intakeTarget={move === 'transfer' ? transferTarget : undefined} intakePath={file.intakePath}
             onSignedOut={onSignedOut} onApplying={setMoving} onApplied={() => { setMove(null); management.onMoved(); }} />
         </Modal>}
       </div>}
@@ -228,9 +286,9 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
 }
 
 export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut, management, onInspect, search = '', catalogView = 'all',
-  onAssociationChanged }: InventoryProps & {
+  onAssociationChanged, importGroupSize }: InventoryProps & {
   seriesKey?: string; volume?: string; management?: FileManagement; onInspect?: Inspect; search?: string; catalogView?: CatalogView;
-  onAssociationChanged?: () => void;
+  onAssociationChanged?: () => void; importGroupSize?: number;
 }) {
   const params = new URLSearchParams({ search, view: catalogView });
   if (seriesKey) params.set('seriesKey', seriesKey);
@@ -254,7 +312,7 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
           <ul className="catalog-files" role="list" aria-label={label}>
             {page.items.map(file => <FileRow key={file.id} file={file} rootId={rootId} seriesKey={seriesKey} version={version}
               onInspect={onInspect} onSignedOut={onSignedOut} management={management} selection={selection}
-              onAssociationChanged={onAssociationChanged} />)}
+              onAssociationChanged={onAssociationChanged} importGroupSize={importGroupSize} />)}
           </ul>
           {page.total > PAGE_SIZE && (
             <div className="border-t border-line p-3">
@@ -271,6 +329,8 @@ function SeriesRow({ series, onInspect, coverVersion, catalogView, ...inventory 
   series: Series; onInspect?: Inspect; coverVersion: string; catalogView: CatalogView;
 }) {
   const [open, setOpen] = useState(false);
+  const [coverOpen, setCoverOpen] = useState(false);
+  const filesId = useId();
   const rowClass = 'grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl p-3 hover:bg-nav-hover sm:gap-3 sm:px-4';
   const contents = <>
     {series.hasCover ? <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available={series.hasCover} revision={coverVersion} className="h-14 w-10 rounded-md" /> :
@@ -282,20 +342,46 @@ function SeriesRow({ series, onInspect, coverVersion, catalogView, ...inventory 
     <ChevronRight className="size-4 text-muted group-open:rotate-90" aria-hidden="true" />
   </>;
 
+  if (onInspect) return <li className="surface">
+    <div className="flex min-w-0 flex-wrap items-center gap-2 p-3 sm:px-4">
+      {series.hasCover ? <Button variant="ghost" className="shrink-0 p-0" aria-label={`Enlarge cover for ${series.title}`}
+        onClick={() => setCoverOpen(true)}>
+        <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available revision={coverVersion} className="h-14 w-10 rounded-md" />
+      </Button> : <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-nav-active text-nav-icon">
+        <Library className="size-4" aria-hidden="true" />
+      </span>}
+      <button type="button" className="flex min-h-11 min-w-[8rem] flex-1 cursor-pointer items-center justify-between gap-2 rounded-lg
+        border-0 bg-transparent p-1 text-start text-ink wrap-anywhere hover:bg-nav-hover"
+        aria-expanded={open} aria-controls={filesId} onClick={() => setOpen(value => !value)}>
+        <span className="min-w-0">
+          <strong className="block">{series.title}</strong>
+          <span className="text-sm text-muted">{series.fileCount.toLocaleString()} {series.fileCount === 1 ? 'file' : 'files'}</span>
+        </span>
+        <ChevronRight aria-hidden="true" className={`size-4 shrink-0 text-muted ${open ? 'rotate-90' : ''}`} />
+      </button>
+      <Button variant="ghost" icon={Info} aria-label={`Intake details for ${series.title}`}
+        title="Intake details" onClick={() => onInspect({ kind: 'series', series })} />
+      <div className="min-w-0 basis-full sm:ml-auto sm:basis-auto sm:max-w-[55%]">
+        <IntakeSeriesMatch series={series} onSignedOut={inventory.onSignedOut} onSaved={inventory.onDataChanged} />
+      </div>
+    </div>
+    <div id={filesId} hidden={!open}>
+      {open && <>
+        <SeriesInfo rootId={inventory.rootId} seriesKey={series.key} title={series.title} version={inventory.version}
+          onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut} suggestion={series.aniList?.metadata} />
+        <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} management={inventory} catalogView={catalogView}
+          importGroupSize={series.fileCount} />
+      </>}
+    </div>
+    {coverOpen && <Modal title={series.title} wide onClose={() => setCoverOpen(false)}>
+      <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available revision={coverVersion}
+        className="rounded-lg [&_img]:max-h-[70dvh] [&_img]:object-contain" />
+    </Modal>}
+  </li>;
+
   return (
     <li className="surface">
-      {onInspect ? <details className="group" onToggle={event => {
-        const expanded = event.currentTarget.open;
-        setOpen(expanded);
-        if (expanded) onInspect({ kind: 'series', series });
-      }}>
-        <summary className={`${rowClass} [&::-webkit-details-marker]:hidden`}>{contents}</summary>
-        {open && <>
-          <SeriesInfo rootId={inventory.rootId} seriesKey={series.key} title={series.title} version={inventory.version}
-            onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut} />
-          <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} management={inventory} catalogView={catalogView} />
-        </>}
-      </details> : <a className={`${rowClass} text-ink no-underline`} href={seriesHref(inventory.rootId, series.key)}>{contents}</a>}
+      <a className={`${rowClass} text-ink no-underline`} href={seriesHref(inventory.rootId, series.key)}>{contents}</a>
     </li>
   );
 }
@@ -367,6 +453,8 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: 
             <Button variant="secondary" icon={Info} onClick={() => setDialog('info')}>More info</Button>
             <MetadataDialogAction rootId={rootId} seriesKey={seriesKey} title={title} metadata={metadata} published
               onChange={onDataChanged} onSignedOut={onSignedOut} />
+            <AniListSearchAction rootId={rootId} seriesKey={seriesKey} title={title} published
+              onChange={onDataChanged} onSignedOut={onSignedOut} />
             <ActionLink variant="ghost" href={duplicateToolsHref({ rootId, seriesKey })}>Review duplicates in Tools</ActionLink>
             <ActionLink variant="ghost" href={duplicateFoldersHref({ rootId, seriesKey })}>Compare folders in Tools</ActionLink>
           </div>}
@@ -424,20 +512,34 @@ function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, se
   coverOnly: boolean; rules: TagRules; catalogView: CatalogView;
 }) {
   const { rootId, version, onSignedOut } = inventory;
+  const [lookupRevision, setLookupRevision] = useState(0);
+  const [matchReview, setMatchReview] = useState<Series[] | null>(null);
   const filters = new URLSearchParams({ search, sort, coverOnly: String(coverOnly), view: catalogView });
   rules.includeTags.forEach(tag => filters.append('includeTag', tag));
   rules.excludeTags.forEach(tag => filters.append('excludeTag', tag));
-  const { page, offset, setOffset, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut, filters);
+  const { page, offset, setOffset, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`,
+    `${version}:${lookupRevision}`, onSignedOut, filters);
+  const queued = Boolean(onInspect && (page?.lookupQueued || page?.items.some(item => item.lookupQueued)));
+  useEffect(() => {
+    if (!queued) return;
+    const timer = window.setInterval(() => setLookupRevision(value => value + 1), 3000);
+    return () => window.clearInterval(timer);
+  }, [queued]);
+  const closeMatches = onInspect ? page?.items.filter(item => item.aniList?.close && item.aniList.revision) ?? [] : [];
 
   return (
     <>
       {error && <InventoryError retry={retry}>Could not load the inventory.</InventoryError>}
       {!page && !error && <p role="status">Loading inventory…</p>}
+      {closeMatches.length > 0 && <Button variant="secondary" className="justify-self-start"
+        onClick={() => setMatchReview(closeMatches)}>Review close matches ({closeMatches.length})</Button>}
+      {matchReview && <ReviewIntakeMatches series={matchReview} onSignedOut={onSignedOut}
+        onSaved={inventory.onDataChanged} onClose={() => setMatchReview(null)} />}
       {page?.total === 0 && (search || coverOnly || rules.includeTags.length || rules.excludeTags.length ?
         <p>No series match these filters.</p> : scanComplete && (catalogView === 'library' ?
           <div className="action-row"><p className="m-0">No confirmed series are published in this folder.</p>
             <ActionLink variant="secondary" href="#tools/metadata">Review associations and metadata</ActionLink></div> :
-          <p>{catalogView === 'all' ? 'No supported files found.' : 'No series match this view.'}</p>))}
+          <p>{queued ? 'Waiting for queued AniList suggestions…' : catalogView === 'all' ? 'No supported files found.' : 'No series match this view.'}</p>))}
       {page && page.total > 0 && (
         <>
           {coverGrid ? <CoverGrid series={page.items} coverVersion={coverVersion} /> : (
@@ -453,27 +555,24 @@ function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, se
   );
 }
 
-function IntakeInspector({ item, rootPath, onClose }: { item: Inspection | null; rootPath: string; onClose: () => void }) {
-  const placement = item ? 'fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 max-h-[50svh] overflow-auto shadow-xl desktop:bottom-4 min-[72rem]:sticky min-[72rem]:inset-x-auto min-[72rem]:top-5 min-[72rem]:bottom-auto min-[72rem]:max-h-none min-[72rem]:shadow-none' : '';
+function IntakeDetails({ item, rootPath, onClose }: { item: Inspection; rootPath: string; onClose: () => void }) {
   return (
-    <aside className={`surface grid min-w-0 content-start gap-3 p-4 ${placement}`} aria-labelledby="intake-inspector-heading">
-      <div className="flex items-center justify-between gap-2">
-        <SectionHeader id="intake-inspector-heading" title="Intake details" />
-        {item && <Button variant="ghost" icon={X} aria-label="Close intake details" onClick={onClose} className="min-[72rem]:hidden" />}
-      </div>
-      <dl className="m-0 grid gap-3 text-sm">
+    <Modal title={item.kind === 'series' ? 'Series intake details' : 'File intake details'} onClose={onClose}>
+      <dl className="m-0 grid gap-3 text-sm wrap-anywhere">
         <div>
           <dt className="text-muted">Source folder</dt>
           <dd><code>{rootPath}</code></dd>
         </div>
-        {item?.kind === 'series' && (
-          <div>
-            <dt className={item.series.hasMetadata ? 'text-positive' : 'text-warning'}>
-              {item.series.hasMetadata ? 'Series metadata' : item.series.suggested ? 'Suggested series' : 'Series unresolved'}</dt>
-            <dd className="font-semibold">{item.series.title}</dd>
-          </div>
-        )}
-        {item?.kind === 'file' && (
+        {item.kind === 'series' ? (
+          <>
+            <div><dt className="text-muted">Series</dt><dd className="font-semibold">{item.series.title}</dd></div>
+            <div><dt className="text-muted">Indexed files</dt><dd>{item.series.fileCount.toLocaleString()}</dd></div>
+            <div><dt className="text-muted">Metadata</dt>
+              <dd>{item.series.hasMetadata ? 'Saved' : 'Awaiting review'}</dd>
+            </div>
+            <div><dt className="text-muted">Artwork</dt><dd>{item.series.hasCover ? 'Available' : 'Missing cover'}</dd></div>
+          </>
+        ) : (
           <>
             <div><dt className="text-muted">File</dt><dd><code>{item.file.relativePath}</code></dd></div>
             <div><dt className="text-muted">Format and size</dt><dd>{item.file.extension.toUpperCase()} · {formatSize(item.file.size)}</dd></div>
@@ -485,8 +584,7 @@ function IntakeInspector({ item, rootPath, onClose }: { item: Inspection | null;
           </>
         )}
       </dl>
-      {!item && <p className="m-0 border-t border-line pt-3 text-sm text-muted">Open a group or select a file to inspect it.</p>}
-    </aside>
+    </Modal>
   );
 }
 
@@ -494,7 +592,7 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
   InventoryProps & { scanComplete: boolean; intake: boolean; rootPath: string; hasCovers: boolean; coverVersion: string;
     managedFolders: LibraryRoot[]; intakeTarget?: LibraryRoot; onInventoryChanged: () => void }) {
   const [selectedView, setView] = useState<InventoryView | null>(null);
-  const [intakeView, setIntakeView] = useState<typeof intakeViews[number]['value']>('attention');
+  const [intakeView, setIntakeView] = useState<typeof intakeViews[number]['value']>('all');
   const [item, setItem] = useState<Inspection | null>(null);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
@@ -564,16 +662,12 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
         <CollectionForm preset={{ ...rules, search: query, coverOnly: coverOnly && hasCovers }} tags={tags} onSignedOut={inventory.onSignedOut}
           onCancel={() => setSaveFilters(false)} onSaved={collection => { setSaveFilters(false); setNotice(`Created collection “${collection.name}”.`); }} />
       </Modal>}
-      <div className={intake ? 'grid min-w-0 items-start gap-4 min-[72rem]:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]' : undefined}>
-        <div className="grid min-w-0 gap-3">
-          {view === 'files' ? <FileInventory key={`${catalogView}:${query}`} {...catalog} onInspect={onInspect}
-            management={intake ? catalog : undefined} search={query} catalogView={catalogView} /> :
-            <GroupedInventory key={JSON.stringify([view, catalogView, query, sort, coverOnly, rules.includeTags, rules.excludeTags])}
-              {...catalog} scanComplete={scanComplete} onInspect={onInspect} catalogView={catalogView}
-              coverVersion={coverVersion} coverGrid={view === 'covers'} search={query} sort={sort} coverOnly={coverOnly && hasCovers} rules={rules} />}
-        </div>
-        {intake && <IntakeInspector rootPath={rootPath} item={item} onClose={() => setItem(null)} />}
-      </div>
+      {view === 'files' ? <FileInventory key={`${catalogView}:${query}`} {...catalog} onInspect={onInspect}
+        management={intake ? catalog : undefined} search={query} catalogView={catalogView} /> :
+        <GroupedInventory key={JSON.stringify([view, catalogView, query, sort, coverOnly, rules.includeTags, rules.excludeTags])}
+          {...catalog} scanComplete={scanComplete} onInspect={onInspect} catalogView={catalogView}
+          coverVersion={coverVersion} coverGrid={view === 'covers'} search={query} sort={sort} coverOnly={coverOnly && hasCovers} rules={rules} />}
+      {intake && item && <IntakeDetails item={item} rootPath={rootPath} onClose={() => setItem(null)} />}
     </section>
   );
 }

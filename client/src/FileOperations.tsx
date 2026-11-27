@@ -50,13 +50,14 @@ function OperationDetails({ operation }: { operation: Operation }) {
   );
 }
 
-export function FileMove({ rootId, fileId, relativePath, folders, intakeTarget, onSignedOut, onApplying, onApplied }: {
+export function FileMove({ rootId, fileId, relativePath, folders, intakeTarget, intakePath, onSignedOut, onApplying, onApplied }: {
   rootId: string; fileId: string; relativePath: string; folders: LibraryRoot[]; intakeTarget?: LibraryRoot;
+  intakePath?: string | null;
   onSignedOut: () => void; onApplying: (busy: boolean) => void; onApplied: () => void;
 }) {
   const [targetRoot, setTargetRoot] = useState(rootId);
-  const [targetPath, setTargetPath] = useState(relativePath);
-  const [keepBoth, setKeepBoth] = useState(false);
+  const [targetPath, setTargetPath] = useState(intakeTarget ? intakePath ?? relativePath : relativePath);
+  const [keepBoth, setKeepBoth] = useState(!!intakeTarget);
   const [copyFolderCovers, setCopyFolderCovers] = useState(false);
   const [plan, setPlan] = useState<Operation | null>(null);
   const [busy, setBusy] = useState(false);

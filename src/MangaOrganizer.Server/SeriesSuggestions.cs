@@ -11,7 +11,7 @@ internal static partial class SeriesSuggestions
         @"|pages?|pg|p)[\s._-]*\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?";
     private static readonly HashSet<string> GenericFolders = new(StringComparer.Ordinal)
     {
-        "archive", "books", "chapters", "comics", "downloads", "import", "imports", "incoming",
+        "archive", "books", "chapters", "comics", "doujin", "doujinshi", "downloads", "import", "imports", "incoming",
         "intake", "library", "manga", "mangas", "misc", "new", "series", "unsorted", "volumes",
     };
 
@@ -19,6 +19,8 @@ internal static partial class SeriesSuggestions
     {
         var parts = relativePath.Split('/');
         var fileName = Path.GetFileNameWithoutExtension(parts[^1]);
+        var doujin = DoujinFilename.Parse(fileName);
+        if (doujin is not null) return doujin.Title;
         var title = ParseTitle(fileName);
         var folder = FindSeriesFolder(parts, rootPath);
         if (title.Length == 0 || NumberOnly().IsMatch(title))

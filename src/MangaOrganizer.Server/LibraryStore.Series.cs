@@ -1,10 +1,14 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
-internal sealed record CatalogSeries(Guid RootId, string Key, string Title, long FileCount, bool Suggested, bool HasCover, bool HasMetadata);
+internal sealed record CatalogAniList(SeriesMetadata Metadata, string? Revision, bool Close);
+internal sealed record CatalogSeries(Guid RootId, string Key, string Title, long FileCount, bool Suggested, bool HasCover, bool HasMetadata,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] CatalogAniList? AniList = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool LookupQueued = false);
 
 internal sealed partial class LibraryStore
 {
@@ -39,9 +43,10 @@ internal sealed partial class LibraryStore
             SELECT f.root_id, f.series_key, MIN(COALESCE(f.series_title, f.relative_path)) AS path_title, COUNT(*) AS file_count,
                 MAX(f.series_title IS NOT NULL) AS suggested, MAX(f.modified_at) AS latest,
                 EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = f.root_id AND cover.series_key = f.series_key) AS has_cover,
-                CASE WHEN COUNT(DISTINCT cm.metadata_id) = 1 THEN MIN(cm.metadata_id) END AS linked_metadata
+                CASE WHEN COUNT(DISTINCT linked.id) = 1 THEN MIN(linked.id) END AS linked_metadata
             FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
             LEFT JOIN content_metadata cm ON cm.content_id = f.content_id
+            LEFT JOIN series_metadata linked ON linked.id = cm.metadata_id AND linked.series_key = f.series_key
             WHERE (f.root_id = $id OR $id IS NULL AND folder.kind IN ('library', 'both'))
                 AND ($seriesKey IS NULL OR f.series_key = $seriesKey)
         """ + CatalogVisibility(view) + """
@@ -49,9 +54,13 @@ internal sealed partial class LibraryStore
             GROUP BY f.root_id, f.series_key
         ), folder_series AS (
             SELECT g.root_id, g.series_key, m.provider_details, COALESCE(m.title, g.path_title) AS title, g.path_title, m.alternate_title, g.file_count,
-                g.suggested AND m.id IS NULL AS suggested, g.latest, g.has_cover, m.id IS NOT NULL AS has_metadata
+                g.suggested AND m.id IS NULL AS suggested, g.latest, g.has_cover, m.id IS NOT NULL AS has_metadata,
+                m.kind, m.summary, m.status, m.total_chapters, m.total_volumes, m.provider_id,
+                binding.metadata_id IS NULL AND NOT EXISTS (
+                    SELECT 1 FROM library_file peer JOIN content_metadata linked ON linked.content_id = peer.content_id
+                    WHERE peer.root_id = g.root_id AND peer.series_key = g.series_key) AS can_confirm_match
             FROM file_groups g LEFT JOIN series_metadata_binding binding ON binding.root_id = g.root_id AND binding.series_key = g.series_key
-            LEFT JOIN series_metadata m ON m.id = COALESCE(binding.metadata_id, g.linked_metadata)
+            LEFT JOIN series_metadata m ON m.id = COALESCE(binding.metadata_id, g.linked_metadata) AND m.series_key = g.series_key
         )
         """;
 
@@ -86,8 +95,25 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$excludeTags", JsonSerializer.Serialize(filters.ExcludeTags));
         command.Parameters.AddWithValue("$collection", (object?)manualCollection ?? DBNull.Value);
         var total = (long)command.ExecuteScalar()!;
+        var lookupQueued = false;
+        if (view == "close")
+        {
+            command.CommandText = """
+                SELECT EXISTS (SELECT 1 FROM metadata_suggestion s JOIN library_file f ON f.series_key = s.series_key
+                    WHERE s.queued = 1 AND f.root_id = $id);
+                """;
+            lookupQueued = (long)command.ExecuteScalar()! != 0;
+        }
         var order = sort switch { "recent" => "latest DESC, ", "files" => "file_count DESC, ", _ => "" };
-        command.CommandText = query + " SELECT root_id, series_key, title, file_count, suggested, has_cover, has_metadata" + filter +
+        const string matchFields = """
+            , alternate_title, kind, summary, status, total_chapters, total_volumes, provider_id, provider_details,
+                (SELECT revision FROM metadata_suggestion s WHERE s.series_key = folder_series.series_key),
+                (SELECT candidates FROM metadata_suggestion s WHERE s.series_key = folder_series.series_key),
+                COALESCE((SELECT queued FROM metadata_suggestion s WHERE s.series_key = folder_series.series_key), 0), can_confirm_match
+            """;
+        var includeMatches = view is "all" or "attention" or "association" or "series" or "metadata" or "cover" or "close";
+        command.CommandText = query + " SELECT root_id, series_key, title, file_count, suggested, has_cover, has_metadata"
+            + (includeMatches ? matchFields : "") + filter +
             " ORDER BY " + order + "title COLLATE NOCASE, series_key, root_id LIMIT $limit OFFSET $offset;";
         command.Parameters.AddWithValue("$limit", limit);
         command.Parameters.AddWithValue("$offset", offset);
@@ -95,10 +121,28 @@ internal sealed partial class LibraryStore
         using var rows = command.ExecuteReader();
         while (rows.Read())
         {
-            items.Add(new(rows.GetGuid(0), rows.GetString(1), rows.GetString(2), rows.GetInt64(3), rows.GetBoolean(4), rows.GetBoolean(5), rows.GetBoolean(6)));
+            var title = rows.GetString(2);
+            var matched = includeMatches ? ReadCatalogAniList(rows, title) : null;
+            items.Add(new(rows.GetGuid(0), rows.GetString(1), title, rows.GetInt64(3), rows.GetBoolean(4), rows.GetBoolean(5),
+                rows.GetBoolean(6), matched, includeMatches && rows.GetBoolean(18) && rows.GetBoolean(17)));
         }
 
-        return new(total, items);
+        return new(total, items, lookupQueued);
+    }
+
+    private static CatalogAniList? ReadCatalogAniList(SqliteDataReader rows, string title)
+    {
+        if (ReadInt(rows, 13) is { } provider)
+        {
+            var details = ReadText(rows, 14) is { } json ? JsonSerializer.Deserialize<AniListDetails>(json) : null;
+            return new(new(title, rows.GetString(8), ReadText(rows, 7), MetadataAgent.PlainDescription(ReadText(rows, 9)),
+                ReadText(rows, 10), ReadInt(rows, 11), ReadInt(rows, 12), provider, details), null, false);
+        }
+        if (!rows.GetBoolean(18) || ReadText(rows, 15) is not { } revision || ReadText(rows, 16) is not { } candidates) return null;
+        if (JsonSerializer.Deserialize<MetadataProposal[]>(candidates) is not { Length: > 0 } proposals) return null;
+        var exact = proposals.Where(proposal => proposal.MatchingTitle is not null).ToArray();
+        return exact.Length == 1 ? new(exact[0].Match.ToMetadata(), revision, true)
+            : proposals.Length == 1 ? new(proposals[0].Match.ToMetadata(), revision, false) : null;
     }
 
     public IReadOnlyList<string> ReadSeriesTags(Guid? root)

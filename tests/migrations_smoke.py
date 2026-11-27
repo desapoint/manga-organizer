@@ -59,6 +59,7 @@ def verify(app, fixture, previous_app=None):
         assert database.execute("PRAGMA journal_mode = WAL").fetchone() == ("wal",)
         database.execute("PRAGMA wal_autocheckpoint = 0")
         database.execute("DROP INDEX library_file_series_lookup")
+        database.execute("DROP TABLE import_file_split")
         database.execute("DROP TABLE maintenance_reset")
         database.execute("DROP TABLE duplicate_review_decision")
         database.execute("DROP TABLE release_tag")

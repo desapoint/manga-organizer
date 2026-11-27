@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
@@ -8,8 +10,10 @@ internal sealed record LibraryRootStatus(Guid Id, string Path, string State, lon
     bool Managed, ScanSnapshot? ScanProgress = null, Guid? IntakeTargetId = null);
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt,
     string? ContentId, string? Sha256, long? IndexedLocations, string? Volume, string? Chapter, bool HasCover,
-    string? SeriesCoverKey, string? SeriesTitle, bool HasSeriesMetadata, string SeriesKey, bool AssociationConfirmed, bool HasSeriesSuggestion);
-internal sealed record CatalogPage<T>(long Total, IReadOnlyList<T> Items);
+    string? SeriesCoverKey, string? SeriesTitle, bool HasSeriesMetadata, string SeriesKey, bool AssociationConfirmed, bool HasSeriesSuggestion,
+    DoujinFilename? FilenameEvidence, string? IntakePath);
+internal sealed record CatalogPage<T>(long Total, IReadOnlyList<T> Items,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool LookupQueued = false);
 
 internal sealed partial class LibraryStore
 {
@@ -102,7 +106,8 @@ internal sealed partial class LibraryStore
             FROM library_file f LEFT JOIN library_content c ON c.id = f.content_id
             LEFT JOIN series_metadata_binding binding ON binding.root_id = f.root_id AND binding.series_key = f.series_key
             LEFT JOIN content_metadata cm ON cm.content_id = f.content_id
-            LEFT JOIN series_metadata m ON m.id = COALESCE(cm.metadata_id, binding.metadata_id)
+            LEFT JOIN series_metadata linked ON linked.id = cm.metadata_id AND linked.series_key = f.series_key
+            LEFT JOIN series_metadata m ON m.id = COALESCE(linked.id, binding.metadata_id) AND m.series_key = f.series_key
             """;
         const string searchFilter = """
              AND ($search = '' OR title_contains(f.relative_path, $search) OR title_contains(COALESCE(f.series_title, ''), $search)
@@ -121,7 +126,13 @@ internal sealed partial class LibraryStore
                 EXISTS(SELECT 1 FROM artwork.archive_cover cover WHERE cover.archive_sha = c.sha256),
                 (SELECT cover.series_key FROM library_series_cover cover WHERE cover.root_id = f.root_id AND cover.series_key = f.series_key),
                 COALESCE(m.title, f.series_title), NOT (
-            """ + " " + MissingMetadata + "), f.series_key, " + ConfirmedSeries + ", f.series_title IS NOT NULL "
+            """ + " " + MissingMetadata + "), f.series_key, " + ConfirmedSeries + ", f.series_title IS NOT NULL, " + IntakeNumbered
+            + ", " + FinishedOneShot + """
+            , json_extract(m.provider_details, '$.StartYear'),
+                (SELECT inferred.volume FROM inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id),
+                (SELECT json_group_array(json_array(chapter.volume, chapter.chapter) ORDER BY CAST(chapter.chapter AS REAL), chapter.chapter)
+                    FROM content_chapter chapter WHERE chapter.content_id = f.content_id)
+            """
             + sources + scope + " ORDER BY f.relative_path LIMIT $limit OFFSET $offset;";
         command.Parameters.AddWithValue("$limit", limit);
         command.Parameters.AddWithValue("$offset", offset);
@@ -130,10 +141,21 @@ internal sealed partial class LibraryStore
         while (rows.Read())
         {
             var verified = !rows.IsDBNull(5);
-            items.Add(new(rows.GetString(0), rows.GetString(1), rows.GetString(2), rows.GetInt64(3), rows.GetDateTimeOffset(4),
+            var path = rows.GetString(1);
+            var title = ReadText(rows, 12);
+            var confirmed = rows.GetBoolean(15);
+            string? intakePath = null;
+            if (view != "library" && confirmed && rows.GetBoolean(17) && title is not null)
+            {
+                var assigned = JsonSerializer.Deserialize<string[][]>(rows.GetString(21)) ?? [];
+                intakePath = IntakeNaming.PathFor(path, title, ReadInt(rows, 19), ReadText(rows, 8) ?? ReadText(rows, 20),
+                    ReadText(rows, 9), assigned, rows.GetBoolean(18));
+            }
+            items.Add(new(rows.GetString(0), path, rows.GetString(2), rows.GetInt64(3), rows.GetDateTimeOffset(4),
                 verified ? rows.GetString(5) : null, verified ? rows.GetString(6) : null, verified ? rows.GetInt64(7) : null,
-                ReadText(rows, 8), ReadText(rows, 9), rows.GetBoolean(10), ReadText(rows, 11), ReadText(rows, 12),
-                rows.GetBoolean(13), rows.GetString(14), rows.GetBoolean(15), rows.GetBoolean(16)));
+                ReadText(rows, 8), ReadText(rows, 9), rows.GetBoolean(10), ReadText(rows, 11), title,
+                rows.GetBoolean(13), rows.GetString(14), confirmed, rows.GetBoolean(16),
+                view == "library" ? null : DoujinFilename.Parse(Path.GetFileNameWithoutExtension(path)), intakePath));
         }
         return new(total, items);
     }
@@ -208,6 +230,7 @@ internal sealed partial class LibraryStore
         {
             StageHashes(database, root.Path, scan, cancellationToken);
             StageKnownSeries(database);
+            StageIntakeSplits(database, root.Id);
             StageCovers(database, root.Path, scan, cancellationToken);
         }
         LibraryScanner.RequireRoot(root.Path);
@@ -246,6 +269,9 @@ internal sealed partial class LibraryStore
                         extension = excluded.extension, size = excluded.size, modified_at = excluded.modified_at,
                         content_id = excluded.content_id, series_key = excluded.series_key, series_title = excluded.series_title,
                         volume_hint = excluded.volume_hint, chapter_hint = excluded.chapter_hint;
+                DELETE FROM import_file_split WHERE EXISTS (
+                    SELECT 1 FROM library_file f WHERE f.id = import_file_split.file_id AND f.root_id = $id
+                        AND f.content_id IS NOT import_file_split.content_id);
                 DELETE FROM library_file WHERE root_id = $id AND relative_path NOT IN (SELECT relative_path FROM scan_file);
                 DELETE FROM library_series_cover WHERE root_id = $id;
                 INSERT INTO library_series_cover(root_id, series_key, relative_path, size, modified_at, archive_entry, sha256)

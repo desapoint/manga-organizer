@@ -207,6 +207,7 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE import_file_split;
             DROP TABLE metadata_suggestion;
             DROP TABLE release_tag;
             DROP TABLE maintenance_reset;
@@ -353,6 +354,14 @@ def verify_series_groups(owner, root_id, path):
     ])
     for releases in numbered_releases.values():
         fixtures.extend(releases)
+    doujin_releases = {
+        "A Rainy Festival 4": "(2021-03 Akihabara Chou Doujinsai) [Studio (Artist)] A Rainy Festival 4 (Fixture Franchise) [English].cbz",
+        "Town on a Hill": "(Air Comiket 3) [Studio(Artist)] Town on a Hill.cbz",
+        "Side Story 22.0": "(C101) [Studio (Artist)] Side Story 22.0 (Original) [English] [Digital].cbz",
+        "Archive Route 2": "(C103) [Studio (Artist)] Archive Route 2 — The Archive Arc (Fixture Franchise) [English] =Imari=.cbz",
+        "Pet's Great Escape": "(C104) [Studio (Artist)]Pet's Great Escape [English] {Translator}.cbz",
+    }
+    fixtures.extend(doujin_releases.values())
     for relative in fixtures:
         file = path / relative
         file.parent.mkdir(parents=True, exist_ok=True)
@@ -366,7 +375,15 @@ def verify_series_groups(owner, root_id, path):
         assert group["fileCount"] == len(releases)
         files = owner.files(root_id, f"?{urlencode({'seriesKey': group['key']})}")
         assert {row["relativePath"] for row in files["items"]} == set(releases)
-    assert groups["total"] == len(by_title) == 14
+    assert groups["total"] == len(by_title) == 14 + len(doujin_releases)
+    for title, filename in doujin_releases.items():
+        path_query = urlencode({"seriesKey": by_title[title]["key"], "view": "all"})
+        (entry,) = owner.files(root_id, "?" + path_query)["items"]
+        assert entry["relativePath"] == filename and entry["filenameEvidence"]["title"] == title
+        assert entry["filenameEvidence"]["event"] and entry["filenameEvidence"]["creator"]
+        assert not entry["associationConfirmed"]
+    arc = owner.files(root_id, "?seriesKey=" + by_title["Archive Route 2"]["key"])["items"][0]["filenameEvidence"]
+    assert arc["alternateTitle"] == "The Archive Arc" and "Fixture Franchise" in arc["notes"]
     assert by_title[series_title]["fileCount"] == 53
     assert by_title["Northbound"]["fileCount"] == 6
     assert by_title["Incoming/001.cbz"]["fileCount"] == by_title["Incoming/002.cbz"]["fileCount"] == 1
@@ -375,7 +392,7 @@ def verify_series_groups(owner, root_id, path):
     assert by_title["Another Series"]["fileCount"] == 1
     assert by_title["Different Title 2"]["key"] != by_title["Different Title 3"]["key"]
     assert by_title["Different Title 2 (2022)"]["fileCount"] == 1
-    assert owner.series(root_id, "?limit=1") == {"total": 14, "items": groups["items"][:1]}
+    assert owner.series(root_id, "?limit=1") == {"total": 14 + len(doujin_releases), "items": groups["items"][:1]}
     query = urlencode({"seriesKey": by_title[series_title]["key"], "limit": 50})
     first = owner.files(root_id, f"?{query}")
     second = owner.files(root_id, f"?{query}&offset=50")
@@ -685,9 +702,11 @@ def verify_external_metadata(executable, fixture):
                 saved = json.loads(browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 123}))
                 assert saved == result and json.loads(browser.request(f"{url}/details", 200))["metadata"] == result
                 edit = {"title": "My corrected title", "kind": "doujin", "totalChapters": 12}
-                corrected = json.loads(browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(), body=edit))
+                assert json.loads(browser.request(f"{url}/metadata/anilist/123", 200)) == result
+                corrected = json.loads(browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(),
+                    body={**edit, "providerId": 123, "useEditedFields": True, "summary": result["summary"]}))
                 assert corrected["title"] == edit["title"] and corrected["providerUrl"] == result["providerUrl"]
-                assert corrected["providerDetails"] == result["providerDetails"]
+                assert corrected["providerDetails"] == result["providerDetails"] and corrected["summary"] == result["summary"]
                 assert json.loads(browser.request(f"{url}/details", 200))["metadata"] == corrected
                 collections = "/api/library/collections"
                 assert json.loads(browser.request(f"{LIBRARY_ROOTS}/{root_id}/tags", 200)) == ["Doujinshi"]
@@ -1096,6 +1115,61 @@ def verify_catalog_visibility(owner, root, path):
     verify_file_association(owner, root, path, pending, ordinary, parchment, version)
 
 
+def verify_intake_file_split(owner, root, path):
+    kept = path / "Split Fixture Vol.01.pdf"
+    outlier = path / "Split Fixture Vol.02.pdf"
+    alias = path / "Different Proposed Group Vol.01.pdf"
+    kept.write_bytes(b"Split fixture keep")
+    outlier.write_bytes(b"Split fixture outlier")
+    alias.write_bytes(kept.read_bytes())
+    owner.scan(root)
+    (group,) = owner.series(root, "?search=Split+Fixture")["items"]
+    group_url = f"{LIBRARY_ROOTS}/{root}/series/{group['key']}"
+    before = {file["relativePath"]: file for file in owner.files(root, f"?seriesKey={group['key']}")["items"]}
+    assert len(before) == 2
+    owner.request(group_url + "/metadata", 200, method="PUT", token=owner.csrf(),
+                  body={"title": "Assigned Split Fixture", "kind": "manga"})
+    (proposed,) = owner.series(root, "?search=Different+Proposed+Group")["items"]
+    proposed_url = f"{LIBRARY_ROOTS}/{root}/series/{proposed['key']}"
+    assert json.loads(owner.request(proposed_url + "/details", 200))["metadata"] is None
+    owner.request(proposed_url + "/metadata", 200, method="PUT", token=owner.csrf(),
+                  body={"title": "Reviewed Different Group", "kind": "manga"})
+    assert json.loads(owner.request(group_url + "/details", 200))["metadata"]["title"] == "Assigned Split Fixture"
+    assert owner.files(root, f"?seriesKey={proposed['key']}&view=library")["total"] == 0
+
+    split_url = group_url + "/split-file"
+    file = before[outlier.name]
+    change = {"fileId": file["id"], "contentId": file["contentId"]}
+    owner.request(split_url, 400, method="POST", body=change)
+    owner.request(split_url, 409, method="POST", token=owner.csrf(), body={**change, "contentId": uuid4().hex})
+    keeper = before[kept.name]
+    owner.request(split_url, 409, method="POST", token=owner.csrf(),
+                  body={"fileId": keeper["id"], "contentId": keeper["contentId"]})
+    owner.request(split_url, 204, method="POST", token=owner.csrf(), body=change)
+    owner.request(split_url, 409, method="POST", token=owner.csrf(), body=change)
+
+    def assert_split():
+        (split,) = owner.files(root, "?search=Split+Fixture+Vol.02.pdf")["items"]
+        assert split["seriesKey"] != group["key"] and split["id"] == file["id"]
+        assert split["contentId"] == file["contentId"] and not split["associationConfirmed"]
+        assert owner.files(root, f"?seriesKey={group['key']}&view=library")["total"] >= 1
+        assert owner.files(root, f"?seriesKey={split['seriesKey']}&view=library")["total"] == 0
+        assert outlier.read_bytes() == b"Split fixture outlier"
+        return split["seriesKey"]
+
+    key = assert_split()
+    owner.scan(root)
+    assert assert_split() == key
+    outlier.write_bytes(b"New archive at previously split path")
+    owner.scan(root)
+    (replacement,) = owner.files(root, "?search=Split+Fixture+Vol.02.pdf")["items"]
+    assert replacement["seriesKey"] == group["key"] and replacement["contentId"] != file["contentId"]
+    assert not replacement["associationConfirmed"]
+    for entry in (kept, outlier, alias):
+        entry.unlink()
+    owner.scan(root)
+
+
 def verify_bulk_release_tags(owner, root, files):
     url = f"/api/versions/{root}"
     selection = {"fileIds": [item["id"] for item in files]}
@@ -1257,6 +1331,7 @@ def smoke(start, media):
         verify_reader(first, second, roots[-1]["id"], media / "intake")
         verify_volume_chapters(first, roots[-1]["id"], media / "intake")
         verify_catalog_visibility(first, roots[-1]["id"], media / "intake")
+        verify_intake_file_split(first, roots[-1]["id"], media / "intake")
         verify_maintenance(first)
         roots = first.roots()
         inventory = first.files(roots[0]["id"], "?limit=100")
@@ -1315,6 +1390,8 @@ def verify_routed_intake(owner, media, source, target):
     ready = media / "primary" / "Routed Release Vol.01.pdf"
     pending = media / "primary" / "Waiting Release Vol.01.pdf"
     destination = media / "archive" / ready.name
+    unnumbered = media / "primary" / "Unnumbered Fixture.pdf"
+    unnumbered.write_bytes(b"Confirmed series without chapter or volume")
     ready.write_bytes(b"Confirmed routed fixture")
     pending.write_bytes(b"Unconfirmed routed fixture")
     owner.scan(source_id)
@@ -1339,6 +1416,13 @@ def verify_routed_intake(owner, media, source, target):
     preview(ready_plan, 409)
     set_target(target_id)
     preview(pending_plan, 409)
+    ready_item = owner.files(source_id, "?search=Routed+Release")["items"][0]
+    assert ready_item["intakePath"] == "Routed Release/Routed Release Vol.1.pdf"
+    no_number = indexed[unnumbered.name]
+    owner.request(f"{LIBRARY_ROOTS}/{source_id}/series/{no_number['seriesKey']}/metadata", 200, method="PUT", token=owner.csrf(),
+                  body={"title": "Unnumbered Fixture", "kind": "manga"})
+    preview({**ready_plan, "fileId": no_number["id"], "targetPath": unnumbered.name}, 409)
+    unnumbered.unlink()
     mixed = json.loads(owner.request(f"{operations}/batch-preview", 200, method="POST", token=owner.csrf(),
                                      body={"items": [ready_plan, pending_plan]}))
     assert mixed[0]["plan"]["target"].endswith(ready.name) and mixed[1]["plan"] is None
@@ -1883,6 +1967,10 @@ def verify_metadata_queue(executable, fixture):
                 alpha = rows["Alpha Shelf"]
                 assert alpha["candidates"][0]["matchingTitle"] == "Alpha Shelf"
                 assert len(rows["Beta Shelf"]["candidates"]) == 2 and rows["Gamma Shelf"]["candidates"] == []
+                close = browser.series(root, "?view=close&limit=1")
+                assert close["total"] == 1 and close["items"][0]["title"] == "Alpha Shelf"
+                assert close["items"][0]["aniList"]["close"] and close["items"][0]["aniList"]["metadata"]["providerId"] == 21
+                assert not browser.files(root, "?view=library")["total"] and len(calls) == 3
                 browser.scan(root)
                 assert settled(browser, 3) == rows
                 page = json.loads(browser.request(queue + "?limit=1", 200))

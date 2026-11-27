@@ -6,7 +6,7 @@ import { FileInventory, PageControls, useInventoryPage } from './CatalogInventor
 import type { LibraryRoot } from './library';
 import { Select } from './Select';
 import { CoverImage, SeriesCover } from './SeriesCover';
-import { MetadataDialogAction } from './SeriesInfo';
+import { AniListSearchAction, MetadataDialogAction } from './SeriesInfo';
 import type { Metadata } from './SeriesInfo';
 import { ActionLink, Button, Modal, SearchField, SegmentedControl } from './ui';
 
@@ -174,6 +174,8 @@ function SuggestionRow({ item, version, folder, onSignedOut, onSaved }: {
           onClick={() => void confirm(suggestion)}>Confirm match</Button>}
         {!item.conflictingMetadata && !!item.candidates?.length && (item.candidates.length > 1 || !suggestion) &&
           <Button variant="secondary" disabled={busy} onClick={() => setShowCandidates(true)}>Review matches ({item.candidates.length})</Button>}
+        <AniListSearchAction rootId={item.rootId} seriesKey={item.seriesKey} title={item.title}
+          onSignedOut={onSignedOut} onChange={onSaved} />
         <MetadataDialogAction rootId={item.rootId} seriesKey={item.seriesKey} title={item.title} metadata={null}
           onSignedOut={onSignedOut} onChange={onSaved} actionLabel="Assign manually" />
       </div>

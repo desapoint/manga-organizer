@@ -12,14 +12,17 @@ internal sealed record MetadataQueueLocation(Guid RootId, string SeriesKey, bool
 internal sealed partial class LibraryStore
 {
     private const string UnresolvedSeries = """
-        SELECT f.root_id, f.series_key, MIN(f.series_title) AS title, COUNT(DISTINCT cm.metadata_id) > 1 AS conflict
+        SELECT f.root_id, f.series_key, MIN(f.series_title) AS title,
+            COUNT(DISTINCT cm.metadata_id) > 1 OR MAX(cm.metadata_id IS NOT NULL AND linked.id IS NULL) AS conflict
         FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
         LEFT JOIN series_metadata_binding binding ON binding.root_id = f.root_id AND binding.series_key = f.series_key
         LEFT JOIN content_metadata cm ON cm.content_id = f.content_id
+        LEFT JOIN series_metadata linked ON linked.id = cm.metadata_id AND linked.series_key = f.series_key
         WHERE ($queueRoot IS NULL OR f.root_id = $queueRoot) AND ($queueSeries IS NULL OR f.series_key = $queueSeries)
         GROUP BY f.root_id, f.series_key
         HAVING MIN(f.series_title) IS NOT NULL AND COUNT(f.content_id) > 0
-            AND MAX(binding.metadata_id) IS NULL AND COUNT(DISTINCT cm.metadata_id) <> 1
+            AND MAX(binding.metadata_id) IS NULL
+            AND (COUNT(DISTINCT linked.id) <> 1 OR MAX(cm.metadata_id IS NOT NULL AND linked.id IS NULL))
         """;
 
     private static void QueueArrivingSeries(SqliteCommand command)

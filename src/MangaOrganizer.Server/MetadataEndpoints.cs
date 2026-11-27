@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace MangaOrganizer.Server;
 
 internal sealed record MetadataChange(int? ProviderId, string? Title, string? Kind, string? AlternateTitle, string? Summary,
-    string? Status, int? TotalChapters, int? TotalVolumes);
+    string? Status, int? TotalChapters, int? TotalVolumes, bool UseEditedFields = false);
 internal sealed record CoverageChange(string? ContentId, string? Volume, string[]? Chapters);
 internal sealed record AssociationConfirmation(string? FileId, string? ContentId);
 
@@ -32,6 +32,14 @@ internal static class MetadataEndpoints
                 ? Results.NoContent()
                 : Results.Conflict(new { message = "The file or its series metadata changed. Refresh the inventory and review the association again." });
         }).WithMetadata(new RequestSizeLimitAttribute(4096));
+        series.MapPost("/split-file", async (Guid root, string seriesKey, AssociationConfirmation change, LibraryStore store,
+            HttpContext context, IAntiforgery antiforgery) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context) || !LibraryEndpoints.IsSeriesKey(seriesKey) ||
+                !IsContentId(change.FileId) || !IsContentId(change.ContentId)) return Results.BadRequest();
+            var error = store.SplitIntakeFile(root, seriesKey.ToLowerInvariant(), change.FileId!.ToLowerInvariant(), change.ContentId!.ToLowerInvariant());
+            return error is null ? Results.NoContent() : Results.Conflict(new { message = error });
+        }).WithMetadata(new RequestSizeLimitAttribute(4096));
         series.MapGet("/metadata/search", async (Guid root, string seriesKey, string? title, LibraryStore store,
             MetadataAgent agent, CancellationToken cancellationToken) =>
         {
@@ -46,12 +54,40 @@ internal static class MetadataEndpoints
                 return Results.Json(new { message = error.Message }, statusCode: StatusCodes.Status502BadGateway);
             }
         });
+        series.MapGet("/metadata/anilist/{id:int:min(1)}", async (Guid root, string seriesKey, int id, LibraryStore store,
+            MetadataAgent agent, CancellationToken cancellationToken) =>
+        {
+            if (!LibraryEndpoints.IsSeriesKey(seriesKey) || !store.TryGetRoot(root, out _)) return Results.NotFound();
+            try
+            {
+                var match = await agent.Read(id, cancellationToken);
+                return match is null ? Results.NotFound() : Results.Ok(match.ToMetadata());
+            }
+            catch (MetadataLookupException error)
+            {
+                return Results.Json(new { message = error.Message }, statusCode: StatusCodes.Status502BadGateway);
+            }
+        });
         series.MapPut("/metadata", async (Guid root, string seriesKey, bool? published, MetadataChange change, LibraryStore store,
             MetadataAgent agent, HttpContext context, IAntiforgery antiforgery, CancellationToken cancellationToken) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context)) return Results.BadRequest();
             if (!LibraryEndpoints.IsSeriesKey(seriesKey) || !store.TryGetRoot(root, out _)) return Results.NotFound();
             if (change.Kind is not (null or "manga" or "doujin")) return Results.BadRequest();
+
+            SeriesMetadata? edited = null;
+            if (change.ProviderId is null || change.UseEditedFields)
+            {
+                var title = change.Title?.Trim();
+                if (string.IsNullOrEmpty(title) || title.Length > 300 || change.AlternateTitle is { Length: > 300 } ||
+                    change.Summary is { Length: > 6000 } || change.Status is { Length: > 40 } ||
+                    change.TotalChapters is < 1 or > 100_000 || change.TotalVolumes is < 1 or > 100_000)
+                {
+                    return Results.BadRequest(new { message = "Enter a title and valid totals before saving metadata." });
+                }
+                edited = new(title, change.Kind ?? "manga", EmptyAsNull(change.AlternateTitle), EmptyAsNull(change.Summary),
+                    EmptyAsNull(change.Status), change.TotalChapters, change.TotalVolumes, null, null);
+            }
 
             SeriesMetadata metadata;
             if (change.ProviderId is { } providerId)
@@ -61,7 +97,8 @@ internal static class MetadataEndpoints
                 {
                     var match = await agent.Read(providerId, cancellationToken);
                     if (match is null) return Results.NotFound();
-                    metadata = match.ToMetadata(change.Kind);
+                    metadata = edited is null ? match.ToMetadata(change.Kind)
+                        : edited with { ProviderId = match.ProviderId, ProviderDetails = match.ProviderDetails };
                 }
                 catch (MetadataLookupException error)
                 {
@@ -70,15 +107,7 @@ internal static class MetadataEndpoints
             }
             else
             {
-                var title = change.Title?.Trim();
-                if (string.IsNullOrEmpty(title) || title.Length > 300 || change.AlternateTitle is { Length: > 300 } ||
-                    change.Summary is { Length: > 6000 } || change.Status is { Length: > 40 } ||
-                    change.TotalChapters is < 1 or > 100_000 || change.TotalVolumes is < 1 or > 100_000)
-                {
-                    return Results.BadRequest(new { message = "Enter a title and valid totals before saving metadata." });
-                }
-                metadata = new(title, change.Kind ?? "manga", EmptyAsNull(change.AlternateTitle), EmptyAsNull(change.Summary),
-                    EmptyAsNull(change.Status), change.TotalChapters, change.TotalVolumes, null, null);
+                metadata = edited!;
             }
 
             return store.SaveMetadata(root, seriesKey.ToLowerInvariant(), metadata, published == true) is { } saved ? Results.Ok(saved) : Results.NotFound();

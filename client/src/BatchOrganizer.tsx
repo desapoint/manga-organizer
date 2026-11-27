@@ -10,7 +10,8 @@ import { FileCover } from './SeriesCover';
 import { ActionLink, Button, Modal, SearchField } from './ui';
 
 type BatchFile = { id: string; contentId: string | null; relativePath: string; seriesTitle: string | null; hasSeriesMetadata: boolean;
-  volume: string | null; chapter: string | null; hasCover: boolean; seriesCoverKey: string | null; associationConfirmed: boolean };
+  volume: string | null; chapter: string | null; hasCover: boolean; seriesCoverKey: string | null; associationConfirmed: boolean;
+  intakePath: string | null };
 type Choice = { file: BatchFile; target: string };
 type Preview = { index: number; plan: Operation | null; error: string | null };
 type Result = { id: string; result: Operation | null; error: string | null };
@@ -59,7 +60,7 @@ function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose
   BatchContext & { targets: LibraryRoot[]; onClose: () => void; intakeTransfer: boolean }) {
   const [search, setSearch] = useState('');
   const [targetRoot, setTargetRoot] = useState(targets[0]?.id ?? '');
-  const [keepBoth, setKeepBoth] = useState(false);
+  const [keepBoth, setKeepBoth] = useState(intakeTransfer);
   const [choices, setChoices] = useState<Choice[]>([]);
   const [plans, setPlans] = useState<Preview[] | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -152,11 +153,15 @@ function BatchDialog({ source, targets, version, onSignedOut, onChanged, onClose
               revision={version} className="h-12 w-8 shrink-0 rounded" />
             <label className="flex min-h-11 items-center gap-2 wrap-anywhere">
               <input type="checkbox" checked={choices.some(choice => choice.file.id === file.id)}
-                disabled={!file.contentId || intakeTransfer && !file.associationConfirmed ||
+                disabled={!file.contentId || intakeTransfer && !file.intakePath ||
                   choices.length >= 50 && !choices.some(choice => choice.file.id === file.id)}
-                onChange={event => setChoices(current => event.target.checked ? [...current, { file, target: suggestedPath(file) }] : current.filter(choice => choice.file.id !== file.id))} />
+                onChange={event => setChoices(current => event.target.checked
+                  ? [...current, { file, target: intakeTransfer ? file.intakePath ?? file.relativePath : suggestedPath(file) }]
+                  : current.filter(choice => choice.file.id !== file.id))} />
               <span><code>{file.relativePath}</code>
-                {intakeTransfer && !file.associationConfirmed && <small className="block text-muted">Confirm series and metadata first</small>}</span>
+                {intakeTransfer && !file.intakePath && <small className="block text-muted">
+                  {file.associationConfirmed ? 'Set a chapter or volume first' : 'Confirm series and metadata first'}
+                </small>}</span>
             </label>
           </li>)}
         </ul>
