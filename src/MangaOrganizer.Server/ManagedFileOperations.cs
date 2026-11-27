@@ -42,7 +42,7 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
             if (request.SourceRoot == request.TargetRoot)
                 throw new FileOperationException("Confirmed files in this folder appear in Library without a transfer.");
             if (!store.CanPreviewIntakeTransfer(request.SourceRoot, request.TargetRoot, file.Id, file.ContentId))
-                throw new FileOperationException("Confirm the file's series and metadata, then check the saved intake target and folder availability.");
+                throw new FileOperationException("Confirm the series and metadata, set a chapter or volume, and check the saved intake target.");
         }
         else if (request.SourceRoot != request.TargetRoot && store.RequiresIntakeTransfer(request.SourceRoot))
         {
@@ -134,7 +134,8 @@ internal sealed partial class ManagedFileOperations(LibraryStore store, string d
             throw new FileOperationException("The destination already exists. The source stays at its original path.");
         }
         var current = store.ReadManagedFile(operation.SourceRoot, operation.FileId);
-        if (current is null || current.ContentId != operation.ContentId || current.RelativePath != operation.SourcePath)
+        if (current is null || current.ContentId != operation.ContentId || current.RelativePath != operation.SourcePath
+            || current.SeriesKey != operation.SeriesKey)
         {
             throw new FileOperationException("The indexed source changed after preview. Create a new plan after rescanning.");
         }

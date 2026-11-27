@@ -81,24 +81,77 @@ function ProviderFacts({ details }: { details: AniListDetails }) {
   );
 }
 
-function SeriesMetadataForm({ title, metadata, save }: { title: string; metadata: Metadata | null; save: (values: object) => Promise<boolean> }) {
-  const [kind, setKind] = useState<BookKind>(metadata?.kind ?? 'manga');
+function metadataFields(metadata: Metadata | null, title: string) {
+  const kind: BookKind = metadata?.kind ?? 'manga';
+  return {
+    title: metadata?.title ?? title,
+    kind,
+    alternateTitle: metadata?.alternateTitle ?? '',
+    totalChapters: metadata?.totalChapters?.toString() ?? '',
+    totalVolumes: metadata?.totalVolumes?.toString() ?? '',
+    status: metadata?.status ?? '',
+    summary: metadata?.summary ?? '',
+  };
+}
+
+function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }: {
+  title: string; metadata: Metadata | null; suggestion?: Metadata;
+  loadProvider: (id: number) => Promise<Metadata>;
+  save: (values: object) => Promise<void>;
+}) {
+  const [fields, setFields] = useState(() => metadataFields(metadata, title));
+  const [hasKind, setHasKind] = useState(metadata !== null);
+  const [providerId, setProviderId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const sourceId = suggestion?.providerId ?? metadata?.providerId;
+
+  function update<K extends keyof typeof fields>(field: K, value: (typeof fields)[K]) {
+    setFields(current => ({ ...current, [field]: value }));
+  }
+
+  async function applyProvider(replace: boolean) {
+    if (!sourceId) return;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const source = suggestion ?? await loadProvider(sourceId);
+      const incoming = metadataFields(source, title);
+      setFields(current => replace ? incoming : {
+        title: current.title.trim() ? current.title : incoming.title,
+        kind: hasKind ? current.kind : incoming.kind,
+        alternateTitle: current.alternateTitle.trim() ? current.alternateTitle : incoming.alternateTitle,
+        totalChapters: current.totalChapters || incoming.totalChapters,
+        totalVolumes: current.totalVolumes || incoming.totalVolumes,
+        status: current.status.trim() ? current.status : incoming.status,
+        summary: current.summary.trim() ? current.summary : incoming.summary,
+      });
+      setHasKind(true);
+      setProviderId(sourceId);
+      setNotice('Review the updated fields and save to apply them.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not load AniList metadata.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const values = new FormData(event.currentTarget);
     setBusy(true);
+    setError('');
     try {
       await save({
-        kind,
-        title: values.get('title'),
-        alternateTitle: values.get('alternateTitle'),
-        summary: values.get('summary'),
-        totalChapters: Number(values.get('totalChapters')) || null,
-        totalVolumes: Number(values.get('totalVolumes')) || null,
-        status: values.get('status'),
+        ...fields,
+        totalChapters: Number(fields.totalChapters) || null,
+        totalVolumes: Number(fields.totalVolumes) || null,
+        providerId,
+        useEditedFields: providerId !== null,
       });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not save series metadata.');
     } finally {
       setBusy(false);
     }
@@ -106,19 +159,30 @@ function SeriesMetadataForm({ title, metadata, save }: { title: string; metadata
 
   return (
     <form onSubmit={handleSave} className="grid gap-3">
-      <label className="grid gap-1">Series title<input name="title" required maxLength={300} defaultValue={metadata?.title ?? title} /></label>
-      <label className="grid gap-1">Alternate title<input name="alternateTitle" maxLength={300} defaultValue={metadata?.alternateTitle ?? ''} /></label>
-      <Select label="Publication type" value={kind} onChange={setKind} options={kinds} />
+      <label className="grid gap-1">Series title<input name="title" required maxLength={300} value={fields.title}
+        onChange={event => update('title', event.target.value)} /></label>
+      <label className="grid gap-1">Alternate title<input name="alternateTitle" maxLength={300} value={fields.alternateTitle}
+        onChange={event => update('alternateTitle', event.target.value)} /></label>
+      <Select label="Publication type" value={fields.kind} onChange={value => { update('kind', value); setHasKind(true); }} options={kinds} />
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1">Total chapters<input name="totalChapters" type="number" min={1} max={100000}
-          defaultValue={metadata?.totalChapters ?? ''} /></label>
+          value={fields.totalChapters} onChange={event => update('totalChapters', event.target.value)} /></label>
         <label className="grid gap-1">Total volumes<input name="totalVolumes" type="number" min={1} max={100000}
-          defaultValue={metadata?.totalVolumes ?? ''} /></label>
+          value={fields.totalVolumes} onChange={event => update('totalVolumes', event.target.value)} /></label>
       </div>
-      <label className="grid gap-1">Publication status<input name="status" maxLength={40} defaultValue={metadata?.status ?? ''} /></label>
-      <label className="grid gap-1">Summary<textarea name="summary" rows={3} maxLength={6000} defaultValue={metadata?.summary ?? ''}
-        className="min-w-0 rounded-lg border border-control bg-field p-3 text-base text-ink" /></label>
-      <Button type="submit" icon={Save} disabled={busy} className="justify-self-start">Save details</Button>
+      <label className="grid gap-1">Publication status<input name="status" maxLength={40} value={fields.status}
+        onChange={event => update('status', event.target.value)} /></label>
+      <label className="grid gap-1">Summary<textarea name="summary" rows={3} maxLength={6000} value={fields.summary}
+        onChange={event => update('summary', event.target.value)} className="min-w-0 rounded-lg border border-control bg-field p-3 text-base text-ink" /></label>
+      {notice && <p role="status" className="m-0 text-sm text-muted">{notice}</p>}
+      {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
+      <div className="action-row">
+        <Button type="submit" icon={Save} disabled={busy}>Save details</Button>
+        {sourceId && <>
+          <Button variant="secondary" disabled={busy} onClick={() => void applyProvider(false)}>Fill missing from AniList</Button>
+          <Button variant="secondary" disabled={busy} onClick={() => void applyProvider(true)}>Replace from AniList</Button>
+        </>}
+      </div>
     </form>
   );
 }
@@ -151,24 +215,74 @@ export function useSeriesDetails({ rootId, seriesKey, version, onSignedOut, publ
 
 type EditorProps = Omit<SeriesContext, 'version'> & { metadata: Metadata | null; onChange: () => void; published?: boolean };
 
-export function MetadataDialogAction({ actionLabel = 'Manage metadata', ...props }: EditorProps & { actionLabel?: string }) {
+export function MetadataDialogAction({ actionLabel = 'Edit metadata', ...props }: EditorProps & {
+  actionLabel?: string; suggestion?: Metadata;
+}) {
   const [open, setOpen] = useState(false);
   return <>
     <Button variant="secondary" className="justify-self-start" onClick={() => setOpen(true)}>{actionLabel}</Button>
-    {open && <Modal title="Manage series metadata" wide onClose={() => setOpen(false)}>
-      <MetadataEditor {...props} />
-    </Modal>}
+    {open && <MetadataDraftDialog {...props} onClose={() => setOpen(false)} />}
   </>;
 }
 
-function MetadataEditor({ rootId, seriesKey, title, metadata, onSignedOut, onChange, published }: EditorProps) {
-  const url = ROOTS_URL + '/' + rootId + '/series/' + seriesKey;
+function MetadataDraftDialog({ onClose, suggestion, ...props }: EditorProps & { onClose: () => void; suggestion?: Metadata }) {
+  async function loadProvider(id: number) {
+    const response = await fetch(metadataUrl(props) + '/metadata/anilist/' + id);
+    return metadataResponse(response, props.onSignedOut, 'Could not load AniList metadata.');
+  }
+
+  return <Modal title="Edit series metadata" onClose={onClose}>
+    <SeriesMetadataForm title={props.title} metadata={props.metadata} suggestion={suggestion} loadProvider={loadProvider}
+      save={async values => { await saveMetadata(props, values); onClose(); props.onChange(); }} />
+  </Modal>;
+}
+
+export function AniListSearchAction({ iconOnly, ...props }: Omit<EditorProps, 'metadata'> & { iconOnly?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<{ metadata: Metadata | null; suggestion: Metadata } | null>(null);
+
+  return <>
+    <Button variant="ghost" icon={Search} aria-label="Find on AniList" title="Find on AniList"
+      onClick={() => setOpen(true)}>{!iconOnly && 'Find on AniList'}</Button>
+    {open && <Modal title="Find on AniList" wide onClose={() => setOpen(false)}>
+      <AniListSearch {...props} onChange={() => { setOpen(false); props.onChange(); }}
+        onReview={(metadata, suggestion) => { setOpen(false); setDraft({ metadata, suggestion }); }} />
+    </Modal>}
+    {draft && <MetadataDraftDialog {...props} {...draft} onClose={() => setDraft(null)} />}
+  </>;
+}
+
+function metadataUrl({ rootId, seriesKey }: Pick<EditorProps, 'rootId' | 'seriesKey'>) {
+  return ROOTS_URL + '/' + rootId + '/series/' + seriesKey;
+}
+
+async function metadataResponse(response: Response, onSignedOut: () => void, fallback: string): Promise<Metadata> {
+  if (response.status === 401) onSignedOut();
+  if (!response.ok) {
+    const failure = await response.json().catch(() => null) as { message?: string } | null;
+    throw new Error(failure?.message ?? fallback);
+  }
+  return response.json();
+}
+
+async function saveMetadata(props: Omit<EditorProps, 'metadata'>, body: object) {
+  const response = await fetch(metadataUrl(props) + '/metadata' + (props.published ? '?published=true' : ''), {
+    method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
+    body: JSON.stringify(body),
+  });
+  return metadataResponse(response, props.onSignedOut, 'Could not save series metadata.');
+}
+
+function AniListSearch({ onReview, ...props }: Omit<EditorProps, 'metadata'> & {
+  onReview: (metadata: Metadata | null, suggestion: Metadata) => void;
+}) {
+  const { title, onSignedOut, onChange } = props;
+  const url = metadataUrl(props);
   const [query, setQuery] = useState(title);
   const [matches, setMatches] = useState<Metadata[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<number | null>(null);
   const [error, setError] = useState('');
-  const [edit, setEdit] = useState(false);
 
   async function findMetadata(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -189,36 +303,32 @@ function MetadataEditor({ rootId, seriesKey, title, metadata, onSignedOut, onCha
     }
   }
 
-  async function save(body: object) {
+  async function choose(candidate: Metadata) {
+    if (candidate.providerId === null) return;
     setError('');
+    setSaving(candidate.providerId);
     try {
-      const response = await fetch(url + '/metadata' + (published ? '?published=true' : ''), {
-        method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
-        body: JSON.stringify(body),
-      });
-      if (response.status === 401) {
-        onSignedOut();
-        return false;
-      }
-      if (!response.ok) {
-        const failure = await response.json().catch(() => null) as { message?: string } | null;
-        throw new Error(failure?.message ?? 'Could not save series metadata.');
-      }
-      setEdit(false);
-      setMatches(null);
+      await saveMetadata(props, { providerId: candidate.providerId, kind: candidate.kind });
       onChange();
-      return true;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not save series metadata.');
-      return false;
+    } finally {
+      setSaving(null);
     }
   }
 
-  async function choose(candidate: Metadata) {
+  async function review(candidate: Metadata) {
     if (candidate.providerId === null) return;
+    setError('');
     setSaving(candidate.providerId);
     try {
-      await save({ providerId: candidate.providerId, kind: candidate.kind });
+      const response = await fetch(url + '/details' + (props.published ? '?published=true' : ''));
+      if (response.status === 401) return onSignedOut();
+      if (!response.ok) throw new Error('Could not load the current series details.');
+      const details = await response.json() as Details;
+      onReview(details.metadata, candidate);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not open the metadata editor.');
     } finally {
       setSaving(null);
     }
@@ -226,10 +336,6 @@ function MetadataEditor({ rootId, seriesKey, title, metadata, onSignedOut, onCha
 
   return (
     <div className="grid min-w-0 gap-4">
-      <Button variant="secondary" className="justify-self-start" onClick={() => setEdit(value => !value)}>
-        {edit ? 'Close editor' : 'Edit metadata'}
-      </Button>
-      {edit && <SeriesMetadataForm title={title} metadata={metadata} save={save} />}
       <form onSubmit={findMetadata} className="action-row">
         <SearchField aria-label="Metadata title" value={query} onChange={event => setQuery(event.target.value)} required maxLength={300}
           className="flex-[1_1_12rem]" />
@@ -255,8 +361,9 @@ function MetadataEditor({ rootId, seriesKey, title, metadata, onSignedOut, onCha
             {candidate.providerUrl && <ActionLink variant="ghost" icon={ExternalLink} href={candidate.providerUrl} target="_blank" rel="noreferrer">
               Open in AniList
             </ActionLink>}
+            <Button variant="secondary" disabled={saving !== null} onClick={() => void review(candidate)}>Review in editor</Button>
             <Button variant="secondary" disabled={saving !== null} onClick={() => void choose(candidate)}>
-              {saving === candidate.providerId ? 'Saving…' : 'Use this match'}
+              Use this match
             </Button>
           </div>
         </li>)}
@@ -279,7 +386,7 @@ export function MetadataDescription({ metadata }: { metadata: Metadata }) {
   </div>;
 }
 
-export function SeriesInfo({ onChange, ...context }: SeriesContext & { onChange: () => void }) {
+export function SeriesInfo({ onChange, suggestion, ...context }: SeriesContext & { onChange: () => void; suggestion?: Metadata }) {
   const { details, error } = useSeriesDetails(context);
   const metadata = details?.metadata ?? null;
   return <section className="grid min-w-0 gap-4 border-t border-line p-4" aria-label="Series details">
@@ -296,6 +403,6 @@ export function SeriesInfo({ onChange, ...context }: SeriesContext & { onChange:
           ...details.chapters.map(({ volume, chapter }) => `${volume ? `Vol. ${volume} · ` : ''}Ch. ${chapter}`)]} />
       </details>}
     </>}
-    <MetadataDialogAction {...context} metadata={metadata} onChange={onChange} />
+    {details && <MetadataDialogAction {...context} metadata={metadata} suggestion={suggestion} onChange={onChange} />}
   </section>;
 }

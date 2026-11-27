@@ -25,10 +25,12 @@ internal sealed partial class LibraryStore
 {
     private const string MetadataIdForGroup = """
         COALESCE(
-            (SELECT binding.metadata_id FROM series_metadata_binding binding WHERE binding.root_id = $root AND binding.series_key = $series),
+            (SELECT binding.metadata_id FROM series_metadata_binding binding JOIN series_metadata confirmed ON confirmed.id = binding.metadata_id
+                WHERE binding.root_id = $root AND binding.series_key = $series AND confirmed.series_key = $series),
             (SELECT CASE WHEN COUNT(DISTINCT cm.metadata_id) = 1 THEN MIN(cm.metadata_id) END
                 FROM library_file f JOIN content_metadata cm ON cm.content_id = f.content_id
-                WHERE f.root_id = $root AND f.series_key = $series)
+                JOIN series_metadata confirmed ON confirmed.id = cm.metadata_id
+                WHERE f.root_id = $root AND f.series_key = $series AND confirmed.series_key = $series)
         )
         """;
 
@@ -44,19 +46,19 @@ internal sealed partial class LibraryStore
         WHERE f.root_id = $root AND f.series_key = $series
         UNION
         SELECT f.content_id, inferred.volume, chapter.value
-        FROM library_file f JOIN inferred_volume_chapters inferred ON inferred.content_id = f.content_id, json_each(inferred.chapters) chapter
+        FROM library_file f JOIN active_inferred_volume_chapters inferred ON inferred.content_id = f.content_id, json_each(inferred.chapters) chapter
         WHERE f.root_id = $root AND f.series_key = $series
             AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = f.content_id)
         UNION
-        SELECT f.content_id, COALESCE(f.volume_hint, ''), f.chapter_hint FROM library_file f
+        SELECT f.content_id, COALESCE(f.volume_hint, ''), f.chapter_hint FROM library_file_numbered f
         WHERE f.root_id = $root AND f.series_key = $series AND f.content_id IS NOT NULL AND f.chapter_hint IS NOT NULL
             AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = f.content_id)
-            AND NOT EXISTS (SELECT 1 FROM inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
+            AND NOT EXISTS (SELECT 1 FROM active_inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
         UNION
-        SELECT f.content_id, COALESCE(f.volume_hint, ''), '1' FROM library_file f
+        SELECT f.content_id, COALESCE(f.volume_hint, ''), '1' FROM library_file_numbered f
         WHERE f.root_id = $root AND f.series_key = $series AND f.content_id IS NOT NULL
             AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = f.content_id)
-            AND NOT EXISTS (SELECT 1 FROM inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
+            AND NOT EXISTS (SELECT 1 FROM active_inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
             AND
         """ + " " + FinishedOneShot + """
 
@@ -115,9 +117,9 @@ internal sealed partial class LibraryStore
         }
 
         command.CommandText = """
-            SELECT DISTINCT volume_hint FROM library_file f WHERE root_id = $root AND series_key = $series AND volume_hint IS NOT NULL
+            SELECT DISTINCT volume_hint FROM library_file_numbered f WHERE root_id = $root AND series_key = $series AND volume_hint IS NOT NULL
                 AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = f.content_id)
-                AND NOT EXISTS (SELECT 1 FROM inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
+                AND NOT EXISTS (SELECT 1 FROM active_inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
             """ + visible;
         var volumes = chapters.Select(chapter => chapter.Volume).OfType<string>().ToHashSet(StringComparer.Ordinal);
         using (var rows = command.ExecuteReader())
@@ -269,7 +271,9 @@ internal sealed partial class LibraryStore
             INSERT INTO content_metadata(content_id, metadata_id)
                 SELECT DISTINCT content_id, $id FROM library_file
                 WHERE root_id = $root AND series_key = $series AND content_id IS NOT NULL AND $attachFiles
-            ON CONFLICT(content_id) DO UPDATE SET metadata_id = excluded.metadata_id;
+            ON CONFLICT(content_id) DO UPDATE SET metadata_id = excluded.metadata_id
+                WHERE EXISTS (SELECT 1 FROM series_metadata previous
+                    WHERE previous.id = content_metadata.metadata_id AND previous.series_key = $series);
             """;
         command.ExecuteNonQuery();
         return metadata;
@@ -292,7 +296,7 @@ internal sealed partial class LibraryStore
             ReadInt(rows, 5), ReadInt(rows, 6), providerId, details);
     }
 
-    public bool SaveCoverage(Guid root, string seriesKey, string contentId, string volume, IReadOnlyList<string> chapters)
+    public bool SaveCoverage(Guid root, string seriesKey, string contentId, string volume, IReadOnlyList<string> chapters, bool wholeVolume)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
@@ -300,9 +304,18 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$content", contentId);
         if (!ContentInGroup(command)) return false;
 
-        command.CommandText = "DELETE FROM content_chapter WHERE content_id = $content;";
+        command.CommandText = """
+            SELECT 1 FROM file_operation WHERE content_id = $content AND state IN ('applying', 'restoring') LIMIT 1;
+            """;
+        if (command.ExecuteScalar() is not null) return false;
+
+        command.Parameters.AddWithValue("$wholeVolume", wholeVolume ? volume : DBNull.Value);
+        command.CommandText = """
+            DELETE FROM content_chapter WHERE content_id = $content;
+            UPDATE library_content SET manual_volume = $wholeVolume WHERE id = $content;
+            """;
         command.ExecuteNonQuery();
-        command.CommandText = "INSERT OR IGNORE INTO content_chapter(content_id, volume, chapter) VALUES ($content, $volume, $chapter);";
+        command.CommandText = "INSERT INTO content_chapter(content_id, volume, chapter) VALUES ($content, $volume, $chapter);";
         command.Parameters.AddWithValue("$volume", volume);
         var chapterParameter = command.Parameters.Add("$chapter", SqliteType.Text);
         foreach (var chapter in chapters)
@@ -326,7 +339,7 @@ internal sealed partial class LibraryStore
             SELECT volume, chapter, NULL FROM content_chapter WHERE content_id = $content
             UNION ALL
             SELECT inferred.volume, chapter.value, inferred.source
-            FROM inferred_volume_chapters inferred, json_each(inferred.chapters) chapter
+            FROM active_inferred_volume_chapters inferred, json_each(inferred.chapters) chapter
             WHERE inferred.content_id = $content AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = $content);
             """;
         var result = new List<SeriesChapter>();

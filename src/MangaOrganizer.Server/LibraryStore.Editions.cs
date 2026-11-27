@@ -18,7 +18,7 @@ internal sealed partial class LibraryStore
         """;
 
     private const string GroupVolumeArchives = """
-        SELECT f.volume_hint AS volume, f.content_id FROM library_file f
+        SELECT f.volume_hint AS volume, f.content_id FROM library_file_numbered f
         WHERE f.root_id = $root AND f.series_key = $series AND f.content_id IS NOT NULL
             AND f.volume_hint IS NOT NULL AND f.chapter_hint IS NULL
             AND NOT EXISTS(SELECT 1 FROM covered c WHERE c.content_id = f.content_id AND c.volume <> f.volume_hint)
@@ -219,7 +219,7 @@ internal sealed partial class LibraryStore
                 MAX(f.volume_hint = $volume AND f.chapter_hint IS NULL
                     AND NOT EXISTS(SELECT 1 FROM covered c WHERE c.content_id = f.content_id)),
                 0
-            FROM library_file f
+            FROM library_file_numbered f
             WHERE f.root_id = $root AND f.series_key = $series AND f.content_id IS NOT NULL
               AND
             """ + " " + GroupVolumeMatch + """
@@ -262,7 +262,7 @@ internal sealed partial class LibraryStore
             command.Parameters.AddWithValue("$full", fullVolume);
             command.CommandText = "WITH covered AS (" + GroupCoverage + """
                 )
-                SELECT 1 FROM library_file f WHERE f.root_id = $root AND f.series_key = $series AND f.content_id = $full
+                SELECT 1 FROM library_file_numbered f WHERE f.root_id = $root AND f.series_key = $series AND f.content_id = $full
                     AND f.volume_hint = $volume AND f.chapter_hint IS NULL
                     AND NOT EXISTS(SELECT 1 FROM covered c WHERE c.content_id = $full)
                 LIMIT 1;

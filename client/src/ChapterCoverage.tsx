@@ -29,12 +29,14 @@ export function ChapterCoverage({ url, contentId, volumeHint, chapterHint, onSav
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
+    const volume = String(data.get('volume') ?? '').trim();
+    const chapters = String(data.get('chapters') ?? '').split(',').map(value => value.trim()).filter(Boolean);
     setBusy(true);
     setError('');
     setSaved(false);
     try {
       const response = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
-        body: JSON.stringify({ contentId, volume: data.get('volume'), chapters: String(data.get('chapters') ?? '').split(',').map(value => value.trim()).filter(Boolean) }) });
+        body: JSON.stringify({ contentId, volume, chapters, wholeVolume: volume.length > 0 && chapters.length === 0 }) });
       if (response.status === 401) return onSignedOut();
       if (!response.ok) {
         const failure = await response.json().catch(() => null) as { message?: string } | null;
@@ -56,7 +58,7 @@ export function ChapterCoverage({ url, contentId, volumeHint, chapterHint, onSav
         <label className="grid gap-1">Volume label (optional)<input name="volume" maxLength={13} defaultValue={start.volume} /></label>
         <label className="grid gap-1">Chapters in this file<input name="chapters" maxLength={6000} defaultValue={start.chapters} placeholder="1, 1.5, 2" /></label>
         {start.source && <p className="m-0 text-sm text-muted">Detected from {start.source === 'archive' ? 'chapter folders in the archive' : 'the chapter range in the filename'}.</p>}
-        <p className="m-0 text-sm text-muted">List the individual chapters you verified. Clearing a manual assignment restores any detected coverage.</p>
+        <p className="m-0 text-sm text-muted">Enter a volume by itself for a whole-volume file, or list the chapters you verified. Clear both fields to restore detected coverage.</p>
         <Button type="submit" disabled={busy} className="justify-self-start">Save coverage</Button>
       </form>}
       {saved && <p role="status" className="m-0 text-positive">Chapter coverage saved.</p>}

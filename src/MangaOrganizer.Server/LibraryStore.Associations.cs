@@ -69,6 +69,7 @@ internal sealed partial class LibraryStore
         command.CommandText = """
             INSERT INTO content_metadata(content_id, metadata_id) VALUES ($content, $metadata)
             ON CONFLICT (content_id) DO UPDATE SET metadata_id = excluded.metadata_id;
+            DELETE FROM import_file_split WHERE content_id = $content;
             UPDATE library_file SET series_key = $target, series_title = $title
             WHERE content_id = $content AND root_id IN (SELECT root_id FROM library_folder);
             """;

@@ -22,7 +22,7 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$compareFolders", compareFolders);
         command.CommandText = """
             WITH scoped AS (
-                SELECT f.* FROM library_file f
+                SELECT f.* FROM library_file_numbered f
                 WHERE f.series_key = $series AND (f.root_id = $root OR $compareFolders)
             ), identities AS (
                 SELECT DISTINCT content_id FROM scoped
@@ -31,7 +31,7 @@ internal sealed partial class LibraryStore
                 FROM content_chapter c JOIN identities i ON i.content_id = c.content_id
                 UNION ALL
                 SELECT v.content_id, v.volume, chapter.value, v.source
-                FROM inferred_volume_chapters v JOIN identities i ON i.content_id = v.content_id, json_each(v.chapters) chapter
+                FROM active_inferred_volume_chapters v JOIN identities i ON i.content_id = v.content_id, json_each(v.chapters) chapter
                 WHERE NOT EXISTS(SELECT 1 FROM content_chapter c WHERE c.content_id = v.content_id)
             )
             SELECT f.id, f.relative_path, folder.path, f.extension, f.size, c.sha256, f.volume_hint, f.chapter_hint,
@@ -94,7 +94,7 @@ internal sealed partial class LibraryStore
         """;
 
     private const string DuplicateSources = """
-        FROM library_file f JOIN library_content c ON c.id = f.content_id
+        FROM library_file_numbered f JOIN library_content c ON c.id = f.content_id
         JOIN library_folder folder ON folder.root_id = f.root_id JOIN library_root r ON r.id = f.root_id
         """;
 
@@ -154,7 +154,7 @@ internal sealed partial class LibraryStore
             SELECT volume, chapter, 'manual' FROM content_chapter WHERE content_id = $coverageContent
             UNION ALL
             SELECT inferred.volume, chapter.value, inferred.source
-            FROM inferred_volume_chapters inferred, json_each(inferred.chapters) chapter
+            FROM active_inferred_volume_chapters inferred, json_each(inferred.chapters) chapter
             WHERE inferred.content_id = $coverageContent
                 AND NOT EXISTS(SELECT 1 FROM content_chapter c WHERE c.content_id = $coverageContent);
             """;

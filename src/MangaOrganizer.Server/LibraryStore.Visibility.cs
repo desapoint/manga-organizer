@@ -27,6 +27,18 @@ internal sealed partial class LibraryStore
             WHERE content.id = f.content_id)
         """;
 
+    private const string CanConfirmIntakeProposal = """
+        NOT EXISTS(SELECT 1 FROM series_metadata_binding binding WHERE binding.root_id = f.root_id AND binding.series_key = f.series_key)
+        AND NOT EXISTS(SELECT 1 FROM library_file peer JOIN content_metadata linked ON linked.content_id = peer.content_id
+            WHERE peer.root_id = f.root_id AND peer.series_key = f.series_key)
+        """;
+
+    private const string CloseAniListProposal = """
+        EXISTS(SELECT 1 FROM metadata_suggestion proposal WHERE proposal.series_key = f.series_key
+            AND (SELECT COUNT(*) FROM json_each(proposal.candidates) candidate
+                WHERE json_type(candidate.value, '$.MatchingTitle') = 'text') = 1)
+        """;
+
     private static string CatalogVisibility(string? view) => view switch
     {
         "library" => " " + LibraryVisibility,
@@ -36,6 +48,7 @@ internal sealed partial class LibraryStore
         "series" => " AND f.series_title IS NULL AND NOT (" + ConfirmedSeries + ")",
         "metadata" => " AND (" + MissingMetadata + ")",
         "cover" => " AND (" + MissingCover + ")",
+        "close" => " AND (" + CanConfirmIntakeProposal + ") AND (" + CloseAniListProposal + ")",
         _ => "",
     };
 
