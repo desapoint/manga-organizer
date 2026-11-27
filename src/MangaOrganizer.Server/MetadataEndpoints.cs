@@ -5,7 +5,7 @@ namespace MangaOrganizer.Server;
 
 internal sealed record MetadataChange(int? ProviderId, string? Title, string? Kind, string? AlternateTitle, string? Summary,
     string? Status, int? TotalChapters, int? TotalVolumes, bool UseEditedFields = false);
-internal sealed record CoverageChange(string? ContentId, string? Volume, string[]? Chapters);
+internal sealed record CoverageChange(string? ContentId, string? Volume, string[]? Chapters, bool WholeVolume = false);
 internal sealed record AssociationConfirmation(string? FileId, string? ContentId);
 
 internal static class MetadataEndpoints
@@ -122,14 +122,15 @@ internal static class MetadataEndpoints
             var volume = change.Volume?.Trim() ?? "";
             if (!IsContentId(change.ContentId) ||
                 (volume.Length > 0 && !BookNumbers.IsNumber(volume)) || change.Chapters is not { Length: <= 500 } chapters ||
-                chapters.Any(chapter => chapter is null || !BookNumbers.IsNumber(chapter)))
+                chapters.Any(chapter => chapter is null || !BookNumbers.IsNumber(chapter)) ||
+                change.WholeVolume && (volume.Length == 0 || chapters.Length != 0))
             {
                 return Results.BadRequest(new { message = "Use individual numeric chapter labels, such as 1, 1.5, and 2." });
             }
 
             var distinct = chapters.Select(BookNumbers.Canonical).Distinct(StringComparer.Ordinal).ToArray();
             return store.SaveCoverage(root, seriesKey.ToLowerInvariant(), change.ContentId!.ToLowerInvariant(),
-                volume.Length == 0 ? "" : BookNumbers.Canonical(volume), distinct) ? Results.NoContent() : Results.NotFound();
+                volume.Length == 0 ? "" : BookNumbers.Canonical(volume), distinct, change.WholeVolume) ? Results.NoContent() : Results.NotFound();
         }).WithMetadata(new RequestSizeLimitAttribute(16 * 1024));
     }
 

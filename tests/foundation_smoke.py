@@ -1427,7 +1427,7 @@ def verify_routed_intake(owner, media, source, target):
                   body={"title": "Unnumbered Fixture", "kind": "manga"})
     draft = {**ready_plan, "fileId": no_number["id"], "targetPath": unnumbered.name}
     preview(draft, 409)
-    whole_volume = {"contentId": no_number["contentId"], "volume": "07", "chapters": []}
+    whole_volume = {"contentId": no_number["contentId"], "volume": "07", "chapters": [], "wholeVolume": True}
     owner.request(volume_url + "/coverage", 204, method="PUT", token=owner.csrf(), body=whole_volume)
     owner.scan(source_id)
     (volume_item,) = owner.files(source_id, f"?seriesKey={no_number['seriesKey']}&volume=7")["items"]
@@ -1437,7 +1437,7 @@ def verify_routed_intake(owner, media, source, target):
     assert details["volumes"] == details["readableVolumes"] == ["7"] and details["availableChapters"] == 0
     (release,) = json.loads(owner.request(volume_url + "/volume-releases?volume=7&published=true", 200))
     assert release["contentId"] == no_number["contentId"] and release["unresolvedVolume"]
-    owner.request(volume_url + "/coverage", 204, method="PUT", token=owner.csrf(), body={**whole_volume, "volume": ""})
+    owner.request(volume_url + "/coverage", 204, method="PUT", token=owner.csrf(), body={**whole_volume, "volume": "", "wholeVolume": False})
     preview(draft, 409)
     owner.request(volume_url + "/coverage", 204, method="PUT", token=owner.csrf(), body=whole_volume)
     volume_target = media / "archive" / volume_item["intakePath"]

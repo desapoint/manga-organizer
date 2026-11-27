@@ -29,12 +29,14 @@ export function ChapterCoverage({ url, contentId, volumeHint, chapterHint, onSav
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
+    const volume = String(data.get('volume') ?? '').trim();
+    const chapters = String(data.get('chapters') ?? '').split(',').map(value => value.trim()).filter(Boolean);
     setBusy(true);
     setError('');
     setSaved(false);
     try {
       const response = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
-        body: JSON.stringify({ contentId, volume: data.get('volume'), chapters: String(data.get('chapters') ?? '').split(',').map(value => value.trim()).filter(Boolean) }) });
+        body: JSON.stringify({ contentId, volume, chapters, wholeVolume: volume.length > 0 && chapters.length === 0 }) });
       if (response.status === 401) return onSignedOut();
       if (!response.ok) {
         const failure = await response.json().catch(() => null) as { message?: string } | null;

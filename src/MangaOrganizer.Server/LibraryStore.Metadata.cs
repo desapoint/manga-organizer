@@ -296,7 +296,7 @@ internal sealed partial class LibraryStore
             ReadInt(rows, 5), ReadInt(rows, 6), providerId, details);
     }
 
-    public bool SaveCoverage(Guid root, string seriesKey, string contentId, string volume, IReadOnlyList<string> chapters)
+    public bool SaveCoverage(Guid root, string seriesKey, string contentId, string volume, IReadOnlyList<string> chapters, bool wholeVolume)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
@@ -309,7 +309,7 @@ internal sealed partial class LibraryStore
             """;
         if (command.ExecuteScalar() is not null) return false;
 
-        command.Parameters.AddWithValue("$wholeVolume", chapters.Count == 0 && volume.Length > 0 ? volume : DBNull.Value);
+        command.Parameters.AddWithValue("$wholeVolume", wholeVolume ? volume : DBNull.Value);
         command.CommandText = """
             DELETE FROM content_chapter WHERE content_id = $content;
             UPDATE library_content SET manual_volume = $wholeVolume WHERE id = $content;
