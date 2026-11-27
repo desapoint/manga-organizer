@@ -116,7 +116,7 @@ export function FileMove({ rootId, fileId, relativePath, folders, onSignedOut, o
   );
 }
 
-export function FileOperationHistory({ onSignedOut, onChanged }: { onSignedOut: () => void; onChanged: () => void }) {
+export function FileOperationHistory({ version, onSignedOut, onChanged }: { version: string; onSignedOut: () => void; onChanged: () => void }) {
   const [history, setHistory] = useState<Operation[] | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
@@ -134,7 +134,7 @@ export function FileOperationHistory({ onSignedOut, onChanged }: { onSignedOut: 
     }
     void load().catch(() => { if (!request.signal.aborted) setError('Could not load file operation history.'); });
     return () => request.abort();
-  }, [refresh, onSignedOut]);
+  }, [refresh, onSignedOut, version]);
 
   async function restore(id: string) {
     setBusy(id);

@@ -231,8 +231,8 @@ function ManifestEditor({ initial, volume: initialVolume, url, version, onChange
   </Modal>;
 }
 
-export function EditionCoverage({ url, version, onSignedOut, onChange, onBrowse, volume }: SeriesTools & {
-  onBrowse: (number: string) => void; volume?: string;
+export function EditionCoverage({ url, version, onSignedOut, onChange, onBrowse, volume, editable = true }: SeriesTools & {
+  onBrowse?: (number: string) => void; volume?: string; editable?: boolean;
 }) {
   const { items, error } = useSeriesList<EditionVolume>(url + '/edition-volumes', version, onSignedOut);
   const [selectedId, setSelectedId] = useState('');
@@ -242,7 +242,7 @@ export function EditionCoverage({ url, version, onSignedOut, onChange, onBrowse,
   return <section aria-label="Volume coverage" className="surface grid gap-3 p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <SectionHeader title="Volume coverage" />
-      <Button variant="secondary" icon={Plus} onClick={() => setEditing('new')}>Add verified volume</Button>
+      {editable && <Button variant="secondary" icon={Plus} onClick={() => setEditing('new')}>Add verified volume</Button>}
     </div>
     {error && <p role="alert" className="m-0 text-danger">Could not load volume coverage.</p>}
     {items?.length === 0 && <p className="m-0 text-sm text-muted">Coverage is unknown until an edition has a verified chapter list.</p>}
@@ -266,8 +266,8 @@ export function EditionCoverage({ url, version, onSignedOut, onChange, onBrowse,
           })}
         </ul>
       </details>
-      <div className="action-row"><Button variant="ghost" onClick={() => onBrowse(selected.volume)}>View chapters</Button>
-        <Button variant="ghost" icon={Pencil} onClick={() => setEditing(selected)}>Edit verified volume</Button></div>
+      <div className="action-row">{onBrowse && <Button variant="ghost" onClick={() => onBrowse(selected.volume)}>View chapters</Button>}
+        {editable && <Button variant="ghost" icon={Pencil} onClick={() => setEditing(selected)}>Edit verified volume</Button>}</div>
     </div>}
     {editing && <ManifestEditor initial={editing === 'new' ? undefined : editing} volume={volume} url={url} version={version}
       onChange={onChange} onSignedOut={onSignedOut} onClose={() => setEditing(null)} />}

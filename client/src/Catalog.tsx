@@ -2,11 +2,9 @@ import { FolderCog, ScanSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getCsrfToken } from './api';
-import { BatchOrganizer } from './BatchOrganizer';
 import { CatalogInventory, SeriesPage } from './CatalogInventory';
 import { Collections } from './Collections';
-import { FileOperationHistory } from './FileOperations';
-import { ROOTS_URL, scanIsActive } from './library';
+import { organizeToolsHref, ROOTS_URL, scanIsActive } from './library';
 import type { FolderRole, LibraryRoot, SeriesLocation, toolsLocation } from './library';
 import { LibrarySettings } from './LibrarySettings';
 import { Overview } from './Overview';
@@ -89,9 +87,7 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
     const seriesRoot = roots?.find(root => root.id === series.rootId);
     return <SeriesPage key={`${series.rootId}/${series.seriesKey}`} {...series} onSignedOut={onSignedOut}
       version={`${inventoryVersion}:${refresh}`} coverVersion={`${seriesRoot?.lastScannedAt ?? ''}:${refresh}`}
-      rootPath={seriesRoot?.path}
-      managedFolders={seriesRoot?.managed ? roots?.filter(root => root.managed) ?? [] : []}
-      onInventoryChanged={() => setRefresh(value => value + 1)} />;
+      rootPath={seriesRoot?.path} />;
   }
 
   if (tools) return <ToolsHub route={tools} roots={roots} version={`${inventoryVersion}:${refresh}`} onSignedOut={onSignedOut}
@@ -108,7 +104,6 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
         <>
           <LibrarySettings folders={roots} onSignedOut={onSignedOut} onChange={() => setRefresh(value => value + 1)} />
           {children}
-          <FileOperationHistory onSignedOut={onSignedOut} onChanged={() => setRefresh(value => value + 1)} />
         </>
       )}
       {visibleRoots?.length === 0 && catalogView && (
@@ -136,9 +131,7 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
             </div>
           </div>
           {scanError && <p role="alert" className="error">{scanError}</p>}
-          {view === 'import' && selected.managed && roots?.some(root => root.managed && root.kind !== 'import') &&
-            <BatchOrganizer key={selected.id} source={selected} targets={roots.filter(root => root.managed && root.kind !== 'import')}
-              version={`${inventoryVersion}:${refresh}`} onSignedOut={onSignedOut} onChanged={() => setRefresh(value => value + 1)} />}
+          {view === 'import' && <ActionLink variant="secondary" href={organizeToolsHref(selected.id)} className="justify-self-start">Organize intake in Tools</ActionLink>}
           <CatalogInventory key={selected.id} rootId={selected.id} version={`${inventoryVersion}:${refresh}`}
             onSignedOut={onSignedOut} scanComplete={selected.state === 'complete'} intake={view === 'import'} rootPath={selected.path}
             hasCovers={selected.hasCovers} coverVersion={`${selected.lastScannedAt ?? ''}:${refresh}`}

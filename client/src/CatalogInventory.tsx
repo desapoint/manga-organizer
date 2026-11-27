@@ -9,7 +9,7 @@ import type { LibraryRoot } from './library';
 import { MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
 import { EditionCoverage, SeriesChapterList, VolumeReleasePicker } from './EditionCoverage';
 import { FileCover, SeriesCover } from './SeriesCover';
-import { duplicateToolsHref, formatSize, isReadableArchive, ROOTS_URL, seriesHref, seriesReaderHref } from './library';
+import { duplicateToolsHref, formatSize, isReadableArchive, organizeToolsHref, ROOTS_URL, seriesHref, seriesReaderHref } from './library';
 import { Select } from './Select';
 import { ActionLink, Button, Modal, PageHeader, SearchField, SectionHeader, SegmentedControl } from './ui';
 
@@ -34,7 +34,8 @@ type CatalogEntry = {
 export type Series = { rootId: string; key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean };
 type Page<T> = { total: number; items: T[] };
 type InventoryProps = { rootId: string; version: string; onSignedOut: () => void };
-type InventoryActions = InventoryProps & { onDataChanged: () => void; managedFolders: LibraryRoot[]; onMoved: () => void };
+type FileManagement = { onDataChanged: () => void; managedFolders: LibraryRoot[]; onMoved: () => void };
+type InventoryActions = InventoryProps & FileManagement;
 type Inspection = { kind: 'series'; series: Series } | { kind: 'file'; file: CatalogEntry };
 type Inspect = (item: Inspection) => void;
 type InventoryView = 'covers' | 'series' | 'files';
@@ -54,9 +55,10 @@ export function useInventoryPage<T>(url: string, version: string, onSignedOut: (
   const params = new URLSearchParams(query);
   params.set('offset', String(offset));
   params.set('limit', String(PAGE_SIZE));
-  const pageUrl = `${url}?${params}`;
+  const pageUrl = url ? `${url}?${params}` : '';
 
   useEffect(() => {
+    if (!pageUrl) return;
     const request = new AbortController();
     setError(false);
 
@@ -105,10 +107,9 @@ function InventoryError({ children, retry }: { children: string; retry: () => vo
   );
 }
 
-function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onSaved, onSignedOut, managedFolders, onMoved }:
+function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut }:
   Pick<InventoryProps, 'rootId' | 'version'> & {
-  file: CatalogEntry; seriesKey?: string; onInspect?: Inspect; coverageUrl?: string; onSaved: () => void; onSignedOut: () => void;
-  managedFolders: LibraryRoot[]; onMoved: () => void;
+  file: CatalogEntry; seriesKey?: string; onInspect?: Inspect; onSignedOut: () => void; management?: FileManagement;
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
   const [showMove, setShowMove] = useState(false);
@@ -117,6 +118,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
   const separator = file.relativePath.lastIndexOf('/');
   const name = file.relativePath.slice(separator + 1);
   const readable = file.contentId && isReadableArchive(file.extension);
+  const coverageUrl = management && `${ROOTS_URL}/${rootId}/series/${file.seriesKey}/coverage`;
   return (
     <li>
       <span className="flex min-w-0 items-center gap-3">
@@ -144,29 +146,28 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, coverageUrl, onS
         {onInspect ? <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare this file</Button> :
           <ActionLink variant="ghost" href={duplicateToolsHref({ rootId, seriesKey: file.seriesKey }, file.id)}>Compare in Tools</ActionLink>}
         {coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>Set chapter coverage</Button>}
-        {managedFolders.length > 0 && <Button variant="ghost" onClick={() => setShowMove(true)}>Move or rename</Button>}
-        {showDuplicates && <DuplicateReviewDialog rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
-          onClose={() => setShowDuplicates(false)} onChanged={onMoved} />}
-        {showCoverage && coverageUrl && <Modal title="Set chapter coverage" onClose={() => setShowCoverage(false)}>
+        {!!management?.managedFolders.length && <Button variant="ghost" onClick={() => setShowMove(true)}>Move or rename</Button>}
+        {showDuplicates && management && <DuplicateReviewDialog rootId={rootId} fileId={file.id} version={version} onSignedOut={onSignedOut}
+          onClose={() => setShowDuplicates(false)} onChanged={management.onMoved} />}
+        {showCoverage && coverageUrl && management && <Modal title="Set chapter coverage" onClose={() => setShowCoverage(false)}>
           <p className="m-0 mb-3 text-sm"><code>{file.relativePath}</code></p>
           <ChapterCoverage url={coverageUrl} contentId={file.contentId} volumeHint={file.volume}
-            chapterHint={file.chapter} onSaved={onSaved} onSignedOut={onSignedOut} />
+            chapterHint={file.chapter} onSaved={management.onDataChanged} onSignedOut={onSignedOut} />
         </Modal>}
-        {showMove && <Modal title="Move or rename file" wide onClose={() => { if (!moving) setShowMove(false); }}>
-          <FileMove rootId={rootId} fileId={file.id} relativePath={file.relativePath} folders={managedFolders}
-            onSignedOut={onSignedOut} onApplying={setMoving} onApplied={() => { setShowMove(false); onMoved(); }} />
+        {showMove && management && <Modal title="Move or rename file" wide onClose={() => { if (!moving) setShowMove(false); }}>
+          <FileMove rootId={rootId} fileId={file.id} relativePath={file.relativePath} folders={management.managedFolders}
+            onSignedOut={onSignedOut} onApplying={setMoving} onApplied={() => { setShowMove(false); management.onMoved(); }} />
         </Modal>}
       </div>}
     </li>
   );
 }
 
-function FileInventory({ rootId, seriesKey, volume, version, onSignedOut, onDataChanged, managedFolders, onMoved, onInspect, search = '' }:
-  InventoryActions & { seriesKey?: string; volume?: string; onInspect?: Inspect; search?: string }) {
+export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut, management, onInspect, search = '' }:
+  InventoryProps & { seriesKey?: string; volume?: string; management?: FileManagement; onInspect?: Inspect; search?: string }) {
   const { page, offset, setOffset, error, retry } = useInventoryPage<CatalogEntry>(`${ROOTS_URL}/${rootId}/files`, version, onSignedOut,
     seriesKey ? { seriesKey, search, ...(volume ? { volume } : {}) } : { search });
   const label = seriesKey ? 'Series files' : 'Catalog files';
-  const coverageUrl = seriesKey ? `${ROOTS_URL}/${rootId}/series/${seriesKey}/coverage` : undefined;
   return (
     <>
       {error && <div className="px-4 pb-3"><InventoryError retry={retry}>Could not load files.</InventoryError></div>}
@@ -177,8 +178,7 @@ function FileInventory({ rootId, seriesKey, volume, version, onSignedOut, onData
           <div className="catalog-columns" aria-hidden="true"><span>File</span><span>Type</span><span>Size</span><span>Modified</span></div>
           <ul className="catalog-files" role="list" aria-label={label}>
             {page.items.map(file => <FileRow key={file.id} file={file} rootId={rootId} seriesKey={seriesKey} version={version}
-              coverageUrl={coverageUrl} onInspect={onInspect} onSaved={onDataChanged} onSignedOut={onSignedOut}
-              managedFolders={managedFolders} onMoved={onMoved} />)}
+              onInspect={onInspect} onSignedOut={onSignedOut} management={management} />)}
           </ul>
           {page.total > PAGE_SIZE && (
             <div className="border-t border-line p-3">
@@ -215,7 +215,7 @@ function SeriesRow({ series, onInspect, coverVersion, ...inventory }: InventoryA
         {open && <>
           <SeriesInfo rootId={inventory.rootId} seriesKey={series.key} title={series.title} version={inventory.version}
             onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut} />
-          <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} />
+          <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} management={inventory} />
         </>}
       </details> : <a className={`${rowClass} text-ink no-underline`} href={seriesHref(inventory.rootId, series.key)}>{contents}</a>}
     </li>
@@ -250,20 +250,16 @@ function CollectionTotal({ label, value, total }: { label: string; value: number
   </div>;
 }
 
-export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventoryChanged, rootPath, ...inventory }: InventoryProps & {
-  seriesKey: string; coverVersion: string; managedFolders: LibraryRoot[]; onInventoryChanged: () => void; rootPath?: string;
+export function SeriesPage({ seriesKey, coverVersion, rootPath, ...inventory }: InventoryProps & {
+  seriesKey: string; coverVersion: string; rootPath?: string;
 }) {
   const [revision, setRevision] = useState(0);
-  const [moved, setMoved] = useState(false);
   const [dialog, setDialog] = useState<'info' | 'cover' | null>(null);
   const [selectedView, setView] = useState<SeriesView | null>(null);
   const [volume, setVolume] = useState<string | null>(null);
   const [readingVolume, setReadingVolume] = useState<string | null>(null);
-  const catalog = { ...inventory, version: `${inventory.version}:${revision}`, managedFolders,
-    onDataChanged: () => setRevision(value => value + 1), onMoved: () => {
-      setMoved(true);
-      onInventoryChanged();
-    } };
+  const catalog = { ...inventory, version: `${inventory.version}:${revision}` };
+  const onDataChanged = () => setRevision(value => value + 1);
   const { rootId, version, onSignedOut } = catalog;
   const { page, error, retry } = useInventoryPage<Series>(`${ROOTS_URL}/${rootId}/series`, version, onSignedOut, { seriesKey });
   const series = page?.items[0];
@@ -272,7 +268,7 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
   const reading = details?.reading;
   const title = metadata?.title ?? series?.title ?? 'Series';
   const seriesUrl = `${ROOTS_URL}/${rootId}/series/${seriesKey}`;
-  const seriesTools = { url: seriesUrl, version, onSignedOut, onChange: catalog.onDataChanged };
+  const seriesTools = { url: seriesUrl, version, onSignedOut, onChange: onDataChanged };
   const view = selectedView ?? (details?.chapters.length ? 'chapters' : details?.volumes.length ? 'volumes' :
     metadata?.totalChapters != null ? 'chapters' : metadata?.totalVolumes != null ? 'volumes' : 'files');
   return (
@@ -293,7 +289,7 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
             </ActionLink>}
             <Button variant="secondary" icon={Info} onClick={() => setDialog('info')}>More info</Button>
             <MetadataDialogAction rootId={rootId} seriesKey={seriesKey} title={title} metadata={metadata}
-              onChange={catalog.onDataChanged} onSignedOut={onSignedOut} />
+              onChange={onDataChanged} onSignedOut={onSignedOut} />
             <ActionLink variant="ghost" href={duplicateToolsHref({ rootId, seriesKey })}>Review duplicates in Tools</ActionLink>
           </div>}
           {reading?.pageIndex != null && <p className="m-0 text-sm text-muted wrap-anywhere">
@@ -303,19 +299,19 @@ export function SeriesPage({ seriesKey, coverVersion, managedFolders, onInventor
       {error && <InventoryError retry={retry}>Could not load this series.</InventoryError>}
       {!error && !page && <p role="status">Loading series…</p>}
       {page && !series && <p>This series is no longer in the selected library folder.</p>}
-      {moved && <p role="status" className="m-0 text-sm text-positive">File change completed. See File operation history in Settings for recovery.</p>}
       {series && detailsError && <p role="alert" className="m-0 text-danger">{detailsError}</p>}
       {series && details && <section aria-label="Reading and collection progress" className="surface grid gap-4 p-4 sm:grid-cols-3">
         <CollectionTotal label="Read chapters · indexed" value={details.readChapters} total={details.availableChapters} />
         <CollectionTotal label="Indexed chapters · released" value={details.availableChapters} total={metadata?.totalChapters ?? null} />
         <CollectionTotal label="Indexed volumes · released" value={details.indexedVolumes} total={metadata?.totalVolumes ?? null} />
       </section>}
-      {series && <EditionCoverage {...seriesTools} volume={details?.volumes.length === 1 ? details.volumes[0] : undefined}
+      {series && <EditionCoverage {...seriesTools} editable={false}
         onBrowse={number => { setVolume(number); setView('chapters'); }} />}
       {series && <section className="grid min-w-0 gap-3" aria-label="Series inventory">
         <SegmentedControl label="Series views" options={seriesViews} value={view} onChange={value => { setVolume(null); setView(value); }} />
         <div className="surface min-w-0">
           {view === 'files' && <>
+            <div className="action-row p-3"><ActionLink variant="ghost" href={organizeToolsHref(rootId, seriesKey)}>Organize series in Tools</ActionLink></div>
             {volume && <div className="action-row p-3"><span>Volume {volume}</span><Button variant="ghost" onClick={() => setVolume(null)}>Show all files</Button></div>}
             <FileInventory key={volume ?? 'all-files'} {...catalog} seriesKey={seriesKey} volume={volume ?? undefined} />
           </>}
@@ -436,7 +432,7 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
   const [notice, setNotice] = useState('');
   const catalog = { ...inventory, version: `${inventory.version}:${catalogRevision}`, managedFolders,
     onDataChanged: () => setCatalogRevision(value => value + 1), onMoved: () => {
-      setNotice('File change completed. A verified recovery copy is in Settings under File operation history.');
+      setNotice('File change completed. A verified recovery copy is in Organize under File operation history.');
       onInventoryChanged();
     } };
   const onInspect = intake ? setItem : undefined;
@@ -485,7 +481,7 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
       </Modal>}
       <div className={intake ? 'grid min-w-0 items-start gap-4 min-[72rem]:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]' : undefined}>
         <div className="grid min-w-0 gap-3">
-          {view === 'files' ? <FileInventory key={query} {...catalog} onInspect={onInspect} search={query} /> :
+          {view === 'files' ? <FileInventory key={query} {...catalog} onInspect={onInspect} management={intake ? catalog : undefined} search={query} /> :
             <GroupedInventory key={JSON.stringify([view, query, sort, coverOnly, rules.includeTags, rules.excludeTags])} {...catalog} scanComplete={scanComplete} onInspect={onInspect}
               coverVersion={coverVersion} coverGrid={view === 'covers'} search={query} sort={sort} coverOnly={coverOnly && hasCovers} rules={rules} />}
         </div>

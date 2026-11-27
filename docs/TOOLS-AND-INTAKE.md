@@ -45,6 +45,10 @@ Persist one **Target library** root ID per Import folder. Every eligible item in
 
 The series displays known chapter and volume totals even when the local indexed count is zero. Show chapter and volume reading actions only where there is a supported local release. Verified manifest coverage identifies specific expected chapters. An aggregate total can show a gap in coverage without identifying the missing chapter numbers. Move coverage assignment, duplicate review, and bulk and storage operations into Tools as their modules become available. [Series detail checklist](SERIES-DETAIL-TODO.md)
 
+## File organization
+
+**Tools → Organize** opens a paginated file inventory for any configured folder. Follow a shortcut from a series to retain its filter. Use file-level moves and renames, batch previews, manual chapter coverage and verified volume editing there. File operation history shows the results and supports guarded restoration. Library keeps file browsing and playback alongside short links into Tools. Import retains contextual review controls and links to the same batch organizer.
+
 ## Maintenance action menu
 
 Place common actions in the Tools hub with a predictable action menu and per-job result. Support rescanning all or selected configured libraries via the existing queue, with availability, per-root progress and duplicate-job guards. Cache maintenance clears rebuildable artifacts separately from release evidence, owner choices or file and recovery bytes. Report what was cleared and allow the ordinary scan or reader to rebuild it.
