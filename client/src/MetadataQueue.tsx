@@ -17,7 +17,7 @@ type ToolProps = { roots: LibraryRoot[] | null; version: string; onSignedOut: ()
 type Proposal = { match: Metadata & { providerId: number }; matchingTitle: string | null };
 type QueueRow = {
   rootId: string; seriesKey: string; title: string; hasCover: boolean; queued: boolean; revision: string | null;
-  candidates: Proposal[] | null; message: string | null; conflictingMetadata: boolean; pagePriority: boolean;
+  lookupTitle?: string; candidates: Proposal[] | null; message: string | null; conflictingMetadata: boolean; pagePriority: boolean;
 };
 
 export function MetadataQueue(props: ToolProps) {
@@ -174,7 +174,7 @@ function SuggestionRow({ item, version, folder, onSignedOut, onSaved }: {
           onClick={() => void confirm(suggestion)}>Confirm match</Button>}
         {!item.conflictingMetadata && !!item.candidates?.length && (item.candidates.length > 1 || !suggestion) &&
           <Button variant="secondary" disabled={busy} onClick={() => setShowCandidates(true)}>Review matches ({item.candidates.length})</Button>}
-        <AniListSearchAction rootId={item.rootId} seriesKey={item.seriesKey} title={item.title}
+        <AniListSearchAction rootId={item.rootId} seriesKey={item.seriesKey} title={item.title} lookupTitle={item.lookupTitle}
           onSignedOut={onSignedOut} onChange={onSaved} />
         <MetadataDialogAction rootId={item.rootId} seriesKey={item.seriesKey} title={item.title} metadata={null}
           onSignedOut={onSignedOut} onChange={onSaved} actionLabel="Assign manually" />

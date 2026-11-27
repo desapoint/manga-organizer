@@ -9,7 +9,8 @@ internal sealed record CatalogAniList(SeriesMetadata Metadata, string? Revision,
 internal sealed record CatalogSeries(Guid RootId, string Key, string Title, long FileCount, bool Suggested, bool HasCover, bool HasMetadata,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] CatalogAniList? AniList = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool LookupQueued = false,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CoverSeriesKey = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CoverSeriesKey = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? LookupTitle = null);
 
 internal sealed partial class LibraryStore
 {
@@ -163,9 +164,11 @@ internal sealed partial class LibraryStore
         {
             var title = rows.GetString(2);
             var matched = includeMatches ? ReadCatalogAniList(rows, title) : null;
+            var hasMetadata = rows.GetBoolean(6);
+            var lookupTitle = includeMatches && !hasMetadata ? DoujinFilename.LookupOverride(rows.GetBoolean(4) ? title : null) : null;
             items.Add(new(rows.GetGuid(0), rows.GetString(1), title, rows.GetInt64(3), rows.GetBoolean(4), rows.GetBoolean(5),
-                rows.GetBoolean(6), matched, includeMatches && rows.GetBoolean(18) && rows.GetBoolean(17),
-                published ? ReadText(rows, 7) : null));
+                hasMetadata, matched, includeMatches && rows.GetBoolean(18) && rows.GetBoolean(17),
+                published ? ReadText(rows, 7) : null, lookupTitle));
         }
 
         return new(total, items, lookupQueued);

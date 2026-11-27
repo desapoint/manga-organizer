@@ -1,11 +1,16 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
 internal sealed record MetadataProposal(MetadataMatch Match, string? MatchingTitle);
 internal sealed record MetadataQueueItem(Guid RootId, string SeriesKey, string Title, bool HasCover, bool Queued, string? Revision,
-    IReadOnlyList<MetadataProposal>? Candidates, string? Message, bool ConflictingMetadata, bool PagePriority);
+    IReadOnlyList<MetadataProposal>? Candidates, string? Message, bool ConflictingMetadata, bool PagePriority)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LookupTitle => DoujinFilename.LookupOverride(Title);
+}
 internal sealed record MetadataWork(string SeriesKey, string Title, string Revision);
 internal sealed record MetadataQueueLocation(Guid RootId, string SeriesKey, bool AlreadyQueued = false);
 
@@ -29,19 +34,26 @@ internal sealed partial class LibraryStore
 
     private static void QueueArrivingSeries(SqliteCommand command)
     {
+        command.Connection!.CreateFunction<string, string>("metadata_lookup_title",
+            title => DoujinFilename.LookupOverride(title) ?? title, isDeterministic: true);
         command.CommandText = """
             INSERT INTO metadata_suggestion(series_key, title, revision, queued, requested_at)
-            SELECT s.series_key, MIN(s.series_title), lower(hex(randomblob(16))), 1, unixepoch()
+            SELECT s.series_key, metadata_lookup_title(MIN(s.series_title)), lower(hex(randomblob(16))), 1, unixepoch()
             FROM scan_file s JOIN scan_hash h ON h.relative_path = s.relative_path
+            LEFT JOIN metadata_suggestion previous ON previous.series_key = s.series_key
             LEFT JOIN library_content content ON content.sha256 = h.sha256
             LEFT JOIN content_metadata cm ON cm.content_id = content.id
             WHERE s.series_title IS NOT NULL AND h.sha256 IS NOT NULL
-                AND NOT EXISTS (SELECT 1 FROM library_file old WHERE old.root_id = $id AND old.series_key = s.series_key
-                    AND old.content_id IS NOT NULL)
+                AND (NOT EXISTS (SELECT 1 FROM library_file old WHERE old.root_id = $id AND old.series_key = s.series_key
+                    AND old.content_id IS NOT NULL) OR previous.title <> metadata_lookup_title(previous.title))
                 AND NOT EXISTS (SELECT 1 FROM series_metadata_binding binding WHERE binding.root_id = $id AND binding.series_key = s.series_key)
             GROUP BY s.series_key
             HAVING COUNT(DISTINCT cm.metadata_id) = 0
-            ON CONFLICT(series_key) DO NOTHING;
+            ON CONFLICT(series_key) DO UPDATE SET title = excluded.title, revision = excluded.revision, queued = 1,
+                requested_at = excluded.requested_at, retry_at = NULL, message = NULL
+            WHERE metadata_suggestion.queued = 0 AND COALESCE(metadata_suggestion.candidates, '[]') = '[]'
+                AND metadata_suggestion.title <> excluded.title
+                AND metadata_lookup_title(metadata_suggestion.title) = excluded.title;
             """;
         command.ExecuteNonQuery();
     }
@@ -131,7 +143,9 @@ internal sealed partial class LibraryStore
             """;
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         using var rows = command.ExecuteReader();
-        return rows.Read() ? new(rows.GetString(0), rows.GetString(1), rows.GetString(2)) : null;
+        if (!rows.Read()) return null;
+        var title = rows.GetString(1);
+        return new(rows.GetString(0), DoujinFilename.LookupOverride(title) ?? title, rows.GetString(2));
     }
 
     public void FinishMetadataSuggestion(MetadataWork work, IReadOnlyList<MetadataProposal>? candidates, string? message, DateTimeOffset? retryAt = null)
@@ -139,12 +153,13 @@ internal sealed partial class LibraryStore
         using var database = OpenDatabase();
         using var command = database.CreateCommand();
         command.CommandText = """
-            UPDATE metadata_suggestion SET candidates = COALESCE($candidates, candidates), message = $message,
+            UPDATE metadata_suggestion SET title = $title, candidates = COALESCE($candidates, candidates), message = $message,
                 revision = CASE WHEN $candidates IS NULL THEN revision ELSE lower(hex(randomblob(16))) END,
                 queued = $queued, retry_at = $retry, priority = CASE WHEN $queued THEN priority ELSE 0 END
             WHERE series_key = $series AND revision = $revision AND queued = 1;
             """;
         command.Parameters.AddWithValue("$series", work.SeriesKey);
+        command.Parameters.AddWithValue("$title", work.Title);
         command.Parameters.AddWithValue("$revision", work.Revision);
         command.Parameters.AddWithValue("$candidates", candidates is null ? DBNull.Value : JsonSerializer.Serialize(candidates));
         command.Parameters.AddWithValue("$message", (object?)message ?? DBNull.Value);

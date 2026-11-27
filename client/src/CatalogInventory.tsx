@@ -42,10 +42,11 @@ type CatalogEntry = {
   hasSeriesSuggestion: boolean;
   filenameEvidence?: { title: string; alternateTitle: string | null; event: string | null; creator: string | null; notes: string[] } | null;
   intakePath?: string | null;
+  lookupTitle?: string;
 };
 
 export type Series = { rootId: string; key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean;
-  aniList?: IntakeAniListMatch; lookupQueued?: boolean; coverSeriesKey?: string };
+  aniList?: IntakeAniListMatch; lookupQueued?: boolean; coverSeriesKey?: string; lookupTitle?: string };
 type Page<T> = { total: number; items: T[]; lookupQueued?: boolean };
 type InventoryProps = { rootId: string; version: string; onSignedOut: () => void };
 type FileManagement = { onDataChanged: () => void; managedFolders: LibraryRoot[]; intakeTarget?: LibraryRoot; onMoved: () => void };
@@ -161,7 +162,7 @@ function FileAssociationAction({ file, rootId, onSignedOut, onChange }: {
     <Button variant="secondary" title={`Confirm association with ${title}`} disabled={busy} onClick={confirm}>Confirm association</Button>
     {error && <span role="alert" className="text-sm text-danger">{error}</span>}
   </> : <>
-    <AniListSearchAction rootId={rootId} seriesKey={file.seriesKey} title={title} onSignedOut={onSignedOut} onChange={onChange} />
+    <AniListSearchAction rootId={rootId} seriesKey={file.seriesKey} title={title} lookupTitle={file.lookupTitle} onSignedOut={onSignedOut} onChange={onChange} />
     <MetadataDialogAction rootId={rootId} seriesKey={file.seriesKey} title={title} metadata={null}
     onChange={onChange} onSignedOut={onSignedOut} actionLabel="Assign series metadata" />
   </>;

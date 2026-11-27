@@ -11,7 +11,8 @@ internal sealed record LibraryRootStatus(Guid Id, string Path, string State, lon
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt,
     string? ContentId, string? Sha256, long? IndexedLocations, string? Volume, string? Chapter, bool HasCover,
     string? SeriesCoverKey, string? SeriesTitle, bool HasSeriesMetadata, string SeriesKey, bool AssociationConfirmed, bool HasSeriesSuggestion,
-    DoujinFilename? FilenameEvidence, string? IntakePath);
+    DoujinFilename? FilenameEvidence, string? IntakePath,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? LookupTitle = null);
 internal sealed record CatalogPage<T>(long Total, IReadOnlyList<T> Items,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool LookupQueued = false);
 
@@ -171,11 +172,13 @@ internal sealed partial class LibraryStore
                 volumeHint = assignedVolumes is [var assignedVolume] && assignedVolume.Length > 0 ? assignedVolume : null;
                 chapterHint = assigned is [var only] ? only[1] : null;
             }
+            var hasMetadata = rows.GetBoolean(13);
+            var lookupTitle = view != "library" && !hasMetadata ? DoujinFilename.LookupOverride(title) : null;
             items.Add(new(rows.GetString(0), path, rows.GetString(2), rows.GetInt64(3), rows.GetDateTimeOffset(4),
                 verified ? rows.GetString(5) : null, verified ? rows.GetString(6) : null, verified ? rows.GetInt64(7) : null,
                 volumeHint, chapterHint, rows.GetBoolean(10), ReadText(rows, 11), title,
-                rows.GetBoolean(13), rows.GetString(14), confirmed, rows.GetBoolean(16),
-                view == "library" ? null : DoujinFilename.Parse(Path.GetFileNameWithoutExtension(path)), intakePath));
+                hasMetadata, rows.GetString(14), confirmed, rows.GetBoolean(16),
+                view == "library" ? null : DoujinFilename.Parse(Path.GetFileNameWithoutExtension(path)), intakePath, lookupTitle));
         }
         return new(total, items);
     }
