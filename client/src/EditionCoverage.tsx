@@ -2,6 +2,7 @@ import { BookOpen, Check, Pencil, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { getCsrfToken } from './api';
+import { PageControls, useInventoryPage } from './CatalogInventory';
 import { seriesReaderHref } from './library';
 import type { Details } from './SeriesInfo';
 import { ActionLink, Button, Modal, SectionHeader } from './ui';
@@ -46,7 +47,7 @@ async function saveSeries(url: string, data: object, onSignedOut: () => void) {
   }
 }
 
-export function VolumeReleasePicker({ volume, rootId, seriesKey, url, version, onSignedOut, onClose, published }: Omit<SeriesTools, 'onChange'> & {
+function VolumeReleasePicker({ volume, rootId, seriesKey, url, version, onSignedOut, onClose, published }: Omit<SeriesTools, 'onChange'> & {
   volume: string; rootId: string; seriesKey: string; onClose: () => void;
 }) {
   const { items, error } = useSeriesList<Release>(url + '/volume-releases?' + new URLSearchParams({ volume, published: String(!!published) }), version, onSignedOut);
@@ -66,6 +67,39 @@ export function VolumeReleasePicker({ volume, rootId, seriesKey, url, version, o
       </li>)}
     </ul>}
   </Modal>;
+}
+
+export function SeriesVolumeList({ details, rootId, seriesKey, onBrowse, ...tools }: SeriesTools & {
+  details: Details; rootId: string; seriesKey: string; onBrowse: (kind: 'chapters' | 'files', volume: string) => void;
+}) {
+  const [limit, setLimit] = useState(50);
+  const [releaseVolume, setReleaseVolume] = useState<string | null>(null);
+  const released = Array.from({ length: details.metadata?.totalVolumes ?? 0 }, (_, index) => String(index + 1));
+  const volumes = [...new Set([...details.volumes, ...released])].sort((a, b) => Number(a) - Number(b));
+  const readings = new Map(details.volumeReading.map(item => [item.volume, item]));
+  if (!volumes.length) return <p className="m-0 p-4 text-sm text-muted">No volume numbers are known for this series.</p>;
+
+  return <>
+    <ul aria-label="Series volumes" role="list" className="m-0 list-none divide-y divide-line p-0">
+      {volumes.slice(0, limit).map(volume => {
+        const reading = readings.get(volume);
+        return <li key={volume} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
+          <strong>Volume {volume}</strong>
+          <div className="action-row">
+            {reading && <ActionLink variant="secondary" icon={BookOpen} href={seriesReaderHref(reading.contentId, rootId, seriesKey)}>Read volume</ActionLink>}
+            {reading && reading.releaseCount > 1 && <Button variant="ghost"
+              onClick={() => setReleaseVolume(volume)}>Choose release ({reading.releaseCount})</Button>}
+            <LinkVolumeChapters {...tools} volume={volume} />
+            <Button variant="ghost" onClick={() => onBrowse('chapters', volume)}>View chapters</Button>
+            <Button variant="ghost" onClick={() => onBrowse('files', volume)}>View files</Button>
+          </div>
+        </li>;
+      })}
+    </ul>
+    {limit < volumes.length && <div className="p-4"><Button variant="secondary" onClick={() => setLimit(value => value + 50)}>Show more volumes</Button></div>}
+    {releaseVolume && <VolumeReleasePicker {...tools} volume={releaseVolume} rootId={rootId} seriesKey={seriesKey}
+      onClose={() => setReleaseVolume(null)} />}
+  </>;
 }
 
 function ReleasePicker({ chapter, rootId, seriesKey, url, version, onSignedOut, onChange, onClose, published }: SeriesTools & {
@@ -115,15 +149,16 @@ function ReleasePicker({ chapter, rootId, seriesKey, url, version, onSignedOut, 
   </Modal>;
 }
 
-export function SeriesChapterList({ chapters, rootId, seriesKey, url, version, onSignedOut, onChange, published }: SeriesTools & {
-  chapters: Chapter[]; rootId: string; seriesKey: string;
+export function SeriesChapterList({ volume, rootId, seriesKey, url, version, onSignedOut, onChange, published }: SeriesTools & {
+  volume: string | null; rootId: string; seriesKey: string;
 }) {
   const [chosen, setChosen] = useState<Chapter | null>(null);
   const [filter, setFilter] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const filtered = chapters.filter(item => item.chapter.includes(filter.trim()) || item.volume?.includes(filter.trim()));
-  const [limit, setLimit] = useState(50);
+  const params = new URLSearchParams({ search: filter.trim(), published: String(!!published) });
+  if (volume) params.set('volume', volume);
+  const query = useInventoryPage<Chapter>(url + '/chapters', version, onSignedOut, params);
 
   async function mark(chapter: Chapter) {
     setBusy(true);
@@ -139,16 +174,20 @@ export function SeriesChapterList({ chapters, rootId, seriesKey, url, version, o
   }
 
   return <>
-    {chapters.length > 0 && <label className="grid max-w-xs gap-1 p-4">Find a chapter
-      <input value={filter} onChange={event => { setFilter(event.target.value); setLimit(50); }} placeholder="Chapter or volume number" />
-    </label>}
+    <label className="grid max-w-xs gap-1 p-4">Find a chapter
+      <input value={filter} maxLength={25} onChange={event => { setFilter(event.target.value); query.setOffset(0); }}
+        placeholder="Chapter or volume number" />
+    </label>
     {error && <p role="alert" className="px-4 text-danger">{error}</p>}
-    {filtered.length ? <ul aria-label="Indexed chapters" role="list" className="m-0 list-none divide-y divide-line p-0">
-      {filtered.slice(0, limit).map(chapter => <li key={`${chapter.volume ?? ''}:${chapter.chapter}`}
+    {query.error && <div className="action-row px-4 pb-4"><p role="alert" className="m-0 text-danger">Could not load chapters.</p>
+      <Button variant="secondary" onClick={query.retry}>Retry</Button></div>}
+    {!query.page && !query.error && <p role="status" className="p-4">Loading chapters…</p>}
+    {query.page?.items.length ? <ul aria-label="Series chapters" role="list" className="m-0 list-none divide-y divide-line p-0">
+      {query.page.items.map(chapter => <li key={`${chapter.volume ?? ''}:${chapter.chapter}`}
         className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
         <div className="grid"><strong>Chapter {chapter.chapter}</strong><span className="text-sm text-muted">
           {chapter.volume ? `Volume ${chapter.volume} · ` : ''}{chapter.completed ? 'Read' : 'Unread'}
-          {chapter.readableFiles === 0 && ' · No readable file'}
+          {chapter.missing ? ' · Missing local file' : chapter.readableFiles === 0 && ' · No readable file'}
         </span></div>
         <div className="action-row">
           {chapter.preferredContentId && chapter.readableFiles > 1 && <ActionLink icon={BookOpen} variant="secondary"
@@ -159,8 +198,9 @@ export function SeriesChapterList({ chapters, rootId, seriesKey, url, version, o
             onClick={() => void mark(chapter)}>{chapter.completed ? 'Mark unread' : 'Mark read'}</Button>
         </div>
       </li>)}
-    </ul> : <p className="m-0 p-4 text-sm text-muted">{filter ? 'No matching chapter numbers.' : 'No indexed chapter numbers. Files remain available in the Files tab.'}</p>}
-    {filtered.length > limit && <div className="p-4"><Button variant="secondary" onClick={() => setLimit(count => count + 50)}>Show more chapters</Button></div>}
+    </ul> : query.page && <p className="m-0 p-4 text-sm text-muted">{filter || volume ? 'No matching chapter numbers.' : 'No chapter numbers are known for this series.'}</p>}
+    {query.page && <div className="px-4"><PageControls label="Chapter pages" offset={query.offset}
+      count={query.page.items.length} total={query.page.total} onChange={query.setOffset} /></div>}
     {chosen && <ReleasePicker chapter={chosen} rootId={rootId} seriesKey={seriesKey} url={url} published={published}
       version={version} onSignedOut={onSignedOut} onChange={onChange} onClose={() => setChosen(null)} />}
   </>;
@@ -175,7 +215,7 @@ const statusClasses = {
 function ManifestEditor({ initial, volume: initialVolume, url, version, onChange, onSignedOut, onClose }: SeriesTools & {
   initial?: EditionVolume; volume?: string; onClose: () => void;
 }) {
-  const [edition, setEdition] = useState(initial?.edition ?? '');
+  const [edition, setEdition] = useState(initial?.edition ?? (initialVolume ? 'Default' : ''));
   const [volume, setVolume] = useState(initial?.volume ?? initialVolume ?? '');
   const [chapters, setChapters] = useState(initial?.chapters.join(', ') ?? '');
   const [ids, setIds] = useState(initial?.contentIds ?? []);
@@ -205,11 +245,11 @@ function ManifestEditor({ initial, volume: initialVolume, url, version, onChange
     <form onSubmit={save}>
       <label className="grid gap-1">Edition <input disabled={!!initial} value={edition} maxLength={120} required
         placeholder="English digital edition" onChange={event => setEdition(event.target.value)} /></label>
-      <label className="grid gap-1">Volume <input disabled={!!initial} value={volume} maxLength={13} required inputMode="decimal"
+      <label className="grid gap-1">Volume <input disabled={!!initial || !!initialVolume} value={volume} maxLength={13} required inputMode="decimal"
         onChange={event => { setVolume(event.target.value); setIds([]); setFull(null); }} /></label>
       <label className="grid gap-1">Verified chapters <textarea required value={chapters} maxLength={8000}
         onChange={event => setChapters(event.target.value)} placeholder="1, 1.5, 2" className="rounded-lg border border-control bg-field p-3" /></label>
-      <p className="m-0 text-sm text-muted">Use the chapter list from this edition. Select files that belong to the same edition.</p>
+      <p className="m-0 text-sm text-muted">Use the chapter list from this edition. Select local files if you also want to link them to the edition.</p>
       {files.error && <p role="alert" className="m-0 text-danger">Could not load indexed releases for this volume.</p>}
       {valid && !files.items && !files.error && <p role="status">Loading indexed files…</p>}
       {files.items && files.items.length > 0 && <fieldset className="grid gap-2">
@@ -226,9 +266,27 @@ function ManifestEditor({ initial, volume: initialVolume, url, version, onChange
         </div>)}
       </fieldset>}
       {error && <p role="alert" className="m-0 text-danger">{error}</p>}
-      <Button type="submit" disabled={!valid || busy || !!files.error} className="justify-self-start">Save verified volume</Button>
+      <Button type="submit" disabled={!valid || busy} className="justify-self-start">Save verified volume</Button>
     </form>
   </Modal>;
+}
+
+export function LinkVolumeChapters(props: SeriesTools & { volume: string }) {
+  const [opened, setOpened] = useState(false);
+  return <>
+    <Button variant="ghost" icon={Pencil} onClick={() => setOpened(true)}>Link chapters</Button>
+    {opened && <VolumeManifestDialog {...props} onClose={() => setOpened(false)} />}
+  </>;
+}
+
+function VolumeManifestDialog(props: SeriesTools & { volume: string; onClose: () => void }) {
+  const { items, error } = useSeriesList<EditionVolume>(props.url + '/edition-volumes?published=true', props.version, props.onSignedOut);
+  if (!items) return <Modal title={`Link chapters for volume ${props.volume}`} onClose={props.onClose}>
+    {error ? <p role="alert">Could not load this volume’s chapter list.</p> : <p role="status">Loading volume…</p>}
+  </Modal>;
+  const initial = items.find(item => item.volume === props.volume && item.edition === 'Default')
+    ?? items.find(item => item.volume === props.volume);
+  return <ManifestEditor {...props} initial={initial} />;
 }
 
 export function EditionCoverage({ url, version, onSignedOut, onChange, onBrowse, volume, editable = true, published }: SeriesTools & {

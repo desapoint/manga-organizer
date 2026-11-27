@@ -625,7 +625,7 @@ def verify_external_metadata(executable, fixture):
                     "coverImage": {"medium": cover}, "staff": {"edges": [
                         {"role": "Story & Art", "node": {"name": {"full": "Fixture Author"}}}]},
                     "tags": [{"name": "Doujinshi"}, {"name": "Hidden outcome", "isMediaSpoiler": True}]}
-    no_cover = {"id": 456, "title": {"romaji": "Cover fallback"},
+    no_cover = {"id": 456, "title": {"romaji": "Cover fallback"}, "status": "FINISHED", "chapters": 1,
                 "coverImage": {"medium": "https://s4.anilist.co.invalid/file/anilistcdn/media/manga/cover/fake.jpg"}}
 
     class Provider(BaseHTTPRequestHandler):
@@ -638,6 +638,8 @@ def verify_external_metadata(executable, fixture):
                 response = {"data": {"Page": {"media": [media_result, no_cover]}}}
             elif variables == {"id": 123}:
                 response = {"data": {"Media": media_result}}
+            elif variables == {"id": 456}:
+                response = {"data": {"Media": no_cover}}
             else:
                 response = {"errors": [{"message": "Unexpected test query"}]}
             data = json.dumps(response).encode()
@@ -705,6 +707,16 @@ def verify_external_metadata(executable, fixture):
                 browser.request(member_path, 204, method="PUT", token=browser.csrf(), body=membership)
                 browser.request(member_path, 204, method="PUT", token=browser.csrf(), body=membership)
                 browser.request(f"{collections}/{dynamic['id']}/membership", 404, method="PUT", token=browser.csrf(), body=membership)
+                with ZipFile(media / "primary" / "One Lucky Day.cbz", "w") as archive:
+                    archive.writestr("01.png", synthetic_png(45, 125, 60))
+                browser.scan(root_id)
+                (one_shot,) = browser.series(root_id, "?search=One+Lucky+Day")["items"]
+                single = f"{LIBRARY_ROOTS}/{root_id}/series/{one_shot['key']}"
+                assert json.loads(browser.request(single + "/chapters", 200))["total"] == 0
+                browser.request(single + "/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 456})
+                (item,) = json.loads(browser.request(single + "/chapters?published=true", 200))["items"]
+                assert item["chapter"] == "1" and item["contentId"] and item["readableFiles"] == 1
+                assert json.loads(browser.request(single + "/chapter-releases?chapter=1&published=true", 200))[0]["contentId"] == item["contentId"]
             with start_app(executable, fixture / "metadata-data", media, None) as address:
                 wait_for_server(address)
                 browser = Browser(address)
@@ -1064,6 +1076,23 @@ def verify_catalog_visibility(owner, root, path):
         "language": "ja", "color": "black-and-white", "censorship": "uncensored",
         "edition": None, "group": "Batch Fixture", "revision": 2,
     }
+    catalog_url = url + "/chapters?published=true"
+    chapter_page = json.loads(owner.request(catalog_url + "&offset=2&limit=2", 200))
+    assert chapter_page["total"] == 10 and [item["chapter"] for item in chapter_page["items"]] == ["3", "4"]
+    assert all(item["missing"] and item["readableFiles"] == 0 and item["contentId"] is None for item in chapter_page["items"])
+    owner.request(url + "/chapter-progress", 204, method="PUT", token=owner.csrf(),
+                  body={"volume": None, "chapter": "4", "completed": True})
+    (chapter_four,) = json.loads(owner.request(catalog_url + "&search=4", 200))["items"]
+    assert chapter_four["completed"] and chapter_four["missing"]
+    owner.request(url + "/chapter-progress", 404, method="PUT", token=owner.csrf(),
+                  body={"volume": None, "chapter": "11", "completed": True})
+    owner.request(url + "/edition-volumes", 204, method="PUT", token=owner.csrf(),
+                  body={"edition": "Default", "volume": "4", "chapters": ["4", "5"], "contentIds": []})
+    volume_chapters = json.loads(owner.request(catalog_url + "&volume=4", 200))["items"]
+    assert [item["chapter"] for item in volume_chapters] == ["4", "5"]
+    assert volume_chapters[0]["completed"] and all(item["missing"] for item in volume_chapters)
+    details = json.loads(owner.request(url + "/details?published=true", 200))
+    assert details["readCatalogChapters"] == 1 and "4" in details["volumes"] and "4" not in details["readableVolumes"]
     verify_file_association(owner, root, path, pending, ordinary, parchment, version)
 
 

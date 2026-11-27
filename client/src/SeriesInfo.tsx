@@ -35,10 +35,13 @@ export type Details = {
   metadata: Metadata | null;
   availableChapters: number;
   readChapters: number;
+  readCatalogChapters: number;
   volumes: string[];
   indexedVolumes: number;
   readableVolumes: string[];
-  chapters: { volume: string | null; chapter: string; contentId: string | null; readableFiles: number; completed: boolean; preferredContentId?: string }[];
+  volumeReading: { volume: string; contentId: string; releaseCount: number }[];
+  chapters: { volume: string | null; chapter: string; contentId: string | null; readableFiles: number; completed: boolean;
+    preferredContentId?: string; missing?: boolean }[];
   reading: { contentId: string; relativePath: string; pageIndex: number | null; pageCount: number | null; hasFinishedFile: boolean } | null;
 };
 

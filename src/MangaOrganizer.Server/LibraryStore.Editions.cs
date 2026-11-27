@@ -103,16 +103,24 @@ internal sealed partial class LibraryStore
         using var command = GroupCommand(database, transaction, root, series);
         if (!GroupExists(command)) return false;
 
+        var released = ReadMetadata(command)?.TotalChapters ?? 0;
         AddWorkKey(command, root, series);
         command.Parameters.AddWithValue("$volume", volume);
         command.Parameters.AddWithValue("$chapter", chapter);
         command.Parameters.AddWithValue("$owner", owner);
         command.Parameters.AddWithValue("$completed", completed);
-        command.CommandText = "WITH covered AS (" + GroupCoverage + """
+        command.Parameters.AddWithValue("$released", released);
+        command.CommandText = "WITH covered AS (" + GroupCoverage + "), verified AS (" + VerifiedChapterLabels + """
+
             )
             INSERT INTO chapter_completion(owner_id, work_key, volume, chapter, completed)
             SELECT $owner, $work, $volume, $chapter, $completed
             WHERE EXISTS(SELECT 1 FROM covered WHERE volume = $volume AND chapter = $chapter)
+                OR EXISTS(SELECT 1 FROM verified WHERE volume = $volume AND chapter = $chapter)
+                OR ($volume = '' AND CAST($chapter AS INTEGER) BETWEEN 1 AND $released
+                    AND CAST(CAST($chapter AS INTEGER) AS TEXT) = $chapter
+                    AND NOT EXISTS(SELECT 1 FROM covered WHERE chapter = $chapter)
+                    AND NOT EXISTS(SELECT 1 FROM verified WHERE chapter = $chapter))
             ON CONFLICT(owner_id, work_key, volume, chapter) DO UPDATE SET completed = excluded.completed;
             """;
         var changed = command.ExecuteNonQuery() == 1;

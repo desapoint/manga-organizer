@@ -13,10 +13,13 @@ internal sealed record SeriesMetadata(string Title, string Kind, string? Alterna
 internal sealed record SeriesChapter(string? Volume, string Chapter,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Source = null);
 internal sealed record LibraryChapter(string? Volume, string Chapter, string? ContentId, int ReadableFiles, bool Completed,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PreferredContentId = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PreferredContentId = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Missing = false);
 internal sealed record SeriesReading(string ContentId, string RelativePath, int? PageIndex, int? PageCount, bool HasFinishedFile);
+internal sealed record VolumeReading(string Volume, string ContentId, int ReleaseCount);
 internal sealed record SeriesDetails(SeriesMetadata? Metadata, int AvailableChapters, int ReadChapters, IReadOnlyList<string> Volumes,
-    IReadOnlyList<LibraryChapter> Chapters, SeriesReading? Reading, int IndexedVolumes, IReadOnlyList<string> ReadableVolumes);
+    IReadOnlyList<LibraryChapter> Chapters, SeriesReading? Reading, int IndexedVolumes, IReadOnlyList<string> ReadableVolumes,
+    IReadOnlyList<VolumeReading> VolumeReading, int ReadCatalogChapters);
 
 internal sealed partial class LibraryStore
 {
@@ -27,6 +30,13 @@ internal sealed partial class LibraryStore
                 FROM library_file f JOIN content_metadata cm ON cm.content_id = f.content_id
                 WHERE f.root_id = $root AND f.series_key = $series)
         )
+        """;
+
+    private const string FinishedOneShot = """
+        f.chapter_hint IS NULL AND EXISTS (
+            SELECT 1 FROM content_metadata association JOIN series_metadata metadata ON metadata.id = association.metadata_id
+            WHERE association.content_id = f.content_id AND metadata.series_key = f.series_key AND metadata.provider_id IS NOT NULL
+                AND metadata.status = 'FINISHED' COLLATE NOCASE AND metadata.total_chapters = 1)
         """;
 
     private const string GroupCoverage = """
@@ -42,6 +52,14 @@ internal sealed partial class LibraryStore
         WHERE f.root_id = $root AND f.series_key = $series AND f.content_id IS NOT NULL AND f.chapter_hint IS NOT NULL
             AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = f.content_id)
             AND NOT EXISTS (SELECT 1 FROM inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
+        UNION
+        SELECT f.content_id, COALESCE(f.volume_hint, ''), '1' FROM library_file f
+        WHERE f.root_id = $root AND f.series_key = $series AND f.content_id IS NOT NULL
+            AND NOT EXISTS (SELECT 1 FROM content_chapter c WHERE c.content_id = f.content_id)
+            AND NOT EXISTS (SELECT 1 FROM inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id)
+            AND
+        """ + " " + FinishedOneShot + """
+
         """;
 
     internal static void BackfillBookNumbers(SqliteConnection database, SqliteCommand command)
@@ -110,17 +128,35 @@ internal sealed partial class LibraryStore
         command.CommandText = "WITH covered AS (" + coverage + "), volume_archive AS (" + GroupVolumeArchives
             + "), readable AS (" + ReadableGroupFiles + visible + """
             )
-            SELECT DISTINCT a.volume FROM volume_archive a JOIN readable f ON f.content_id = a.content_id;
+            , volume_paths AS (
+                SELECT a.volume, f.content_id, MIN(f.relative_path) AS relative_path
+                FROM volume_archive a JOIN readable f ON f.content_id = a.content_id GROUP BY a.volume, f.content_id
+            ), ranked AS (
+                SELECT v.volume, v.content_id, COUNT(*) OVER (PARTITION BY v.volume) AS release_count,
+                    ROW_NUMBER() OVER (PARTITION BY v.volume ORDER BY p.updated_at DESC, v.relative_path, v.content_id) AS priority
+                FROM volume_paths v LEFT JOIN reading_progress p ON p.owner_id = $owner AND p.content_id = v.content_id
+            )
+            SELECT volume, content_id, release_count FROM ranked WHERE priority = 1;
             """;
-        var readableVolumes = new HashSet<string>(StringComparer.Ordinal);
+        var volumeReading = new List<VolumeReading>();
         using (var rows = command.ExecuteReader())
         {
-            while (rows.Read()) readableVolumes.Add(rows.GetString(0));
+            while (rows.Read()) volumeReading.Add(new(rows.GetString(0), rows.GetString(1), rows.GetInt32(2)));
         }
-        var listedVolumes = volumes.OrderBy(Numeric).Take(500).ToArray();
+        var indexedVolumes = volumes.Count;
+        command.CommandText = "SELECT DISTINCT volume FROM edition_volume_manifest WHERE work_key IN ($work, $localWork);";
+        using (var rows = command.ExecuteReader())
+        {
+            while (rows.Read()) volumes.Add(rows.GetString(0));
+        }
+        var listedVolumes = volumes.OrderBy(Numeric).ToArray();
+        volumeReading.Sort((first, second) => Numeric(first.Volume).CompareTo(Numeric(second.Volume)));
+        command.Parameters.AddWithValue("$released", metadata?.TotalChapters ?? 0);
+        command.CommandText = ChapterCatalog(published) + " SELECT COUNT(*) FROM catalog WHERE completed;";
+        var catalogRead = Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
         return new(metadata, chapters.Count, readChapters, listedVolumes,
             chapters.OrderBy(chapter => Numeric(chapter.Volume)).ThenBy(chapter => Numeric(chapter.Chapter)).Take(500).ToArray(),
-            ReadSeriesReading(command, visible), volumes.Count, listedVolumes.Where(readableVolumes.Contains).ToArray());
+            ReadSeriesReading(command, visible), indexedVolumes, volumeReading.Select(volume => volume.Volume).ToArray(), volumeReading, catalogRead);
     }
 
     private static SeriesReading? ReadSeriesReading(SqliteCommand command, string visible)
