@@ -62,7 +62,15 @@ internal sealed partial class LibraryStore
         command.CommandText = """
             SELECT r.id, f.path, r.state, r.file_count, r.last_attempt_at,
                 r.last_scanned_at, r.skipped_links, f.name, f.kind,
-                EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = r.id), f.managed, route.target_root
+                EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = r.id) OR EXISTS(
+                    SELECT 1 FROM library_file file
+                    LEFT JOIN content_metadata cm ON cm.content_id = file.content_id
+                    LEFT JOIN series_metadata m ON m.id = cm.metadata_id AND
+            """ + " " + LinkedSeriesScope("file", "m") + """
+
+                    JOIN series_cover_preference pref ON pref.series_id = m.id
+                    WHERE file.root_id = r.id
+                ), f.managed, route.target_root
             FROM library_folder f JOIN library_root r ON r.id = f.root_id
             LEFT JOIN library_intake_target route ON route.source_root = f.root_id
             ORDER BY f.rowid;
@@ -102,12 +110,14 @@ internal sealed partial class LibraryStore
             volumeCoverage = "WITH covered AS (" + ScopedGroupCoverage(view == "library") + ") ";
             scope += " AND " + GroupVolumeMatch;
         }
-        const string sources = """
+        var sources = """
             FROM library_file_numbered f LEFT JOIN library_content c ON c.id = f.content_id
             LEFT JOIN series_metadata_binding binding ON binding.root_id = f.root_id AND binding.series_key = f.series_key
             LEFT JOIN content_metadata cm ON cm.content_id = f.content_id
-            LEFT JOIN series_metadata linked ON linked.id = cm.metadata_id AND linked.series_key = f.series_key
-            LEFT JOIN series_metadata m ON m.id = COALESCE(linked.id, binding.metadata_id) AND m.series_key = f.series_key
+            LEFT JOIN series_metadata linked ON linked.id = cm.metadata_id AND
+            """ + " " + LinkedSeriesScope("f", "linked") + """
+
+            LEFT JOIN series_metadata m ON m.id = COALESCE(linked.id, binding.metadata_id)
             """;
         const string searchFilter = """
              AND ($search = '' OR title_contains(f.relative_path, $search) OR title_contains(COALESCE(f.series_title, ''), $search)
@@ -144,16 +154,26 @@ internal sealed partial class LibraryStore
             var path = rows.GetString(1);
             var title = ReadText(rows, 12);
             var confirmed = rows.GetBoolean(15);
+            var assigned = JsonSerializer.Deserialize<string[][]>(rows.GetString(21)) ?? [];
+            var volumeHint = ReadText(rows, 8);
+            var chapterHint = ReadText(rows, 9);
             string? intakePath = null;
             if (view != "library" && confirmed && rows.GetBoolean(17) && title is not null)
             {
-                var assigned = JsonSerializer.Deserialize<string[][]>(rows.GetString(21)) ?? [];
-                intakePath = IntakeNaming.PathFor(path, title, ReadInt(rows, 19), ReadText(rows, 8) ?? ReadText(rows, 20),
-                    ReadText(rows, 9), assigned, rows.GetBoolean(18));
+                intakePath = IntakeNaming.PathFor(path, title, ReadInt(rows, 19), volumeHint ?? ReadText(rows, 20),
+                    chapterHint, assigned, rows.GetBoolean(18));
+            }
+
+            // The stored assignment takes precedence over the scanned filename.
+            if (view == "library" && assigned.Length != 0)
+            {
+                var assignedVolumes = assigned.Select(label => label[0]).Distinct().ToArray();
+                volumeHint = assignedVolumes is [var assignedVolume] && assignedVolume.Length > 0 ? assignedVolume : null;
+                chapterHint = assigned is [var only] ? only[1] : null;
             }
             items.Add(new(rows.GetString(0), path, rows.GetString(2), rows.GetInt64(3), rows.GetDateTimeOffset(4),
                 verified ? rows.GetString(5) : null, verified ? rows.GetString(6) : null, verified ? rows.GetInt64(7) : null,
-                ReadText(rows, 8), ReadText(rows, 9), rows.GetBoolean(10), ReadText(rows, 11), title,
+                volumeHint, chapterHint, rows.GetBoolean(10), ReadText(rows, 11), title,
                 rows.GetBoolean(13), rows.GetString(14), confirmed, rows.GetBoolean(16),
                 view == "library" ? null : DoujinFilename.Parse(Path.GetFileNameWithoutExtension(path)), intakePath));
         }
@@ -232,7 +252,7 @@ internal sealed partial class LibraryStore
         if (count > 0)
         {
             StageHashes(database, root.Path, scan, cancellationToken);
-            StageKnownSeries(database);
+            StageKnownSeries(database, root.Id);
             StageIntakeSplits(database, root.Id);
             StageCovers(database, root.Path, scan, cancellationToken);
         }

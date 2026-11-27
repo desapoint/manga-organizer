@@ -88,7 +88,7 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
     const seriesRoot = roots?.find(root => root.id === series.rootId);
     return <SeriesPage key={`${series.rootId}/${series.seriesKey}`} {...series} onSignedOut={onSignedOut}
       version={`${inventoryVersion}:${refresh}`} coverVersion={`${seriesRoot?.lastScannedAt ?? ''}:${refresh}`}
-      rootPath={seriesRoot?.path} />;
+      rootPath={seriesRoot?.path} onInventoryChanged={() => setRefresh(value => value + 1)} />;
   }
 
   if (tools) return <ToolsHub route={tools} roots={roots} version={`${inventoryVersion}:${refresh}`} onSignedOut={onSignedOut}

@@ -33,6 +33,26 @@ internal static class ChapterEditionEndpoints
             && store.ReadVolumeReleases(root, seriesKey.ToLowerInvariant(), BookNumbers.Canonical(volume), owner, published == true) is { } list
                 ? Results.Ok(list) : Results.NotFound());
 
+        series.MapGet("/release-metadata", (Guid root, string seriesKey, string? volume, string? chapter, LibraryStore store,
+            HttpContext context) =>
+        {
+            if (!ReaderEndpoints.TryOwner(context, out _)) return Results.Unauthorized();
+            if (!IsRelease(seriesKey, volume, chapter)) return Results.BadRequest();
+            var metadata = store.ReadReleaseMetadata(root, seriesKey.ToLowerInvariant(), NormalizeVolume(volume), NormalizeVolume(chapter));
+            return metadata is null ? Results.NotFound() : Results.Ok(metadata);
+        });
+        series.MapPut("/release-metadata", async (Guid root, string seriesKey, string? volume, string? chapter, ReleaseMetadata metadata,
+            LibraryStore store, HttpContext context, IAntiforgery antiforgery) =>
+        {
+            if (!ReaderEndpoints.TryOwner(context, out _)) return Results.Unauthorized();
+            if (!await antiforgery.IsRequestValidAsync(context) || !IsRelease(seriesKey, volume, chapter)
+                || metadata.Title is { Length: > 300 } || metadata.Summary is { Length: > 8_000 })
+                return Results.BadRequest();
+            var normalized = new ReleaseMetadata(TrimOptional(metadata.Title), TrimOptional(metadata.Summary));
+            return store.SaveReleaseMetadata(root, seriesKey.ToLowerInvariant(), NormalizeVolume(volume), NormalizeVolume(chapter), normalized)
+                ? Results.NoContent() : Results.NotFound();
+        }).WithMetadata(new RequestSizeLimitAttribute(64 * 1024));
+
         series.MapPut("/chapter-progress", async (Guid root, string seriesKey, ChapterCompletion change, bool? published, LibraryStore store,
             HttpContext context, IAntiforgery antiforgery) =>
         {
@@ -82,6 +102,13 @@ internal static class ChapterEditionEndpoints
                 ? Results.NoContent() : Results.Conflict(new { message = "Check the indexed releases. A full-volume assignment requires an unresolved volume file." });
         }).WithMetadata(new RequestSizeLimitAttribute(40 * 1024));
     }
+
+    private static string? TrimOptional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static bool IsRelease(string seriesKey, string? volume, string? chapter) => LibraryEndpoints.IsSeriesKey(seriesKey)
+        && (!string.IsNullOrEmpty(volume) || !string.IsNullOrEmpty(chapter))
+        && (string.IsNullOrEmpty(volume) || BookNumbers.IsNumber(volume))
+        && (string.IsNullOrEmpty(chapter) || BookNumbers.IsNumber(chapter));
 
     private static bool IsChapter(string seriesKey, string? volume, string? chapter) => LibraryEndpoints.IsSeriesKey(seriesKey)
         && (string.IsNullOrEmpty(volume) || BookNumbers.IsNumber(volume)) && chapter is not null && BookNumbers.IsNumber(chapter);

@@ -42,6 +42,69 @@ def verified_snapshot(data, source_schema, target_schema):
     return backup
 
 
+def verify_canonical_upgrade(app, fresh, data, target_version):
+    data.mkdir()
+    root = str(uuid4())
+    with (closing(sqlite3.connect(fresh / "organizer.sqlite")) as source,
+          closing(sqlite3.connect(data / "organizer.sqlite")) as database):
+        source.backup(database)
+        database.executescript("""
+            DROP TABLE series_release_metadata;
+            DROP TABLE series_identity_alias;
+            DROP TABLE series_cover_preference;
+            DROP INDEX series_metadata_anilist_id;
+            DROP INDEX content_metadata_series;
+            ALTER TABLE series_metadata DROP COLUMN manual_tags;
+            DELETE FROM schema_migration WHERE version > 23;
+            INSERT INTO series_metadata(id, series_key, title, kind, provider_id, updated_at)
+              VALUES ('first', 'alpha', 'Saved custom title', 'manga', 321, '2026-01-01'),
+                     ('second', 'beta', 'Older duplicate title', 'manga', 321, '2026-01-01'),
+                     ('local', 'gamma', 'Independent manual work', 'manga', NULL, '2026-01-01');
+            INSERT INTO library_content(id, sha256) VALUES ('release', zeroblob(32)), ('bound', randomblob(32));
+            INSERT INTO content_metadata VALUES ('release', 'second'), ('bound', 'second');
+            INSERT INTO chapter_completion VALUES ('owner', 'second', '2', '8', 1);
+            INSERT INTO edition_volume_manifest VALUES ('edition', 'second', 'Verified edition', '2', '["8"]');
+            """)
+        database.execute("INSERT INTO library_root (id, path_key) VALUES (?, ?)", (root, str(data)))
+        database.execute("INSERT INTO library_folder (root_id, path, kind) VALUES (?, ?, 'both')", (root, str(data)))
+        database.execute("INSERT INTO series_metadata_binding VALUES (?, 'other-bound-key', 'second')", (root,))
+        database.execute("""
+            INSERT INTO library_file (root_id, relative_path, extension, size, modified_at, series_key, content_id)
+            VALUES (?, 'Unbound release.cbz', 'cbz', 1, '2026-01-01', 'beta', 'release')
+            """, (root,))
+        database.commit()
+
+    run_migrations(app, data)
+    snapshot = verified_snapshot(data, 23, target_version)
+    with closing(sqlite3.connect(snapshot / "organizer.sqlite")) as backup:
+        assert backup.execute("SELECT COUNT(*) FROM series_metadata WHERE provider_id = 321").fetchone() == (2,)
+    with closing(sqlite3.connect(data / "organizer.sqlite")) as database:
+        assert database.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert database.execute("SELECT id, title, provider_id FROM series_metadata ORDER BY id").fetchall() == [
+            ("first", "Saved custom title", 321), ("local", "Independent manual work", None)
+        ]
+        assert database.execute("SELECT * FROM series_identity_alias").fetchall() == [("second", "first")]
+        assert database.execute("SELECT series_key, metadata_id FROM series_metadata_binding ORDER BY series_key").fetchall() == [
+            ("beta", "first"), ("other-bound-key", "first")
+        ]
+        assert database.execute("SELECT DISTINCT metadata_id FROM content_metadata").fetchall() == [("first",)]
+        history = database.execute("""
+            SELECT alias.series_id, status.completed, edition.chapters
+            FROM series_identity_alias alias JOIN chapter_completion status ON status.work_key = alias.previous_id
+            JOIN edition_volume_manifest edition ON edition.work_key = alias.previous_id
+            """).fetchone()
+        assert history == ("first", 1, '["8"]')
+        try:
+            database.execute("""
+                INSERT INTO series_metadata(id, series_key, title, kind, provider_id, updated_at)
+                VALUES ('duplicate', 'delta', 'Blocked duplicate', 'manga', 321, '2026-01-01')
+                """)
+        except sqlite3.IntegrityError:
+            pass
+        else:
+            raise AssertionError("AniList ID uniqueness was not enforced")
+
+
 def verify(app, fixture, previous_app=None):
     fresh = fixture / "fresh"
     run_migrations(app, fresh)
@@ -50,6 +113,7 @@ def verify(app, fixture, previous_app=None):
     run_migrations(app, fresh)
     assert entries(fresh) == installed
     assert not (fresh / "upgrade-backups").exists()
+    verify_canonical_upgrade(app, fresh, fixture / "pre-canonical", len(installed))
 
     # Exercise the exact schema from the previous managed-file preview with an AniList assignment.
     keys = fresh / "keys"
@@ -80,6 +144,12 @@ def verify(app, fixture, previous_app=None):
         database.execute("DROP TABLE inferred_volume_chapters")
         database.execute("DROP TABLE series_collection_item")
         database.execute("DROP TABLE series_collection")
+        database.execute("DROP TABLE series_cover_preference")
+        database.execute("DROP TABLE series_release_metadata")
+        database.execute("DROP TABLE series_identity_alias")
+        database.execute("DROP INDEX series_metadata_anilist_id")
+        database.execute("DROP INDEX content_metadata_series")
+        database.execute("ALTER TABLE series_metadata DROP COLUMN manual_tags")
         database.execute("ALTER TABLE series_metadata DROP COLUMN provider_details")
         database.execute("DELETE FROM schema_migration WHERE version >= 9")
         database.execute("""
@@ -170,4 +240,4 @@ if __name__ == "__main__":
     executable = options.app.resolve()
     with TemporaryDirectory() as fixture:
         verify(executable, Path(fixture), options.previous_app.resolve() if options.previous_app else None)
-    print("Passed fresh schema, verified WAL and legacy backups, fail-closed backup errors, idempotence, and future-version protection")
+    print("Passed fresh schema, canonical series consolidation, verified WAL and legacy backups, fail-closed backup errors, idempotence, and future-version protection")

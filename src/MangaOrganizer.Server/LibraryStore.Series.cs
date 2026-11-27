@@ -47,25 +47,29 @@ internal sealed partial class LibraryStore
             SELECT f.root_id, f.series_key, MIN(COALESCE(f.series_title, f.relative_path)) AS path_title, COUNT(*) AS file_count,
                 MAX(f.series_title IS NOT NULL) AS suggested, MAX(f.modified_at) AS latest,
                 EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = f.root_id AND cover.series_key = f.series_key) AS has_cover,
-                CASE WHEN COUNT(DISTINCT linked.id) = 1 THEN MIN(linked.id) END AS linked_metadata,
-        """ + " " + SharedAniListId + """
-             AS shared_provider
+        """ + " " + SharedSeriesId + """
+             AS linked_metadata
             FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
             LEFT JOIN content_metadata cm ON cm.content_id = f.content_id
-            LEFT JOIN series_metadata linked ON linked.id = cm.metadata_id AND linked.series_key = f.series_key
+            LEFT JOIN series_metadata linked ON linked.id = cm.metadata_id AND
+        """ + " " + LinkedSeriesScope("f", "linked") + """
+
             WHERE (f.root_id = $id OR $id IS NULL AND folder.kind IN ('library', 'both'))
         """ + (published ? "" : " AND ($seriesKey IS NULL OR f.series_key = $seriesKey)") + CatalogVisibility(view) + """
 
             GROUP BY f.root_id, f.series_key
         ), local_series AS (
-            SELECT g.root_id, g.series_key, m.provider_details, COALESCE(m.title, g.path_title) AS title, g.path_title, m.alternate_title, g.file_count,
-                g.suggested AND m.id IS NULL AS suggested, g.latest, g.has_cover, m.id IS NOT NULL AS has_metadata,
-                m.kind, m.summary, m.status, m.total_chapters, m.total_volumes, m.provider_id, g.shared_provider,
+            SELECT g.root_id, g.series_key, m.provider_details, m.manual_tags, COALESCE(m.manual_tags, m.provider_details -> '$.Tags') AS tags, COALESCE(m.title, g.path_title) AS title, g.path_title, m.alternate_title, g.file_count,
+                g.suggested AND m.id IS NULL AS suggested, g.latest, g.has_cover OR EXISTS(
+                    SELECT 1 FROM series_cover_preference pref
+                    WHERE pref.series_id = m.id
+                ) AS has_cover, m.id IS NOT NULL AS has_metadata,
+                m.kind, m.summary, m.status, m.total_chapters, m.total_volumes, m.provider_id, g.linked_metadata AS shared_work,
                 binding.metadata_id IS NULL AND NOT EXISTS (
                     SELECT 1 FROM library_file peer JOIN content_metadata linked ON linked.content_id = peer.content_id
                     WHERE peer.root_id = g.root_id AND peer.series_key = g.series_key) AS can_confirm_match
             FROM file_groups g LEFT JOIN series_metadata_binding binding ON binding.root_id = g.root_id AND binding.series_key = g.series_key
-            LEFT JOIN series_metadata m ON m.id = COALESCE(binding.metadata_id, g.linked_metadata) AND m.series_key = g.series_key
+            LEFT JOIN series_metadata m ON m.id = COALESCE(binding.metadata_id, g.linked_metadata)
         )
         """;
 
@@ -75,9 +79,9 @@ internal sealed partial class LibraryStore
                     SUM(file_count) OVER cohort AS library_count, MAX(latest) OVER cohort AS library_latest,
                     MIN(CASE WHEN has_cover THEN series_key END) OVER cohort AS cover_key
                 FROM local_series s
-                WINDOW cohort AS (PARTITION BY root_id, shared_provider, CASE WHEN shared_provider IS NULL THEN series_key END)
+                WINDOW cohort AS (PARTITION BY root_id, shared_work, CASE WHEN shared_work IS NULL THEN series_key END)
             ), folder_series AS (
-                SELECT root_id, series_key, provider_details, title, alternate_title, library_count AS file_count,
+                SELECT root_id, series_key, tags, title, alternate_title, library_count AS file_count,
                     suggested, library_latest AS latest, cover_key IS NOT NULL AS has_cover, has_metadata, cover_key
                 FROM published_members WHERE series_key = library_key AND ($seriesKey IS NULL OR EXISTS(
                     SELECT 1 FROM published_members member WHERE member.root_id = published_members.root_id
@@ -108,9 +112,9 @@ internal sealed partial class LibraryStore
         var filter = """
              FROM folder_series candidate WHERE ($coverOnly = 0 OR has_cover)
             AND NOT EXISTS (SELECT 1 FROM json_each($includeTags) wanted
-                WHERE NOT EXISTS (SELECT 1 FROM json_each(provider_details, '$.Tags') tag
+                WHERE NOT EXISTS (SELECT 1 FROM json_each(tags) tag
                     WHERE tag_equals(json_extract(tag.value, '$.Name'), wanted.value)))
-            AND NOT EXISTS (SELECT 1 FROM json_each(provider_details, '$.Tags') tag
+            AND NOT EXISTS (SELECT 1 FROM json_each(tags) tag
                 JOIN json_each($excludeTags) excluded ON tag_equals(json_extract(tag.value, '$.Name'), excluded.value))
             """ + (published ? """
                  AND ($search = '' OR EXISTS(SELECT 1 FROM published_members candidate_member
@@ -145,7 +149,7 @@ internal sealed partial class LibraryStore
             , alternate_title, kind, summary, status, total_chapters, total_volumes, provider_id, provider_details,
                 (SELECT revision FROM metadata_suggestion s WHERE s.series_key = candidate.series_key),
                 (SELECT candidates FROM metadata_suggestion s WHERE s.series_key = candidate.series_key),
-                COALESCE((SELECT queued FROM metadata_suggestion s WHERE s.series_key = candidate.series_key), 0), can_confirm_match
+                COALESCE((SELECT queued FROM metadata_suggestion s WHERE s.series_key = candidate.series_key), 0), can_confirm_match, manual_tags
             """;
         var includeMatches = view is "all" or "attention" or "association" or "series" or "metadata" or "cover" or "close";
         command.CommandText = query + " SELECT root_id, series_key, title, file_count, suggested, has_cover, has_metadata"
@@ -173,7 +177,7 @@ internal sealed partial class LibraryStore
         {
             var details = ReadText(rows, 14) is { } json ? JsonSerializer.Deserialize<AniListDetails>(json) : null;
             return new(new(title, rows.GetString(8), ReadText(rows, 7), MetadataAgent.PlainDescription(ReadText(rows, 9)),
-                ReadText(rows, 10), ReadInt(rows, 11), ReadInt(rows, 12), provider, details), null, false);
+                ReadText(rows, 10), ReadInt(rows, 11), ReadInt(rows, 12), provider, details, ReadManualTags(rows, 19)), null, false);
         }
         if (!rows.GetBoolean(18) || ReadText(rows, 15) is not { } revision || ReadText(rows, 16) is not { } candidates) return null;
         if (JsonSerializer.Deserialize<MetadataProposal[]>(candidates) is not { Length: > 0 } proposals) return null;
@@ -188,7 +192,7 @@ internal sealed partial class LibraryStore
         using var command = database.CreateCommand();
         command.CommandText = SeriesQuery() + """
              SELECT DISTINCT json_extract(tag.value, '$.Name') COLLATE NOCASE AS name
-             FROM folder_series, json_each(provider_details, '$.Tags') tag
+             FROM folder_series, json_each(tags) tag
              WHERE COALESCE(json_extract(tag.value, '$.Spoiler'), 0) = 0 AND name IS NOT NULL
              ORDER BY name;
             """;

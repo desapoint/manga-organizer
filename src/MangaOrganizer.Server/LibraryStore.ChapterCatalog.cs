@@ -43,7 +43,7 @@ internal sealed partial class LibraryStore
                     WHERE other.owner_id = $owner AND other.work_key IN (
             {{GroupWorkKeys}}
                     ) AND other.volume = label.volume AND other.chapter = label.chapter
-                )) THEN readable.content_id END) AS preferred
+                )) THEN readable.content_id END) AS preferred, metadata.title
             FROM labels label JOIN numbering n ON n.chapter = label.chapter
             LEFT JOIN coverage c ON c.volume = label.volume AND c.chapter = label.chapter
             LEFT JOIN readable ON readable.content_id = c.content_id
@@ -60,6 +60,8 @@ internal sealed partial class LibraryStore
                 AND pref.volume = label.volume AND pref.chapter = label.chapter
             LEFT JOIN preferred_chapter_release local_pref ON local_pref.owner_id = $owner AND local_pref.work_key = $localWork
                 AND local_pref.volume = label.volume AND local_pref.chapter = label.chapter
+            LEFT JOIN series_release_metadata metadata ON metadata.series_id = $work
+                AND metadata.volume = label.volume AND metadata.chapter = label.chapter
             GROUP BY label.volume, label.chapter
         )
         """;
@@ -68,6 +70,7 @@ internal sealed partial class LibraryStore
         string search, int offset, int limit)
     {
         using var database = OpenDatabase();
+        RegisterTitleSearch(database);
         using var transaction = database.BeginTransaction(deferred: true);
         using var command = GroupCommand(database, transaction, root, series, published);
         if (!GroupExists(command, published)) return null;
@@ -82,12 +85,12 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$limit", limit);
         const string filter = """
              WHERE ($filterVolume IS NULL OR volume = $filterVolume)
-                AND ($search = '' OR instr(chapter, $search) > 0 OR instr(volume, $search) > 0)
+                AND ($search = '' OR instr(chapter, $search) > 0 OR instr(volume, $search) > 0 OR title_contains(COALESCE(title, ''), $search))
             """;
         var catalog = ChapterCatalog(published);
         command.CommandText = catalog + " SELECT COUNT(*) FROM catalog" + filter;
         var total = (long)command.ExecuteScalar()!;
-        command.CommandText = catalog + " SELECT volume, chapter, readable_count, content_id, missing, completed, preferred FROM catalog"
+        command.CommandText = catalog + " SELECT volume, chapter, readable_count, content_id, missing, completed, preferred, title FROM catalog"
             + filter + " ORDER BY CAST(chapter AS REAL), CAST(volume AS REAL), volume, chapter LIMIT $limit OFFSET $offset;";
         var items = new List<LibraryChapter>(limit);
         using var rows = command.ExecuteReader();
@@ -96,7 +99,7 @@ internal sealed partial class LibraryStore
             var label = rows.GetString(0);
             var readableCount = rows.GetInt32(2);
             items.Add(new(label.Length == 0 ? null : label, rows.GetString(1), readableCount == 1 ? rows.GetString(3) : null,
-                readableCount, rows.GetBoolean(5), ReadText(rows, 6), rows.GetBoolean(4)));
+                readableCount, rows.GetBoolean(5), ReadText(rows, 6), rows.GetBoolean(4), ReadText(rows, 7)));
         }
         return new(total, items);
     }

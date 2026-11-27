@@ -35,6 +35,10 @@ internal static class DatabaseMigrations
         new("0021-quarantine-retained-location"),
         new("0022-import-file-splits"),
         new("0023-manual-whole-volumes"),
+        new("0024-manual-series-tags"),
+        new("0025-series-cover-preferences"),
+        new("0026-canonical-series-identity"),
+        new("0027-series-release-metadata"),
     ];
 
     public static int Apply(string dataDirectory)

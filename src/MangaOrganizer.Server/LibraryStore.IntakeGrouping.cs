@@ -4,7 +4,7 @@ namespace MangaOrganizer.Server;
 
 internal sealed partial class LibraryStore
 {
-    public string? GroupIntakeSeries(Guid root, string[] keys, string title, string? target, bool confirm, string kind)
+    public string? GroupIntakeSeries(Guid root, string[] keys, string title, string? target, bool confirm, string kind, SeriesTag[]? tags)
     {
         using var database = OpenCoverDatabase();
         database.CreateFunction<string, string, string?>("selected_title_chapter", SeriesSuggestions.ChapterForSelectedTitle, isDeterministic: true);
@@ -16,13 +16,14 @@ internal sealed partial class LibraryStore
             SELECT COUNT(DISTINCT f.series_key),
                 MAX(f.content_id IS NULL OR EXISTS (
                     SELECT 1 FROM file_operation op WHERE op.content_id = f.content_id AND op.state IN ('applying', 'restoring'))),
-                MAX(cm.content_id IS NOT NULL AND (m.id IS NULL OR m.series_key <> $series)),
+                MAX(cm.content_id IS NOT NULL AND cm.metadata_id IS NOT (
+            """ + MetadataIdForGroup + """
+                )),
                 MAX(f.series_key <> $series AND binding.metadata_id IS NOT NULL)
             FROM library_file f
             JOIN library_folder folder ON folder.root_id = f.root_id
             JOIN library_root state ON state.id = f.root_id
             LEFT JOIN content_metadata cm ON cm.content_id = f.content_id
-            LEFT JOIN series_metadata m ON m.id = cm.metadata_id
             LEFT JOIN series_metadata_binding binding ON binding.root_id = f.root_id AND binding.series_key = f.series_key
             WHERE f.root_id = $root AND f.series_key IN (SELECT value FROM json_each($selected))
               AND folder.kind IN ('import', 'both') AND state.state NOT IN ('scanning', 'queued', 'unavailable');
@@ -56,7 +57,10 @@ internal sealed partial class LibraryStore
 
         if (confirm)
         {
-            WriteMetadata(command, existing ?? new(groupTitle, kind, null, null, null, null, null, null, null));
+            if (existing is null)
+                WriteMetadata(command, new(groupTitle, kind, null, null, null, null, null, null, null, tags));
+            else
+                AttachSeriesMetadata(command);
         }
         else if (existing is null)
         {

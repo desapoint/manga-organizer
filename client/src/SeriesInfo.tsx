@@ -5,6 +5,9 @@ import { getCsrfToken } from './api';
 import { ROOTS_URL } from './library';
 import { Select } from './Select';
 import { CoverImage } from './SeriesCover';
+import { SeriesCoverEditor } from './SeriesCoverEditor';
+import { draftForTags, SeriesTagFields, tagsFromDraft } from './SeriesTags';
+import type { SeriesTag, TagDraft } from './SeriesTags';
 import { ActionLink, Button, Modal, SearchField, SectionHeader } from './ui';
 
 type BookKind = 'manga' | 'doujin';
@@ -19,6 +22,8 @@ export type Metadata = {
   providerId: number | null;
   providerUrl: string | null;
   providerDetails: AniListDetails | null;
+  tags: SeriesTag[];
+  hasManualTags?: boolean;
 };
 type AniListDetails = {
   coverUrl: string | null;
@@ -27,7 +32,7 @@ type AniListDetails = {
   startYear: number | null;
   endYear: number | null;
   genres: string[];
-  tags: { name: string; spoiler: boolean }[];
+  tags: SeriesTag[];
   credits: { name: string; role: string | null }[];
 };
 
@@ -38,10 +43,11 @@ export type Details = {
   readCatalogChapters: number;
   volumes: string[];
   indexedVolumes: number;
+  volumeTitles: Record<string, string>;
   readableVolumes: string[];
   volumeReading: { volume: string; contentId: string; releaseCount: number }[];
   chapters: { volume: string | null; chapter: string; contentId: string | null; readableFiles: number; completed: boolean;
-    preferredContentId?: string; missing?: boolean }[];
+    preferredContentId?: string; missing?: boolean; title?: string }[];
   reading: { contentId: string; relativePath: string; pageIndex: number | null; pageCount: number | null; hasFinishedFile: boolean } | null;
 };
 
@@ -60,8 +66,6 @@ function MetadataTags({ names }: { names: string[] }) {
 
 function ProviderFacts({ details }: { details: AniListDetails }) {
   const years = publicationYears(details);
-  const tags = details.tags.filter(tag => !tag.spoiler).map(tag => tag.name);
-  const spoilers = details.tags.filter(tag => tag.spoiler).map(tag => tag.name);
   return (
     <dl className="m-0 grid gap-2 text-sm wrap-anywhere">
       {details.format && <div><dt className="inline font-semibold">Format</dt> <dd className="inline text-muted">{details.format.toLowerCase().replaceAll('_', ' ')}</dd></div>}
@@ -70,15 +74,25 @@ function ProviderFacts({ details }: { details: AniListDetails }) {
       {details.credits.length > 0 && <div><dt className="inline font-semibold">Credits</dt> <dd className="inline text-muted">
         {details.credits.map(credit => credit.role ? `${credit.name} (${credit.role})` : credit.name).join(' · ')}</dd></div>}
       {details.genres.length > 0 && <div><dt className="mb-1 font-semibold">Genres</dt><dd><MetadataTags names={details.genres} /></dd></div>}
-      {(tags.length > 0 || spoilers.length > 0) && <div><dt className="mb-1 font-semibold">Tags</dt><dd>
-        {tags.length > 0 && <MetadataTags names={tags} />}
-        {spoilers.length > 0 && <details>
-          <summary className="min-h-11 cursor-pointer py-2 text-muted">Show spoiler tags</summary>
-          <MetadataTags names={spoilers} />
-        </details>}
-      </dd></div>}
     </dl>
   );
+}
+
+function SeriesTagDetails({ tags }: { tags: SeriesTag[] }) {
+  const regular = tags.filter(tag => !tag.spoiler).map(tag => tag.name);
+  const spoilers = tags.filter(tag => tag.spoiler).map(tag => tag.name);
+  if (tags.length === 0) return null;
+
+  return <dl className="m-0 text-sm">
+    <dt className="mb-1 font-semibold">Tags</dt>
+    <dd>
+      {regular.length > 0 && <MetadataTags names={regular} />}
+      {spoilers.length > 0 && <details>
+        <summary className="min-h-11 cursor-pointer py-2 text-muted">Show spoiler tags</summary>
+        <MetadataTags names={spoilers} />
+      </details>}
+    </dd>
+  </dl>;
 }
 
 function metadataFields(metadata: Metadata | null, title: string) {
@@ -105,10 +119,24 @@ function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [tagDraft, setTagDraft] = useState(() => draftForTags(metadata?.tags ?? []));
+  const [tagMode, setTagMode] = useState<'preserve' | 'manual' | 'provider'>('preserve');
+  const [providerTags, setProviderTags] = useState(metadata?.providerDetails?.tags);
+
   const sourceId = suggestion?.providerId ?? metadata?.providerId;
 
   function update<K extends keyof typeof fields>(field: K, value: (typeof fields)[K]) {
     setFields(current => ({ ...current, [field]: value }));
+  }
+
+  function useLinkedTags(tags: SeriesTag[]) {
+    setTagDraft(draftForTags(tags));
+    setTagMode('provider');
+  }
+
+  function updateTags(draft: TagDraft) {
+    setTagDraft(draft);
+    setTagMode('manual');
   }
 
   async function applyProvider(replace: boolean) {
@@ -128,6 +156,10 @@ function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }:
         status: current.status.trim() ? current.status : incoming.status,
         summary: current.summary.trim() ? current.summary : incoming.summary,
       });
+      const sourceTags = source.providerDetails?.tags ?? [];
+      setProviderTags(sourceTags);
+      const hasTagOverride = tagMode === 'manual' || (tagMode === 'preserve' && metadata?.hasManualTags);
+      if (replace || !hasTagOverride || tagsFromDraft(tagDraft).length === 0) useLinkedTags(sourceTags);
       setHasKind(true);
       setProviderId(sourceId);
       setNotice('Review the updated fields and save to apply them.');
@@ -149,6 +181,8 @@ function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }:
         totalVolumes: Number(fields.totalVolumes) || null,
         providerId,
         useEditedFields: providerId !== null,
+        tags: tagMode === 'manual' ? tagsFromDraft(tagDraft) : undefined,
+        useProviderTags: tagMode === 'provider',
       });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not save series metadata.');
@@ -174,6 +208,9 @@ function SeriesMetadataForm({ title, metadata, suggestion, loadProvider, save }:
         onChange={event => update('status', event.target.value)} /></label>
       <label className="grid gap-1">Summary<textarea name="summary" rows={3} maxLength={6000} value={fields.summary}
         onChange={event => update('summary', event.target.value)} className="min-w-0 rounded-lg border border-control bg-field p-3 text-base text-ink" /></label>
+      <SeriesTagFields draft={tagDraft} onChange={updateTags} disabled={busy} />
+      {providerTags && <Button variant="secondary" className="justify-self-start" disabled={busy}
+        onClick={() => useLinkedTags(providerTags)}>Use AniList tags</Button>}
       {notice && <p role="status" className="m-0 text-sm text-muted">{notice}</p>}
       {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
       <div className="action-row">
@@ -226,6 +263,7 @@ export function MetadataDialogAction({ actionLabel = 'Edit metadata', ...props }
 }
 
 function MetadataDraftDialog({ onClose, suggestion, ...props }: EditorProps & { onClose: () => void; suggestion?: Metadata }) {
+  const [coversOpen, setCoversOpen] = useState(false);
   async function loadProvider(id: number) {
     const response = await fetch(metadataUrl(props) + '/metadata/anilist/' + id);
     return metadataResponse(response, props.onSignedOut, 'Could not load AniList metadata.');
@@ -234,6 +272,10 @@ function MetadataDraftDialog({ onClose, suggestion, ...props }: EditorProps & { 
   return <Modal title="Edit series metadata" onClose={onClose}>
     <SeriesMetadataForm title={props.title} metadata={props.metadata} suggestion={suggestion} loadProvider={loadProvider}
       save={async values => { await saveMetadata(props, values); onClose(); props.onChange(); }} />
+    {props.metadata && <details className="mt-4 border-t border-line" onToggle={event => setCoversOpen(event.currentTarget.open)}>
+      <summary className="min-h-11 cursor-pointer py-3 font-semibold">Series cover</summary>
+      {coversOpen && <SeriesCoverEditor url={metadataUrl(props)} published={props.published} onSaved={props.onChange} onSignedOut={props.onSignedOut} />}
+    </details>}
   </Modal>;
 }
 
@@ -383,6 +425,7 @@ export function MetadataDescription({ metadata }: { metadata: Metadata }) {
     </p>
     {metadata.summary && <p className="m-0 max-w-prose text-sm whitespace-pre-line text-detail">{metadata.summary}</p>}
     {metadata.providerDetails && <ProviderFacts details={metadata.providerDetails} />}
+    <SeriesTagDetails tags={metadata.tags} />
   </div>;
 }
 

@@ -5,10 +5,9 @@ namespace MangaOrganizer.Server;
 
 internal sealed partial class LibraryStore
 {
-    // Require all confirmed members of a local group to agree on the provider identity.
-    private const string SharedAniListId = """
-        CASE WHEN COUNT(DISTINCT linked.provider_id) = 1 AND COUNT(linked.provider_id) = COUNT(*)
-            THEN MIN(linked.provider_id) END
+    // A scanned group represents one work only when its confirmed links agree.
+    private const string SharedSeriesId = """
+        CASE WHEN COUNT(DISTINCT linked.id) = 1 THEN MIN(linked.id) END
         """;
 
     private const string GroupSeriesKeys = "f.series_key IN (SELECT value FROM json_each($seriesKeys))";
@@ -23,15 +22,17 @@ internal sealed partial class LibraryStore
             command.CommandText = """
                 WITH groups AS (
                     SELECT f.series_key,
-                """ + " " + SharedAniListId + """
-                 AS provider_id
+                """ + " " + SharedSeriesId + """
+                 AS metadata_id
                     FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
                     JOIN content_metadata cm ON cm.content_id = f.content_id
-                    JOIN series_metadata linked ON linked.id = cm.metadata_id AND linked.series_key = f.series_key
+                    JOIN series_metadata linked ON linked.id = cm.metadata_id AND
+                """ + " " + LinkedSeriesScope("f", "linked") + """
+
                     WHERE f.root_id = $root AND folder.kind IN ('library', 'both')
                     GROUP BY f.series_key
                 )
-                SELECT peer.series_key FROM groups current JOIN groups peer ON peer.provider_id = current.provider_id
+                SELECT peer.series_key FROM groups current JOIN groups peer ON peer.metadata_id = current.metadata_id
                 WHERE current.series_key = $series ORDER BY peer.series_key;
                 """;
             using var rows = command.ExecuteReader();

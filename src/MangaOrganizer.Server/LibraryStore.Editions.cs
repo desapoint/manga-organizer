@@ -12,7 +12,8 @@ internal sealed record EditionVolumeChange(string? Edition, string? Volume, stri
 internal sealed partial class LibraryStore
 {
     private const string GroupVolumeMatch = """
-        (f.volume_hint = $volume OR EXISTS(SELECT 1 FROM covered c WHERE c.volume = $volume AND c.content_id = f.content_id)
+        ((f.volume_hint = $volume AND NOT EXISTS(SELECT 1 FROM content_chapter manual WHERE manual.content_id = f.content_id))
+            OR EXISTS(SELECT 1 FROM covered c WHERE c.volume = $volume AND c.content_id = f.content_id)
             OR EXISTS(SELECT 1 FROM edition_volume_release e JOIN edition_volume_manifest m ON m.id = e.manifest_id
                 WHERE m.work_key IN (
         """ + " " + GroupWorkKeys + """
@@ -44,15 +45,12 @@ internal sealed partial class LibraryStore
         var work = metadataId ?? localKey;
         var workKeys = group.Select(key => $"{root:D}/{key}").ToHashSet(StringComparer.Ordinal);
         workKeys.Add(work);
-        if (group.Length > 1)
+        if (metadataId is not null)
         {
-            command.CommandText = """
-                SELECT DISTINCT m.id FROM library_file f JOIN content_metadata cm ON cm.content_id = f.content_id
-                JOIN series_metadata m ON m.id = cm.metadata_id AND m.series_key = f.series_key
-                WHERE f.root_id = $root AND
-                """ + " " + GroupSeriesKeys;
-            using var rows = command.ExecuteReader();
-            while (rows.Read()) workKeys.Add(rows.GetString(0));
+            command.Parameters.AddWithValue("$identity", metadataId);
+            command.CommandText = "SELECT previous_id FROM series_identity_alias WHERE series_id = $identity;";
+            using var aliases = command.ExecuteReader();
+            while (aliases.Read()) workKeys.Add(aliases.GetString(0));
         }
 
         command.Parameters.AddWithValue("$localWork", localKey);
