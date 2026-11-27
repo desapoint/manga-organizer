@@ -95,8 +95,7 @@ def start_app(executable, data_dir, media, password, *, expect_setup=False, meta
     env.pop(BOOTSTRAP_VARIABLE, None)
     if password is not None:
         env[BOOTSTRAP_VARIABLE] = password
-    if metadata_service is not None:
-        env["MANGA_ORGANIZER_METADATA_SERVICE_URL"] = metadata_service
+    env["MANGA_ORGANIZER_METADATA_SERVICE_URL"] = metadata_service or "http://127.0.0.1:1/graphql"
     log_path = data_dir.parent / f"server-{uuid4().hex}.log"
     with log_path.open("wb") as log, subprocess.Popen([executable], env=env, stdout=log, stderr=log) as process:
         try:
@@ -125,6 +124,7 @@ def start_container(image, volume, media, password, *, readonly=True):
     command = ["docker", "run", "--detach", "--name", name, "-p", "127.0.0.1::8787",
                "--mount", f"type=volume,source={volume},target=/config",
                "--mount", f"type=bind,source={media},target=/media" + (",readonly" if readonly else ""),
+               "--env", "MANGA_ORGANIZER_METADATA_SERVICE_URL=http://127.0.0.1:1/graphql",
                "--env", "MANGA_ORGANIZER_LIBRARY_ROOTS__0=/media/primary",
                "--env", "MANGA_ORGANIZER_LIBRARY_ROOTS__1=/media/archive"]
     env = os.environ.copy()
@@ -205,6 +205,7 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE metadata_suggestion;
             DROP TABLE edition_volume_release;
             DROP TABLE edition_volume_manifest;
             DROP TABLE preferred_chapter_release;
@@ -221,6 +222,7 @@ def verify_web_setup(executable, fixture, media):
             DROP TABLE series_metadata;
             DROP INDEX library_file_content;
             DROP INDEX library_file_series;
+            DROP INDEX library_file_series_lookup;
             ALTER TABLE library_file DROP COLUMN content_id;
             ALTER TABLE library_file DROP COLUMN series_key;
             ALTER TABLE library_file DROP COLUMN series_title;
@@ -1348,6 +1350,110 @@ def review_duplicates(owner, root, directory, *, shared_permissions=False):
     owner.scan(root)
 
 
+def verify_metadata_queue(executable, fixture):
+    media = fixture / "queue-media"
+    (media / "primary").mkdir(parents=True)
+    (media / "archive").mkdir()
+    for index, name in enumerate(("Alpha Shelf Vol.01", "Alpha Shelf Vol.02", "Beta Shelf Vol.01", "Gamma Shelf Vol.01")):
+        (media / "primary" / f"{name}.pdf").write_bytes(f"Queue fixture {index}".encode())
+    calls = []
+
+    class Provider(BaseHTTPRequestHandler):
+        def do_POST(self):
+            variables = json.loads(self.rfile.read(int(self.headers["Content-Length"])))["variables"]
+            title = variables.get("title")
+            calls.append((title, time.monotonic()))
+            if title == "Rate Shelf" and sum(name == title for name, _ in calls) == 1:
+                self.send_response(429)
+                self.send_header("Retry-After", "4")
+                self.end_headers()
+                return
+            matches = {
+                "Alpha Shelf": [{"id": 21, "title": {"english": "Alpha release", "native": "Alpha Shelf"}}],
+                "Beta Shelf": [{"id": 22, "title": {"english": "Beta Shelf"}}, {"id": 23, "title": {"romaji": "Beta Shelf"}}],
+                "Rate Shelf": [{"id": 24, "title": {"english": "Rate Shelf"}}],
+            }
+            result = json.dumps({"data": {"Page": {"media": matches.get(title, [])}}}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(result)))
+            self.end_headers()
+            self.wfile.write(result)
+
+        def log_message(self, *_args):
+            pass
+
+    queue = "/api/metadata-suggestions"
+    data = fixture / "queue-data"
+    password = uuid4().hex
+
+    def settled(browser, count):
+        for _ in range(120):
+            rows = json.loads(browser.request(queue, 200))["items"]
+            if len(rows) == count and all(row["candidates"] is not None and not row["queued"] for row in rows):
+                return {row["title"]: row for row in rows}
+            time.sleep(0.25)
+        raise AssertionError(f"Queue did not settle: {rows}")
+
+    with ThreadingHTTPServer(("127.0.0.1", 0), Provider) as service:
+        thread = threading.Thread(target=service.serve_forever, daemon=True)
+        thread.start()
+        try:
+            lookup = f"http://127.0.0.1:{service.server_port}/graphql"
+            with start_app(executable, data, media, password, metadata_service=lookup) as address:
+                wait_for_server(address)
+                Browser(address).request(queue, 401)
+                browser = Browser(address)
+                browser.sign_in(password)
+                root = browser.roots()[0]["id"]
+                browser.scan(root)
+                rows = settled(browser, 3)
+                assert sorted(name for name, _ in calls) == ["Alpha Shelf", "Beta Shelf", "Gamma Shelf"]
+                alpha = rows["Alpha Shelf"]
+                assert alpha["candidates"][0]["matchingTitle"] == "Alpha Shelf"
+                assert len(rows["Beta Shelf"]["candidates"]) == 2 and rows["Gamma Shelf"]["candidates"] == []
+                browser.scan(root)
+                assert settled(browser, 3) == rows
+                page = json.loads(browser.request(queue + "?limit=1", 200))
+                assert page["total"] == 3 and page["items"] == [alpha]
+                assert len(calls) == 3
+
+            with start_app(executable, data, media, None, metadata_service=lookup) as address:
+                wait_for_server(address)
+                browser = Browser(address)
+                browser.sign_in(password)
+                assert settled(browser, 3) == rows
+                visible = [{"rootId": item["rootId"], "seriesKey": item["seriesKey"]} for item in page["items"]]
+                browser.request(queue + "/refresh", 400, method="POST", body={"items": visible})
+                result = json.loads(browser.request(queue + "/refresh", 202, method="POST", token=browser.csrf(), body={"items": visible}))
+                assert result == {"queued": 1}
+                refreshed = settled(browser, 3)
+                assert [name for name, _ in calls][3:] == ["Alpha Shelf"]
+                assert refreshed["Alpha Shelf"]["revision"] != alpha["revision"]
+                for title in ("Beta Shelf", "Gamma Shelf"):
+                    assert refreshed[title] == rows[title]
+
+                target = f"{queue}/{root}/{alpha['seriesKey']}"
+                match = {"providerId": 21, "revision": alpha["revision"]}
+                browser.request(target, 409, method="POST", token=browser.csrf(), body=match)
+                match["revision"] = refreshed["Alpha Shelf"]["revision"]
+                saved = json.loads(browser.request(target, 200, method="POST", token=browser.csrf(), body=match))
+                assert saved["title"] == "Alpha release" and saved["providerId"] == 21
+                browser.request(target, 409, method="POST", token=browser.csrf(), body=match)
+                assert [name for name, _ in calls][3:] == ["Alpha Shelf"]
+                assert json.loads(browser.request(queue + "?limit=1", 200))["total"] == 2
+
+                (media / "primary" / "Rate Shelf Vol.01.pdf").write_bytes(b"Newly arrived")
+                browser.scan(root)
+                rows = settled(browser, 3)
+                assert rows["Rate Shelf"]["candidates"][0]["match"]["providerId"] == 24
+                assert [name for name, _ in calls][4:] == ["Rate Shelf", "Rate Shelf"]
+                assert calls[-1][1] - calls[-2][1] >= 3.5
+        finally:
+            service.shutdown()
+            thread.join()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -1363,6 +1469,7 @@ if __name__ == "__main__":
             executable = str(target.app.resolve())
             verify_web_setup(executable, Path(fixture), media)
             verify_external_metadata(executable, Path(fixture), media)
+            verify_metadata_queue(executable, Path(fixture))
             data_dir = Path(fixture) / "data"
             smoke(lambda password: start_app(executable, data_dir, media, password), media)
             managed_data = Path(fixture) / "managed-data"

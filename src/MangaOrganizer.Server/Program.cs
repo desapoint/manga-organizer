@@ -65,6 +65,7 @@ builder.Services.AddSingleton<BookReader>();
 builder.Services.AddSingleton(services => new ManagedFileOperations(services.GetRequiredService<LibraryStore>(), dataDirectory));
 builder.Services.AddSingleton(_ => new MetadataAgent(builder.Configuration["MANGA_ORGANIZER_METADATA_SERVICE_URL"]));
 builder.Services.AddHostedService(services => services.GetRequiredService<LibraryScanQueue>());
+builder.Services.AddHostedService<MetadataSuggestionWorker>();
 
 builder.Services.AddDataProtection()
     .SetApplicationName($"MangaOrganizer/{identity.InstanceId:D}")
@@ -131,6 +132,7 @@ api.MapGet("/server", () => Results.Ok(new { id = identity.InstanceId })).Requir
 api.MapLibrary(dataDirectory);
 api.MapReader();
 api.MapFileOperations();
+api.MapMetadataQueue();
 
 api.MapDelete("/session", async (HttpContext context, IAntiforgery antiforgery) =>
 {

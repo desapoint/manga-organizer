@@ -27,7 +27,7 @@ internal static class WebUi
         app.Use(async (context, next) =>
         {
             context.Response.Headers.XContentTypeOptions = "nosniff";
-            context.Response.Headers.ContentSecurityPolicy = "default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
+            context.Response.Headers.ContentSecurityPolicy = "default-src 'self'; img-src 'self' https://s3.anilist.co https://s4.anilist.co; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
             if (context.Request.Path.StartsWithSegments("/api") && context.Request.Path != "/api/csrf")
             {
                 context.Response.Headers.CacheControl = "no-store";
