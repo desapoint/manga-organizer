@@ -10,7 +10,8 @@ import { Button, Modal } from './ui';
 function CollectionSeries({ collection, version, onSignedOut }: {
   collection: Collection; version: string; onSignedOut: () => void;
 }) {
-  const { page, offset, setOffset, error, retry } = useInventoryPage<Series>(COLLECTIONS_URL + '/' + collection.id + '/series', version, onSignedOut);
+  const { page, offset, setOffset, error, retry } = useInventoryPage<Series>(COLLECTIONS_URL + '/' + collection.id + '/series', version, onSignedOut,
+    { published: 'true' });
   if (error) return <div className="action-row"><p role="alert">Could not load collection series.</p><Button variant="secondary" onClick={retry}>Retry</Button></div>;
   if (!page) return <p role="status">Loading collection…</p>;
   if (!page.total) return <p className="m-0 text-sm text-muted">{collection.filters

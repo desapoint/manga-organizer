@@ -43,6 +43,8 @@ In Docker, bind-mount folders you want to browse and select their container path
 
 The catalog records file locations and SHA-256 identities in SQLite. Rescans recognize identical bytes after renames or moves and keep the last successful inventory when a root goes offline. See the [read-only catalog scope](docs/FILE-ORGANIZATION.md#read-only-catalog).
 
+Library displays scanned files once their series association and metadata are confirmed. Review new discoveries under **Tools → Associations and metadata** or use **Needs attention** in Import. **All files** shows the full scanned intake inventory. A folder configured for both roles shares the same scan and file records.
+
 ## Start here
 
 - [Reference repositories (all seven)](REFERENCES.md)

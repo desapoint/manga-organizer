@@ -968,6 +968,74 @@ def verify_volume_chapters(owner, root_id, path):
     assert len(coverage(moved, new_url)) == 3
 
 
+def verify_catalog_visibility(owner, root, path):
+    def comic(name, color):
+        with ZipFile(path / name, "w") as archive:
+            archive.writestr("01.png", synthetic_png(*color))
+
+    def files(view, *params):
+        response = owner.files(root, "?view=" + view + "".join("&" + param for param in params))
+        return response["total"], {item["relativePath"]: item for item in response["items"]}
+
+    def group(search):
+        return owner.series(root, "?search=" + search)["items"][0]["key"]
+
+    first = "Published Parchment Vol.01 Ch.01.cbz"
+    later = "Published Parchment Vol.02 Ch.02.cbz"
+    no_cover = "Unillustrated Periodical Vol.01.pdf"
+    pending = "Pending Signal Ch.01.cbz"
+    comic(first, (90, 120, 150))
+    comic(pending, (90, 121, 150))
+    comic("03.cbz", (90, 122, 150))
+    (path / no_cover).write_bytes(b"Unillustrated periodical fixture")
+    owner.scan(root)
+    parchment = group("Published+Parchment")
+    url = f"{LIBRARY_ROOTS}/{root}/series/{parchment}"
+    assert files("library", f"seriesKey={parchment}")[0] == 0
+    assert first in files("attention", "search=Published+Parchment")[1]
+    assert pending in files("association", "search=Pending+Signal")[1]
+    assert "03.cbz" in files("series", "search=03.cbz")[1]
+    assert pending in files("metadata", "search=Pending+Signal")[1]
+    owner.request(url + "/details?published=true", 404)
+
+    metadata = {"title": "Published Parchment", "kind": "manga", "totalChapters": 9}
+    owner.request(url + "/metadata", 200, method="PUT", token=owner.csrf(), body=metadata)
+    no_cover_url = f"{LIBRARY_ROOTS}/{root}/series/{group('Unillustrated+Periodical')}"
+    owner.request(no_cover_url + "/metadata", 200, method="PUT", token=owner.csrf(),
+                  body={"title": "Unillustrated Periodical", "kind": "manga"})
+    assert first not in files("attention", "search=Published+Parchment")[1]
+    assert no_cover in files("library", "search=Unillustrated+Periodical")[1]
+    assert no_cover in files("cover", "search=Unillustrated+Periodical")[1]
+    assert no_cover in files("attention", "search=Unillustrated+Periodical")[1]
+    assert files("library", "search=Unillustrated+Periodical")[1][no_cover]["id"] == files("all", "search=Unillustrated+Periodical")[1][no_cover]["id"]
+
+    comic(later, (91, 120, 150))
+    owner.scan(root)
+    owner.request(url + "/metadata?published=true", 200, method="PUT", token=owner.csrf(), body={**metadata, "totalChapters": 10})
+    assert files("library", f"seriesKey={parchment}", "limit=1")[0] == 1
+    assert owner.series(root, f"?seriesKey={parchment}&view=library")["items"][0]["fileCount"] == 1
+    assert owner.series(root, f"?seriesKey={parchment}&view=attention")["items"][0]["fileCount"] == 1
+    total, attention = files("attention", f"seriesKey={parchment}")
+    assert total == 1 and set(attention) == {later}
+    assert files("metadata", f"seriesKey={parchment}")[0] == 0
+    details = json.loads(owner.request(url + "/details?published=true", 200))
+    assert details["availableChapters"] == 1 and details["volumes"] == ["1"] and details["metadata"]["totalChapters"] == 10
+    chapter = json.loads(owner.request(url + "/chapter-releases?published=true&volume=2&chapter=2", 200))
+    assert chapter == []
+    assert json.loads(owner.request(url + "/volume-releases?published=true&volume=2", 200)) == []
+
+    release = attention[later]
+    confirmation = {"fileId": release["id"], "contentId": release["contentId"]}
+    owner.request(url + "/association", 400, method="POST", body=confirmation)
+    owner.request(url + "/association", 409, method="POST", token=owner.csrf(), body={**confirmation, "contentId": uuid4().hex})
+    owner.request(url + "/association", 204, method="POST", token=owner.csrf(), body=confirmation)
+    owner.request(url + "/association", 204, method="POST", token=owner.csrf(), body=confirmation)
+    total, page = files("library", f"seriesKey={parchment}", "limit=1", "offset=1")
+    assert total == 2 and page[later]["id"] == release["id"]
+    assert page[later]["associationConfirmed"]
+    assert files("attention", f"seriesKey={parchment}")[0] == 0
+
+
 def verify_maintenance(owner):
     url = "/api/maintenance"
     roots = owner.roots()
@@ -1035,6 +1103,7 @@ def smoke(start, media):
         roots = verify_folder_settings(first, media)
         verify_reader(first, second, roots[-1]["id"], media / "intake")
         verify_volume_chapters(first, roots[-1]["id"], media / "intake")
+        verify_catalog_visibility(first, roots[-1]["id"], media / "intake")
         verify_maintenance(first)
         roots = first.roots()
         inventory = first.files(roots[0]["id"], "?limit=100")
@@ -1477,6 +1546,8 @@ def verify_metadata_queue(executable, fixture):
                 match["revision"] = refreshed["Alpha Shelf"]["revision"]
                 saved = json.loads(browser.request(target, 200, method="POST", token=browser.csrf(), body=match))
                 assert saved["title"] == "Alpha release" and saved["providerId"] == 21
+                published = browser.files(root, f"?view=library&seriesKey={alpha['seriesKey']}")
+                assert published["total"] == 2 and all(file["associationConfirmed"] for file in published["items"])
                 browser.request(target, 409, method="POST", token=browser.csrf(), body=match)
                 assert [name for name, _ in calls][3:] == ["Alpha Shelf"]
                 assert json.loads(browser.request(queue + "?limit=1", 200))["total"] == 2

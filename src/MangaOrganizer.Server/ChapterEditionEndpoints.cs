@@ -12,15 +12,15 @@ internal static class ChapterEditionEndpoints
     public static void MapChapterEditions(this RouteGroupBuilder library)
     {
         var series = library.MapGroup("/{root:guid}/series/{seriesKey}");
-        series.MapGet("/chapter-releases", (Guid root, string seriesKey, string? volume, string? chapter, LibraryStore store, HttpContext context) =>
+        series.MapGet("/chapter-releases", (Guid root, string seriesKey, string? volume, string? chapter, bool? published, LibraryStore store, HttpContext context) =>
             ReaderEndpoints.TryOwner(context, out var owner) && IsChapter(seriesKey, volume, chapter)
-            && store.ReadChapterReleases(root, seriesKey.ToLowerInvariant(), NormalizeVolume(volume), BookNumbers.Canonical(chapter!), owner) is { } list
+            && store.ReadChapterReleases(root, seriesKey.ToLowerInvariant(), NormalizeVolume(volume), BookNumbers.Canonical(chapter!), owner, published == true) is { } list
                 ? Results.Ok(list) : Results.NotFound());
 
-        series.MapGet("/volume-releases", (Guid root, string seriesKey, string? volume, LibraryStore store, HttpContext context) =>
+        series.MapGet("/volume-releases", (Guid root, string seriesKey, string? volume, bool? published, LibraryStore store, HttpContext context) =>
             ReaderEndpoints.TryOwner(context, out var owner) && LibraryEndpoints.IsSeriesKey(seriesKey)
             && volume is not null && BookNumbers.IsNumber(volume)
-            && store.ReadVolumeReleases(root, seriesKey.ToLowerInvariant(), BookNumbers.Canonical(volume), owner) is { } list
+            && store.ReadVolumeReleases(root, seriesKey.ToLowerInvariant(), BookNumbers.Canonical(volume), owner, published == true) is { } list
                 ? Results.Ok(list) : Results.NotFound());
 
         series.MapPut("/chapter-progress", async (Guid root, string seriesKey, ChapterCompletion change, LibraryStore store,
@@ -45,8 +45,8 @@ internal static class ChapterEditionEndpoints
                 ? Results.NoContent() : Results.NotFound();
         }).WithMetadata(new RequestSizeLimitAttribute(4096));
 
-        series.MapGet("/edition-volumes", (Guid root, string seriesKey, LibraryStore store) =>
-            LibraryEndpoints.IsSeriesKey(seriesKey) && store.ReadEditionVolumes(root, seriesKey.ToLowerInvariant()) is { } list
+        series.MapGet("/edition-volumes", (Guid root, string seriesKey, bool? published, LibraryStore store) =>
+            LibraryEndpoints.IsSeriesKey(seriesKey) && store.ReadEditionVolumes(root, seriesKey.ToLowerInvariant(), published == true) is { } list
                 ? Results.Ok(list) : Results.NotFound());
         series.MapGet("/edition-candidates", (Guid root, string seriesKey, string? volume, LibraryStore store) =>
             LibraryEndpoints.IsSeriesKey(seriesKey) && volume is not null && BookNumbers.IsNumber(volume)

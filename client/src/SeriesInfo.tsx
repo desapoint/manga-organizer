@@ -122,27 +122,31 @@ function SeriesMetadataForm({ title, metadata, save }: { title: string; metadata
 
 type SeriesContext = { rootId: string; seriesKey: string; title: string; version: string; onSignedOut: () => void };
 
-export function useSeriesDetails({ rootId, seriesKey, version, onSignedOut }: Omit<SeriesContext, 'title'>) {
-  const url = ROOTS_URL + '/' + rootId + '/series/' + seriesKey;
+export function useSeriesDetails({ rootId, seriesKey, version, onSignedOut, published }: Omit<SeriesContext, 'title'> & { published?: boolean }) {
+  const url = ROOTS_URL + '/' + rootId + '/series/' + seriesKey + '/details' + (published ? '?published=true' : '');
   const [details, setDetails] = useState<Details | null>(null);
   const [error, setError] = useState('');
   useEffect(() => {
     const request = new AbortController();
     async function readDetails() {
-      const response = await fetch(url + '/details', { signal: request.signal });
+      const response = await fetch(url, { signal: request.signal });
       if (response.status === 401) return onSignedOut();
+      if (published && response.status === 404) {
+        if (!request.signal.aborted) { setDetails(null); setError(''); }
+        return;
+      }
       if (!response.ok) throw new Error();
       const details = await response.json() as Details;
       if (!request.signal.aborted) { setDetails(details); setError(''); }
     }
     void readDetails().catch(() => { if (!request.signal.aborted) setError('Could not load series details.'); });
     return () => request.abort();
-  }, [url, version, onSignedOut]);
+  }, [url, version, onSignedOut, published]);
 
   return { details, error };
 }
 
-type EditorProps = Omit<SeriesContext, 'version'> & { metadata: Metadata | null; onChange: () => void };
+type EditorProps = Omit<SeriesContext, 'version'> & { metadata: Metadata | null; onChange: () => void; published?: boolean };
 
 export function MetadataDialogAction({ actionLabel = 'Manage metadata', ...props }: EditorProps & { actionLabel?: string }) {
   const [open, setOpen] = useState(false);
@@ -154,7 +158,7 @@ export function MetadataDialogAction({ actionLabel = 'Manage metadata', ...props
   </>;
 }
 
-function MetadataEditor({ rootId, seriesKey, title, metadata, onSignedOut, onChange }: EditorProps) {
+function MetadataEditor({ rootId, seriesKey, title, metadata, onSignedOut, onChange, published }: EditorProps) {
   const url = ROOTS_URL + '/' + rootId + '/series/' + seriesKey;
   const [query, setQuery] = useState(title);
   const [matches, setMatches] = useState<Metadata[] | null>(null);
@@ -185,7 +189,7 @@ function MetadataEditor({ rootId, seriesKey, title, metadata, onSignedOut, onCha
   async function save(body: object) {
     setError('');
     try {
-      const response = await fetch(url + '/metadata', {
+      const response = await fetch(url + '/metadata' + (published ? '?published=true' : ''), {
         method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
         body: JSON.stringify(body),
       });
