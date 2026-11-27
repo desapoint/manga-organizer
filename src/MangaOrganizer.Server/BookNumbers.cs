@@ -67,7 +67,7 @@ internal readonly record struct CoverOrder(decimal Number, decimal Chapter) : IC
     {
         var numbers = BookNumbers.FromPath(path, useRangeStart: true);
         var volume = Parse(numbers.Volume);
-        var chapter = Parse(numbers.Chapter ?? SeriesSuggestions.BareChapter(path, seriesTitle));
+        var chapter = Parse(numbers.Chapter ?? (seriesTitle is null ? null : SeriesSuggestions.ChapterForSelectedTitle(path, seriesTitle)));
         return new(volume ?? chapter ?? decimal.MaxValue, volume.HasValue ? chapter ?? -1 : -1);
     }
 

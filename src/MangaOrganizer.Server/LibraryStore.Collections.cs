@@ -31,15 +31,19 @@ internal sealed partial class LibraryStore
     public IReadOnlyList<SeriesCollection> ReadCollections(Guid? root = null, string? series = null, Guid? id = null)
     {
         using var database = OpenDatabase();
+        using var transaction = database.BeginTransaction(deferred: true);
         using var command = database.CreateCommand();
+        command.Transaction = transaction;
+        command.Parameters.AddWithValue("$root", (object?)root ?? DBNull.Value);
+        if (root.HasValue && series is not null) BindSeriesGroup(command, series, published: true);
+        else command.Parameters.AddWithValue("$seriesKeys", "[]");
         command.CommandText = """
             SELECT c.id, c.name, c.filters, EXISTS(SELECT 1 FROM series_collection_item i
-                WHERE i.collection_id = c.id AND i.root_id = $root AND i.series_key = $series)
+                WHERE i.collection_id = c.id AND i.root_id = $root
+                    AND i.series_key IN (SELECT value FROM json_each($seriesKeys)))
             FROM series_collection c WHERE $id IS NULL OR c.id = $id ORDER BY c.name COLLATE NOCASE, c.id;
             """;
         command.Parameters.AddWithValue("$id", (object?)id ?? DBNull.Value);
-        command.Parameters.AddWithValue("$root", (object?)root ?? DBNull.Value);
-        command.Parameters.AddWithValue("$series", (object?)series ?? DBNull.Value);
         using var rows = command.ExecuteReader();
         var collections = new List<SeriesCollection>();
         while (rows.Read())
@@ -77,13 +81,13 @@ internal sealed partial class LibraryStore
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
-        using var command = GroupCommand(database, transaction, root, series);
+        using var command = GroupCommand(database, transaction, root, series, published: true);
         command.Parameters.AddWithValue("$id", id);
         command.CommandText = "SELECT 1 FROM series_collection WHERE id = $id AND filters IS NULL;";
         if (command.ExecuteScalar() is null || included && !GroupExists(command)) return false;
         command.CommandText = included
             ? "INSERT OR IGNORE INTO series_collection_item VALUES ($id, $root, $series);"
-            : "DELETE FROM series_collection_item WHERE collection_id = $id AND root_id = $root AND series_key = $series;";
+            : "DELETE FROM series_collection_item WHERE collection_id = $id AND root_id = $root AND series_key IN (SELECT value FROM json_each($seriesKeys));";
         command.ExecuteNonQuery();
         transaction.Commit();
         return true;

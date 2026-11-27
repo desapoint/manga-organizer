@@ -648,6 +648,8 @@ def verify_external_metadata(executable, fixture):
     no_cover = {"id": 456, "title": {"romaji": "Cover fallback"}, "status": "FINISHED", "chapters": 1,
                 "coverImage": {"medium": "https://s4.anilist.co.invalid/file/anilistcdn/media/manga/cover/fake.jpg"}}
 
+    shared_work = {"id": 789, "title": {"english": "Shared work fixture"}, "chapters": 4, "volumes": 2}
+
     class Provider(BaseHTTPRequestHandler):
         def do_POST(self):
             request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
@@ -662,6 +664,10 @@ def verify_external_metadata(executable, fixture):
                 response = {"data": {"Media": media_result}}
             elif variables == {"id": 456}:
                 response = {"data": {"Media": no_cover}}
+            elif variables == {"id": 789}:
+                response = {"data": {"Media": shared_work}}
+            elif variables.get("title", "").endswith(" grouping fixture"):
+                response = {"data": {"Page": {"media": []}}}
             else:
                 response = {"errors": [{"message": "Unexpected test query"}]}
             data = json.dumps(response).encode()
@@ -748,6 +754,7 @@ def verify_external_metadata(executable, fixture):
                 (item,) = json.loads(browser.request(single + "/chapters?published=true", 200))["items"]
                 assert item["chapter"] == "1" and item["contentId"] and item["readableFiles"] == 1
                 assert json.loads(browser.request(single + "/chapter-releases?chapter=1&published=true", 200))[0]["contentId"] == item["contentId"]
+                verify_same_provider_group(browser, root_id, media / "primary")
             with start_app(executable, fixture / "metadata-data", media, None) as address:
                 wait_for_server(address)
                 browser = Browser(address)
@@ -762,6 +769,44 @@ def verify_external_metadata(executable, fixture):
         finally:
             service.shutdown()
             server.join(timeout=5)
+
+
+def verify_same_provider_group(browser, root, path):
+    first = "Western grouping fixture Ch.1.cbz"
+    second = "Eastern grouping fixture Vol.2 Ch.2.cbz"
+    for index, name in enumerate((first, second)):
+        with ZipFile(path / name, "w") as archive:
+            archive.writestr("01.png", synthetic_png(75 + index, 130, 100))
+    browser.scan(root)
+    indexed = {item["relativePath"]: item for item in browser.files(root, "?search=grouping+fixture")["items"]}
+    keys = [indexed[name]["seriesKey"] for name in (first, second)]
+    assert keys[0] != keys[1]
+    urls = [f"{LIBRARY_ROOTS}/{root}/series/{key}" for key in keys]
+    progress = {"chapter": "2", "volume": "2", "completed": True}
+    browser.request(urls[1] + "/chapter-progress", 204, method="PUT", token=browser.csrf(), body=progress)
+    for url in urls:
+        browser.request(url + "/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 789})
+    (card,) = browser.series(root, "?view=library&search=Shared+work+fixture")["items"]
+    assert card["fileCount"] == 2 and card["key"] in keys and card["hasCover"]
+    browser.request(f"{LIBRARY_ROOTS}/{root}/series/{card['coverSeriesKey']}/cover", 200)
+    for alias in ("Eastern", "Western"):
+        assert browser.series(root, "?view=library&search=" + alias)["items"] == [card]
+    for key, url in zip(keys, urls):
+        assert browser.series(root, "?view=library&seriesKey=" + key)["items"] == [card]
+        files = browser.files(root, "?view=library&seriesKey=" + key)["items"]
+        assert {file["relativePath"] for file in files} == {first, second}
+        volume = browser.files(root, "?view=library&seriesKey=" + key + "&volume=2")["items"]
+        assert [file["relativePath"] for file in volume] == [second]
+        details = json.loads(browser.request(url + "/details?published=true", 200))
+        assert details["availableChapters"] == 2 and details["readCatalogChapters"] == 1
+        chapters = json.loads(browser.request(url + "/chapters?published=true", 200))["items"]
+        assert {(row["chapter"], row["completed"]) for row in chapters if not row.get("missing")} == {("1", False), ("2", True)}
+        releases = json.loads(browser.request(url + "/chapter-releases?volume=2&chapter=2&published=true", 200))
+        assert [release["relativePath"] for release in releases] == [second]
+    browser.request(urls[0] + "/chapter-progress?published=true", 204, method="PUT",
+                    token=browser.csrf(), body={**progress, "completed": False})
+    details = json.loads(browser.request(urls[1] + "/details?published=true", 200))
+    assert details["readCatalogChapters"] == 0 and details["readChapters"] == 0
 
 
 def verify_reader(owner, peer, root_id, path):
@@ -1182,6 +1227,63 @@ def verify_intake_file_split(owner, root, path):
     owner.scan(root)
 
 
+def verify_numbered_and_manual_intake_groups(owner, root, path):
+    releases = [
+        "[Grove (North Smith)] Paper Lantern 1 (x3200) [Owl Press].pdf",
+        "[Grove (North Smith)] Paper Lantern 2 (x3200) [Alternate Press].pdf",
+        "[North Smith] Paper Lantern 8.pdf",
+        "[South Smith] Paper Lantern 3.pdf",
+        "Frost Path 1.pdf",
+        "Frost Path 2.pdf",
+    ]
+    for index, name in enumerate(releases):
+        (path / name).write_text(f"Disposable release {index}")
+    owner.scan(root)
+    inferred = {file["relativePath"]: file for file in owner.files(root, "?search=Paper+Lantern")["items"]}
+    selected = [inferred[name] for name in releases[:3]]
+    key = selected[0]["seriesKey"]
+    assert {file["seriesKey"] for file in selected} == {key}
+    assert [file["chapter"] for file in selected] == ["1", "2", "8"]
+    assert all(file["seriesTitle"] == "Paper Lantern" and not file["associationConfirmed"] for file in selected)
+    assert inferred[releases[3]]["seriesKey"] != key and inferred[releases[3]]["chapter"] is None
+    assert owner.files(root, "?view=library&search=Paper+Lantern")["total"] == 0
+
+    manual = owner.files(root, "?search=Frost+Path")["items"]
+    keys = [file["seriesKey"] for file in manual]
+    assert len(set(keys)) == 2
+    change = {"seriesKeys": keys, "title": "Frost Path"}
+    route = f"{LIBRARY_ROOTS}/{root}/group-series"
+    owner.request(route, 400, method="POST", body=change)
+    owner.request(route, 409, method="POST", token=owner.csrf(), body={**change, "seriesKeys": [keys[0], sha256(b"stale").hexdigest()]})
+    owner.request(route, 204, method="POST", token=owner.csrf(), body=change)
+    (group,) = owner.series(root, "?search=Frost+Path")["items"]
+    assert group["fileCount"] == 2 and not group["hasMetadata"]
+    owner.scan(root)
+    files = owner.files(root, "?seriesKey=" + group["key"])["items"]
+    assert [file["chapter"] for file in files] == ["1", "2"] and all(not file["associationConfirmed"] for file in files)
+    metadata = f"{LIBRARY_ROOTS}/{root}/series/{group['key']}/metadata"
+    owner.request(metadata, 200, method="PUT", token=owner.csrf(), body={"title": "Frost Path", "kind": "doujin"})
+    (published,) = owner.series(root, "?view=library&search=Frost+Path")["items"]
+    assert published["fileCount"] == 2 and "aniList" not in published
+
+    late = "Frost Path 3.pdf"
+    (path / late).write_text("Late unlinked chapter")
+    releases.append(late)
+    owner.scan(root)
+    (late_file,) = owner.files(root, "?search=Frost+Path+3")["items"]
+    owner.request(route, 204, method="POST", token=owner.csrf(), body={
+        "seriesKeys": [group["key"], late_file["seriesKey"]], "targetSeriesKey": group["key"], "confirm": True,
+    })
+    appended = owner.files(root, "?view=library&seriesKey=" + group["key"])["items"]
+    assert [file["chapter"] for file in appended] == ["1", "2", "3"]
+    assert json.loads(owner.request(metadata.rsplit("/", 1)[0] + "/details?published=true", 200))["metadata"]["kind"] == "doujin"
+    owner.request(route, 409, method="POST", token=owner.csrf(),
+                  body={"seriesKeys": [group["key"], key], "title": "New title"})
+    for name in releases:
+        (path / name).unlink()
+    owner.scan(root)
+
+
 def verify_bulk_release_tags(owner, root, files):
     url = f"/api/versions/{root}"
     selection = {"fileIds": [item["id"] for item in files]}
@@ -1344,6 +1446,7 @@ def smoke(start, media):
         verify_volume_chapters(first, roots[-1]["id"], media / "intake")
         verify_catalog_visibility(first, roots[-1]["id"], media / "intake")
         verify_intake_file_split(first, roots[-1]["id"], media / "intake")
+        verify_numbered_and_manual_intake_groups(first, roots[-1]["id"], media / "intake")
         verify_maintenance(first)
         roots = first.roots()
         inventory = first.files(roots[0]["id"], "?limit=100")

@@ -48,6 +48,44 @@ internal static partial class SeriesSuggestions
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(input)));
     }
 
+    public static (string Key, string Title, string Chapter)? NumberedCreatorRelease(string relativePath)
+    {
+        var stem = Path.GetFileNameWithoutExtension(relativePath);
+        var prefix = CreatorPrefix().Match(stem);
+        if (!prefix.Success) return null;
+        var creator = prefix.Groups["name"].Value;
+        var alias = CreatorAlias().Match(creator);
+        if (alias.Success) creator = alias.Groups["alias"].Value;
+
+        var release = stem[prefix.Length..].TrimEnd();
+        var annotations = ReleaseAnnotations().Match(release);
+        if (annotations.Success) release = release[..annotations.Index];
+        var number = BareNumberSuffix().Match(release);
+        var chapter = number.Groups["chapter"].Value;
+        if (!number.Success || !BookNumbers.IsNumber(chapter) || ReleaseYear().IsMatch(chapter)) return null;
+        var title = release[..number.Index].Trim();
+        var normalizedTitle = Normalize(title);
+        if (normalizedTitle.Length == 0 || Normalize(creator).Length == 0) return null;
+
+        var key = Key("creator-series/" + Normalize(creator) + "/" + normalizedTitle, null);
+        return (key, title, BookNumbers.Canonical(chapter));
+    }
+
+    public static string? ChapterForSelectedTitle(string path, string title)
+    {
+        if (NumberedCreatorRelease(path) is { } release && Normalize(release.Title) == Normalize(title))
+            return release.Chapter;
+        var number = BareChapter(path, title);
+        return number is not null && BookNumbers.IsNumber(number) && !ReleaseYear().IsMatch(number)
+            ? BookNumbers.Canonical(number) : null;
+    }
+
+    [GeneratedRegex(@"^\[(?<name>[^\[\]]+)\]\s*", MatchOptions)]
+    private static partial Regex CreatorPrefix();
+
+    [GeneratedRegex(@"\((?<alias>[^()]+)\)\s*$", MatchOptions)]
+    private static partial Regex CreatorAlias();
+
     public static string? BareChapter(string relativePath, string? seriesTitle)
     {
         if (seriesTitle is null) return null;
