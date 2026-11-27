@@ -1013,7 +1013,7 @@ def verify_catalog_visibility(owner, root, path):
     assert pending in files("metadata", "search=Pending+Signal")[1]
     owner.request(url + "/details?published=true", 404)
 
-    metadata = {"title": "Published Parchment", "kind": "manga", "totalChapters": 9}
+    metadata = {"title": "Published Parchment", "alternateTitle": "Opposite Title", "kind": "manga", "totalChapters": 9}
     owner.request(url + "/metadata", 200, method="PUT", token=owner.csrf(), body=metadata)
     no_cover_url = f"{LIBRARY_ROOTS}/{root}/series/{group('Unillustrated+Periodical')}"
     owner.request(no_cover_url + "/metadata", 200, method="PUT", token=owner.csrf(),
@@ -1053,6 +1053,7 @@ def verify_catalog_visibility(owner, root, path):
         "language": "ja", "color": "black-and-white", "censorship": "uncensored",
         "edition": None, "group": "Batch Fixture", "revision": 2,
     }
+    verify_file_association(owner, root, path, pending, ordinary, parchment, version)
 
 
 def verify_bulk_release_tags(owner, root, files):
@@ -1094,6 +1095,51 @@ def verify_bulk_release_tags(owner, root, files):
     owner.request(url + "/batch", 204, method="PUT", token=owner.csrf(),
                   body={"field": "edition", "value": None, "targets": targets(corrected[2:])})
     assert preview()[-1]["tags"]["edition"] is None
+
+
+def verify_file_association(owner, root, path, pending, ordinary, target_key, version):
+    endpoint = "/api/file-associations"
+    Browser(owner.url).request(endpoint + "/series", 401)
+    target_list = json.loads(owner.request(endpoint + "/series?search=opposite&limit=1", 200))
+    assert target_list["total"] == 1
+    (target,) = target_list["items"]
+    assert target["title"] == "Published Parchment" and target["alternateTitle"] == "Opposite Title"
+    assert owner.files(root, "?view=unassociated&search=Pending+Signal")["total"] == 2
+    published = f"?view=library&seriesKey={target_key}"
+    expected = {"contentId": ordinary["contentId"], "seriesKey": ordinary["seriesKey"], "metadataId": target["id"]}
+    url = f"{endpoint}/{root}/files/{ordinary['id']}"
+    owner.request(url + "/preview", 400, method="POST", body=expected)
+    owner.request(url + "/preview", 409, method="POST", token=owner.csrf(), body={**expected, "contentId": uuid4().hex})
+    preview = json.loads(owner.request(url + "/preview", 200, method="POST", token=owner.csrf(), body=expected))
+    assert preview["count"] == 2 and preview["locations"][0]["relativePath"] == pending and preview["currentTitle"] is None
+    owner.request(url, 400, method="PUT", body={**expected, "revision": preview["revision"]})
+
+    data = (path / pending).read_bytes()
+    late = path / "Unrelated late alias.cbz"
+    late.write_bytes(data)
+    owner.scan(root)
+    owner.request(url, 409, method="PUT", token=owner.csrf(), body={**expected, "revision": preview["revision"]})
+    assert owner.files(root, published)["total"] == 2
+    current = json.loads(owner.request(url + "/preview", 200, method="POST", token=owner.csrf(), body=expected))
+    assert current["count"] == 3 and current["target"]["id"] == target["id"]
+
+    book = f"/api/reader/{ordinary['contentId']}"
+    progress = json.loads(owner.request(book + "/progress", 200, method="PUT", token=owner.csrf(),
+                                       body={"updateId": str(uuid4()), "baseRevision": 0, "pageIndex": 0}))
+    owner.request(url, 204, method="PUT", token=owner.csrf(), body={**expected, "revision": current["revision"]})
+    assert owner.files(root, published)["total"] == 5
+    assert owner.files(root, "?view=unassociated&search=Pending+Signal")["total"] == 0
+    tags = json.loads(owner.request(version, 200))["tags"]
+    assert tags["group"] == "Batch Fixture"
+    assert json.loads(owner.request(book, 200))["progress"] == progress
+    assert late.read_bytes() == data and (path / pending).read_bytes() == data
+
+    renamed = late.with_name("Relocated archive without its series name.cbz")
+    late.rename(renamed)
+    owner.scan(root)
+    (restored,) = owner.files(root, published + "&search=Relocated+archive")["items"]
+    assert restored["contentId"] == ordinary["contentId"] and restored["associationConfirmed"]
+    assert json.loads(owner.request(book, 200))["progress"] == progress
 
 
 def verify_maintenance(owner):

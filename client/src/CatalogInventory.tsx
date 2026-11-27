@@ -5,6 +5,7 @@ import { ChapterCoverage } from './ChapterCoverage';
 import { CollectionForm, emptyFilters, SeriesCollectionMembership, TagRulesFields, useTagNames } from './CollectionControls';
 import type { TagRules } from './CollectionControls';
 import { DuplicateReviewDialog } from './DuplicateReview';
+import { FileAssociationEditor } from './FileAssociationEditor';
 import { FileMove } from './FileOperations';
 import { EditReleaseTags, ReleaseSelectionActions, SelectReleaseCheckbox, useReleaseSelection } from './ReleaseTagsEditor';
 import type { LibraryRoot } from './library';
@@ -54,7 +55,7 @@ const intakeViews = [
   { value: 'cover', label: 'Missing cover' },
   { value: 'all', label: 'All files' },
 ] as const;
-type CatalogView = typeof intakeViews[number]['value'] | 'library';
+type CatalogView = typeof intakeViews[number]['value'] | 'library' | 'unassociated';
 
 const sortOptions = [
   { value: 'title', label: 'Title' },
@@ -155,10 +156,10 @@ function FileAssociationAction({ file, rootId, onSignedOut, onChange }: {
     onChange={onChange} onSignedOut={onSignedOut} actionLabel="Assign series metadata" />;
 }
 
-function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut, selection }:
+function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut, selection, onAssociationChanged }:
   Pick<InventoryProps, 'rootId' | 'version'> & {
   file: CatalogEntry; seriesKey?: string; onInspect?: Inspect; onSignedOut: () => void; management?: FileManagement;
-  selection: ReturnType<typeof useReleaseSelection>;
+  selection: ReturnType<typeof useReleaseSelection>; onAssociationChanged?: () => void;
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
   const [move, setMove] = useState<'organize' | 'transfer' | null>(null);
@@ -169,6 +170,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   const readable = file.contentId && isReadableArchive(file.extension);
   const coverageUrl = management && `${ROOTS_URL}/${rootId}/series/${file.seriesKey}/coverage`;
   const transferTarget = file.associationConfirmed ? management?.intakeTarget : undefined;
+  const updateAssociation = onAssociationChanged ?? management?.onDataChanged;
   return (
     <li>
       <span className="flex min-w-0 items-center gap-3 max-[36rem]:col-span-full">
@@ -195,10 +197,13 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
       {file.contentId && <div className="action-row col-span-full">
         {readable && <ActionLink variant="ghost" icon={BookOpen} href={onInspect ? `#read/${file.contentId}/intake` :
           seriesKey ? seriesReaderHref(file.contentId, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>}
-        {onInspect ? <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare this file</Button> :
-          <ActionLink variant="ghost" href={duplicateToolsHref({ rootId, seriesKey: file.seriesKey }, file.id)}>Compare in Tools</ActionLink>}
-        {management && !file.associationConfirmed && <FileAssociationAction file={file} rootId={rootId}
-          onChange={management.onDataChanged} onSignedOut={onSignedOut} />}
+        {!onAssociationChanged && (onInspect ? <Button variant="ghost" onClick={() => setShowDuplicates(true)}>Compare this file</Button> :
+          <ActionLink variant="ghost" href={duplicateToolsHref({ rootId, seriesKey: file.seriesKey }, file.id)}>Compare in Tools</ActionLink>)}
+        {updateAssociation && !file.associationConfirmed && <FileAssociationAction file={file} rootId={rootId}
+          onChange={updateAssociation} onSignedOut={onSignedOut} />}
+        {updateAssociation && <FileAssociationEditor key={file.contentId + file.seriesKey} rootId={rootId} fileId={file.id}
+          contentId={file.contentId} seriesKey={file.seriesKey} relativePath={file.relativePath} confirmed={file.associationConfirmed}
+          onSignedOut={onSignedOut} onSaved={updateAssociation} />}
         {management && <EditReleaseTags rootId={rootId} fileId={file.id} onSignedOut={onSignedOut} />}
         {coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>Set chapter coverage</Button>}
         {transferTarget && <Button variant="secondary" onClick={() => setMove('transfer')}>Transfer to library</Button>}
@@ -221,8 +226,11 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   );
 }
 
-export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut, management, onInspect, search = '', catalogView = 'all' }:
-  InventoryProps & { seriesKey?: string; volume?: string; management?: FileManagement; onInspect?: Inspect; search?: string; catalogView?: CatalogView }) {
+export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut, management, onInspect, search = '', catalogView = 'all',
+  onAssociationChanged }: InventoryProps & {
+  seriesKey?: string; volume?: string; management?: FileManagement; onInspect?: Inspect; search?: string; catalogView?: CatalogView;
+  onAssociationChanged?: () => void;
+}) {
   const params = new URLSearchParams({ search, view: catalogView });
   if (seriesKey) params.set('seriesKey', seriesKey);
   if (volume) params.set('volume', volume);
@@ -244,7 +252,8 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
           <div className="catalog-columns" aria-hidden="true"><span>File</span><span>Type</span><span>Size</span><span>Modified</span></div>
           <ul className="catalog-files" role="list" aria-label={label}>
             {page.items.map(file => <FileRow key={file.id} file={file} rootId={rootId} seriesKey={seriesKey} version={version}
-              onInspect={onInspect} onSignedOut={onSignedOut} management={management} selection={selection} />)}
+              onInspect={onInspect} onSignedOut={onSignedOut} management={management} selection={selection}
+              onAssociationChanged={onAssociationChanged} />)}
           </ul>
           {page.total > PAGE_SIZE && (
             <div className="border-t border-line p-3">

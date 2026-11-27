@@ -1,15 +1,18 @@
 import { Check, ExternalLink, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { getCsrfToken } from './api';
-import { PageControls, useInventoryPage } from './CatalogInventory';
+import { FileInventory, PageControls, useInventoryPage } from './CatalogInventory';
 import type { LibraryRoot } from './library';
 import { Select } from './Select';
 import { CoverImage, SeriesCover } from './SeriesCover';
 import { MetadataDialogAction } from './SeriesInfo';
 import type { Metadata } from './SeriesInfo';
-import { ActionLink, Button, Modal, SearchField } from './ui';
+import { ActionLink, Button, Modal, SearchField, SegmentedControl } from './ui';
 
 const endpoint = '/api/metadata-suggestions';
+const associationViews = [{ value: 'metadata', label: 'Series metadata' }, { value: 'files', label: 'File associations' }] as const;
+type ToolProps = { roots: LibraryRoot[] | null; version: string; onSignedOut: () => void; onChanged: () => void };
 
 type Proposal = { match: Metadata & { providerId: number }; matchingTitle: string | null };
 type QueueRow = {
@@ -17,9 +20,40 @@ type QueueRow = {
   candidates: Proposal[] | null; message: string | null; conflictingMetadata: boolean;
 };
 
-export function MetadataQueue({ roots, version, onSignedOut }: {
-  roots: LibraryRoot[] | null; version: string; onSignedOut: () => void;
-}) {
+export function MetadataQueue(props: ToolProps) {
+  const [view, setView] = useState<typeof associationViews[number]['value']>('metadata');
+  return <>
+    <SegmentedControl label="Association views" options={associationViews} value={view} onChange={setView} />
+    {view === 'metadata' ? <SeriesQueue {...props} /> : <FileAssociationQueue {...props} />}
+  </>;
+}
+
+function FileAssociationQueue({ roots, version, onSignedOut, onChanged }: ToolProps) {
+  const [root, setRoot] = useState('');
+  const [search, setSearch] = useState('');
+  const folder = roots?.find(item => item.id === root) ?? roots?.[0];
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSearch(String(new FormData(event.currentTarget).get('search') ?? '').trim());
+  }
+
+  if (!roots) return <p role="status">Loading folders…</p>;
+  if (!folder) return <p>Configure and scan a folder to review file associations.</p>;
+  return <section aria-label="Files awaiting association" className="grid gap-3">
+    <form className="surface flex flex-wrap items-end gap-3 p-4" onSubmit={submit}>
+      <Select label="Folder" value={folder.id} options={roots.map(item => ({ value: item.id, label: item.name || item.path }))}
+        onChange={setRoot} />
+      <SearchField aria-label="Find files needing association" name="search" placeholder="Search filename or series"
+        className="min-w-0 flex-1" maxLength={160} />
+      <Button variant="secondary" type="submit">Search</Button>
+    </form>
+    <FileInventory key={folder.id + search} rootId={folder.id} version={version} onSignedOut={onSignedOut} search={search}
+      catalogView="unassociated" onAssociationChanged={onChanged} />
+  </section>;
+}
+
+function SeriesQueue({ roots, version, onSignedOut, onChanged }: ToolProps) {
   const [root, setRoot] = useState('');
   const [search, setSearch] = useState('');
   return <>
@@ -31,13 +65,11 @@ export function MetadataQueue({ roots, version, onSignedOut }: {
       }))]} onChange={setRoot} />
     </div>
     <SuggestionPage key={JSON.stringify([root, search])} root={root} search={search.trim()} version={version}
-      roots={roots} onSignedOut={onSignedOut} />
+      roots={roots} onSignedOut={onSignedOut} onChanged={onChanged} />
   </>;
 }
 
-function SuggestionPage({ root, search, version, roots, onSignedOut }: {
-  root: string; search: string; version: string; roots: LibraryRoot[] | null; onSignedOut: () => void;
-}) {
+function SuggestionPage({ root, search, version, roots, onSignedOut, onChanged }: ToolProps & { root: string; search: string }) {
   const [revision, setRevision] = useState(0);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
@@ -86,7 +118,7 @@ function SuggestionPage({ root, search, version, roots, onSignedOut }: {
     {page && page.total > 0 && <>
       <ul aria-label="Series awaiting metadata" className="m-0 grid list-none gap-2 p-0" role="list">
         {page.items.map(item => <SuggestionRow key={item.rootId + item.seriesKey} item={item} version={version}
-          folder={roots?.find(folder => folder.id === item.rootId)} onSignedOut={onSignedOut} onSaved={reload} />)}
+          folder={roots?.find(folder => folder.id === item.rootId)} onSignedOut={onSignedOut} onSaved={onChanged} />)}
       </ul>
       <PageControls label="Metadata suggestion pages" offset={offset} count={page.items.length} total={page.total} onChange={setOffset} />
     </>}
