@@ -85,6 +85,7 @@ export function SelectReleaseCheckbox({ label, checked, onChange, disabled = fal
   label: string; checked: boolean | 'mixed'; onChange: () => void; disabled?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const Mark = checked === 'mixed' ? Minus : Check;
   useLayoutEffect(() => {
     if (input.current) input.current.indeterminate = checked === 'mixed';
   }, [checked]);
@@ -92,12 +93,11 @@ export function SelectReleaseCheckbox({ label, checked, onChange, disabled = fal
   return <label className="grid size-11 shrink-0 place-items-center has-enabled:cursor-pointer">
     <input ref={input} className="peer sr-only" type="checkbox" aria-label={label} checked={checked === true}
       disabled={disabled} onChange={onChange} />
-    <span aria-hidden="true" className="grid size-5 place-items-center rounded-full border border-control bg-field
+    <span aria-hidden="true" className="relative size-5 rounded-full border border-control bg-field
       peer-checked:border-accent peer-checked:bg-accent peer-checked:text-accent-ink
       peer-indeterminate:border-accent peer-indeterminate:text-accent-readable peer-disabled:opacity-45
       peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent">
-      {checked === true && <Check className="size-3.5" strokeWidth={3} />}
-      {checked === 'mixed' && <Minus className="size-3.5" strokeWidth={3} />}
+      {checked !== false && <Mark className="absolute inset-0 m-auto size-3.5" strokeWidth={3} />}
     </span>
   </label>;
 }

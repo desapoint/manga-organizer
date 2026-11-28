@@ -335,8 +335,9 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
   const folders = folderResult?.folders;
   const showFolders = !!folders && folders.length > 1;
   const pageIds = page?.items.flatMap(file => file.contentId ? [file.id] : []) ?? [];
+  const seriesFileIds = folders?.flatMap(folder => folder.fileIds);
   const selection = useReleaseSelection(foldersUrl || `${rootId}:${params}:${offset}`,
-    folders?.flatMap(folder => folder.fileIds) ?? pageIds, persistent);
+    seriesFileIds ?? pageIds, persistent);
   const label = seriesKey ? 'Series files' : 'Catalog files';
   const rowActions = persistent ? ' with-file-actions' : '';
   const tagActions = management && (persistent || pageIds.length > 0) ? <ReleaseSelectionActions selection={selection}
@@ -351,6 +352,11 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
   const folderInfo = new Map(folders?.map((folder, index) => [folder.directory,
     { ids: folder.fileIds, label: folder.directory ? `Folder ${index + 1}` : 'Intake root' }]));
 
+  function selectionState(ids: string[]) {
+    if (!ids.some(id => selection.selected.has(id))) return false;
+    return ids.every(id => selection.selected.has(id)) ? true : 'mixed' as const;
+  }
+
   return (
     <>
       {seriesToolbar?.(tagActions)}
@@ -362,19 +368,22 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
       {page && page.total > 0 && (
         <div className={seriesKey ? 'min-w-0 rounded-b-xl border-t border-line bg-inset' : 'surface'}>
           {!seriesToolbar && tagActions && <div className="action-row border-b border-line px-4 py-2">{tagActions}</div>}
-          <div className={`catalog-columns${rowActions}`} aria-hidden="true">
-            <span>File</span><span>Type</span><span>Size</span><span>Modified</span>
+          <div className={`catalog-columns${rowActions}${foldersUrl ? ' with-series-selection' : ''}`}>
+            {foldersUrl ? <span className="flex min-w-0 items-center gap-3">
+              <SelectReleaseCheckbox label="Select all files in this series" checked={selectionState(seriesFileIds ?? [])}
+                disabled={!seriesFileIds?.length} onChange={() => selection.toggle(seriesFileIds ?? [])} />
+              <span aria-hidden="true">Select all files</span>
+            </span> : <span aria-hidden="true">File</span>}
+            <span aria-hidden="true">Type</span><span aria-hidden="true">Size</span><span aria-hidden="true">Modified</span>
           </div>
           <ul className={`catalog-files${rowActions}`} role="list" aria-label={label}>
             {[...visibleFolders].flatMap(([directory, entries]) => {
               const folder = folderInfo.get(directory);
               const folderIds = folder?.ids ?? [];
-              const count = folderIds.filter(id => selection.selected.has(id)).length;
-              const checked = count === 0 ? false : count === folderIds.length ? true : 'mixed' as const;
               const folderLabel = folder?.label ?? 'Folder';
               return [
                 showFolders && onInspect && <li key={`folder:${directory}`} className="catalog-folder-heading">
-                  <SelectReleaseCheckbox label={`Select all eligible files in ${folderLabel}`} checked={checked}
+                  <SelectReleaseCheckbox label={`Select all eligible files in ${folderLabel}`} checked={selectionState(folderIds)}
                     disabled={!folderIds.length} onChange={() => selection.toggle(folderIds)} />
                   <span className="min-w-0 wrap-anywhere">{folderLabel}</span>
                   <Button variant="ghost" icon={Info} aria-label={`Open ${folderLabel} details`} title="Folder details"
