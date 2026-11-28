@@ -5,7 +5,7 @@ namespace MangaOrganizer.Server;
 
 internal sealed record MetadataChange(int? ProviderId, string? Title, string? Kind, string? AlternateTitle, string? Summary,
     string? Status, int? TotalChapters, int? TotalVolumes, bool UseEditedFields = false, SeriesTag?[]? Tags = null, bool UseProviderTags = false,
-    bool RemoveAniListLink = false, int? ExpectedAniListId = null, SeriesFileReview[]? ReviewFiles = null);
+    bool RemoveAniListLink = false, int? ExpectedAniListId = null, SeriesFileReview[]? ReviewFiles = null, string?[]? AlternateTitles = null);
 internal sealed record CoverageChange(string? ContentId, string? Volume, string[]? Chapters, bool WholeVolume = false);
 internal sealed record AssociationConfirmation(string? FileId, string? ContentId);
 
@@ -92,8 +92,15 @@ internal static class MetadataEndpoints
                 {
                     return Results.BadRequest(new { message = "Enter a title and valid totals before saving metadata." });
                 }
-                edited = new(title, change.Kind ?? "manga", EmptyAsNull(change.AlternateTitle), EmptyAsNull(change.Summary),
-                    EmptyAsNull(change.Status), change.TotalChapters, change.TotalVolumes, null, null);
+                var alternates = change.AlternateTitles ?? (EmptyAsNull(change.AlternateTitle) is { } alternate ? [alternate] : []);
+                if (alternates.Length > 32 || alternates.Any(value => value?.Trim() is not { Length: > 0 and <= 300 } name || name.Any(char.IsControl)))
+                    return Results.BadRequest(new { message = "Enter up to 32 alternate titles with 1–300 characters each." });
+
+                var distinct = alternates.Select(value => value!.Trim())
+                    .Where(value => !string.Equals(value, title, StringComparison.OrdinalIgnoreCase))
+                    .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                edited = new(title, change.Kind ?? "manga", distinct.FirstOrDefault(), EmptyAsNull(change.Summary),
+                    EmptyAsNull(change.Status), change.TotalChapters, change.TotalVolumes, null, null) { AlternateTitles = distinct };
             }
 
             SeriesMetadata metadata;

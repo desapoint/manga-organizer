@@ -9,6 +9,7 @@ internal sealed record SeriesMetadata(string Title, string Kind, string? Alterna
     int? TotalChapters, int? TotalVolumes, int? ProviderId, AniListDetails? ProviderDetails,
     [property: JsonIgnore] SeriesTag[]? ManualTags = null)
 {
+    public string[] AlternateTitles { get; init; } = AlternateTitle is null ? [] : [AlternateTitle];
     public SeriesTag[] Tags => ManualTags ?? ProviderDetails?.Tags ?? [];
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool HasManualTags => ManualTags is not null;
@@ -287,6 +288,7 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$title", metadata.Title);
         command.Parameters.AddWithValue("$kind", metadata.Kind);
         command.Parameters.AddWithValue("$alternate", (object?)metadata.AlternateTitle ?? DBNull.Value);
+        command.Parameters.AddWithValue("$alternates", JsonSerializer.Serialize(metadata.AlternateTitles));
         command.Parameters.AddWithValue("$summary", (object?)metadata.Summary ?? DBNull.Value);
         command.Parameters.AddWithValue("$status", (object?)metadata.Status ?? DBNull.Value);
         command.Parameters.AddWithValue("$chapters", (object?)metadata.TotalChapters ?? DBNull.Value);
@@ -299,12 +301,13 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);
         command.CommandText = """
             INSERT INTO series_metadata(id, series_key, title, alternate_title, kind, summary, status, total_chapters, total_volumes,
-                provider_id, provider_details, manual_tags, updated_at)
-                VALUES ($id, $series, $title, $alternate, $kind, $summary, $status, $chapters, $volumes, $provider, $providerDetails, $manualTags, $now)
+                provider_id, provider_details, manual_tags, updated_at, alternate_titles)
+                VALUES ($id, $series, $title, $alternate, $kind, $summary, $status, $chapters, $volumes, $provider, $providerDetails, $manualTags, $now, $alternates)
             ON CONFLICT(id) DO UPDATE SET title = excluded.title, kind = excluded.kind, alternate_title = excluded.alternate_title,
                 summary = excluded.summary, status = excluded.status, total_chapters = excluded.total_chapters,
                 total_volumes = excluded.total_volumes, provider_id = excluded.provider_id,
-                provider_details = excluded.provider_details, manual_tags = excluded.manual_tags, updated_at = excluded.updated_at;
+                provider_details = excluded.provider_details, manual_tags = excluded.manual_tags, updated_at = excluded.updated_at,
+                alternate_titles = excluded.alternate_titles;
             """;
         command.ExecuteNonQuery();
         BindMetadataToGroup(command, previousId, attachFiles, scoped);
@@ -353,7 +356,7 @@ internal sealed partial class LibraryStore
 
     private const string MetadataColumns = """
         m.title, m.kind, m.alternate_title, m.summary, m.status, m.total_chapters, m.total_volumes,
-        m.provider_id, m.provider_details, m.manual_tags
+        m.provider_id, m.provider_details, m.manual_tags, m.alternate_titles
         """;
 
     public SeriesMetadata? ReadLinkedProviderMetadata(int provider)
@@ -391,8 +394,14 @@ internal sealed partial class LibraryStore
         var summary = ReadText(rows, 3);
         return new(rows.GetString(0), rows.GetString(1), ReadText(rows, 2),
             providerId.HasValue ? MetadataAgent.PlainDescription(summary) : summary, ReadText(rows, 4),
-            ReadInt(rows, 5), ReadInt(rows, 6), providerId, details, ReadManualTags(rows, 9));
+            ReadInt(rows, 5), ReadInt(rows, 6), providerId, details, ReadManualTags(rows, 9))
+        {
+            AlternateTitles = ReadAlternateTitles(rows, 10),
+        };
     }
+
+    private static string[] ReadAlternateTitles(SqliteDataReader rows, int column) =>
+        ReadText(rows, column) is { } titles ? JsonSerializer.Deserialize<string[]>(titles) ?? [] : [];
 
     private static SeriesTag[]? ReadManualTags(SqliteDataReader rows, int index) =>
         ReadText(rows, index) is { } json ? JsonSerializer.Deserialize<SeriesTag[]>(json) : null;

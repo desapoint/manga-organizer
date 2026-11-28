@@ -138,9 +138,9 @@ internal sealed partial class LibraryStore
 
             LEFT JOIN series_metadata m ON m.id = COALESCE(linked.id, binding.metadata_id)
             """;
-        const string searchFilter = """
+        var searchFilter = $"""
              AND ($search = '' OR title_contains(f.relative_path, $search) OR title_contains(COALESCE(f.series_title, ''), $search)
-                OR title_contains(COALESCE(m.title, ''), $search) OR title_contains(COALESCE(m.alternate_title, ''), $search))
+                OR title_contains(COALESCE(m.title, ''), $search) OR {AlternateTitleSearch("m")})
             """;
         if (search.Length > 0) scope += " " + searchFilter;
         command.CommandText = volumeCoverage + "SELECT COUNT(*) " + sources + scope;

@@ -42,6 +42,7 @@ internal static class DatabaseMigrations
         new("0028-incremental-scan"),
         new("0029-scan-checkpoints"),
         new("0030-review-file-associations"),
+        new("0031-series-alternate-titles"),
     ];
 
     public static int Apply(string dataDirectory)

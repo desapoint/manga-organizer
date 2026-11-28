@@ -16,7 +16,7 @@ import type { LibraryRoot } from './library';
 import type { ReviewedFile } from './SeriesInfo';
 import { AniListSearchAction, MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
 import { EditionCoverage, SeriesChapterList, SeriesVolumeList } from './EditionCoverage';
-import { FileCover, SeriesCover, SeriesCoverDialog } from './SeriesCover';
+import { FileCover, FileCoverDialog, SeriesCover, SeriesCoverDialog } from './SeriesCover';
 import { duplicateFoldersHref, duplicateToolsHref, formatSize, isReadableArchive, organizeToolsHref, ROOTS_URL,
   seriesHref, seriesReaderHref } from './library';
 import { Select } from './Select';
@@ -197,7 +197,7 @@ function FileAssociationAction({ file, rootId, onSignedOut, onChange, intake }: 
     ? <Button variant="secondary" title={`Confirm association with ${title}`} disabled={busy} onClick={confirm}>Confirm association</Button>
     : <>
     <AniListSearchAction rootId={rootId} seriesKey={file.seriesKey} title={title} lookupTitle={lookupTitle} reviewFiles={reviewFiles} onSignedOut={onSignedOut} onChange={onChange} />
-    <MetadataDialogAction rootId={rootId} seriesKey={file.seriesKey} title={title} metadata={null} reviewFiles={reviewFiles}
+    <MetadataDialogAction rootId={rootId} seriesKey={file.seriesKey} title={title} lookupTitle={lookupTitle} metadata={null} reviewFiles={reviewFiles}
     onChange={onChange} onSignedOut={onSignedOut} actionLabel="Assign series metadata" />
   </>;
 }
@@ -255,6 +255,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   selection: ReturnType<typeof useReleaseSelection>; onAssociationChanged?: () => void; importGroupSize?: number; onCoverageChanged?: () => void;
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
+  const [coverOpen, setCoverOpen] = useState(false);
   const [move, setMove] = useState<'organize' | 'transfer' | null>(null);
   const [moving, setMoving] = useState(false);
   const intake = !!onInspect;
@@ -270,6 +271,8 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   const coverageLabel = onCoverageChanged ? 'Assign volume or chapters' : 'Set chapter coverage';
   const transferTarget = file.intakePath ? management?.intakeTarget : undefined;
   const updateAssociation = onAssociationChanged ?? management?.onDataChanged;
+  const fileArtwork = { rootId, fileId: file.id, available: file.hasCover, seriesCoverKey: file.seriesCoverKey, revision: version };
+  const cover = <FileCover {...fileArtwork} className={`shrink-0 rounded-sm ${intake ? 'h-15 w-10' : 'h-12 w-8'}`} />;
   function finish(change?: () => void) {
     selection.remove(file.id);
     change?.();
@@ -279,8 +282,9 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
       <span className="file-name flex min-w-0 items-center gap-3 max-[36rem]:col-span-full">
         {selection.enabled && <SelectReleaseCheckbox label={`Select ${onInspect ? [name, coverage].filter(Boolean).join(', ') : file.relativePath}`} disabled={!file.contentId}
           checked={selection.selected.has(file.id)} onChange={() => selection.toggle([file.id])} />}
-        <FileCover rootId={rootId} fileId={file.id} available={file.hasCover} seriesCoverKey={file.seriesCoverKey} revision={version}
-          className={`shrink-0 rounded-sm ${intake ? 'h-15 w-10' : 'h-12 w-8'}`} />
+        {file.hasCover || file.seriesCoverKey ? <button type="button" aria-label={`Enlarge cover for ${name}`}
+          className="group block shrink-0 cursor-pointer rounded-sm border-0 bg-transparent p-0"
+          onClick={() => setCoverOpen(true)}>{cover}</button> : cover}
         <span className="file-path" title={onInspect ? undefined : file.relativePath}>
           {onInspect ? <button type="button" className="min-h-11 cursor-pointer rounded-sm border-0 bg-transparent p-0 text-start
             text-inherit wrap-anywhere hover:text-accent-readable hover:underline desktop:min-h-0"
@@ -339,6 +343,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
             onSignedOut={onSignedOut} onApplying={setMoving} onApplied={() => { setMove(null); finish(management.onMoved); }} />
         </Modal>}
       </>}
+      {coverOpen && <FileCoverDialog {...fileArtwork} title={name} onClose={() => setCoverOpen(false)} />}
     </li>
   );
 }
@@ -501,7 +506,7 @@ function SeriesRow({ series, onInspect, coverVersion, catalogView, selection, ..
       {open && <>
         <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} management={inventory} catalogView={catalogView}
           importGroupSize={series.fileCount} seriesToolbar={actions => <SeriesInfo rootId={inventory.rootId} seriesKey={series.key}
-            title={series.title} version={inventory.version} onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut}
+            title={series.title} lookupTitle={series.lookupTitle} version={inventory.version} onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut}
             suggestion={series.aniList?.revision ? series.aniList.metadata : undefined} reviewFiles={series.reviewFiles} actions={actions} />} />
       </>}
     </div>

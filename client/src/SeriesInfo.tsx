@@ -1,8 +1,9 @@
-import { ExternalLink, Eye, EyeOff, Search, Save } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ExternalLink, Eye, EyeOff, Link2, Search, Save, Undo2, Unlink2 } from 'lucide-react';
+import { useEffect, useId, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { getCsrfToken } from './api';
 import { ROOTS_URL } from './library';
+import { MultiValueField } from './MultiValueField';
 import { Select } from './Select';
 import { CoverImage } from './SeriesCover';
 import { SeriesCoverEditor } from './SeriesCoverEditor';
@@ -17,6 +18,7 @@ export type Metadata = {
   title: string;
   kind: BookKind;
   alternateTitle: string | null;
+  alternateTitles: string[];
   summary: string | null;
   status: string | null;
   totalChapters: number | null;
@@ -54,6 +56,19 @@ export type Details = {
 };
 
 const kinds = [{ value: 'manga', label: 'Manga' }, { value: 'doujin', label: 'Doujin' }] as const;
+const unsetStatus = '__unset';
+const publicationStatuses = [
+  { value: unsetStatus, label: 'Unknown' },
+  { value: 'FINISHED', label: 'Finished' },
+  { value: 'RELEASING', label: 'Releasing' },
+  { value: 'NOT_YET_RELEASED', label: 'Not yet released' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+  { value: 'HIATUS', label: 'Hiatus' },
+];
+
+function alternateTitles(metadata: Metadata | null) {
+  return metadata?.alternateTitles ?? (metadata?.alternateTitle ? [metadata.alternateTitle] : []);
+}
 
 function publicationYears({ startYear, endYear }: AniListDetails) {
   if (startYear && endYear && startYear !== endYear) return `${startYear}–${endYear}`;
@@ -115,7 +130,7 @@ function metadataFields(metadata: Metadata | null, title: string) {
   return {
     title: metadata?.title ?? title,
     kind,
-    alternateTitle: metadata?.alternateTitle ?? '',
+    alternateTitles: alternateTitles(metadata),
     totalChapters: metadata?.totalChapters?.toString() ?? '',
     totalVolumes: metadata?.totalVolumes?.toString() ?? '',
     status: metadata?.status ?? '',
@@ -123,15 +138,18 @@ function metadataFields(metadata: Metadata | null, title: string) {
   };
 }
 
-function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadProvider, save }: {
-  title: string; metadata: Metadata | null; suggestion?: Metadata; linkSuggestion?: boolean;
+function SeriesMetadataForm({ context, metadata, suggestion, linkSuggestion, loadProvider, save }: {
+  context: AniListSearchProps; metadata: Metadata | null; suggestion?: Metadata; linkSuggestion?: boolean;
   loadProvider: (id: number) => Promise<Metadata>;
   save: (values: object) => Promise<void>;
 }) {
+  const { title } = context;
+  const titleId = useId();
   const [fields, setFields] = useState(() => metadataFields(metadata, title));
   const [hasKind, setHasKind] = useState(metadata !== null);
   const [draftLink, setDraftLink] = useState<Metadata | undefined>(() => linkSuggestion ? suggestion : undefined);
   const [removeMatch, setRemoveMatch] = useState(false);
+  const [searchTitle, setSearchTitle] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const notify = useToast();
   const [tagDraft, setTagDraft] = useState(() => draftForTags(metadata?.tags ?? []));
@@ -139,12 +157,20 @@ function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadP
   const [providerTags, setProviderTags] = useState(metadata?.providerDetails?.tags);
 
   const linked = metadata?.providerId ? metadata : undefined;
-  const match = removeMatch ? undefined : draftLink ?? suggestion ?? linked;
+  const match = removeMatch ? undefined : draftLink ?? linked ?? suggestion;
   const sourceId = match?.providerId;
-  const statusText = removeMatch ? 'Saving will keep local metadata and remove the AniList match.' :
-    draftLink ? 'Saving will link this series to AniList.' : linked ? 'Saving will keep this AniList link.' :
-    suggestion ? 'This is a suggestion. Saving now will keep the metadata local.' : 'Saving will keep these details on this server.';
+  const linkStatus = removeMatch && linked ? 'AniList link will be removed on save' :
+    draftLink && !removeMatch && draftLink.providerId !== linked?.providerId ? 'AniList link will be saved' :
+    linked && !removeMatch ? 'Linked to AniList' :
+    suggestion && !removeMatch ? 'Suggested AniList match · Unlinked' : 'Unlinked from AniList';
+  const hasTagOverride = tagMode === 'manual' || (tagMode === 'preserve' && metadata?.hasManualTags);
+  const statuses = fields.status && !publicationStatuses.some(option => option.value === fields.status)
+    ? [...publicationStatuses, { value: fields.status, label: fields.status }] : publicationStatuses;
 
+  function openSearch() {
+    const unchanged = fields.title === (metadata?.title ?? title);
+    setSearchTitle((unchanged && !metadata ? context.lookupTitle || fields.title : fields.title).trim());
+  }
 
   function update<K extends keyof typeof fields>(field: K, value: (typeof fields)[K]) {
     setFields(current => ({ ...current, [field]: value }));
@@ -160,24 +186,38 @@ function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadP
     setTagMode('manual');
   }
 
+  function stageMatch(candidate: Metadata) {
+    setSearchTitle(null);
+    setRemoveMatch(false);
+    setDraftLink(candidate);
+    const tags = candidate.providerDetails?.tags ?? [];
+    setProviderTags(tags);
+    if (!hasTagOverride) useLinkedTags(tags);
+  }
+
   async function applyProvider(replace: boolean) {
     if (!sourceId) return;
     setBusy(true);
     try {
-      const source = suggestion?.providerId === sourceId ? suggestion : await loadProvider(sourceId);
+      const staged = draftLink ?? suggestion;
+      const source = staged?.providerId === sourceId ? staged : await loadProvider(sourceId);
       const incoming = metadataFields(source, title);
-      setFields(current => replace ? incoming : {
-        title: current.title.trim() ? current.title : incoming.title,
-        kind: hasKind ? current.kind : incoming.kind,
-        alternateTitle: current.alternateTitle.trim() ? current.alternateTitle : incoming.alternateTitle,
-        totalChapters: current.totalChapters || incoming.totalChapters,
-        totalVolumes: current.totalVolumes || incoming.totalVolumes,
-        status: current.status.trim() ? current.status : incoming.status,
-        summary: current.summary.trim() ? current.summary : incoming.summary,
+      setFields(current => {
+        if (replace) return incoming;
+        const existingTitles = new Set(current.alternateTitles.map(value => value.toLowerCase()));
+        return {
+          title: current.title.trim() ? current.title : incoming.title,
+          kind: hasKind ? current.kind : incoming.kind,
+          alternateTitles: [...current.alternateTitles, ...incoming.alternateTitles
+            .filter(value => !existingTitles.has(value.toLowerCase()))].slice(0, 32),
+          totalChapters: current.totalChapters || incoming.totalChapters,
+          totalVolumes: current.totalVolumes || incoming.totalVolumes,
+          status: current.status.trim() ? current.status : incoming.status,
+          summary: current.summary.trim() ? current.summary : incoming.summary,
+        };
       });
       const sourceTags = source.providerDetails?.tags ?? [];
       setProviderTags(sourceTags);
-      const hasTagOverride = tagMode === 'manual' || (tagMode === 'preserve' && metadata?.hasManualTags);
       if (replace || !hasTagOverride || tagsFromDraft(tagDraft).length === 0) useLinkedTags(sourceTags);
       setHasKind(true);
       setDraftLink(source);
@@ -211,40 +251,45 @@ function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadP
     }
   }
 
-  return (
+  return <>
     <form onSubmit={handleSave} className="grid gap-3">
-      {(match || removeMatch || metadata) && <section aria-label="AniList match" className="grid gap-2 rounded-lg border border-line bg-inset p-3">
-        <div className="grid gap-1 min-w-0">
-          <strong className="text-sm">{removeMatch ? 'Match removed for this save' :
-            draftLink ? 'AniList match selected' : linked ? 'Linked to AniList' :
-            suggestion ? 'Suggested AniList match' : 'Local metadata'}</strong>
-          {match && <span className="text-sm wrap-anywhere">{match.title}</span>}
-          <p className="m-0 text-sm text-muted">{statusText}
-            {removeMatch && linked && ' This applies to the shared series and all its files.'}</p>
+      <div className="grid gap-1">
+        <label htmlFor={titleId}>Series title</label>
+        <div className="flex min-w-0 gap-1.5">
+          <input id={titleId} name="title" required maxLength={300} value={fields.title} className="flex-1"
+            onChange={event => update('title', event.target.value)}
+            onKeyDown={event => {
+              if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+              event.preventDefault();
+              openSearch();
+            }} />
+          {removeMatch ? <Button variant="secondary" icon={Undo2} aria-label="Undo removal" title="Undo removal"
+            disabled={busy} onClick={() => setRemoveMatch(false)} /> :
+            draftLink || linked ? <Button variant="secondary" icon={Unlink2} aria-label="Remove match" title="Remove AniList link"
+              disabled={busy} onClick={() => setRemoveMatch(true)} /> :
+            <Button variant="secondary" icon={Link2} aria-label={suggestion ? 'Link on save' : 'Choose an AniList link'}
+              title={suggestion ? 'Select suggested AniList match' : 'Choose an AniList link'} disabled={busy}
+              onClick={() => { if (suggestion) stageMatch(suggestion); else openSearch(); }} />}
+          <Button variant="secondary" icon={Search} aria-label="Find on AniList" title="Find on AniList" disabled={busy} onClick={openSearch} />
         </div>
-        {(match || removeMatch) && <div className="action-row">
-          {match?.providerUrl && <ActionLink variant="ghost" icon={ExternalLink} href={match.providerUrl}
-            target="_blank" rel="noreferrer">Open in AniList</ActionLink>}
-          {match && !draftLink && !linked && <Button variant="secondary" disabled={busy} onClick={() => setDraftLink(match)}>
-            Link on save
-          </Button>}
-          {match && <Button variant="ghost" disabled={busy} onClick={() => setRemoveMatch(true)}>Remove match</Button>}
-          {removeMatch && <Button variant="secondary" disabled={busy} onClick={() => setRemoveMatch(false)}>Undo removal</Button>}
-        </div>}
-      </section>}
-      <label className="grid gap-1">Series title<input name="title" required maxLength={300} value={fields.title}
-        onChange={event => update('title', event.target.value)} /></label>
-      <label className="grid gap-1">Alternate title<input name="alternateTitle" maxLength={300} value={fields.alternateTitle}
-        onChange={event => update('alternateTitle', event.target.value)} /></label>
-      <Select label="Publication type" value={fields.kind} onChange={value => { update('kind', value); setHasKind(true); }} options={kinds} />
-      <div className="grid gap-3 sm:grid-cols-2">
+        <section aria-label="AniList match" className="flex flex-wrap items-baseline gap-x-2 text-sm wrap-anywhere">
+          <strong className="text-muted" role="status">{linkStatus}</strong>
+          {match?.providerUrl && <a className="inline-flex items-center gap-1 text-accent-readable" href={match.providerUrl}
+            target="_blank" rel="noreferrer">{match.title}<ExternalLink className="size-3 shrink-0" aria-hidden="true" /></a>}
+          {removeMatch && linked && <span className="text-muted">This applies to the shared series and all its files.</span>}
+        </section>
+      </div>
+      <MultiValueField label="Alternate titles" itemLabel="alternate title" values={fields.alternateTitles} limit={32} maxLength={300}
+        onChange={value => update('alternateTitles', value)} disabled={busy} />
+      <div className="grid items-end gap-3 sm:grid-cols-3">
+        <Select label="Publication type" value={fields.kind} onChange={value => { update('kind', value); setHasKind(true); }} options={kinds} />
         <label className="grid gap-1">Total chapters<input name="totalChapters" type="number" min={1} max={100000}
           value={fields.totalChapters} onChange={event => update('totalChapters', event.target.value)} /></label>
         <label className="grid gap-1">Total volumes<input name="totalVolumes" type="number" min={1} max={100000}
           value={fields.totalVolumes} onChange={event => update('totalVolumes', event.target.value)} /></label>
       </div>
-      <label className="grid gap-1">Publication status<input name="status" maxLength={40} value={fields.status}
-        onChange={event => update('status', event.target.value)} /></label>
+      <Select label="Publication status" value={fields.status || unsetStatus} options={statuses}
+        onChange={value => update('status', value === unsetStatus ? '' : value)} />
       <label className="grid gap-1">Summary<textarea name="summary" rows={3} maxLength={6000} value={fields.summary}
         onChange={event => update('summary', event.target.value)} className="min-w-0 rounded-lg border border-control bg-field p-3 text-base text-ink" /></label>
       <SeriesTagFields draft={tagDraft} onChange={updateTags} disabled={busy} />
@@ -258,7 +303,10 @@ function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadP
         </>}
       </div>
     </form>
-  );
+    {searchTitle !== null && <Modal title="Find on AniList" wide onClose={() => setSearchTitle(null)}>
+      <AniListSearch {...context} lookupTitle={searchTitle} onPick={stageMatch} autoSearch />
+    </Modal>}
+  </>;
 }
 
 type SeriesContext = { rootId: string; seriesKey: string; title: string; version: string; onSignedOut: () => void };
@@ -287,7 +335,9 @@ export function useSeriesDetails({ rootId, seriesKey, version, onSignedOut, publ
   return { details, error };
 }
 
-type EditorProps = Omit<SeriesContext, 'version'> & { metadata: Metadata | null; onChange: () => void; published?: boolean; reviewFiles?: ReviewedFile[] };
+type EditorProps = Omit<SeriesContext, 'version'> & {
+  metadata: Metadata | null; onChange: () => void; published?: boolean; reviewFiles?: ReviewedFile[]; lookupTitle?: string;
+};
 
 export function MetadataDialogAction({ actionLabel = 'Edit metadata', ...props }: EditorProps & {
   actionLabel?: string; suggestion?: Metadata;
@@ -309,8 +359,8 @@ function MetadataDraftDialog({ onClose, suggestion, linkSuggestion, ...props }: 
     return metadataResponse(response, props.onSignedOut, 'Could not load AniList metadata.');
   }
 
-  return <Modal title="Edit series metadata" onClose={onClose}>
-    <SeriesMetadataForm title={props.title} metadata={props.metadata} suggestion={suggestion} linkSuggestion={linkSuggestion} loadProvider={loadProvider}
+  return <Modal title="Edit series metadata" wide onClose={onClose}>
+    <SeriesMetadataForm context={props} metadata={props.metadata} suggestion={suggestion} linkSuggestion={linkSuggestion} loadProvider={loadProvider}
       save={async values => {
         await saveMetadata(props, values);
         notify('success', 'Series metadata saved.');
@@ -324,7 +374,7 @@ function MetadataDraftDialog({ onClose, suggestion, linkSuggestion, ...props }: 
   </Modal>;
 }
 
-type AniListSearchProps = Omit<EditorProps, 'metadata'> & { lookupTitle?: string };
+type AniListSearchProps = Omit<EditorProps, 'metadata'>;
 
 export function AniListSearchAction({ iconOnly, disabled, onAssigningChange, ...props }: AniListSearchProps & {
   iconOnly?: boolean; disabled?: boolean; onAssigningChange?: (assigning: boolean) => void;
@@ -367,40 +417,49 @@ async function saveMetadata(props: Omit<EditorProps, 'metadata'>, body: object) 
   return metadataResponse(response, props.onSignedOut, 'Could not save series metadata.');
 }
 
-function AniListSearch({ onReview, onAssigningChange, lookupTitle, ...props }: AniListSearchProps & {
-  onReview: (metadata: Metadata | null, suggestion: Metadata) => void;
-  onAssigningChange: (assigning: boolean) => void;
+function AniListSearch({ onPick, onReview, onAssigningChange, lookupTitle, autoSearch, ...props }: AniListSearchProps & {
+  onPick?: (suggestion: Metadata) => void;
+  onReview?: (metadata: Metadata | null, suggestion: Metadata) => void;
+  onAssigningChange?: (assigning: boolean) => void;
+  autoSearch?: boolean;
 }) {
   const { title, onSignedOut, onChange } = props;
   const url = metadataUrl(props);
   const [query, setQuery] = useState(lookupTitle ?? title);
+  const [submitted, setSubmitted] = useState(() => autoSearch && query.trim() ? { title: query.trim() } : null);
   const [matches, setMatches] = useState<Metadata[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<{ id: number; action: 'choose' | 'review' } | null>(null);
   const notify = useToast();
 
-  async function findMetadata(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    if (!submitted) return;
+    const request = new AbortController();
     setLoading(true);
-    try {
-      const response = await fetch(url + '/metadata/search?' + new URLSearchParams({ title: query }));
-      if (response.status === 401) return onSignedOut();
-      if (!response.ok) {
-        const failure = await response.json().catch(() => null) as { message?: string } | null;
-        throw new Error(failure?.message ?? 'Metadata lookup failed.');
+    setMatches(null);
+    void (async () => {
+      try {
+        const response = await fetch(url + '/metadata/search?' + new URLSearchParams(submitted), { signal: request.signal });
+        if (response.status === 401) return onSignedOut();
+        if (!response.ok) {
+          const failure = await response.json().catch(() => null) as { message?: string } | null;
+          throw new Error(failure?.message ?? 'Metadata lookup failed.');
+        }
+        const results = await response.json() as Metadata[];
+        if (!request.signal.aborted) setMatches(results);
+      } catch (reason) {
+        if (!request.signal.aborted) notify('error', reason instanceof Error ? reason.message : 'Metadata lookup failed.');
+      } finally {
+        if (!request.signal.aborted) setLoading(false);
       }
-      setMatches(await response.json() as Metadata[]);
-    } catch (reason) {
-      notify('error', reason instanceof Error ? reason.message : 'Metadata lookup failed.');
-    } finally {
-      setLoading(false);
-    }
-  }
+    })();
+    return () => request.abort();
+  }, [submitted, url, onSignedOut, notify]);
 
   async function choose(candidate: Metadata) {
     if (candidate.providerId === null || saving) return;
     setSaving({ id: candidate.providerId, action: 'choose' });
-    onAssigningChange(true);
+    onAssigningChange?.(true);
     try {
       const saved = await saveMetadata(props, { providerId: candidate.providerId, kind: candidate.kind });
       notify('success', `Linked ${saved.title} to AniList.`);
@@ -409,12 +468,12 @@ function AniListSearch({ onReview, onAssigningChange, lookupTitle, ...props }: A
       notify('error', reason instanceof Error ? reason.message : 'Could not save series metadata.');
     } finally {
       setSaving(null);
-      onAssigningChange(false);
+      onAssigningChange?.(false);
     }
   }
 
   async function review(candidate: Metadata) {
-    if (candidate.providerId === null || saving) return;
+    if (!onReview || candidate.providerId === null || saving) return;
     setSaving({ id: candidate.providerId, action: 'review' });
     try {
       const response = await fetch(url + '/details' + (props.published ? '?published=true' : ''));
@@ -431,7 +490,7 @@ function AniListSearch({ onReview, onAssigningChange, lookupTitle, ...props }: A
 
   return (
     <div className="grid min-w-0 gap-4">
-      <form onSubmit={findMetadata} className="action-row">
+      <form onSubmit={event => { event.preventDefault(); setSubmitted({ title: query.trim() }); }} className="action-row">
         <SearchField aria-label="Metadata title" value={query} onChange={event => setQuery(event.target.value)} required maxLength={300}
           className="flex-[1_1_12rem]" />
         <Button type="submit" variant="secondary" icon={Search} disabled={loading || !!saving || !query.trim()}>
@@ -445,7 +504,7 @@ function AniListSearch({ onReview, onAssigningChange, lookupTitle, ...props }: A
             <CoverImage src={candidate.providerDetails?.coverUrl ?? undefined} className="h-21 w-14 shrink-0 rounded-md" />
             <div className="grid min-w-0 gap-1 wrap-anywhere">
               <strong>{candidate.title}</strong>
-              {candidate.alternateTitle && <span className="text-sm text-muted">{candidate.alternateTitle}</span>}
+              {alternateTitles(candidate).length > 0 && <span className="text-sm text-muted">{alternateTitles(candidate).join(' · ')}</span>}
               <span className="text-sm text-muted">
                 {[candidate.kind === 'doujin' ? 'Doujin' : 'Manga', candidate.providerDetails && publicationYears(candidate.providerDetails),
                   candidate.status?.toLowerCase().replaceAll('_', ' ')].filter(Boolean).join(' · ')}
@@ -456,10 +515,12 @@ function AniListSearch({ onReview, onAssigningChange, lookupTitle, ...props }: A
             {candidate.providerUrl && <ActionLink variant="ghost" icon={ExternalLink} href={candidate.providerUrl} target="_blank" rel="noreferrer">
               Open in AniList
             </ActionLink>}
-            <Button variant="secondary" disabled={saving !== null} onClick={() => void review(candidate)}>Review in editor</Button>
-            <Button variant="secondary" disabled={saving !== null} onClick={() => void choose(candidate)}>
-              {saving?.action === 'choose' && saving.id === candidate.providerId ? 'Linking…' : 'Use this match'}
-            </Button>
+            {onPick ? <Button variant="secondary" onClick={() => onPick(candidate)}>Select match</Button> : <>
+              <Button variant="secondary" disabled={saving !== null} onClick={() => void review(candidate)}>Review in editor</Button>
+              <Button variant="secondary" disabled={saving !== null} onClick={() => void choose(candidate)}>
+                {saving?.action === 'choose' && saving.id === candidate.providerId ? 'Linking…' : 'Use this match'}
+              </Button>
+            </>}
           </div>
         </li>)}
       </ul>}
@@ -477,17 +538,16 @@ export function MetadataStatus({ metadata, showProviderLink = false }: { metadat
 
 export function MetadataDescription({ metadata, layout = 'standard' }: { metadata: Metadata; layout?: 'standard' | 'preview' }) {
   const preview = layout === 'preview';
+  const titles = alternateTitles(metadata);
   const paragraphs = metadata.summary?.split(/\r\n?|\n/).map(paragraph => paragraph.trim()).filter(Boolean) ?? [];
   return <div className="grid min-w-0 gap-4 wrap-anywhere">
-    {preview ? metadata.alternateTitle && <section aria-label="Alternate titles" className="grid gap-1 text-sm">
+    {titles.length > 0 && <section aria-label="Alternate titles" className="grid gap-1 text-sm">
       <h3 className="m-0 font-semibold text-ink">Alternate titles</h3>
-      <p className="m-0 text-muted">{metadata.alternateTitle}</p>
-    </section> : <div className="grid gap-1 text-sm text-muted">
-      {metadata.alternateTitle && <p className="m-0">{metadata.alternateTitle}</p>}
-      <MetadataStatus metadata={metadata} showProviderLink />
-    </div>}
+      <MetadataTags names={titles} />
+    </section>}
+    {!preview && <MetadataStatus metadata={metadata} showProviderLink />}
     {paragraphs.length > 0 && <section aria-label="Synopsis" className={`grid max-w-prose gap-2 text-sm text-detail
-      ${!preview || metadata.alternateTitle ? 'border-t border-line pt-3' : ''}`}>
+      ${!preview || titles.length > 0 ? 'border-t border-line pt-3' : ''}`}>
       <h3 className="m-0 font-semibold text-ink">Synopsis</h3>
       {paragraphs.map((paragraph, index) => <p key={index} className="m-0">{paragraph}</p>)}
     </section>}
@@ -496,8 +556,8 @@ export function MetadataDescription({ metadata, layout = 'standard' }: { metadat
   </div>;
 }
 
-export function SeriesInfo({ onChange, suggestion, actions, reviewFiles, ...context }: SeriesContext & {
-  onChange: () => void; suggestion?: Metadata; actions?: ReactNode; reviewFiles?: ReviewedFile[];
+export function SeriesInfo({ onChange, suggestion, actions, reviewFiles, lookupTitle, ...context }: SeriesContext & {
+  onChange: () => void; suggestion?: Metadata; actions?: ReactNode; reviewFiles?: ReviewedFile[]; lookupTitle?: string;
 }) {
   const { details, error } = useSeriesDetails(context);
   const metadata = details?.metadata ?? null;
@@ -516,7 +576,8 @@ export function SeriesInfo({ onChange, suggestion, actions, reviewFiles, ...cont
       </details>}
     </>}
     <div className="action-row">
-      {details && <MetadataDialogAction {...context} metadata={metadata} suggestion={suggestion} reviewFiles={reviewFiles} onChange={onChange} />}
+      {details && <MetadataDialogAction {...context} metadata={metadata} suggestion={suggestion} reviewFiles={reviewFiles}
+        lookupTitle={lookupTitle} onChange={onChange} />}
       {actions}
     </div>
   </section>;

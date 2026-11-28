@@ -10,12 +10,13 @@ namespace MangaOrganizer.Server;
 internal sealed record MetadataMatch(int ProviderId, string Title, string? AlternateTitle, string Kind,
     string? Summary, string? Status, int? TotalChapters, int? TotalVolumes, AniListDetails ProviderDetails)
 {
+    public string[] AlternateTitles { get; init; } = AlternateTitle is null ? [] : [AlternateTitle];
     public string ProviderUrl => MetadataAgent.ListingUrl(ProviderId);
     [JsonIgnore]
-    public IReadOnlyList<string> LookupTitles { get; init; } = [];
+    public IEnumerable<string> LookupTitles => AlternateTitles.Prepend(Title);
 
     internal SeriesMetadata ToMetadata(string? kind = null) => new(Title, kind ?? Kind, AlternateTitle, Summary,
-        Status, TotalChapters, TotalVolumes, ProviderId, ProviderDetails);
+        Status, TotalChapters, TotalVolumes, ProviderId, ProviderDetails) { AlternateTitles = AlternateTitles };
 }
 
 internal sealed record AniListDetails(string? CoverUrl, string? Format, string? CountryOfOrigin, int? StartYear, int? EndYear,
@@ -189,11 +190,12 @@ internal sealed partial class MetadataAgent : IDisposable
         var country = media.CountryOfOrigin is { Length: 2 } code && code.All(char.IsAsciiLetter) ? code.ToUpperInvariant() : null;
         var details = new AniListDetails(CoverUrl(media.CoverImage?.Medium) ?? CoverUrl(media.CoverImage?.Large),
             Truncate(media.Format, 40), country, ValidYear(media.StartDate), ValidYear(media.EndDate), genres, tags, credits);
-        return new MetadataMatch(media.Id, titles[0], titles.Skip(1).FirstOrDefault(), doujin ? "doujin" : "manga",
+        var alternates = titles.Skip(1).Concat((media.Synonyms ?? []).Take(24).Select(value => Truncate(value, 300)).OfType<string>())
+            .Distinct(StringComparer.OrdinalIgnoreCase).Where(value => !string.Equals(value, titles[0], StringComparison.OrdinalIgnoreCase)).ToArray();
+        return new MetadataMatch(media.Id, titles[0], alternates.FirstOrDefault(), doujin ? "doujin" : "manga",
             Truncate(PlainDescription(media.Description), 6000), Truncate(media.Status, 40), ValidTotal(media.Chapters), ValidTotal(media.Volumes), details)
         {
-            LookupTitles = titles.Concat((media.Synonyms ?? []).Take(24).Select(value => Truncate(value, 300)).OfType<string>())
-                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            AlternateTitles = alternates,
         };
     }
 

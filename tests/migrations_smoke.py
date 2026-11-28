@@ -49,6 +49,7 @@ def verify_canonical_upgrade(app, fresh, data, target_version):
           closing(sqlite3.connect(data / "organizer.sqlite")) as database):
         source.backup(database)
         database.executescript("""
+            ALTER TABLE series_metadata DROP COLUMN alternate_titles;
             DROP TABLE file_association_review;
             ALTER TABLE content_metadata DROP COLUMN reviewed_locations_only;
             DROP TABLE library_scan_metadata;
@@ -131,6 +132,7 @@ def verify(app, fixture, previous_app=None):
     with closing(sqlite3.connect(fresh / "organizer.sqlite")) as database:
         assert database.execute("PRAGMA journal_mode = WAL").fetchone() == ("wal",)
         database.execute("PRAGMA wal_autocheckpoint = 0")
+        database.execute("ALTER TABLE series_metadata DROP COLUMN alternate_titles")
         database.execute("DROP TABLE file_association_review")
         database.execute("ALTER TABLE content_metadata DROP COLUMN reviewed_locations_only")
         database.execute("DROP TABLE library_scan_metadata")
@@ -171,8 +173,8 @@ def verify(app, fixture, previous_app=None):
         database.execute("ALTER TABLE series_metadata DROP COLUMN provider_details")
         database.execute("DELETE FROM schema_migration WHERE version >= 9")
         database.execute("""
-            INSERT INTO series_metadata(id, series_key, title, kind, provider_id, updated_at)
-            VALUES ('saved-series', 'series-key', 'Saved title', 'manga', 123, '2026-01-01')
+            INSERT INTO series_metadata(id, series_key, title, kind, provider_id, updated_at, alternate_title)
+            VALUES ('saved-series', 'series-key', 'Saved title', 'manga', 123, '2026-01-01', 'A title, with punctuation')
             """)
         database.commit()
         assert (fresh / "organizer.sqlite-wal").stat().st_size > 32
@@ -185,6 +187,8 @@ def verify(app, fixture, previous_app=None):
     assert entries(fresh)[:8] == installed[:8]
     with closing(sqlite3.connect(fresh / "organizer.sqlite")) as database:
         assert database.execute("SELECT title, provider_id, provider_details FROM series_metadata").fetchone() == ("Saved title", 123, None)
+        legacy_title, aliases = database.execute("SELECT alternate_title, alternate_titles FROM series_metadata").fetchone()
+        assert legacy_title == "A title, with punctuation" and json.loads(aliases) == [legacy_title]
 
     legacy = fixture / "legacy"
     legacy.mkdir()
