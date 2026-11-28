@@ -6,6 +6,7 @@ import type { Series } from './CatalogInventory';
 import { ROOTS_URL } from './library';
 import { Select } from './Select';
 import { draftForTags, SeriesTagFields, tagsFromDraft } from './SeriesTags';
+import { useToast } from './Toast';
 import { Button, Modal } from './ui';
 
 const kinds = [{ value: 'manga', label: 'Manga' }, { value: 'doujin', label: 'Doujin' }] as const;
@@ -22,14 +23,13 @@ export function IntakeGroupingDialog({ rootId, series, onClose, onSaved, onSigne
   const [confirm, setConfirm] = useState(false);
   const [tags, setTags] = useState(() => draftForTags([]));
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const notify = useToast();
   const saved = series.filter(item => item.hasMetadata);
   const target = saved.length === 1 ? saved[0] : undefined;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
-    setError('');
     try {
       const manualTags = confirm && !target ? tagsFromDraft(tags) : [];
       const response = await fetch(ROOTS_URL + '/' + rootId + '/group-series', {
@@ -43,9 +43,10 @@ export function IntakeGroupingDialog({ rootId, series, onClose, onSaved, onSigne
         const failure = await response.json().catch(() => null) as { message?: string } | null;
         throw new Error(failure?.message ?? 'Could not group these entries.');
       }
+      notify('success', 'Selected entries grouped.');
       onSaved();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not group these entries.');
+      notify('error', reason instanceof Error ? reason.message : 'Could not group these entries.');
     } finally {
       setBusy(false);
     }
@@ -71,7 +72,6 @@ export function IntakeGroupingDialog({ rootId, series, onClose, onSaved, onSigne
           <SeriesTagFields draft={tags} onChange={setTags} disabled={busy} />
         </>}
         {!target && <p className="m-0 text-sm text-muted">You can link the grouped series to AniList from its Import row.</p>}
-        {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
         <Button type="submit" icon={Group} className="justify-self-start" disabled={busy || (!target && !title.trim())}>
           {busy ? 'Grouping…' : 'Group selected'}
         </Button>

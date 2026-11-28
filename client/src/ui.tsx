@@ -3,6 +3,7 @@ import { createContext, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
 import type { ScanState } from './library';
+import { ToastAnchor } from './Toast';
 
 const buttonVariants = {
   primary: 'border-transparent bg-accent text-accent-ink not-disabled:hover:bg-accent-hover',
@@ -104,6 +105,7 @@ export function Modal({ title, onClose, children, className = '', wide = false }
     </div>
     <ModalPortalContext.Provider value={portal}>{children}</ModalPortalContext.Provider>
     <div ref={setPortal} />
+    <ToastAnchor />
   </dialog>;
 }
 

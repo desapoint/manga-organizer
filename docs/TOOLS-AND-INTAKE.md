@@ -34,6 +34,8 @@ The scanner recognizes compact convention labels such as `(COMITIA101)`, `(CR31)
 
 The AniList preview separates the synopsis, publication details, tags and actions. Consecutive line breaks collapse to a single paragraph break. Spoiler tags appear as filled placeholders after the regular tags. Use the eye button beside **Tags** to reveal or hide their names.
 
+Import uses equal-width title and AniList columns on wide screens, with fixed locations for confirmation, search and details. On narrow screens those columns stack. A match being saved disables its row and dialog actions. Task feedback appears in toasts so that confirmation and failure messages keep the inventory in place.
+
 In an expanded Import series, use the header checkbox to select all eligible files under the current intake filter, including files on other pages. When a series spans several parent folders, the folder checkboxes select files from one folder at a time. The round row controls select individual files. A horizontal line in the header or folder checkbox indicates a partial selection. Checking or clearing a release keeps the file row and its columns in place. Applying bulk tags clears the selection. Opening or canceling the preview preserves it. Each file has its own release tag action at the end of the row. File details link to the Duplicates tool when identical bytes are indexed in multiple locations.
 
 The metadata editor shows the current AniList link or proposed match and what saving will do. Selecting a suggestion stages the link. Removing a match stages a local-only save and keeps the editable fields and tags. For an already linked series, the change applies to the shared series record and retains its files and reading history.

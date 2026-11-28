@@ -8,6 +8,7 @@ import { CoverImage } from './SeriesCover';
 import { SeriesCoverEditor } from './SeriesCoverEditor';
 import { draftForTags, SeriesTagFields, tagsFromDraft } from './SeriesTags';
 import type { SeriesTag, TagDraft } from './SeriesTags';
+import { useToast } from './Toast';
 import { ActionLink, Button, Modal, SearchField, SectionHeader } from './ui';
 
 type BookKind = 'manga' | 'doujin';
@@ -121,8 +122,7 @@ function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadP
   const [draftLink, setDraftLink] = useState<Metadata | undefined>(() => linkSuggestion ? suggestion : undefined);
   const [removeMatch, setRemoveMatch] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const notify = useToast();
   const [tagDraft, setTagDraft] = useState(() => draftForTags(metadata?.tags ?? []));
   const [tagMode, setTagMode] = useState<'preserve' | 'manual' | 'provider'>('preserve');
   const [providerTags, setProviderTags] = useState(metadata?.providerDetails?.tags);
@@ -152,8 +152,6 @@ function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadP
   async function applyProvider(replace: boolean) {
     if (!sourceId) return;
     setBusy(true);
-    setError('');
-    setNotice('');
     try {
       const source = suggestion?.providerId === sourceId ? suggestion : await loadProvider(sourceId);
       const incoming = metadataFields(source, title);
@@ -172,9 +170,9 @@ function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadP
       if (replace || !hasTagOverride || tagsFromDraft(tagDraft).length === 0) useLinkedTags(sourceTags);
       setHasKind(true);
       setDraftLink(source);
-      setNotice('Review the updated fields and save to apply them.');
+      notify('success', 'Draft updated. Review the fields and save to apply them.');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not load AniList metadata.');
+      notify('error', reason instanceof Error ? reason.message : 'Could not load AniList metadata.');
     } finally {
       setBusy(false);
     }
@@ -183,7 +181,6 @@ function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadP
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
-    setError('');
     try {
       await save({
         ...fields,
@@ -197,7 +194,7 @@ function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadP
         expectedAniListId: removeMatch ? linked?.providerId ?? null : undefined,
       });
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not save series metadata.');
+      notify('error', reason instanceof Error ? reason.message : 'Could not save series metadata.');
     } finally {
       setBusy(false);
     }
@@ -220,7 +217,7 @@ function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadP
           {match && !draftLink && !linked && <Button variant="secondary" disabled={busy} onClick={() => setDraftLink(match)}>
             Link on save
           </Button>}
-          {match && <Button variant="ghost" disabled={busy} onClick={() => { setRemoveMatch(true); setNotice(''); }}>Remove match</Button>}
+          {match && <Button variant="ghost" disabled={busy} onClick={() => setRemoveMatch(true)}>Remove match</Button>}
           {removeMatch && <Button variant="secondary" disabled={busy} onClick={() => setRemoveMatch(false)}>Undo removal</Button>}
         </div>}
       </section>}
@@ -242,8 +239,6 @@ function SeriesMetadataForm({ title, metadata, suggestion, linkSuggestion, loadP
       <SeriesTagFields draft={tagDraft} onChange={updateTags} disabled={busy} />
       {providerTags && match && <Button variant="secondary" className="justify-self-start" disabled={busy}
         onClick={() => useLinkedTags(providerTags)}>Use AniList tags</Button>}
-      {notice && <p role="status" className="m-0 text-sm text-muted">{notice}</p>}
-      {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
       <div className="action-row">
         <Button type="submit" icon={Save} disabled={busy}>Save details</Button>
         {sourceId && <>
@@ -297,6 +292,7 @@ function MetadataDraftDialog({ onClose, suggestion, linkSuggestion, ...props }: 
   onClose: () => void; suggestion?: Metadata; linkSuggestion?: boolean;
 }) {
   const [coversOpen, setCoversOpen] = useState(false);
+  const notify = useToast();
   async function loadProvider(id: number) {
     const response = await fetch(metadataUrl(props) + '/metadata/anilist/' + id);
     return metadataResponse(response, props.onSignedOut, 'Could not load AniList metadata.');
@@ -304,7 +300,12 @@ function MetadataDraftDialog({ onClose, suggestion, linkSuggestion, ...props }: 
 
   return <Modal title="Edit series metadata" onClose={onClose}>
     <SeriesMetadataForm title={props.title} metadata={props.metadata} suggestion={suggestion} linkSuggestion={linkSuggestion} loadProvider={loadProvider}
-      save={async values => { await saveMetadata(props, values); onClose(); props.onChange(); }} />
+      save={async values => {
+        await saveMetadata(props, values);
+        notify('success', 'Series metadata saved.');
+        onClose();
+        props.onChange();
+      }} />
     {props.metadata && <details className="mt-4 border-t border-line" onToggle={event => setCoversOpen(event.currentTarget.open)}>
       <summary className="min-h-11 cursor-pointer py-3 font-semibold">Series cover</summary>
       {coversOpen && <SeriesCoverEditor url={metadataUrl(props)} published={props.published} onSaved={props.onChange} onSignedOut={props.onSignedOut} />}
@@ -314,15 +315,20 @@ function MetadataDraftDialog({ onClose, suggestion, linkSuggestion, ...props }: 
 
 type AniListSearchProps = Omit<EditorProps, 'metadata'> & { lookupTitle?: string };
 
-export function AniListSearchAction({ iconOnly, ...props }: AniListSearchProps & { iconOnly?: boolean }) {
+export function AniListSearchAction({ iconOnly, disabled, onAssigningChange, ...props }: AniListSearchProps & {
+  iconOnly?: boolean; disabled?: boolean; onAssigningChange?: (assigning: boolean) => void;
+}) {
   const [open, setOpen] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   const [draft, setDraft] = useState<{ metadata: Metadata | null; suggestion: Metadata } | null>(null);
 
   return <>
-    <Button variant="ghost" icon={Search} aria-label="Find on AniList" title="Find on AniList"
+    <Button variant="ghost" icon={Search} aria-label="Find on AniList" title="Find on AniList" disabled={disabled || assigning}
+      className={iconOnly ? 'size-11 px-0 py-0' : undefined}
       onClick={() => setOpen(true)}>{!iconOnly && 'Find on AniList'}</Button>
-    {open && <Modal title="Find on AniList" wide onClose={() => setOpen(false)}>
+    {open && <Modal title="Find on AniList" wide onClose={() => { if (!assigning) setOpen(false); }}>
       <AniListSearch {...props} onChange={() => { setOpen(false); props.onChange(); }}
+        onAssigningChange={value => { setAssigning(value); onAssigningChange?.(value); }}
         onReview={(metadata, suggestion) => { setOpen(false); setDraft({ metadata, suggestion }); }} />
     </Modal>}
     {draft && <MetadataDraftDialog {...props} {...draft} linkSuggestion onClose={() => setDraft(null)} />}
@@ -350,20 +356,20 @@ async function saveMetadata(props: Omit<EditorProps, 'metadata'>, body: object) 
   return metadataResponse(response, props.onSignedOut, 'Could not save series metadata.');
 }
 
-function AniListSearch({ onReview, lookupTitle, ...props }: AniListSearchProps & {
+function AniListSearch({ onReview, onAssigningChange, lookupTitle, ...props }: AniListSearchProps & {
   onReview: (metadata: Metadata | null, suggestion: Metadata) => void;
+  onAssigningChange: (assigning: boolean) => void;
 }) {
   const { title, onSignedOut, onChange } = props;
   const url = metadataUrl(props);
   const [query, setQuery] = useState(lookupTitle ?? title);
   const [matches, setMatches] = useState<Metadata[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState<number | null>(null);
-  const [error, setError] = useState('');
+  const [saving, setSaving] = useState<{ id: number; action: 'choose' | 'review' } | null>(null);
+  const notify = useToast();
 
   async function findMetadata(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError('');
     setLoading(true);
     try {
       const response = await fetch(url + '/metadata/search?' + new URLSearchParams({ title: query }));
@@ -374,30 +380,31 @@ function AniListSearch({ onReview, lookupTitle, ...props }: AniListSearchProps &
       }
       setMatches(await response.json() as Metadata[]);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Metadata lookup failed.');
+      notify('error', reason instanceof Error ? reason.message : 'Metadata lookup failed.');
     } finally {
       setLoading(false);
     }
   }
 
   async function choose(candidate: Metadata) {
-    if (candidate.providerId === null) return;
-    setError('');
-    setSaving(candidate.providerId);
+    if (candidate.providerId === null || saving) return;
+    setSaving({ id: candidate.providerId, action: 'choose' });
+    onAssigningChange(true);
     try {
-      await saveMetadata(props, { providerId: candidate.providerId, kind: candidate.kind });
+      const saved = await saveMetadata(props, { providerId: candidate.providerId, kind: candidate.kind });
+      notify('success', `Linked ${saved.title} to AniList.`);
       onChange();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not save series metadata.');
+      notify('error', reason instanceof Error ? reason.message : 'Could not save series metadata.');
     } finally {
       setSaving(null);
+      onAssigningChange(false);
     }
   }
 
   async function review(candidate: Metadata) {
-    if (candidate.providerId === null) return;
-    setError('');
-    setSaving(candidate.providerId);
+    if (candidate.providerId === null || saving) return;
+    setSaving({ id: candidate.providerId, action: 'review' });
     try {
       const response = await fetch(url + '/details' + (props.published ? '?published=true' : ''));
       if (response.status === 401) return onSignedOut();
@@ -405,7 +412,7 @@ function AniListSearch({ onReview, lookupTitle, ...props }: AniListSearchProps &
       const details = await response.json() as Details;
       onReview(details.metadata, candidate);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not open the metadata editor.');
+      notify('error', reason instanceof Error ? reason.message : 'Could not open the metadata editor.');
     } finally {
       setSaving(null);
     }
@@ -416,7 +423,7 @@ function AniListSearch({ onReview, lookupTitle, ...props }: AniListSearchProps &
       <form onSubmit={findMetadata} className="action-row">
         <SearchField aria-label="Metadata title" value={query} onChange={event => setQuery(event.target.value)} required maxLength={300}
           className="flex-[1_1_12rem]" />
-        <Button type="submit" variant="secondary" icon={Search} disabled={loading || !query.trim()}>
+        <Button type="submit" variant="secondary" icon={Search} disabled={loading || !!saving || !query.trim()}>
           {loading ? 'Looking up…' : 'Search AniList'}
         </Button>
       </form>
@@ -440,12 +447,11 @@ function AniListSearch({ onReview, lookupTitle, ...props }: AniListSearchProps &
             </ActionLink>}
             <Button variant="secondary" disabled={saving !== null} onClick={() => void review(candidate)}>Review in editor</Button>
             <Button variant="secondary" disabled={saving !== null} onClick={() => void choose(candidate)}>
-              Use this match
+              {saving?.action === 'choose' && saving.id === candidate.providerId ? 'Linking…' : 'Use this match'}
             </Button>
           </div>
         </li>)}
       </ul>}
-      {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
     </div>
   );
 }

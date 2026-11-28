@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { getCsrfToken } from './api';
 import { Select } from './Select';
+import { useToast } from './Toast';
 import { Button, Modal } from './ui';
 
 export const colorOptions = [
@@ -113,6 +114,7 @@ function BulkReleaseTagsDialog({ rootId, fileIds, onSignedOut, onClose, onSaved 
   const [clear, setClear] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const notify = useToast();
   const [stale, setStale] = useState(false);
   const choices = field === 'color' ? colorOptions : field === 'censorship' ? censorshipOptions : null;
   const fieldLabel = releaseFields.find(item => item.value === field)?.label;
@@ -152,9 +154,10 @@ function BulkReleaseTagsDialog({ rootId, fileIds, onSignedOut, onClose, onSaved 
         const details = await response.json().catch(() => null) as { message?: string } | null;
         throw new Error(details?.message ?? 'Could not save release tags.');
       }
+      notify('success', 'Release tags saved.');
       onSaved();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not save release tags.');
+      notify('error', reason instanceof Error ? reason.message : 'Could not save release tags.');
     } finally {
       setBusy(false);
     }
@@ -213,6 +216,7 @@ function ReleaseTagsDialog({ rootId, fileId, onSignedOut, onSaved, onClose }: Ed
   const [release, setRelease] = useState<Release | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const notify = useToast();
   useEffect(() => {
     const controller = new AbortController();
     void fetch(url, { signal: controller.signal }).then(async response => {
@@ -241,10 +245,11 @@ function ReleaseTagsDialog({ rootId, fileId, onSignedOut, onSaved, onClose }: Ed
         const details = await response.json().catch(() => null) as { message?: string } | null;
         throw new Error(details?.message ?? 'Could not save release tags.');
       }
+      notify('success', 'Release tags saved.');
       onSaved?.();
       onClose();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not save release tags.');
+      notify('error', reason instanceof Error ? reason.message : 'Could not save release tags.');
     } finally {
       setBusy(false);
     }

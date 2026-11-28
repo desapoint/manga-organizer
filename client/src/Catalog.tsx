@@ -12,6 +12,7 @@ import { Overview } from './Overview';
 import { ScanFolderInfo, ScanStatus } from './ScanStatus';
 import { Select } from './Select';
 import { ToolsHub } from './ToolsHub';
+import { useToast } from './Toast';
 import { ActionLink, Button, PageHeader, SectionHeader } from './ui';
 
 export type CatalogView = FolderRole | 'settings' | 'overview' | 'collections' | 'tools';
@@ -25,7 +26,7 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
   const [refresh, setRefresh] = useState(0);
   const [scanPending, setScanPending] = useState(false);
   const [rootsError, setRootsError] = useState('');
-  const [scanError, setScanError] = useState('');
+  const notify = useToast();
 
   const catalogView = view === 'library' || view === 'import';
   const visibleRoots = catalogView ? roots?.filter(root => root.kind === view || root.kind === 'both') : [];
@@ -33,10 +34,6 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
   const folderOptions = visibleRoots?.map(root => ({ value: root.id, label: root.name || root.path, description: root.name ? root.path : undefined })) ?? [];
   const rootId = selected?.id;
   const inventoryVersion = roots?.map(root => `${root.id}:${root.lastScannedAt}`).join('|');
-
-  useEffect(() => {
-    setScanError('');
-  }, [view]);
 
   useEffect(() => {
     const request = new AbortController();
@@ -69,7 +66,6 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
   async function scanRequest(action: 'quick' | 'full' | 'pause' | 'resume' | 'stop') {
     if (!rootId) return;
     setScanPending(true);
-    setScanError('');
     try {
       const suffix = action === 'quick' || action === 'full' ? `?full=${action === 'full'}` : '/' + action;
       const response = await fetch(`${ROOTS_URL}/${rootId}/scan${suffix}`, {
@@ -82,7 +78,7 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
         throw new Error(problem?.message ?? 'Could not update the scan. Check its status and try again.');
       }
     } catch (reason) {
-      setScanError(reason instanceof Error ? reason.message : 'Could not update the scan.');
+      notify('error', reason instanceof Error ? reason.message : 'Could not update the scan.');
     } finally {
       setScanPending(false);
     }
@@ -131,10 +127,7 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
             </div>
             <div className="catalog-controls">
               <Select className="flex-[1_1_13rem]" label={folderTitle} hideLabel
-                value={selected.id} options={folderOptions} onChange={id => {
-                  setSelectedId(id);
-                  setScanError('');
-                }} />
+                value={selected.id} options={folderOptions} onChange={setSelectedId} />
               <div className="action-row">
                 {paused || scanActive ? <>
                   {paused ? <Button icon={Play} aria-label="Resume scan" title="Resume scan" disabled={controlPending}
@@ -150,7 +143,6 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
             </div>
             <ScanStatus root={selected} />
           </div>
-          {scanError && <p role="alert" className="error">{scanError}</p>}
           {view === 'import' && roots && <>
             <IntakeTransfer source={selected} folders={roots} version={`${inventoryVersion}:${refresh}`}
               onSignedOut={onSignedOut} onChanged={() => setRefresh(value => value + 1)} />
