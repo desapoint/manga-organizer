@@ -1,7 +1,9 @@
-import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Info, Library, ListOrdered, Split, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ImagePlus, Info, Library, ListOrdered, Split, X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getCsrfToken } from './api';
+import { BulkCoverageRow, useBulkFileCoverage } from './BulkFileCoverage';
+import type { FileCoverageState } from './BulkFileCoverage';
 import { ChapterCoverage } from './ChapterCoverage';
 import { CollectionForm, emptyFilters, SeriesCollectionMembership, TagRulesFields, useTagNames } from './CollectionControls';
 import type { TagRules } from './CollectionControls';
@@ -17,6 +19,7 @@ import type { ReviewedFile } from './SeriesInfo';
 import { AniListSearchAction, MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
 import { EditionCoverage, SeriesChapterList, SeriesVolumeList } from './EditionCoverage';
 import { FileCover, FileCoverDialog, SeriesCover, SeriesCoverDialog } from './SeriesCover';
+import { SeriesCoverEditor } from './SeriesCoverEditor';
 import { duplicateFoldersHref, duplicateToolsHref, formatSize, isReadableArchive, organizeToolsHref, ROOTS_URL,
   seriesHref, seriesReaderHref } from './library';
 import { Select } from './Select';
@@ -45,6 +48,7 @@ type CatalogEntry = {
   filenameEvidence?: { title: string; alternateTitle: string | null; event: string | null; creator: string | null; notes: string[] } | null;
   intakePath?: string | null;
   lookupTitle?: string;
+  coverage?: FileCoverageState;
 };
 
 export type Series = { rootId: string; key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean;
@@ -196,8 +200,10 @@ function FileAssociationAction({ file, rootId, onSignedOut, onChange, intake }: 
   return file.hasSeriesMetadata
     ? <Button variant="secondary" title={`Confirm association with ${title}`} disabled={busy} onClick={confirm}>Confirm association</Button>
     : <>
-    <AniListSearchAction rootId={rootId} seriesKey={file.seriesKey} title={title} lookupTitle={lookupTitle} reviewFiles={reviewFiles} onSignedOut={onSignedOut} onChange={onChange} />
-    <MetadataDialogAction rootId={rootId} seriesKey={file.seriesKey} title={title} lookupTitle={lookupTitle} metadata={null} reviewFiles={reviewFiles}
+    <AniListSearchAction rootId={rootId} seriesKey={file.seriesKey} title={title} lookupTitle={lookupTitle} localFile={file}
+      reviewFiles={reviewFiles} onSignedOut={onSignedOut} onChange={onChange} />
+    <MetadataDialogAction rootId={rootId} seriesKey={file.seriesKey} title={title} lookupTitle={lookupTitle} localFile={file}
+    metadata={null} reviewFiles={reviewFiles}
     onChange={onChange} onSignedOut={onSignedOut} actionLabel="Assign series metadata" />
   </>;
 }
@@ -249,6 +255,17 @@ function formatReleaseNumber(number: string) {
   return whole.padStart(2, '0') + (fraction ? `.${fraction}` : '');
 }
 
+function fileCoverageLabel(file: CatalogEntry, compact: boolean) {
+  const volume = file.coverage ? file.coverage.volume : file.volume;
+  const chapters = file.coverage?.chapters ?? (file.chapter ? [file.chapter] : []);
+  const number = (label: string) => compact ? formatReleaseNumber(label) : label;
+  const space = compact ? '' : ' ';
+  const volumeLabel = file.coverage?.multipleVolumes ? 'Multiple volumes' : volume && `Vol.${space}${number(volume)}`;
+  const chapterList = chapters.slice(0, 2).map(number).join(', ');
+  const remaining = chapters.length > 2 ? ` +${chapters.length - 2}` : '';
+  return [volumeLabel, chapterList && `Ch.${space}${chapterList}${remaining}`].filter(Boolean).join(compact ? ' - ' : ' · ');
+}
+
 function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut, selection, onAssociationChanged, importGroupSize, onCoverageChanged }:
   Pick<InventoryProps, 'rootId' | 'version'> & {
   file: CatalogEntry; seriesKey?: string; onInspect?: Inspect; onSignedOut: () => void; management?: FileManagement;
@@ -261,9 +278,8 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   const intake = !!onInspect;
   const separator = file.relativePath.lastIndexOf('/');
   const name = onInspect ? intakeFileTitle(file) ?? 'Unidentified file' : file.relativePath.slice(separator + 1);
-  const coverage = [file.volume && `Vol. ${file.volume}`, file.chapter && `Ch. ${file.chapter}`].filter(Boolean).join(' · ');
-  const detectedCoverage = [file.volume && `Vol.${formatReleaseNumber(file.volume)}`, file.chapter && `Ch.${formatReleaseNumber(file.chapter)}`]
-    .filter(Boolean).join(' - ');
+  const coverage = fileCoverageLabel(file, false);
+  const compactCoverage = fileCoverageLabel(file, true);
   const readerHref = file.contentId && isReadableArchive(file.extension) ? (intake ? `#read/${file.contentId}/intake` :
     seriesKey ? seriesReaderHref(file.contentId, rootId, seriesKey) : `#read/${file.contentId}`) : null;
   const saveCoverage = onCoverageChanged ?? management?.onDataChanged;
@@ -299,7 +315,8 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
           )}
         </span>
       </span>
-      {intake && <span className="file-numbering min-w-0 wrap-anywhere tabular-nums">{detectedCoverage}</span>}
+      {intake && <span className="file-numbering min-w-0 wrap-anywhere tabular-nums"
+        title={file.coverage?.chapters.join(', ') || undefined}>{compactCoverage}</span>}
       <span className="file-format">{file.extension.toUpperCase()}</span>
       <span className="file-size">{formatSize(file.size)}</span>
       <time dateTime={file.modifiedAt}>{new Date(file.modifiedAt).toLocaleDateString()}</time>
@@ -372,9 +389,16 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
   onAssociationChanged?: () => void; importGroupSize?: number; onCoverageChanged?: () => void;
   seriesToolbar?: (actions: ReactNode) => ReactNode;
 }) {
+  const bulkCoverage = useBulkFileCoverage(rootId, catalogView === 'library', onSignedOut, () => {
+    selection.stop();
+    (onCoverageChanged ?? management?.onDataChanged)?.();
+  });
+  const editingCoverage = bulkCoverage.drafts !== null;
+  const canEditCoverage = !!onCoverageChanged || !!onInspect && !!management;
   const params = new URLSearchParams({ search, view: catalogView });
   if (seriesKey) params.set('seriesKey', seriesKey);
   if (volume) params.set('volume', volume);
+  if (canEditCoverage) params.set('includeCoverage', 'true');
   const { page, offset, setOffset, error, retry } = useInventoryPage<CatalogEntry>(`${ROOTS_URL}/${rootId}/files`, version, onSignedOut, params);
   const persistent = !!onInspect && !!management;
   const foldersUrl = persistent && seriesKey ? `${ROOTS_URL}/${rootId}/series/${seriesKey}/release-folders?view=${catalogView}` : '';
@@ -389,6 +413,17 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
   const rowActions = onInspect ? ' with-file-actions' : '';
   const tagActions = management && (persistent || pageIds.length > 0) ? <ReleaseSelectionActions selection={selection}
     pageIds={pageIds} rootId={rootId} onSignedOut={onSignedOut} onSaved={management.onDataChanged} persistent={persistent} /> : null;
+  const actions = editingCoverage ? <>
+    <Button disabled={bulkCoverage.busy || !bulkCoverage.drafts?.size} onClick={() => void bulkCoverage.apply()}>
+      {bulkCoverage.busy ? 'Applying…' : 'Apply changes'}
+    </Button>
+    <Button variant="secondary" disabled={bulkCoverage.busy} onClick={bulkCoverage.cancel}>Cancel</Button>
+    <span role="status" className="text-sm text-muted">{bulkCoverage.drafts?.size ?? 0} edited</span>
+  </> : <>
+    {tagActions}
+    {canEditCoverage && <Button variant="secondary" icon={ListOrdered}
+      disabled={pageIds.length === 0} onClick={bulkCoverage.start}>Edit volumes and chapters</Button>}
+  </>;
   const visibleFolders = new Map<string, CatalogEntry[]>();
   for (const file of page?.items ?? []) {
     const directory = showFolders ? file.relativePath.slice(0, Math.max(0, file.relativePath.lastIndexOf('/'))) : '';
@@ -406,7 +441,11 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
 
   return (
     <>
-      {seriesToolbar?.(tagActions)}
+      {seriesToolbar?.(actions)}
+      {!seriesToolbar && (canEditCoverage || tagActions) && <div className="action-row border-b border-line px-4 py-2">{actions}</div>}
+      {editingCoverage && <p className="m-0 px-4 py-2 text-sm text-muted">
+        Enter a volume alone for a whole volume, or separate chapters with commas. Clear both fields to restore detected coverage.
+      </p>}
       {error && <div className="px-4 pb-3"><InventoryError retry={retry}>Could not load files.</InventoryError></div>}
       {!page && !error && <p className="px-4" role="status">Loading files…</p>}
       {folderResult && !folders && <p role="alert" className="m-0 px-4 py-2 text-sm text-danger">Could not load folder selection. Individual files remain selectable.</p>}
@@ -414,7 +453,9 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
         'No files in the current inventory.' : 'No files match this view.'}</p>}
       {page && page.total > 0 && (
         <div className={`${seriesKey ? 'min-w-0 rounded-b-xl border-t border-line bg-inset' : 'surface'}${onInspect ? ' @container/intake-files' : ''}`}>
-          {!seriesToolbar && tagActions && <div className="action-row border-b border-line px-4 py-2">{tagActions}</div>}
+          {editingCoverage ? <ul className="@container m-0 list-none p-0" role="list" aria-label={`${label} coverage editor`}>
+            {page.items.map(file => <BulkCoverageRow key={file.id} file={file} editor={bulkCoverage} />)}
+          </ul> : <>
           <div className={`catalog-columns${rowActions}${foldersUrl ? ' with-series-selection' : ''}`}>
             {foldersUrl ? <span className="flex min-w-0 items-center gap-3">
               <SelectReleaseCheckbox label="Select all files in this series" checked={selectionState(seriesFileIds ?? [])}
@@ -444,6 +485,7 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
               ];
             })}
           </ul>
+          </>}
           {page.total > PAGE_SIZE && (
             <div className="border-t border-line p-3">
               <PageControls label={`${label} pages`} offset={offset} count={page.items.length} total={page.total} onChange={setOffset} />
@@ -511,7 +553,8 @@ function SeriesRow({ series, onInspect, coverVersion, catalogView, selection, ..
       </>}
     </div>
     {coverOpen && <SeriesCoverDialog title={series.title} wide onClose={() => setCoverOpen(false)}
-      rootId={inventory.rootId} seriesKey={series.key} available={series.hasCover} preferredSrc={matchCover} revision={coverVersion} />}
+      rootId={inventory.rootId} seriesKey={series.key} available={series.hasCover} preferredSrc={matchCover}
+      preferredLargeSrc={series.aniList?.metadata.providerDetails?.coverLargeUrl ?? undefined} revision={coverVersion} />}
   </li>;
 
   return (
@@ -553,7 +596,7 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, onInventoryChang
   seriesKey: string; coverVersion: string; rootPath?: string; onInventoryChanged: () => void;
 }) {
   const [revision, setRevision] = useState(0);
-  const [dialog, setDialog] = useState<'info' | 'cover' | null>(null);
+  const [dialog, setDialog] = useState<'info' | 'cover' | 'cover-editor' | null>(null);
   const [selectedView, setView] = useState<SeriesView | null>(null);
   const [volume, setVolume] = useState<string | null>(null);
   const catalog = { ...inventory, version: `${inventory.version}:${revision}` };
@@ -589,6 +632,7 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, onInventoryChang
               {reading.pageIndex !== null ? 'Continue reading' : reading.hasFinishedFile ? 'Read next file' : 'Start reading'}
             </ActionLink>}
             <Button variant="secondary" icon={Info} onClick={() => setDialog('info')}>More info</Button>
+            {metadata && <Button variant="secondary" icon={ImagePlus} onClick={() => setDialog('cover-editor')}>Change cover</Button>}
             <MetadataDialogAction rootId={rootId} seriesKey={seriesKey} title={title} metadata={metadata} published
               onChange={onDataChanged} onSignedOut={onSignedOut} />
             <AniListSearchAction rootId={rootId} seriesKey={seriesKey} title={title} published
@@ -640,6 +684,9 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, onInventoryChang
       </Modal>}
       {dialog === 'cover' && <SeriesCoverDialog title={title} onClose={() => setDialog(null)}
         rootId={rootId} seriesKey={series?.coverSeriesKey ?? seriesKey} available revision={coverVersion} />}
+      {dialog === 'cover-editor' && <Modal title="Change series cover" wide onClose={() => setDialog(null)}>
+        <SeriesCoverEditor url={seriesUrl} published onSaved={onDataChanged} onSignedOut={onSignedOut} />
+      </Modal>}
     </section>
   );
 }

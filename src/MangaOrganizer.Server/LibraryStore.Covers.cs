@@ -38,13 +38,18 @@ internal sealed partial class LibraryStore
         return cleared;
     }
 
-    public SeriesCoverPicture? ReadCover(Guid rootId, string seriesKey)
+    public SeriesCoverPicture? ReadCover(Guid rootId, string seriesKey, bool highResolution = false)
     {
         using var database = OpenCoverDatabase();
         using var command = database.CreateCommand();
         command.Parameters.AddWithValue("$root", rootId);
         command.Parameters.AddWithValue("$series", seriesKey);
-        if (GroupExists(command) && ReadPreferredCover(command) is { } preferred) return preferred;
+        if (GroupExists(command) && ReadPreferredCover(command) is { } preferred)
+        {
+            return highResolution && preferred.ProviderUrl is not null &&
+                MetadataAgent.CoverUrl(ReadMetadata(command)?.ProviderDetails?.CoverLargeUrl) is { } larger
+                ? preferred with { ProviderUrl = larger } : preferred;
+        }
 
         command.CommandText = """
             SELECT folder.path, cover.relative_path, cover.size, cover.modified_at, cover.archive_entry, cover.sha256, image.data

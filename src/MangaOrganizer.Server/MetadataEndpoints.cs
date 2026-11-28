@@ -5,8 +5,11 @@ namespace MangaOrganizer.Server;
 
 internal sealed record MetadataChange(int? ProviderId, string? Title, string? Kind, string? AlternateTitle, string? Summary,
     string? Status, int? TotalChapters, int? TotalVolumes, bool UseEditedFields = false, SeriesTag?[]? Tags = null, bool UseProviderTags = false,
-    bool RemoveAniListLink = false, int? ExpectedAniListId = null, SeriesFileReview[]? ReviewFiles = null, string?[]? AlternateTitles = null);
+    bool RemoveAniListLink = false, int? ExpectedAniListId = null, SeriesFileReview[]? ReviewFiles = null, string?[]? AlternateTitles = null,
+    string? SummaryMarkup = null);
 internal sealed record CoverageChange(string? ContentId, string? Volume, string[]? Chapters, bool WholeVolume = false);
+internal sealed record FileCoverageChange(string? FileId, string? ContentId, string? SeriesKey, string? Revision, string? Volume, string[]? Chapters);
+internal sealed record FileCoverageBatch(FileCoverageChange?[]? Changes);
 internal sealed record AssociationConfirmation(string? FileId, string? ContentId);
 
 internal static class MetadataEndpoints
@@ -87,7 +90,7 @@ internal static class MetadataEndpoints
             {
                 var title = change.Title?.Trim();
                 if (string.IsNullOrEmpty(title) || title.Length > 300 || change.AlternateTitle is { Length: > 300 } ||
-                    change.Summary is { Length: > 6000 } || change.Status is { Length: > 40 } ||
+                    change.Summary is { Length: > 6000 } || change.SummaryMarkup is { Length: > 24000 } || change.Status is { Length: > 40 } ||
                     change.TotalChapters is < 1 or > 100_000 || change.TotalVolumes is < 1 or > 100_000)
                 {
                     return Results.BadRequest(new { message = "Enter a title and valid totals before saving metadata." });
@@ -100,7 +103,11 @@ internal static class MetadataEndpoints
                     .Where(value => !string.Equals(value, title, StringComparison.OrdinalIgnoreCase))
                     .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
                 edited = new(title, change.Kind ?? "manga", distinct.FirstOrDefault(), EmptyAsNull(change.Summary),
-                    EmptyAsNull(change.Status), change.TotalChapters, change.TotalVolumes, null, null) { AlternateTitles = distinct };
+                    EmptyAsNull(change.Status), change.TotalChapters, change.TotalVolumes, null, null)
+                {
+                    AlternateTitles = distinct,
+                    SummaryMarkup = EmptyAsNull(change.SummaryMarkup),
+                };
             }
 
             SeriesMetadata metadata;
@@ -146,19 +153,53 @@ internal static class MetadataEndpoints
             if (!await antiforgery.IsRequestValidAsync(context)) return Results.BadRequest();
             if (!LibraryEndpoints.IsSeriesKey(seriesKey)) return Results.NotFound();
 
-            var volume = change.Volume?.Trim() ?? "";
-            if (!IsContentId(change.ContentId) ||
-                (volume.Length > 0 && !BookNumbers.IsNumber(volume)) || change.Chapters is not { Length: <= 500 } chapters ||
-                chapters.Any(chapter => chapter is null || !BookNumbers.IsNumber(chapter)) ||
-                change.WholeVolume && (volume.Length == 0 || chapters.Length != 0))
+            if (!IsContentId(change.ContentId) || NormalizeCoverage(change.Volume, change.Chapters) is not { } labels ||
+                change.WholeVolume && (labels.Volume.Length == 0 || labels.Chapters.Length != 0))
             {
                 return Results.BadRequest(new { message = "Use individual numeric chapter labels, such as 1, 1.5, and 2." });
             }
 
-            var distinct = chapters.Select(BookNumbers.Canonical).Distinct(StringComparer.Ordinal).ToArray();
             return store.SaveCoverage(root, seriesKey.ToLowerInvariant(), change.ContentId!.ToLowerInvariant(),
-                volume.Length == 0 ? "" : BookNumbers.Canonical(volume), distinct, change.WholeVolume, published == true) ? Results.NoContent() : Results.NotFound();
+                labels.Volume, labels.Chapters, change.WholeVolume, published == true) ? Results.NoContent() : Results.NotFound();
         }).WithMetadata(new RequestSizeLimitAttribute(16 * 1024));
+    }
+
+    public static void MapFileCoverage(this RouteGroupBuilder library)
+    {
+        library.MapPut("/{root:guid}/file-coverage", async (Guid root, bool? published, FileCoverageBatch batch, LibraryStore store,
+            HttpContext context, IAntiforgery antiforgery) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context) || batch.Changes is not { Length: > 0 and <= 500 } changes)
+                return Results.BadRequest();
+
+            var edits = new List<FileCoverageEdit>(changes.Length);
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var change in changes)
+            {
+                if (change is null || !IsContentId(change.FileId) || !IsContentId(change.ContentId) ||
+                    change.SeriesKey is null || !LibraryEndpoints.IsSeriesKey(change.SeriesKey) ||
+                    change.Revision is not { Length: 64 } revision || !revision.All(char.IsAsciiHexDigit) ||
+                    !seen.Add(change.ContentId!))
+                    return Results.BadRequest();
+                if (NormalizeCoverage(change.Volume, change.Chapters) is not { } labels)
+                    return Results.BadRequest(new { message = "Use individual numeric chapter labels, such as 1, 1.5, and 2." });
+
+                edits.Add(new(change.FileId!.ToLowerInvariant(), change.ContentId!.ToLowerInvariant(), change.SeriesKey.ToLowerInvariant(),
+                    revision.ToLowerInvariant(), labels.Volume, labels.Chapters));
+            }
+            return store.SaveFileCoverage(root, edits, published == true) ? Results.NoContent() :
+                Results.Conflict(new { message = "A release or its coverage changed. Refresh the file list and review the batch again." });
+        }).WithMetadata(new RequestSizeLimitAttribute(8 * 1024 * 1024));
+    }
+
+    private static (string Volume, string[] Chapters)? NormalizeCoverage(string? input, string[]? chapters)
+    {
+        var volume = input?.Trim() ?? "";
+        if (volume.Length > 0 && !BookNumbers.IsNumber(volume) || chapters is not { Length: <= 500 } ||
+            chapters.Any(chapter => chapter is null || !BookNumbers.IsNumber(chapter))) return null;
+
+        return (volume.Length == 0 ? "" : BookNumbers.Canonical(volume),
+            chapters.Select(BookNumbers.Canonical).Distinct(StringComparer.Ordinal).ToArray());
     }
 
     private static string? EmptyAsNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

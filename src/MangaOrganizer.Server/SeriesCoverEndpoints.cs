@@ -24,13 +24,24 @@ internal static class SeriesCoverEndpoints
                 : Results.NotFound());
 
         series.MapPut("/cover-preference", async (Guid root, string seriesKey, bool? published, SeriesCoverChange change,
-            LibraryStore store, HttpContext context, IAntiforgery antiforgery) =>
+            LibraryStore store, MetadataAgent agent, HttpContext context, IAntiforgery antiforgery, CancellationToken cancellationToken) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context) || !LibraryEndpoints.IsSeriesKey(seriesKey) ||
                 (change.CandidateId is null ? !change.UseProvider : change.UseProvider || !LibraryEndpoints.IsSeriesKey(change.CandidateId)))
                 return Results.BadRequest();
 
-            return store.SetSeriesCover(root, seriesKey.ToLowerInvariant(), published == true, change.CandidateId, useProvider: change.UseProvider)
+            var key = seriesKey.ToLowerInvariant();
+            if (change.UseProvider)
+            {
+                if (store.ReadProviderCoverSource(root, key, published == true) is not { } source) return Results.NotFound();
+                var cover = await agent.DownloadCover(source.Large, source.Thumbnail, cancellationToken);
+                if (cover is null)
+                    return Results.Json(new { message = "Could not save a local copy of the AniList cover. Try again." }, statusCode: 502);
+
+                return store.SetSeriesCover(root, key, published == true, upload: cover, expectedProvider: source)
+                    ? Results.NoContent() : Results.Conflict(new { message = "The AniList cover changed while downloading. Reopen the cover options." });
+            }
+            return store.SetSeriesCover(root, key, published == true, change.CandidateId)
                 ? Results.NoContent() : Results.NotFound();
         }).WithMetadata(new RequestSizeLimitAttribute(4096));
 

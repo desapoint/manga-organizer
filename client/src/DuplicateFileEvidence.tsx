@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { CoverageMark } from './CoverageMark';
 import { fileName, filePattern } from './duplicateCoverage';
@@ -7,24 +7,13 @@ import { formatSize } from './library';
 import { EditReleaseTags } from './ReleaseTagsEditor';
 import { FileCover } from './SeriesCover';
 import { Button } from './ui';
-
-type ArchiveEvidence = { imagePages: number; comicInfo: { label: string; value: string }[] };
+import { useArchiveEvidence } from './useArchiveEvidence';
 
 function FileEvidence({ file, color, note, onSignedOut, version, actions }: {
   file: CoverageFile; color: string | undefined; note?: string; onSignedOut: () => void; version: string; actions?: ReactNode;
 }) {
-  const [evidence, setEvidence] = useState<ArchiveEvidence | null>();
   const { rootId, fileId } = file;
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetch(`/api/file-operations/duplicates/${rootId}/${fileId}/archive`, { signal: controller.signal })
-      .then(async response => {
-        if (response.status === 401) return onSignedOut();
-        const result = response.ok ? await response.json() as ArchiveEvidence : null;
-        if (!controller.signal.aborted) setEvidence(result);
-      }).catch(() => { if (!controller.signal.aborted) setEvidence(null); });
-    return () => controller.abort();
-  }, [fileId, onSignedOut, rootId, version]);
+  const evidence = useArchiveEvidence(rootId, fileId, onSignedOut, version);
 
   return <article className="grid min-w-0 content-start gap-2.5 rounded-lg border border-line bg-inset p-3">
     <div className="flex min-w-0 items-start gap-2.5">

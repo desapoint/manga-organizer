@@ -14,7 +14,8 @@ internal sealed record CatalogEntry(string Id, string RelativePath, string Exten
     string? ContentId, string? Sha256, long? IndexedLocations, string? Volume, string? Chapter, bool HasCover,
     string? SeriesCoverKey, string? SeriesTitle, bool HasSeriesMetadata, string SeriesKey, bool AssociationConfirmed, bool HasSeriesSuggestion,
     DoujinFilename? FilenameEvidence, string? IntakePath,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? LookupTitle = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? LookupTitle = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] FileCoverageState? Coverage = null);
 internal sealed record CatalogPage<T>(long Total, IReadOnlyList<T> Items,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool LookupQueued = false);
 
@@ -107,7 +108,8 @@ internal sealed partial class LibraryStore
         return result;
     }
 
-    public CatalogPage<CatalogEntry> ReadFiles(Guid id, int offset, int limit, string? seriesKey, string search, string? volume, string? view)
+    public CatalogPage<CatalogEntry> ReadFiles(Guid id, int offset, int limit, string? seriesKey, string search, string? volume, string? view,
+        bool includeCoverage = false)
     {
         using var database = OpenCoverDatabase();
         RegisterTitleSearch(database);
@@ -156,12 +158,8 @@ internal sealed partial class LibraryStore
                 (SELECT cover.series_key FROM library_series_cover cover WHERE cover.root_id = f.root_id AND cover.series_key = f.series_key),
                 COALESCE(m.title, f.series_title), NOT (
             """ + " " + MissingMetadata + "), f.series_key, " + ConfirmedSeries + ", f.series_title IS NOT NULL, " + IntakeNumbered
-            + ", " + FinishedOneShot + """
-            , json_extract(m.provider_details, '$.StartYear'),
-                (SELECT inferred.volume FROM active_inferred_volume_chapters inferred WHERE inferred.content_id = f.content_id),
-                (SELECT json_group_array(json_array(chapter.volume, chapter.chapter) ORDER BY CAST(chapter.chapter AS REAL), chapter.chapter)
-                    FROM content_chapter chapter WHERE chapter.content_id = f.content_id)
-            """
+            + ", " + FinishedOneShot + ", json_extract(m.provider_details, '$.StartYear'), " + InferredFileVolume + ", " + AssignedFileChapters
+            + (includeCoverage ? ", c.manual_volume, " + InferredFileChapters : "")
             + sources + scope + " ORDER BY f.relative_path LIMIT $limit OFFSET $offset;";
         command.Parameters.AddWithValue("$limit", limit);
         command.Parameters.AddWithValue("$offset", offset);
@@ -176,6 +174,8 @@ internal sealed partial class LibraryStore
             var assigned = JsonSerializer.Deserialize<string[][]>(rows.GetString(21)) ?? [];
             var volumeHint = ReadText(rows, 8);
             var chapterHint = ReadText(rows, 9);
+            var coverage = includeCoverage && verified ? FileCoverage(volumeHint, chapterHint, rows.GetBoolean(18), ReadText(rows, 20),
+                assigned, ReadText(rows, 22), ReadText(rows, 23)) : null;
             string? intakePath = null;
             if (view != "library" && confirmed && rows.GetBoolean(17) && title is not null)
             {
@@ -196,7 +196,7 @@ internal sealed partial class LibraryStore
                 verified ? rows.GetString(5) : null, verified ? rows.GetString(6) : null, verified ? rows.GetInt64(7) : null,
                 volumeHint, chapterHint, rows.GetBoolean(10), ReadText(rows, 11), title,
                 hasMetadata, rows.GetString(14), confirmed, rows.GetBoolean(16),
-                view == "library" ? null : DoujinFilename.Parse(Path.GetFileNameWithoutExtension(path)), intakePath, lookupTitle));
+                view == "library" ? null : DoujinFilename.Parse(Path.GetFileNameWithoutExtension(path)), intakePath, lookupTitle, coverage));
         }
         return new(total, items);
     }

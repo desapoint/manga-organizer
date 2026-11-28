@@ -5,6 +5,7 @@ namespace MangaOrganizer.Server;
 internal sealed record SeriesCoverCandidate(string Id, string Label);
 internal sealed record SeriesCoverChoices(long Total, IReadOnlyList<SeriesCoverCandidate> Items, string? PreferredLabel, string? AniListCoverUrl);
 internal sealed record SeriesCoverPicture(byte[]? Data, string? ProviderUrl, string? Label = null);
+internal sealed record ProviderCoverSource(string SeriesId, string Thumbnail, string? Large);
 
 internal sealed partial class LibraryStore
 {
@@ -88,7 +89,25 @@ internal sealed partial class LibraryStore
         return GroupExists(command, published) ? ReadCoverCandidate(command, candidate, published)?.Data : null;
     }
 
-    public bool SetSeriesCover(Guid root, string seriesKey, bool published, string? candidate = null, byte[]? upload = null, bool useProvider = false)
+    public ProviderCoverSource? ReadProviderCoverSource(Guid root, string seriesKey, bool published)
+    {
+        using var database = OpenDatabase();
+        using var transaction = database.BeginTransaction(deferred: true);
+        using var command = GroupCommand(database, transaction, root, seriesKey, published);
+        if (!GroupExists(command, published)) return null;
+        command.CommandText = "SELECT " + MetadataIdForGroup;
+        return command.ExecuteScalar() is string seriesId ? ReadProviderCoverSource(command, seriesId) : null;
+    }
+
+    private static ProviderCoverSource? ReadProviderCoverSource(SqliteCommand command, string seriesId)
+    {
+        var details = ReadMetadata(command)?.ProviderDetails;
+        return MetadataAgent.CoverUrl(details?.CoverUrl) is { } thumbnail
+            ? new(seriesId, thumbnail, MetadataAgent.CoverUrl(details?.CoverLargeUrl)) : null;
+    }
+
+    public bool SetSeriesCover(Guid root, string seriesKey, bool published, string? candidate = null, byte[]? upload = null,
+        ProviderCoverSource? expectedProvider = null)
     {
         using var database = OpenCoverDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
@@ -96,18 +115,17 @@ internal sealed partial class LibraryStore
         if (!GroupExists(command, published)) return false;
         command.CommandText = "SELECT " + MetadataIdForGroup;
         if (command.ExecuteScalar() is not string seriesId) return false;
+        if (expectedProvider is not null && ReadProviderCoverSource(command, seriesId) != expectedProvider) return false;
         command.Parameters.AddWithValue("$coverSeries", seriesId);
 
-        if (candidate is null && upload is null && !useProvider)
+        if (candidate is null && upload is null)
         {
             command.CommandText = "DELETE FROM series_cover_preference WHERE series_id = $coverSeries;";
         }
         else
         {
-            var picture = upload is not null ? new SeriesCoverPicture(upload, null, "Uploaded image")
-                : candidate is not null ? ReadCoverCandidate(command, candidate, published)
-                : MetadataAgent.CoverUrl(ReadMetadata(command)?.ProviderDetails?.CoverUrl) is { } url
-                    ? new(null, url, "AniList cover") : null;
+            var picture = upload is not null ? new SeriesCoverPicture(upload, null, expectedProvider is null ? "Uploaded image" : "AniList cover")
+                : candidate is not null ? ReadCoverCandidate(command, candidate, published) : null;
             if (picture is null) return false;
 
             command.CommandText = """

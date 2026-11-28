@@ -97,7 +97,11 @@ export function Modal({ title, onClose, children, className = '', headerClassNam
     };
   }, []);
 
-  return <dialog ref={dialog} aria-labelledby={id} onCancel={event => { event.preventDefault(); onClose(); }}
+  return <dialog ref={dialog} aria-labelledby={id} onCancel={event => {
+    event.preventDefault();
+    event.stopPropagation();
+    onClose();
+  }}
     className={`m-auto ${wide ? 'w-[min(64rem,calc(100%-2rem))]' : 'w-[min(36rem,calc(100%-2rem))]'} max-h-[calc(100dvh-2rem)] overflow-auto rounded-xl border border-line bg-panel p-4 text-ink backdrop:bg-black/70 sm:p-5 ${className}`}>
     <div className={`mb-4 flex items-center justify-between gap-3 ${headerClassName}`}>
       <SectionHeader id={id} title={title} />

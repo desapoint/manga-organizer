@@ -15,12 +15,6 @@ export function tagsFromDraft({ regular, spoilers }: TagDraft): SeriesTag[] {
   return [...regular.map(name => ({ name, spoiler: false })), ...spoilers.map(name => ({ name, spoiler: true }))];
 }
 
-export function fillMissingTags(current: SeriesTag[], incoming: SeriesTag[]): TagDraft {
-  const names = new Set(current.map(tag => tag.name.toLowerCase()));
-  const missing = incoming.filter(tag => !names.has(tag.name.toLowerCase()));
-  return draftForTags([...current, ...missing].slice(0, tagLimit));
-}
-
 export function SeriesTagFields({ draft, onChange, disabled }: {
   draft: TagDraft;
   onChange: (draft: TagDraft) => void;

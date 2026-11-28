@@ -11,16 +11,19 @@ internal sealed record MetadataMatch(int ProviderId, string Title, string? Alter
     string? Summary, string? Status, int? TotalChapters, int? TotalVolumes, AniListDetails ProviderDetails)
 {
     public string[] AlternateTitles { get; init; } = AlternateTitle is null ? [] : [AlternateTitle];
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SummaryMarkup { get; init; }
     public string ProviderUrl => MetadataAgent.ListingUrl(ProviderId);
     [JsonIgnore]
     public IEnumerable<string> LookupTitles => AlternateTitles.Prepend(Title);
 
     internal SeriesMetadata ToMetadata(string? kind = null) => new(Title, kind ?? Kind, AlternateTitle, Summary,
-        Status, TotalChapters, TotalVolumes, ProviderId, ProviderDetails) { AlternateTitles = AlternateTitles };
+        Status, TotalChapters, TotalVolumes, ProviderId, ProviderDetails) { AlternateTitles = AlternateTitles, SummaryMarkup = SummaryMarkup };
 }
 
 internal sealed record AniListDetails(string? CoverUrl, string? Format, string? CountryOfOrigin, int? StartYear, int? EndYear,
-    string[] Genres, SeriesTag[] Tags, AniListCredit[] Credits);
+    string[] Genres, SeriesTag[] Tags, AniListCredit[] Credits,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CoverLargeUrl = null);
 internal sealed record AniListCredit(string Name, string? Role);
 
 internal sealed class MetadataLookupException(string message, DateTimeOffset? retryAt = null) : Exception(message)
@@ -31,8 +34,8 @@ internal sealed class MetadataLookupException(string message, DateTimeOffset? re
 internal sealed partial class MetadataAgent : IDisposable
 {
     private const string MediaFields = """
-        id title { english romaji native } synonyms description(asHtml:false) status chapters volumes
-        coverImage { medium large } format countryOfOrigin startDate { year } endDate { year }
+        id title { english romaji native } synonyms description(asHtml:true) status chapters volumes
+        coverImage { medium large extraLarge } format countryOfOrigin startDate { year } endDate { year }
         genres tags { name isMediaSpoiler isGeneralSpoiler }
         staff(page:1,perPage:12) { edges { role node { name { full } } } }
         """;
@@ -188,14 +191,18 @@ internal sealed partial class MetadataAgent : IDisposable
         var genres = (media.Genres ?? []).Select(name => Truncate(name, 100)).OfType<string>()
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray();
         var country = media.CountryOfOrigin is { Length: 2 } code && code.All(char.IsAsciiLetter) ? code.ToUpperInvariant() : null;
-        var details = new AniListDetails(CoverUrl(media.CoverImage?.Medium) ?? CoverUrl(media.CoverImage?.Large),
-            Truncate(media.Format, 40), country, ValidYear(media.StartDate), ValidYear(media.EndDate), genres, tags, credits);
+        var largerCover = CoverUrl(media.CoverImage?.ExtraLarge) ?? CoverUrl(media.CoverImage?.Large);
+        var thumbnail = CoverUrl(media.CoverImage?.Medium) ?? largerCover;
+        var details = new AniListDetails(thumbnail, Truncate(media.Format, 40), country,
+            ValidYear(media.StartDate), ValidYear(media.EndDate), genres, tags, credits,
+            largerCover != thumbnail ? largerCover : null);
         var alternates = titles.Skip(1).Concat((media.Synonyms ?? []).Take(24).Select(value => Truncate(value, 300)).OfType<string>())
             .Distinct(StringComparer.OrdinalIgnoreCase).Where(value => !string.Equals(value, titles[0], StringComparison.OrdinalIgnoreCase)).ToArray();
         return new MetadataMatch(media.Id, titles[0], alternates.FirstOrDefault(), doujin ? "doujin" : "manga",
             Truncate(PlainDescription(media.Description), 6000), Truncate(media.Status, 40), ValidTotal(media.Chapters), ValidTotal(media.Volumes), details)
         {
             AlternateTitles = alternates,
+            SummaryMarkup = Truncate(media.Description, 24000),
         };
     }
 
@@ -207,10 +214,10 @@ internal sealed partial class MetadataAgent : IDisposable
         return DescriptionFormatting().Replace(text, "").Trim();
     }
 
-    [GeneratedRegex(@"<br\s*/?>|</p\s*>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"<br\s*/?>|</(?:p|li|div)\s*>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex DescriptionBreaks();
 
-    [GeneratedRegex(@"</?(?:p|i|b|em|strong|u|s|del|sup|sub)\s*>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"</?(?:p|i|b|em|strong|u|s|del|sup|sub|ol|ul|li|div|blockquote|a)\b[^>]*>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex DescriptionFormatting();
 
     internal static string? CoverUrl(string? value)
@@ -240,7 +247,7 @@ internal sealed partial class MetadataAgent : IDisposable
     private sealed record ProviderTitle(string? English, string? Romaji, string? Native);
     private sealed record ProviderTag(string? Name, bool? IsMediaSpoiler, bool? IsGeneralSpoiler);
     private sealed record ProviderDate(int? Year);
-    private sealed record ProviderCover(string? Medium, string? Large);
+    private sealed record ProviderCover(string? Medium, string? Large, string? ExtraLarge);
     private sealed record ProviderStaff(ProviderCredit?[]? Edges);
     private sealed record ProviderCredit(string? Role, ProviderPerson? Node);
     private sealed record ProviderPerson(ProviderName? Name);
