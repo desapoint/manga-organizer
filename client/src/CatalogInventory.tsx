@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, ChevronRight, Info, Library, Split, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Info, Library, Split, X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getCsrfToken } from './api';
@@ -118,11 +118,35 @@ export function PageControls({ label, offset, count, total, onChange }: {
 }) {
   if (total <= PAGE_SIZE) return null;
 
+  const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
+  const lastPage = Math.ceil(total / PAGE_SIZE);
+  const visibleCount = Math.min(5, lastPage);
+  const firstVisiblePage = Math.max(1, Math.min(currentPage - 2, lastPage - visibleCount + 1));
+  const pages = Array.from({ length: visibleCount }, (_, index) => firstVisiblePage + index);
+  const goToPage = (page: number) => onChange((page - 1) * PAGE_SIZE);
+
   return (
-    <nav className="pagination" aria-label={label}>
-      <Button variant="secondary" disabled={offset === 0} onClick={() => onChange(offset - PAGE_SIZE)}>Previous</Button>
-      <span>{offset + 1}–{offset + count} of {total.toLocaleString()}</span>
-      <Button variant="secondary" disabled={offset + PAGE_SIZE >= total} onClick={() => onChange(offset + PAGE_SIZE)}>Next</Button>
+    <nav className="@container" aria-label={label}>
+      <div className="grid items-center gap-2 @[52rem]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+        <span className="text-center text-sm tabular-nums @[52rem]:col-start-2">
+          {offset + 1}–{offset + count} of {total.toLocaleString()}
+        </span>
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          <Button variant="secondary" size="compact" className="min-w-9" icon={ChevronsLeft} aria-label="First page"
+            title="First page" disabled={currentPage === 1} onClick={() => goToPage(1)} />
+          <Button variant="secondary" size="compact" className="min-w-9" icon={ChevronLeft} aria-label="Previous page"
+            title="Previous page" disabled={currentPage === 1} onClick={() => goToPage(currentPage - 1)} />
+          {pages.map(page => (
+            <Button key={page} variant={page === currentPage ? 'primary' : 'secondary'} size="compact"
+              className="min-w-9 tabular-nums" aria-label={`Page ${page}`} aria-current={page === currentPage ? 'page' : undefined}
+              onClick={() => goToPage(page)}>{page}</Button>
+          ))}
+          <Button variant="secondary" size="compact" className="min-w-9" icon={ChevronRight} aria-label="Next page"
+            title="Next page" disabled={currentPage === lastPage} onClick={() => goToPage(currentPage + 1)} />
+          <Button variant="secondary" size="compact" className="min-w-9" icon={ChevronsRight} aria-label="Last page"
+            title="Last page" disabled={currentPage === lastPage} onClick={() => goToPage(lastPage)} />
+        </div>
+      </div>
     </nav>
   );
 }
