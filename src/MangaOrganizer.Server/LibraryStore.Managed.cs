@@ -286,8 +286,9 @@ internal sealed partial class LibraryStore
                 command.Parameters.AddWithValue("$extension", Path.GetExtension(path)[1..].ToLowerInvariant());
                 command.Parameters.AddWithValue("$size", operation.Size);
                 command.CommandText = """
-                    INSERT INTO library_file(root_id, relative_path, extension, size, modified_at, content_id, series_key, series_title, volume_hint, chapter_hint)
-                    VALUES($root, $path, $extension, $size, $modified, $content, $series, $title, $volume, $chapter);
+                    INSERT INTO library_file(id, root_id, relative_path, extension, size, modified_at, content_id, series_key, series_title, volume_hint, chapter_hint)
+                    VALUES(CASE WHEN EXISTS(SELECT 1 FROM library_file WHERE id = $file) THEN lower(hex(randomblob(16))) ELSE $file END,
+                        $root, $path, $extension, $size, $modified, $content, $series, $title, $volume, $chapter);
                     """;
                 command.ExecuteNonQuery();
             }

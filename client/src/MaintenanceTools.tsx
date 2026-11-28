@@ -22,7 +22,7 @@ export function MaintenanceTools({ roots, onSignedOut, onChanged }: {
   const [error, setError] = useState('');
   const libraries = roots?.filter(root => root.kind !== 'import') ?? [];
   const selected = selection.filter(id => libraries.some(root => root.id === id));
-  const scanReady = libraries.some(root => !scanIsActive(root));
+  const scanReady = libraries.some(root => !scanIsActive(root) && root.state !== 'paused');
   const scanActive = roots?.some(scanIsActive);
 
   async function request<T>(suffix: string, body: object) {

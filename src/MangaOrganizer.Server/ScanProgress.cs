@@ -4,11 +4,17 @@ namespace MangaOrganizer.Server;
 
 internal sealed record ScanSnapshot(string Phase, long DiscoveredFiles, long ProcessedFiles, long VerifiedFiles,
     long TotalBytes, long BytesRead, string? CurrentPath, long SeriesTotal, long SeriesChecked, long CoversFound,
-    long HashedFiles, long ReusedFiles, long ElapsedMilliseconds, bool Full);
+    long HashedFiles, long ReusedFiles, long ElapsedMilliseconds, bool Full, string? RequestedAction = null);
 
-internal sealed class ScanProgress(bool full)
+internal sealed class ScanProgress(bool full, ScanSnapshot? previous = null)
 {
     public bool Full { get; } = full;
+    public string? RequestedAction
+    {
+        get => requestedAction;
+        set => requestedAction = value;
+    }
+    private volatile string? requestedAction;
     private long startedAt;
     private readonly object gate = new();
     private string phase = "queued";
@@ -16,7 +22,7 @@ internal sealed class ScanProgress(bool full)
     private long processedFiles;
     private long verifiedFiles;
     private long totalBytes;
-    private long bytesRead;
+    private long bytesRead = previous?.BytesRead ?? 0;
     private long reusedFiles;
     private string? currentPath;
     private long seriesTotal;
@@ -29,7 +35,8 @@ internal sealed class ScanProgress(bool full)
         {
             return new(phase, discoveredFiles, processedFiles, verifiedFiles, totalBytes, bytesRead, currentPath,
                 seriesTotal, seriesChecked, coversFound, verifiedFiles - reusedFiles, reusedFiles,
-                startedAt == 0 ? 0 : (long)Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds, Full);
+                (previous?.ElapsedMilliseconds ?? 0) + (startedAt == 0 ? 0 : (long)Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds),
+                Full, RequestedAction);
         }
     }
 
@@ -79,6 +86,8 @@ internal sealed class ScanProgress(bool full)
             phase = "covers";
             currentPath = null;
             seriesTotal = groups;
+            seriesChecked = 0;
+            coversFound = 0;
         }
     }
 

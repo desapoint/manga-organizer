@@ -58,6 +58,8 @@ internal sealed partial class LibraryStore
 
         LibraryScanner.NormalizeRoot(path, dataDirectory, otherPaths);
         var folder = SaveFolder(command, id, path, name, change.Kind, change.Managed);
+        if (id is { } previousId && previousId != folder.Id)
+            DiscardScanPlan(command, previousId);
         transaction.Commit();
         return folder;
     }
@@ -75,8 +77,20 @@ internal sealed partial class LibraryStore
 
         command.CommandText = "DELETE FROM library_folder WHERE root_id = $id;";
         command.ExecuteNonQuery();
+        DiscardScanPlan(command, id);
         transaction.Commit();
         return true;
+    }
+
+    private static void DiscardScanPlan(SqliteCommand command, Guid id)
+    {
+        command.Parameters.Clear();
+        command.Parameters.AddWithValue("$id", id);
+        command.CommandText = """
+            DELETE FROM library_scan_checkpoint WHERE root_id = $id;
+            UPDATE library_root SET state = 'interrupted' WHERE id = $id AND state IN ('paused', 'stopped');
+            """;
+        command.ExecuteNonQuery();
     }
 
     private static bool CanChangeFolder(SqliteCommand command, Guid id)

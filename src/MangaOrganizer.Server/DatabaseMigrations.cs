@@ -40,6 +40,8 @@ internal static class DatabaseMigrations
         new("0026-canonical-series-identity"),
         new("0027-series-release-metadata"),
         new("0028-incremental-scan"),
+        new("0029-scan-checkpoints"),
+        new("0030-review-file-associations"),
     ];
 
     public static int Apply(string dataDirectory)

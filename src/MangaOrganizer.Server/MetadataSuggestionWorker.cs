@@ -27,7 +27,7 @@ internal sealed class MetadataSuggestionWorker(LibraryStore store, MetadataAgent
         try
         {
             var title = SeriesSuggestions.Key("", work.Title);
-            var matches = await agent.Search(work.Title, stoppingToken);
+            if (await agent.SearchQueued(work.Title, stoppingToken) is not { } matches) return;
             var ranked = matches.DistinctBy(match => match.ProviderId).Select(match => new MetadataProposal(match,
                 match.LookupTitles.FirstOrDefault(candidate => SeriesSuggestions.Key("", candidate) == title)))
                 .OrderByDescending(candidate => candidate.MatchingTitle is not null).ToArray();

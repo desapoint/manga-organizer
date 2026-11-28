@@ -6,7 +6,7 @@ namespace MangaOrganizer.Server;
 
 internal sealed record MetadataProposal(MetadataMatch Match, string? MatchingTitle);
 internal sealed record MetadataQueueItem(Guid RootId, string SeriesKey, string Title, bool HasCover, bool Queued, string? Revision,
-    IReadOnlyList<MetadataProposal>? Candidates, string? Message, bool ConflictingMetadata, bool PagePriority)
+    IReadOnlyList<MetadataProposal>? Candidates, string? Message, bool ConflictingMetadata, bool PagePriority, IReadOnlyList<SeriesFileReview> ReviewFiles)
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? LookupTitle => DoujinFilename.LookupOverride(Title);
@@ -53,8 +53,19 @@ internal sealed partial class LibraryStore
                 requested_at = excluded.requested_at, retry_at = NULL, message = NULL
             WHERE metadata_suggestion.queued = 0 AND COALESCE(metadata_suggestion.candidates, '[]') = '[]'
                 AND metadata_suggestion.title <> excluded.title
-                AND metadata_lookup_title(metadata_suggestion.title) = excluded.title;
+                AND metadata_lookup_title(metadata_suggestion.title) = excluded.title
+            RETURNING series_key;
             """;
+        var queued = new List<string>();
+        using (var rows = command.ExecuteReader())
+        {
+            while (rows.Read()) queued.Add(rows.GetString(0));
+        }
+        command.CommandText = """
+            DELETE FROM library_scan_metadata WHERE root_id = $id;
+            INSERT INTO library_scan_metadata(root_id, series_key) SELECT $id, value FROM json_each($lookupKeys);
+            """;
+        command.Parameters.AddWithValue("$lookupKeys", JsonSerializer.Serialize(queued));
         command.ExecuteNonQuery();
     }
 
@@ -76,7 +87,9 @@ internal sealed partial class LibraryStore
         command.CommandText = filtered + """
             SELECT f.root_id, f.series_key, f.title,
                 EXISTS(SELECT 1 FROM library_series_cover c WHERE c.root_id = f.root_id AND c.series_key = f.series_key),
-                COALESCE(s.queued, 0), s.revision, s.candidates, s.message, f.conflict, COALESCE(s.priority, 0)
+                COALESCE(s.queued, 0), s.revision, s.candidates, s.message, f.conflict, COALESCE(s.priority, 0),
+                (SELECT json_group_array(json_object('FileId', peer.id, 'ContentId', peer.content_id) ORDER BY peer.id)
+                    FROM library_file peer WHERE peer.root_id = f.root_id AND peer.series_key = f.series_key AND peer.content_id IS NOT NULL)
             FROM filtered f LEFT JOIN metadata_suggestion s ON s.series_key = f.series_key
             ORDER BY f.title COLLATE NOCASE, f.root_id, f.series_key LIMIT $limit OFFSET $offset;
             """;
@@ -86,7 +99,7 @@ internal sealed partial class LibraryStore
         {
             var candidates = ReadText(rows, 6) is { } json ? JsonSerializer.Deserialize<MetadataProposal[]>(json) : null;
             items.Add(new(rows.GetGuid(0), rows.GetString(1), rows.GetString(2), rows.GetBoolean(3), rows.GetBoolean(4),
-                ReadText(rows, 5), candidates, ReadText(rows, 7), rows.GetBoolean(8), rows.GetBoolean(9)));
+                ReadText(rows, 5), candidates, ReadText(rows, 7), rows.GetBoolean(8), rows.GetBoolean(9), JsonSerializer.Deserialize<SeriesFileReview[]>(rows.GetString(10)) ?? []));
         }
         return new(total, items);
     }
@@ -168,12 +181,14 @@ internal sealed partial class LibraryStore
         command.ExecuteNonQuery();
     }
 
-    public SeriesMetadata? ConfirmMetadataSuggestion(Guid root, string series, string revision, int providerId)
+    public SeriesMetadata? ConfirmMetadataSuggestion(Guid root, string series, string revision, int providerId, SeriesFileReview[]? reviewFiles)
     {
         using var database = OpenDatabase();
+        database.DefaultTimeout = 2;
         using var transaction = database.BeginTransaction(deferred: false);
         using var command = GroupCommand(database, transaction, root, series);
-        if (!GroupExists(command) || GroupHasActiveIntakeTransfer(command) || ReadMetadata(command) is not null) return null;
+        if (!GroupExists(command) || GroupHasActiveIntakeTransfer(command) || ReadMetadata(command) is not null
+            || !BindReviewedFiles(command, reviewFiles)) return null;
         command.CommandText = """
             SELECT 1 FROM library_file f JOIN content_metadata cm ON cm.content_id = f.content_id
             WHERE f.root_id = $root AND f.series_key = $series LIMIT 1;
@@ -184,7 +199,7 @@ internal sealed partial class LibraryStore
         if (command.ExecuteScalar() is not string json) return null;
         var match = JsonSerializer.Deserialize<MetadataProposal[]>(json)?.FirstOrDefault(item => item.Match.ProviderId == providerId)?.Match;
         if (match is null) return null;
-        var saved = WriteMetadata(command, match.ToMetadata(), linkOnly: true);
+        var saved = WriteMetadata(command, match.ToMetadata(), linkOnly: true, scoped: reviewFiles is not null);
         transaction.Commit();
         return saved;
     }

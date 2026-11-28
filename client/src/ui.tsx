@@ -3,6 +3,7 @@ import { createContext, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
 import type { ScanState } from './library';
+import { ToastAnchor } from './Toast';
 
 const buttonVariants = {
   primary: 'border-transparent bg-accent text-accent-ink not-disabled:hover:bg-accent-hover',
@@ -104,6 +105,7 @@ export function Modal({ title, onClose, children, className = '', wide = false }
     </div>
     <ModalPortalContext.Provider value={portal}>{children}</ModalPortalContext.Provider>
     <div ref={setPortal} />
+    <ToastAnchor />
   </dialog>;
 }
 
@@ -129,6 +131,8 @@ const statusStyles = {
   idle: { label: 'Ready', style: 'text-muted' },
   queued: { label: 'Queued', style: 'text-accent-readable' },
   scanning: { label: 'Scanning', style: 'text-accent-readable' },
+  paused: { label: 'Paused', style: 'text-warning' },
+  stopped: { label: 'Stopped', style: 'text-muted' },
   complete: { label: 'Indexed', style: 'text-positive' },
   unavailable: { label: 'Unavailable', style: 'text-warning' },
   incomplete: { label: 'Incomplete', style: 'text-warning' },

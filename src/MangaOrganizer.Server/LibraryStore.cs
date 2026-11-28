@@ -7,7 +7,9 @@ namespace MangaOrganizer.Server;
 internal sealed record LibraryRoot(Guid Id, string Path);
 internal sealed record LibraryRootStatus(Guid Id, string Path, string State, long FileCount,
     DateTimeOffset? LastAttemptAt, DateTimeOffset? LastScannedAt, long SkippedLinks, string? Name, string Kind, bool HasCovers,
-    bool Managed, ScanSnapshot? ScanProgress = null, Guid? IntakeTargetId = null, ScanSnapshot? LastScan = null);
+    bool Managed, ScanSnapshot? ScanProgress = null, Guid? IntakeTargetId = null, ScanSnapshot? LastScan = null,
+    ScanLookupProgress? MetadataProgress = null);
+internal sealed record ScanLookupProgress(long Total, long Completed);
 internal sealed record CatalogEntry(string Id, string RelativePath, string Extension, long Size, DateTimeOffset ModifiedAt,
     string? ContentId, string? Sha256, long? IndexedLocations, string? Volume, string? Chapter, bool HasCover,
     string? SeriesCoverKey, string? SeriesTitle, bool HasSeriesMetadata, string SeriesKey, bool AssociationConfirmed, bool HasSeriesSuggestion,
@@ -29,7 +31,10 @@ internal sealed partial class LibraryStore
         using var command = database.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            UPDATE library_root SET state = 'interrupted' WHERE state IN ('queued', 'scanning');
+            UPDATE library_root SET state = CASE WHEN EXISTS (
+                SELECT 1 FROM library_scan_checkpoint checkpoint WHERE checkpoint.root_id = library_root.id
+                    AND checkpoint.file_plan IS NOT NULL) THEN 'paused' ELSE 'interrupted' END
+            WHERE state IN ('queued', 'scanning');
             UPDATE file_operation SET state = 'review', message = 'The server stopped during this operation. Verify retained files before recovery.'
                 WHERE state IN ('applying', 'restoring');
             """;
@@ -71,9 +76,19 @@ internal sealed partial class LibraryStore
 
                     JOIN series_cover_preference pref ON pref.series_id = m.id
                     WHERE file.root_id = r.id
-                ), f.managed, route.target_root, r.last_scan
+                ), f.managed, route.target_root, r.last_scan, checkpoint.snapshot,
+                (SELECT COUNT(*) FROM library_scan_metadata jobs WHERE jobs.root_id = r.id),
+                (SELECT COUNT(*) FROM library_scan_metadata jobs LEFT JOIN metadata_suggestion s ON s.series_key = jobs.series_key
+                    WHERE jobs.root_id = r.id AND (COALESCE(s.queued, 0) = 0 OR NOT EXISTS (
+                        SELECT 1 FROM library_file candidate WHERE candidate.root_id = jobs.root_id
+                            AND candidate.series_key = jobs.series_key AND candidate.content_id IS NOT NULL
+                            AND NOT EXISTS (SELECT 1 FROM series_metadata_binding binding WHERE binding.root_id = jobs.root_id
+                                AND binding.series_key = jobs.series_key)
+                        GROUP BY candidate.series_key HAVING COUNT(DISTINCT (
+                            SELECT link.metadata_id FROM content_metadata link WHERE link.content_id = candidate.content_id)) = 0)))
             FROM library_folder f JOIN library_root r ON r.id = f.root_id
             LEFT JOIN library_intake_target route ON route.source_root = f.root_id
+            LEFT JOIN library_scan_checkpoint checkpoint ON checkpoint.root_id = r.id AND r.state IN ('paused', 'stopped')
             ORDER BY f.rowid;
             """;
         var result = new List<LibraryRootStatus>();
@@ -84,8 +99,10 @@ internal sealed partial class LibraryStore
                 row.IsDBNull(4) ? null : row.GetDateTimeOffset(4),
                 row.IsDBNull(5) ? null : row.GetDateTimeOffset(5), row.GetInt64(6),
                 row.IsDBNull(7) ? null : row.GetString(7), row.GetString(8), row.GetBoolean(9), row.GetBoolean(10),
+                ScanProgress: row.IsDBNull(13) ? null : JsonSerializer.Deserialize<ScanSnapshot>(row.GetString(13)),
                 IntakeTargetId: row.IsDBNull(11) ? null : row.GetGuid(11),
-                LastScan: row.IsDBNull(12) ? null : JsonSerializer.Deserialize<ScanSnapshot>(row.GetString(12))));
+                LastScan: row.IsDBNull(12) ? null : JsonSerializer.Deserialize<ScanSnapshot>(row.GetString(12)),
+                MetadataProgress: row.GetInt64(14) == 0 ? null : new(row.GetInt64(14), row.GetInt64(15))));
         }
         return result;
     }
@@ -184,18 +201,19 @@ internal sealed partial class LibraryStore
         return new(total, items);
     }
 
-    public bool TryQueue(Guid id)
+    public bool TryQueue(Guid id, bool resume = false)
     {
         using var database = OpenDatabase();
         using var command = database.CreateCommand();
         command.CommandText = """
             UPDATE library_root SET state = 'queued', last_attempt_at = $now
-            WHERE id = $id AND state NOT IN ('queued', 'scanning')
+            WHERE id = $id AND (($resume AND state = 'paused') OR (NOT $resume AND state NOT IN ('queued', 'scanning', 'paused')))
                 AND EXISTS (SELECT 1 FROM library_folder WHERE root_id = $id)
                 AND NOT EXISTS (SELECT 1 FROM file_operation op WHERE op.state IN ('applying', 'restoring')
                     AND ($id IN (op.source_root, op.target_root) OR op.state = 'applying' AND $id = op.quarantine_keep_root));
             """;
         command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$resume", resume);
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);
         return command.ExecuteNonQuery() == 1;
     }
@@ -210,7 +228,7 @@ internal sealed partial class LibraryStore
         command.ExecuteNonQuery();
     }
 
-    public void Refresh(LibraryRoot root, ScanProgress scan, CancellationToken cancellationToken)
+    public void Refresh(LibraryRoot root, ScanProgress scan, bool resume, CancellationToken cancellationToken)
     {
         using var database = OpenCoverDatabase();
         using var command = database.CreateCommand();
@@ -253,22 +271,52 @@ internal sealed partial class LibraryStore
             """;
         command.ExecuteNonQuery();
 
-        scan.StartPhase("discovering");
-        var (count, skippedLinks) = StageFiles(database, root.Path, scan, cancellationToken);
-        if (count > 0)
+        long? completedDiscovery = null;
+        try
         {
-            StageHashes(database, root, scan, cancellationToken);
-            StageKnownSeries(database, root.Id);
-            StageIntakeSplits(database, root.Id);
-            StageCovers(database, root, scan, cancellationToken);
+            scan.StartPhase("discovering");
+            var plan = resume ? ReadScanPlan(database, root.Id) : null;
+            var (count, skippedLinks) = StageFiles(database, root.Path, scan, plan, cancellationToken);
+            completedDiscovery = skippedLinks;
+            if (count > 0)
+            {
+                StageHashes(database, root, scan, resume, cancellationToken);
+                StageKnownSeries(database, root.Id);
+                StageIntakeSplits(database, root.Id);
+            }
+            do
+            {
+                if (count > 0)
+                {
+                    using var artwork = OpenCoverDatabase();
+                    StageCovers(database, artwork, root, scan, cancellationToken);
+                }
+                LibraryScanner.RequireRoot(root.Path);
+                cancellationToken.ThrowIfCancellationRequested();
+                scan.StartPhase("publishing");
+            } while (!PublishScan(database, root.Id, count, skippedLinks, scan, cancellationToken));
         }
-        LibraryScanner.RequireRoot(root.Path);
-        cancellationToken.ThrowIfCancellationRequested();
-        scan.StartPhase("publishing");
+        catch (OperationCanceledException) when (scan.RequestedAction is { } action)
+        {
+            SaveScanCheckpoint(database, root.Id, scan.Snapshot() with { RequestedAction = null },
+                action == "pause" ? "paused" : "stopped", completedDiscovery);
+        }
+    }
 
+    private static bool PublishScan(SqliteConnection database, Guid rootId, long count, long skippedLinks, ScanProgress scan,
+        CancellationToken cancellationToken)
+    {
         using var transaction = database.BeginTransaction();
+        // A confirmation can change the series key while artwork is being extracted. Reuse the artwork with the updated grouping.
+        if (count > 0 && StageKnownSeries(database, rootId, transaction) != 0)
+        {
+            transaction.Commit();
+            return false;
+        }
+
+        using var command = database.CreateCommand();
         command.Transaction = transaction;
-        command.Parameters.AddWithValue("$id", root.Id);
+        command.Parameters.AddWithValue("$id", rootId);
         command.CommandText = "SELECT file_count FROM library_root WHERE id = $id;";
         var previousCount = (long)command.ExecuteScalar()!;
         var published = count != 0 || previousCount == 0;
@@ -279,6 +327,7 @@ internal sealed partial class LibraryStore
         else
         {
             QueueArrivingSeries(command);
+            StageRenamedReviews(command);
             command.CommandText = """
                 INSERT INTO library_content(sha256)
                     SELECT DISTINCT sha256 FROM scan_hash WHERE sha256 IS NOT NULL
@@ -308,6 +357,9 @@ internal sealed partial class LibraryStore
                         IS NOT (excluded.extension, excluded.size, excluded.modified_at, excluded.content_id, excluded.series_key,
                                 excluded.series_title, excluded.volume_hint, excluded.chapter_hint, excluded.scan_stamp,
                                 excluded.scan_chapters, excluded.scan_chapter_source);
+                INSERT OR IGNORE INTO file_association_review(file_id, content_id)
+                SELECT f.id, f.content_id FROM scan_renamed_review moved JOIN library_file f ON f.root_id = $id
+                    AND f.relative_path = moved.relative_path AND f.content_id = moved.content_id;
                 DELETE FROM import_file_split WHERE EXISTS (
                     SELECT 1 FROM library_file f WHERE f.id = import_file_split.file_id AND f.root_id = $id
                         AND f.content_id IS NOT import_file_split.content_id);
@@ -360,12 +412,15 @@ internal sealed partial class LibraryStore
             command.Parameters.AddWithValue("$scan", JsonSerializer.Serialize(scan.Snapshot() with { Phase = "complete" }));
             command.ExecuteNonQuery();
         }
+        command.CommandText = "DELETE FROM library_scan_checkpoint WHERE root_id = $id;";
+        command.ExecuteNonQuery();
         cancellationToken.ThrowIfCancellationRequested();
         transaction.Commit();
+        return true;
     }
 
     private static (long Count, long SkippedLinks) StageFiles(SqliteConnection database, string path, ScanProgress scan,
-        CancellationToken cancellationToken)
+        (long SkippedLinks, LibraryFileFact[] Files)? savedPlan, CancellationToken cancellationToken)
     {
         // Build the inventory in a temporary table without holding the published catalog's write lock.
         using var transaction = database.BeginTransaction(deferred: true);
@@ -387,8 +442,9 @@ internal sealed partial class LibraryStore
         insert.Prepare();
 
         long count = 0;
-        var skippedLinks = LibraryScanner.Collect(path, file =>
+        void AddFile(LibraryFileFact file)
         {
+            scan.BeginFile(file.RelativePath);
             relativePath.Value = file.RelativePath;
             extension.Value = file.Extension;
             size.Value = file.Size;
@@ -408,7 +464,24 @@ internal sealed partial class LibraryStore
             insert.ExecuteNonQuery();
             count++;
             scan.Discovered(file.Size);
-        }, cancellationToken);
+        }
+
+        long skippedLinks;
+        if (savedPlan is { } plan)
+        {
+            skippedLinks = plan.SkippedLinks;
+            foreach (var planned in plan.Files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (MediaFiles.Resolve(path, planned.RelativePath) is { Exists: true } file &&
+                    (file.Attributes & (FileAttributes.Directory | FileAttributes.ReparsePoint)) == 0)
+                    AddFile(planned with { Size = file.Length, ModifiedAt = file.LastWriteTimeUtc });
+            }
+        }
+        else
+        {
+            skippedLinks = LibraryScanner.Collect(path, AddFile, cancellationToken);
+        }
         insert.CommandText = """
             WITH numbered AS (
                 SELECT creator_series_key, MIN(creator_series_title) AS title FROM scan_file

@@ -43,7 +43,7 @@ internal sealed partial class LibraryStore
             SELECT 1 FROM content_metadata association JOIN series_metadata metadata ON metadata.id = association.metadata_id
             WHERE association.content_id = f.content_id AND metadata.provider_id IS NOT NULL
                 AND metadata.status = 'FINISHED' COLLATE NOCASE AND metadata.total_chapters = 1 AND
-        """ + " " + LinkedSeriesScope("f", "metadata") + ")";
+        """ + " " + LinkedSeriesScope("f", "metadata") + " AND " + ReviewedLocation("f", "association") + ")";
 
     private static string GroupCoverage => $$"""
         SELECT f.content_id, c.volume, c.chapter FROM library_file f JOIN content_chapter c ON c.content_id = f.content_id
@@ -210,17 +210,18 @@ internal sealed partial class LibraryStore
     }
 
     public SeriesMetadata? SaveMetadata(Guid root, string seriesKey, SeriesMetadata metadata, bool published, bool useProviderTags, bool linkOnly,
-        bool removeAniListLink, int? expectedAniListId)
+        bool removeAniListLink, int? expectedAniListId, SeriesFileReview[]? reviewFiles)
     {
         using var database = OpenDatabase();
         using var transaction = database.BeginTransaction(deferred: false);
         using var command = GroupCommand(database, transaction, root, seriesKey, published);
         if (!GroupExists(command, published) || GroupHasActiveIntakeTransfer(command)) return null;
+        if (!published && !BindReviewedFiles(command, reviewFiles)) return null;
 
         if (removeAniListLink && ReadMetadata(command)?.ProviderId != expectedAniListId) return null;
 
         var saved = WriteMetadata(command, metadata, attachFiles: !published, useProviderTags: useProviderTags, linkOnly: linkOnly,
-            removeAniListLink: removeAniListLink);
+            removeAniListLink: removeAniListLink, scoped: !published && reviewFiles is not null);
         transaction.Commit();
         return saved;
     }
@@ -233,29 +234,34 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$file", fileId);
         command.Parameters.AddWithValue("$content", contentId);
         command.CommandText = """
-            INSERT INTO content_metadata(content_id, metadata_id)
-            SELECT f.content_id, metadata.id FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
+            INSERT INTO content_metadata(content_id, metadata_id, reviewed_locations_only)
+            SELECT f.content_id, metadata.id, 1 FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
             JOIN series_metadata metadata ON metadata.id = (
             """ + " " + MetadataIdForGroup + """
             )
             WHERE f.root_id = $root AND f.series_key = $series AND f.id = $file AND f.content_id = $content
             ON CONFLICT(content_id) DO NOTHING;
             """;
-        var linked = command.ExecuteNonQuery() == 1;
-        if (!linked)
-        {
-            command.CommandText = """
-                SELECT 1 FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
-                WHERE f.root_id = $root AND f.series_key = $series AND f.id = $file AND f.content_id = $content AND
-                """ + " " + ConfirmedSeries;
-            linked = command.ExecuteScalar() is not null;
-        }
+        command.ExecuteNonQuery();
+        command.CommandText = """
+            INSERT OR IGNORE INTO file_association_review(file_id, content_id)
+            SELECT f.id, f.content_id FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
+            JOIN content_metadata link ON link.content_id = f.content_id
+            JOIN series_metadata metadata ON metadata.id = link.metadata_id
+            WHERE f.root_id = $root AND f.series_key = $series AND f.id = $file AND f.content_id = $content AND
+            """ + " " + LinkedSeriesScope("f", "metadata") + ";";
+        command.ExecuteNonQuery();
+        command.CommandText = """
+            SELECT 1 FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
+            WHERE f.root_id = $root AND f.series_key = $series AND f.id = $file AND f.content_id = $content AND
+            """ + " " + ConfirmedSeries;
+        var linked = command.ExecuteScalar() is not null;
         transaction.Commit();
         return linked;
     }
 
     private static SeriesMetadata WriteMetadata(SqliteCommand command, SeriesMetadata metadata, bool attachFiles = true, bool useProviderTags = false,
-        bool linkOnly = false, bool removeAniListLink = false)
+        bool linkOnly = false, bool removeAniListLink = false, bool scoped = false)
     {
         command.CommandText = "SELECT " + MetadataIdForGroup;
         var previousId = command.ExecuteScalar() as string;
@@ -265,7 +271,7 @@ internal sealed partial class LibraryStore
         {
             command.Parameters.AddWithValue("$id", linkedId);
             var linked = ReadMetadataById(command, "$id")!;
-            BindMetadataToGroup(command, previousId, attachFiles);
+            BindMetadataToGroup(command, previousId, attachFiles, scoped);
             return linked;
         }
 
@@ -301,19 +307,21 @@ internal sealed partial class LibraryStore
                 provider_details = excluded.provider_details, manual_tags = excluded.manual_tags, updated_at = excluded.updated_at;
             """;
         command.ExecuteNonQuery();
-        BindMetadataToGroup(command, previousId, attachFiles);
+        BindMetadataToGroup(command, previousId, attachFiles, scoped);
         return metadata;
     }
 
-    private static void BindMetadataToGroup(SqliteCommand command, string? previousId, bool attachFiles)
+    private static void BindMetadataToGroup(SqliteCommand command, string? previousId, bool attachFiles, bool scoped)
     {
         command.CommandText = """
             INSERT INTO series_metadata_binding(root_id, series_key, metadata_id) VALUES ($root, $series, $id)
             ON CONFLICT(root_id, series_key) DO UPDATE SET metadata_id = excluded.metadata_id;
             """;
         command.ExecuteNonQuery();
-        if (attachFiles || previousId is not null && previousId != (string)command.Parameters["$id"].Value!)
-            AttachSeriesMetadata(command, previousId, attachFiles);
+        if (attachFiles && !scoped || previousId is not null && previousId != (string)command.Parameters["$id"].Value!)
+            AttachSeriesMetadata(command, previousId, attachFiles && !scoped);
+        if (scoped)
+            AttachReviewedFiles(command);
     }
 
     private static void AttachSeriesMetadata(SqliteCommand command, string? previousId = null, bool attachNew = true)
@@ -332,6 +340,15 @@ internal sealed partial class LibraryStore
             WHERE content_metadata.metadata_id = $previousMetadata;
             """;
         command.ExecuteNonQuery();
+        if (attachNew)
+        {
+            command.CommandText = """
+                INSERT OR IGNORE INTO file_association_review(file_id, content_id)
+                SELECT f.id, f.content_id FROM library_file f JOIN content_metadata link ON link.content_id = f.content_id
+                WHERE f.root_id = $root AND f.series_key = $series AND link.reviewed_locations_only = 1 AND link.metadata_id =
+                """ + MetadataIdForGroup + ";";
+            command.ExecuteNonQuery();
+        }
     }
 
     private const string MetadataColumns = """
@@ -468,18 +485,22 @@ internal sealed partial class LibraryStore
     private static string? ReadText(SqliteDataReader rows, int index) => rows.IsDBNull(index) ? null : rows.GetString(index);
     private static int? ReadInt(SqliteDataReader rows, int index) => rows.IsDBNull(index) ? null : rows.GetInt32(index);
 
-    private static void StageKnownSeries(SqliteConnection database, Guid root)
+    private static int StageKnownSeries(SqliteConnection database, Guid root, SqliteTransaction? transaction = null)
     {
         using var command = database.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             UPDATE scan_file AS f SET series_key = m.series_key
             FROM scan_hash h JOIN library_content c ON c.sha256 = h.sha256
             JOIN content_metadata cm ON cm.content_id = c.id JOIN series_metadata m ON m.id = cm.metadata_id
-            WHERE f.relative_path = h.relative_path AND NOT EXISTS (
+            WHERE f.relative_path = h.relative_path AND f.series_key <> m.series_key AND NOT EXISTS (
                 SELECT 1 FROM series_metadata_binding alias
-                WHERE alias.root_id = $root AND alias.series_key = f.series_key AND alias.metadata_id = m.id);
+                WHERE alias.root_id = $root AND alias.series_key = f.series_key AND alias.metadata_id = m.id)
+            AND NOT EXISTS (
+                SELECT 1 FROM library_file previous JOIN import_file_split split ON split.file_id = previous.id
+                WHERE previous.root_id = $root AND previous.relative_path = f.relative_path AND split.content_id = c.id);
             """;
         command.Parameters.AddWithValue("$root", root);
-        command.ExecuteNonQuery();
+        return command.ExecuteNonQuery();
     }
 }

@@ -35,10 +35,12 @@ internal sealed partial class MetadataAgent : IDisposable
         genres tags { name isMediaSpoiler isGeneralSpoiler }
         staff(page:1,perPage:12) { edges { role node { name { full } } } }
         """;
+    private const string SearchQuery = "query($title:String!){Page(page:1,perPage:8){media(search:$title,type:MANGA){" + MediaFields + "}}}";
     private readonly HttpClient client;
     private readonly Uri endpoint;
     private static readonly TimeSpan MinimumRequestSpacing = TimeSpan.FromSeconds(3);
     private readonly SemaphoreSlim requestGate = new(1);
+    private int interactiveRequests;
     private DateTimeOffset rateLimitUntil;
     private DateTimeOffset nextRequestAt;
 
@@ -63,12 +65,14 @@ internal sealed partial class MetadataAgent : IDisposable
         client.DefaultRequestHeaders.UserAgent.ParseAdd("MangaOrganizer/0.1");
     }
 
-    public async Task<IReadOnlyList<MetadataMatch>> Search(string title, CancellationToken cancellationToken)
-    {
-        var query = "query($title:String!){Page(page:1,perPage:8){media(search:$title,type:MANGA){" + MediaFields + "}}}";
-        var data = await Request(query, new { title }, cancellationToken);
-        return (data?.Page?.Media ?? []).OfType<ProviderMedia>().Select(ToMatch).OfType<MetadataMatch>().ToArray();
-    }
+    public async Task<IReadOnlyList<MetadataMatch>> Search(string title, CancellationToken cancellationToken) =>
+        ReadMatches(await Request(SearchQuery, new { title }, cancellationToken));
+
+    public async Task<IReadOnlyList<MetadataMatch>?> SearchQueued(string title, CancellationToken cancellationToken) =>
+        await Request(SearchQuery, new { title }, cancellationToken, queued: true) is { } data ? ReadMatches(data) : null;
+
+    private static MetadataMatch[] ReadMatches(MetadataData? data) =>
+        (data?.Page?.Media ?? []).OfType<ProviderMedia>().Select(ToMatch).OfType<MetadataMatch>().ToArray();
 
     public async Task<MetadataMatch?> Read(int id, CancellationToken cancellationToken)
     {
@@ -85,23 +89,44 @@ internal sealed partial class MetadataAgent : IDisposable
 
     public static string ListingUrl(int id) => $"https://anilist.co/manga/{id}";
 
-    private async Task<MetadataData?> Request(string query, object variables, CancellationToken cancellationToken)
+    private async Task<MetadataData?> Request(string query, object variables, CancellationToken cancellationToken, bool queued = false)
     {
-        await requestGate.WaitAsync(cancellationToken);
+        if (!queued) Interlocked.Increment(ref interactiveRequests);
         try
         {
-            var now = DateTimeOffset.UtcNow;
-            if (rateLimitUntil > now)
-                throw RateLimited(rateLimitUntil);
-            var wait = nextRequestAt - now;
-            if (wait > TimeSpan.Zero)
-                await Task.Delay(wait, cancellationToken);
-            nextRequestAt = DateTimeOffset.UtcNow + MinimumRequestSpacing;
-            return await SendRequest(query, variables, cancellationToken);
+            if (queued)
+            {
+                if (Volatile.Read(ref interactiveRequests) != 0 || !await requestGate.WaitAsync(0, cancellationToken))
+                    return null;
+            }
+            else
+            {
+                await requestGate.WaitAsync(cancellationToken);
+            }
+
+            try
+            {
+                if (queued && Volatile.Read(ref interactiveRequests) != 0) return null;
+                var now = DateTimeOffset.UtcNow;
+                if (rateLimitUntil > now)
+                    throw RateLimited(rateLimitUntil);
+                var wait = nextRequestAt - now;
+                if (wait > TimeSpan.Zero)
+                {
+                    if (queued) return null;
+                    await Task.Delay(wait, cancellationToken);
+                }
+                nextRequestAt = DateTimeOffset.UtcNow + MinimumRequestSpacing;
+                return await SendRequest(query, variables, cancellationToken);
+            }
+            finally
+            {
+                requestGate.Release();
+            }
         }
         finally
         {
-            requestGate.Release();
+            if (!queued) Interlocked.Decrement(ref interactiveRequests);
         }
     }
 

@@ -211,6 +211,9 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE file_association_review;
+            DROP TABLE library_scan_metadata;
+            DROP TABLE library_scan_checkpoint;
             DROP TABLE library_sidecar_stamp;
             ALTER TABLE library_file DROP COLUMN scan_stamp;
             ALTER TABLE library_file DROP COLUMN scan_chapters;
@@ -382,8 +385,17 @@ def verify_series_groups(owner, root_id, path):
         "Tea Time - At Dawn": "(COMIKET104) [Studio] Tea Time - At Dawn [English].cbz",
         "Koi no Silver Himitsu": "(COMITIA137) [Studio (Artist)] Koi no Silver Himitsu The Secret of Silver (English).cbz",
         "Haru no Tabiji The Animation": "(COMITIA142) [Studio] Haru no Tabiji The Animation (English).cbz",
+        "Hoshi no Machi 2": "(CR31) [Studio (Artist)] Hoshi no Machi 2 - Star Town 2 [English] =Translator=.cbz",
+        "Little Lantern": "(Doujinshi) [Studio (Artist)] Little Lantern + Omake.cbz",
+        "Ore no Harbor": "(Puniket 15) [Studio (Artist)] Ore no Harbor (Fixture Franchise) [English].cbz",
+        "Night Flight!": "(SC2018 Summer) [Studio (Artist)] Night Flight! _Yoru no Hiko_ [English] [Translator].cbz",
+        "A Quiet Workshop": "(SC61) [Studio (Artist)] A Quiet Workshop (Fixture Franchise) [English] {Translator}.cbz",
+        "Mountain Post": "01. [Artist] Mountain Post (Publisher) [English] [Translator].cbz",
+        "Paper Lamps": "(Local Book Fair 9) [Studio] Paper Lamps [English].cbz",
     }
+    folder_named_release = "(SC61) [Studio] Bright Harbor (Guidebook) [English]/001.cbz"
     fixtures.extend(doujin_releases.values())
+    fixtures.append(folder_named_release)
     for relative in fixtures:
         file = path / relative
         file.parent.mkdir(parents=True, exist_ok=True)
@@ -397,12 +409,16 @@ def verify_series_groups(owner, root_id, path):
         assert group["fileCount"] == len(releases)
         files = owner.files(root_id, f"?{urlencode({'seriesKey': group['key']})}")
         assert {row["relativePath"] for row in files["items"]} == set(releases)
-    assert groups["total"] == len(by_title) == 14 + len(doujin_releases)
+    assert groups["total"] == len(by_title) == 15 + len(doujin_releases)
     for title, filename in doujin_releases.items():
         path_query = urlencode({"seriesKey": by_title[title]["key"], "view": "all"})
         (entry,) = owner.files(root_id, "?" + path_query)["items"]
         assert entry["relativePath"] == filename and entry["filenameEvidence"]["title"] == title
-        assert entry["filenameEvidence"]["event"] and entry["filenameEvidence"]["creator"]
+        assert entry["filenameEvidence"]["creator"]
+        if filename.startswith("("):
+            assert entry["filenameEvidence"]["event"]
+        else:
+            assert entry["filenameEvidence"]["event"] is None and "01." in entry["filenameEvidence"]["notes"]
         assert not entry["associationConfirmed"]
     arc = owner.files(root_id, "?seriesKey=" + by_title["Archive Route 2"]["key"])["items"][0]["filenameEvidence"]
     assert arc["alternateTitle"] == "The Archive Arc" and "Fixture Franchise" in arc["notes"]
@@ -411,7 +427,16 @@ def verify_series_groups(owner, root_id, path):
     assert garden["event"] == "COMITIA130" and garden["creator"] == "Studio (Artist)"
     bilingual = owner.files(root_id, "?seriesKey=" + by_title["Koi no Silver Himitsu"]["key"])["items"][0]["filenameEvidence"]
     assert bilingual["alternateTitle"] == "The Secret of Silver"
-    assert owner.series(root_id, "?view=all&search=Incoming%2F001.cbz")["items"][0]["lookupTitle"] == ""
+    for title, alternate in [("Hoshi no Machi 2", "Star Town 2"), ("Night Flight!", "Yoru no Hiko")]:
+        (version,) = owner.files(root_id, "?seriesKey=" + by_title[title]["key"])["items"]
+        assert version["filenameEvidence"]["alternateTitle"] == alternate
+    (extra,) = owner.files(root_id, "?seriesKey=" + by_title["Little Lantern"]["key"])["items"]
+    assert "Omake" in extra["filenameEvidence"]["notes"]
+    (from_folder,) = owner.files(root_id, "?seriesKey=" + by_title["Bright Harbor"]["key"])["items"]
+    assert from_folder["relativePath"] == folder_named_release
+    assert from_folder["seriesTitle"] == "Bright Harbor"
+    unidentified = owner.series(root_id, "?view=all&search=Incoming%2F001.cbz")["items"][0]
+    assert unidentified["lookupTitle"] == "" and unidentified["title"] == "Unidentified series"
     assert by_title[series_title]["fileCount"] == 53
     assert by_title["Northbound"]["fileCount"] == 6
     assert by_title["Incoming/001.cbz"]["fileCount"] == by_title["Incoming/002.cbz"]["fileCount"] == 1
@@ -420,7 +445,7 @@ def verify_series_groups(owner, root_id, path):
     assert by_title["Another Series"]["fileCount"] == 1
     assert by_title["Different Title 2"]["key"] != by_title["Different Title 3"]["key"]
     assert by_title["Different Title 2 (2022)"]["fileCount"] == 1
-    assert owner.series(root_id, "?limit=1") == {"total": 14 + len(doujin_releases), "items": groups["items"][:1]}
+    assert owner.series(root_id, "?limit=1") == {"total": 15 + len(doujin_releases), "items": groups["items"][:1]}
     query = urlencode({"seriesKey": by_title[series_title]["key"], "limit": 50})
     first = owner.files(root_id, f"?{query}")
     second = owner.files(root_id, f"?{query}&offset=50")
@@ -637,6 +662,84 @@ def verify_live_scan(owner, root_id, path):
         assert 0 <= snapshot["coversFound"] <= snapshot["seriesChecked"] <= snapshot["seriesTotal"]
     probe.unlink()
     owner.scan(root_id)
+
+
+def verify_scan_checkpoints(executable, fixture):
+    media, data = fixture / "checkpoint-media", fixture / "checkpoint-data"
+    primary = media / "primary"
+    primary.mkdir(parents=True)
+    (media / "archive").mkdir()
+    first = primary / "A Cabin Ch.1.pdf"
+    first.write_bytes(b"original small digest")
+    slow = primary / "Z Large fixture.pdf"
+    password = uuid4().hex
+    reuse = supports_quick_scan(primary)
+
+    def state():
+        return next(root for root in owner.roots() if root["id"] == root_id)
+
+    def wait_for(predicate):
+        deadline = time.monotonic() + 25
+        while time.monotonic() < deadline:
+            current = state()
+            if predicate(current):
+                return current
+            time.sleep(0.01)
+        raise AssertionError(current)
+
+    def control(action, expected=202):
+        owner.request(f"{route}/{action}", expected, method="POST", token=owner.csrf())
+
+    def verify_in_progress():
+        owner.request(route + "?full=true", 202, method="POST", token=owner.csrf())
+        wait_for(lambda root: (root["scanProgress"] or {}).get("currentPath") == slow.name
+                 and root["scanProgress"]["phase"] == "hashing")
+
+    with start_app(executable, data, media, password) as address:
+        wait_for_server(address)
+        owner = Browser(address)
+        owner.sign_in(password)
+        root_id = owner.roots()[0]["id"]
+        route = f"{LIBRARY_ROOTS}/{root_id}/scan"
+        owner.scan(root_id)
+        digest = owner.files(root_id)["items"][0]["sha256"]
+        with slow.open("wb") as stream:
+            stream.truncate(1024 ** 3)
+        verify_in_progress()
+        owner.request(route + "/pause", 400, method="POST")
+        control("pause")
+        paused = wait_for(lambda root: root["state"] == "paused")
+        assert paused["fileCount"] == 1 and paused["scanProgress"]["processedFiles"] == 1, paused
+        owner.request(route, 409, method="POST", token=owner.csrf())
+        owner.request("/api/maintenance/artwork-cache/clear", 200, method="POST", token=owner.csrf())
+
+    arrived = primary / "B New arrival Ch.1.pdf"
+    arrived.write_bytes(b"new file after discovery")
+    with start_app(executable, data, media, None) as address:
+        wait_for_server(address)
+        owner = Browser(address)
+        owner.sign_in(password)
+        assert state()["scanProgress"] == paused["scanProgress"]
+        control("resume")
+        completed = wait_for(lambda root: root["state"] == "complete")
+        assert completed["fileCount"] == 2 and completed["lastScan"]["full"], completed
+        assert completed["lastScan"]["reusedFiles"] == int(reuse), completed
+        assert owner.files(root_id)["items"][0]["sha256"] == digest
+
+        verify_in_progress()
+        control("stop")
+        stopped = wait_for(lambda root: root["state"] == "stopped")
+        assert stopped["fileCount"] == 2 and stopped["scanProgress"]["processedFiles"] == 2, stopped
+        control("resume", 409)
+        slow.unlink()
+        older = first.stat()
+        first.write_bytes(b"CHANGED small digest!")
+        os.utime(first, ns=(older.st_atime_ns, older.st_mtime_ns))
+        fresh = owner.scan(root_id)["lastScan"]
+        assert fresh["reusedFiles"] == int(reuse) and fresh["discoveredFiles"] == 2, fresh
+        files = owner.files(root_id)["items"]
+        assert {file["relativePath"] for file in files} == {first.name, arrived.name}
+        assert files[0]["sha256"] != digest
 
 
 def verify_series_metadata(owner, root_id, path):
@@ -2369,6 +2472,7 @@ def verify_metadata_queue(executable, fixture):
                 root = browser.roots()[0]["id"]
                 browser.scan(root)
                 rows = settled(browser, 3)
+                assert browser.roots()[0]["metadataProgress"] == {"total": 3, "completed": 3}
                 assert sorted(name for name, _ in calls) == ["Alpha Shelf", "Beta Shelf", "Gamma Shelf"]
                 alpha = rows["Alpha Shelf"]
                 assert alpha["candidates"][0]["matchingTitle"] == "Alpha Shelf"
@@ -2402,10 +2506,39 @@ def verify_metadata_queue(executable, fixture):
                 match = {"providerId": 21, "revision": alpha["revision"]}
                 browser.request(target, 409, method="POST", token=browser.csrf(), body=match)
                 match["revision"] = refreshed["Alpha Shelf"]["revision"]
-                saved = json.loads(browser.request(target, 200, method="POST", token=browser.csrf(), body=match))
+                match["reviewFiles"] = alpha["reviewFiles"]
+                assert len(match["reviewFiles"]) == 2 and close["items"][0]["reviewFiles"] == match["reviewFiles"]
+                primary = media / "primary"
+                newcomer = primary / "Alpha Shelf Vol.03.pdf"
+                copy = primary / "Alpha Shelf Vol.04.pdf"
+                newcomer.write_bytes(b"Unreviewed third volume")
+                copy.write_bytes((primary / "Alpha Shelf Vol.01.pdf").read_bytes())
+                browser.scan(root)
+                updated = browser.series(root, f"?view=all&seriesKey={alpha['seriesKey']}")["items"][0]
+                assert len(updated["reviewFiles"]) == 4 and updated["aniList"]["revision"] == match["revision"]
+                token = browser.csrf()
+                with closing(sqlite3.connect(data / "organizer.sqlite")) as publisher, publisher:
+                    publisher.execute("BEGIN IMMEDIATE")
+                    busy = json.loads(browser.request(target, 503, method="POST", token=token, body=match))
+                    assert "Try confirming again" in busy["message"]
+                saved = json.loads(browser.request(target, 200, method="POST", token=token, body=match))
                 assert saved["title"] == "Alpha release" and saved["providerId"] == 21
                 published = browser.files(root, f"?view=library&seriesKey={alpha['seriesKey']}")
                 assert published["total"] == 2 and all(file["associationConfirmed"] for file in published["items"])
+                pending = browser.files(root, f"?view=association&seriesKey={alpha['seriesKey']}")["items"]
+                assert {file["relativePath"] for file in pending} == {newcomer.name, copy.name}
+                assert all(file["hasSeriesMetadata"] and not file["associationConfirmed"] for file in pending)
+                assert browser.series(root, f"?view=close&seriesKey={alpha['seriesKey']}")["total"] == 0
+                original = primary / "Alpha Shelf Vol.02.pdf"
+                moved = original.with_name("Alpha Shelf Vol.02 [Archived].pdf")
+                original.rename(moved)
+                browser.scan(root)
+                published = browser.files(root, f"?view=library&seriesKey={alpha['seriesKey']}")
+                assert {file["relativePath"] for file in published["items"]} == {"Alpha Shelf Vol.01.pdf", moved.name}
+                (duplicate,) = [file for file in pending if file["relativePath"] == copy.name]
+                browser.request(f"{LIBRARY_ROOTS}/{root}/series/{alpha['seriesKey']}/association", 204,
+                                method="POST", token=browser.csrf(), body={"fileId": duplicate["id"], "contentId": duplicate["contentId"]})
+                assert browser.files(root, f"?view=library&seriesKey={alpha['seriesKey']}")["total"] == 3
                 browser.request(target, 409, method="POST", token=browser.csrf(), body=match)
                 assert [name for name, _ in calls][3:] == ["Alpha Shelf"]
                 assert json.loads(browser.request(queue + "?limit=1", 200))["total"] == 2
@@ -2443,6 +2576,7 @@ def verify_metadata_queue(executable, fixture):
                     (media / "primary" / f"{title} Vol.01.pdf").write_bytes(title.encode())
                 browser.scan(root)
                 assert page_started.wait(timeout=8)
+                assert browser.roots()[0]["metadataProgress"] == {"total": 3, "completed": 0}
                 running = calls[-1][0]
                 wanted = max(priority_titles - {running}, key=lambda title: sha256(("series\0" + title.lower()).encode()).digest())
                 page = json.loads(browser.request(queue + "?" + urlencode({"search": wanted, "limit": 1}), 200))
@@ -2478,7 +2612,7 @@ def verify_metadata_queue(executable, fixture):
 
                 browser = Browser(address)
                 browser.sign_in(password)
-                prefix = "(COMITIA101) [Studio (Artist)] "
+                prefix = "(SC2018 Summer) [Studio (Artist)] "
                 note = " & [English] [Translator]"
                 old_title = prefix + "Lantern Evening" + note
                 old_key = sha256(old_title.encode()).hexdigest()
@@ -2504,7 +2638,7 @@ def verify_metadata_queue(executable, fixture):
 
                 before = len(calls)
                 (legacy,) = browser.series(root, f"?view=all&seriesKey={old_key}")["items"]
-                assert legacy["title"] == old_title and legacy["lookupTitle"] == "Lantern Evening"
+                assert legacy["title"] == legacy["lookupTitle"] == "Lantern Evening"
                 (file,) = browser.files(root, f"?view=all&seriesKey={old_key}")["items"]
                 assert file["relativePath"] == old_path and file["lookupTitle"] == "Lantern Evening"
                 (row,) = json.loads(browser.request(queue + "?search=Lantern+Evening", 200))["items"]
@@ -2653,6 +2787,7 @@ if __name__ == "__main__":
             verify_web_setup(executable, Path(fixture), media)
             verify_external_metadata(executable, Path(fixture))
             verify_metadata_queue(executable, Path(fixture))
+            verify_scan_checkpoints(executable, Path(fixture))
             verify_maintenance_resets(executable, Path(fixture))
             data_dir = Path(fixture) / "data"
             smoke(lambda password: start_app(executable, data_dir, media, password), media)

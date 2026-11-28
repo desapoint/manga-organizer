@@ -6,6 +6,7 @@ import { getCsrfToken } from './api';
 import { Workspace } from './Workspace';
 import { FirstRunSetup } from './FirstRunSetup';
 import type { SetupStatus } from './FirstRunSetup';
+import { ToastProvider } from './Toast';
 import { AuthLayout, Button, PageHeader } from './ui';
 import './styles.css';
 
@@ -128,4 +129,4 @@ function App() {
   );
 }
 
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(<ToastProvider><App /></ToastProvider>);
