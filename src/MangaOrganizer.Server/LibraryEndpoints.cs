@@ -58,7 +58,7 @@ internal static class LibraryEndpoints
         });
 
         library.MapGet("/{id:guid}/files", (Guid id, int? offset, int? limit, string? seriesKey, string? search, string? volume,
-            string? view, bool? includeCoverage, LibraryStore store) =>
+            string? view, bool? includeCoverage, bool? suggestCoverage, LibraryStore store) =>
         {
             if (!store.TryGetRoot(id, out _))
             {
@@ -70,7 +70,7 @@ internal static class LibraryEndpoints
                 return Results.BadRequest();
             }
             return Results.Ok(store.ReadFiles(id, offset ?? 0, limit ?? 50, seriesKey?.ToLowerInvariant(), search?.Trim() ?? "",
-                volume is null ? null : BookNumbers.Canonical(volume), view, includeCoverage == true));
+                volume is null ? null : BookNumbers.Canonical(volume), view, includeCoverage == true, suggestCoverage == true));
         });
 
         library.MapGet("/{id:guid}/series/{key}/release-folders", (Guid id, string key, string? view, LibraryStore store) =>

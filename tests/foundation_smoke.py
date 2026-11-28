@@ -332,6 +332,7 @@ def verify_folder_settings(owner, media):
     verify_lowest_owned_cover(owner, shared["id"], media / "intake")
     verify_live_scan(owner, shared["id"], media / "intake")
     verify_series_metadata(owner, shared["id"], media / "intake")
+    verify_coverage_suggestions(owner, shared["id"], media / "intake")
     owner.request(f"{LIBRARY_ROOTS}/{archive['id']}", 204, method="DELETE", token=owner.csrf())
     assert (media / "archive" / "Volume.epub").exists()
     assert (media / "intake" / "Unmatched.cbz").exists()
@@ -354,6 +355,8 @@ def verify_series_groups(owner, root_id, path):
                              for n in range(1, 6)],
         "Akumetsu": [f"Akumetsu - Tome {n:02} [CBR] [Scan DP] [FR] [1500x1200].cbr" for n in range(1, 8)],
         "Undead Unluck": [f"Undead Unluck {n} (2022) (Digital) (1r0n).cbz" for n in range(107, 119)],
+        "12 Years Apart": [f"12 Years Apart (2021-2022)/12 Years Apart {n:03} (2021) (Digital) (1r0n).cbz"
+                           for n in range(1, 4)],
     }
     chapter_titles = [
         (1, "Undead and Unluck"), (4, "Comment utiliser mon unluck"), (5, "Tu es qui, toi"),
@@ -409,7 +412,9 @@ def verify_series_groups(owner, root_id, path):
         assert group["fileCount"] == len(releases)
         files = owner.files(root_id, f"?{urlencode({'seriesKey': group['key']})}")
         assert {row["relativePath"] for row in files["items"]} == set(releases)
-    assert groups["total"] == len(by_title) == 15 + len(doujin_releases)
+        if title == "12 Years Apart":
+            assert [(row["volume"], row["chapter"]) for row in files["items"]] == [(None, "1"), (None, "2"), (None, "3")]
+    assert groups["total"] == len(by_title) == 16 + len(doujin_releases)
     for title, filename in doujin_releases.items():
         path_query = urlencode({"seriesKey": by_title[title]["key"], "view": "all"})
         (entry,) = owner.files(root_id, "?" + path_query)["items"]
@@ -445,7 +450,7 @@ def verify_series_groups(owner, root_id, path):
     assert by_title["Another Series"]["fileCount"] == 1
     assert by_title["Different Title 2"]["key"] != by_title["Different Title 3"]["key"]
     assert by_title["Different Title 2 (2022)"]["fileCount"] == 1
-    assert owner.series(root_id, "?limit=1") == {"total": 15 + len(doujin_releases), "items": groups["items"][:1]}
+    assert owner.series(root_id, "?limit=1") == {"total": 16 + len(doujin_releases), "items": groups["items"][:1]}
     query = urlencode({"seriesKey": by_title[series_title]["key"], "limit": 50})
     first = owner.files(root_id, f"?{query}")
     second = owner.files(root_id, f"?{query}&offset=50")
@@ -453,6 +458,37 @@ def verify_series_groups(owner, root_id, path):
     assert {row["relativePath"] for row in first["items"] + second["items"]} == set(fixtures[:53])
     owner.request(f"{LIBRARY_ROOTS}/{root_id}/series?offset=-1", 400)
     owner.request(f"{LIBRARY_ROOTS}/{root_id}/files?seriesKey=invalid", 400)
+
+
+def verify_coverage_suggestions(owner, root, path):
+    name = "Harbor Serial 002.cbz"
+    (path / name).write_bytes(b"Numbered file whose filename uses a series alias")
+    owner.scan(root)
+    (entry,) = owner.files(root, "?search=Harbor+Serial+002")["items"]
+    assert entry["chapter"] is None
+    url = f"{LIBRARY_ROOTS}/{root}"
+    series = f"{url}/series/{entry['seriesKey']}"
+    owner.request(series + "/metadata", 200, method="PUT", token=owner.csrf(),
+                  body={"title": "Harbor Chronicles", "alternateTitles": ["Harbor Serial"], "kind": "manga"})
+
+    def coverage(published, suggested):
+        params = urlencode({"seriesKey": entry["seriesKey"], "view": "library" if published else "all",
+                            "includeCoverage": "true", "suggestCoverage": str(suggested).lower()})
+        return owner.files(root, "?" + params)["items"][0]["coverage"]
+
+    before = coverage(True, False)
+    assert "suggestion" not in before and before["chapters"] == []
+    for published in [False, True]:
+        result = coverage(published, True)
+        assert result["suggestion"] == {"volume": None, "chapters": ["2"]}
+        assert result["chapters"] == [] and result["revision"] == before["revision"]
+
+    assert coverage(True, False) == before
+    change = {"fileId": entry["id"], "contentId": entry["contentId"], "seriesKey": entry["seriesKey"],
+              "revision": before["revision"], "volume": "", "chapters": ["2"]}
+    owner.request(url + "/file-coverage?published=true", 204, method="PUT", token=owner.csrf(), body={"changes": [change]})
+    after = coverage(True, True)
+    assert after["chapters"] == ["2"] and "suggestion" not in after
 
 
 def synthetic_png(red, green, blue, width=12, height=18):

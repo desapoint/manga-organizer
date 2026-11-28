@@ -78,7 +78,7 @@ export function ScanStatus({ root }: { root: LibraryRoot }) {
         {details.counter && <span className="ms-auto text-end text-sm text-muted tabular-nums">{details.counter}</span>}
       </div>
       {phase !== 'queued' && <progress aria-labelledby={titleId} max={details.total || 1} value={details.value}
-        className="scan-progress-bar" data-animated={active} />}
+        className="progress-bar scan-progress-bar" data-animated={active} />}
       {details.detail && <p className="m-0 text-sm text-muted">{details.detail}</p>}
       {path && <div className="flex min-w-0 flex-wrap items-start gap-2">
         {folder && <code aria-label="Current folder" className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-line bg-inset px-2 py-1 text-xs text-muted wrap-anywhere">

@@ -80,22 +80,35 @@ internal static partial class SeriesSuggestions
             ? BookNumbers.Canonical(number) : null;
     }
 
+    public static string? ChapterForKnownTitles(string path, string? savedTitle, IReadOnlyList<string> alternateTitles, string? scannedTitle)
+    {
+        var titles = alternateTitles.Prepend(savedTitle).OfType<string>().ToArray();
+        var release = Normalize(ChapterReleaseStem(path));
+        if (titles.Any(title => Normalize(title) == release)) return null;
+        return titles.Append(scannedTitle).OfType<string>().Select(title => ChapterForSelectedTitle(path, title))
+            .FirstOrDefault(chapter => chapter is not null);
+    }
+
     [GeneratedRegex(@"^\[(?<name>[^\[\]]+)\]\s*", MatchOptions)]
     private static partial Regex CreatorPrefix();
 
     [GeneratedRegex(@"\((?<alias>[^()]+)\)\s*$", MatchOptions)]
     private static partial Regex CreatorAlias();
 
-    public static string? BareChapter(string relativePath, string? seriesTitle)
+    private static string? BareChapter(string relativePath, string seriesTitle)
     {
-        if (seriesTitle is null) return null;
+        var title = ChapterReleaseStem(relativePath);
+        var number = BareNumberSuffix().Match(title);
+        return number.Success && Normalize(title[..number.Index]) == Normalize(seriesTitle) ? number.Groups["chapter"].Value : null;
+    }
+
+    private static string ChapterReleaseStem(string relativePath)
+    {
         var stem = Path.GetFileNameWithoutExtension(relativePath.Split('/')[^1]);
         var title = ReleaseStatusSuffix().Replace(ReleasePrefix().Replace(stem.Trim(), ""), "");
         var annotations = ReleaseAnnotations().Match(title);
         if (annotations.Success) title = title[..annotations.Index];
-        title = TrimReleaseTags(title);
-        var number = BareNumberSuffix().Match(title);
-        return number.Success && Normalize(title[..number.Index]) == Normalize(seriesTitle) ? number.Groups["chapter"].Value : null;
+        return TrimReleaseTags(title);
     }
 
     private static string? FindSeriesFolder(string[] parts, string rootPath)

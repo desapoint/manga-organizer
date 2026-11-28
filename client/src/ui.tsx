@@ -7,8 +7,8 @@ import { ToastAnchor } from './Toast';
 
 const buttonVariants = {
   primary: 'border-transparent bg-accent text-accent-ink not-disabled:hover:bg-accent-hover',
-  secondary: 'border-control bg-transparent text-secondary enabled:hover:bg-nav-hover',
-  ghost: 'border-transparent bg-transparent text-muted enabled:hover:bg-nav-hover enabled:hover:text-ink',
+  secondary: 'border-control bg-transparent text-secondary not-disabled:hover:bg-nav-hover',
+  ghost: 'border-transparent bg-transparent text-muted not-disabled:hover:bg-nav-hover not-disabled:hover:text-ink',
 };
 
 type ActionStyle = { variant?: keyof typeof buttonVariants; icon?: LucideIcon };

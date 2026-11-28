@@ -1,10 +1,13 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
-internal sealed record FileCoverageState(string? Volume, string[] Chapters, bool MultipleVolumes, string Revision);
+internal sealed record FileCoverageSuggestion(string? Volume, string[] Chapters);
+internal sealed record FileCoverageState(string? Volume, string[] Chapters, bool MultipleVolumes, string Revision,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] FileCoverageSuggestion? Suggestion = null);
 internal sealed record FileCoverageEdit(string FileId, string ContentId, string SeriesKey, string Revision,
     string Volume, string[] Chapters);
 
@@ -42,6 +45,18 @@ internal sealed partial class LibraryStore
             return new(inferredVolume, JsonSerializer.Deserialize<string[]>(inferredChapters) ?? [], false, revision);
         var chapter = chapterHint ?? (oneShot ? "1" : null);
         return new(volumeHint, chapter is null ? [] : [chapter], false, revision);
+    }
+
+    private static FileCoverageSuggestion? SuggestFileCoverage(string path, FileCoverageState current,
+        string? savedTitle, string[] alternateTitles, string? scannedTitle)
+    {
+        var numbers = BookNumbers.FromPath(path);
+        var volume = current.Volume ?? numbers.Volume;
+        var chapter = current.Chapters.Length == 0
+            ? numbers.Chapter ?? SeriesSuggestions.ChapterForKnownTitles(path, savedTitle, alternateTitles, scannedTitle)
+            : null;
+        return chapter is not null ? new(volume, [chapter]) :
+            volume != current.Volume ? new(volume, current.Chapters) : null;
     }
 
     public bool SaveFileCoverage(Guid root, IReadOnlyList<FileCoverageEdit> edits, bool published)

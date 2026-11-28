@@ -414,8 +414,12 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
   const tagActions = management && (persistent || pageIds.length > 0) ? <ReleaseSelectionActions selection={selection}
     pageIds={pageIds} rootId={rootId} onSignedOut={onSignedOut} onSaved={management.onDataChanged} persistent={persistent} /> : null;
   const actions = editingCoverage ? <>
-    <Button disabled={bulkCoverage.busy || !bulkCoverage.drafts?.size} onClick={() => void bulkCoverage.apply()}>
+    <Button disabled={bulkCoverage.busy || bulkCoverage.suggesting || !bulkCoverage.drafts?.size} onClick={() => void bulkCoverage.apply()}>
       {bulkCoverage.busy ? 'Applying…' : 'Apply changes'}
+    </Button>
+    <Button variant="secondary" disabled={bulkCoverage.busy || bulkCoverage.suggesting}
+      onClick={() => void bulkCoverage.suggest(params)}>
+      {bulkCoverage.suggesting ? 'Finding assignments…' : 'Suggest assignments'}
     </Button>
     <Button variant="secondary" disabled={bulkCoverage.busy} onClick={bulkCoverage.cancel}>Cancel</Button>
     <span role="status" className="text-sm text-muted">{bulkCoverage.drafts?.size ?? 0} edited</span>
@@ -588,7 +592,7 @@ function CollectionTotal({ label, value, total }: { label: string; value: number
   return <div className="grid min-w-0 gap-1.5">
     <strong className="text-sm">{label}</strong>
     <span className="text-sm text-muted">{value.toLocaleString()}{total === null ? ' · released total unknown' : ` of ${total.toLocaleString()}`}</span>
-    {!!total && <progress className="h-2 w-full accent-accent" aria-label={label} value={Math.min(value, total)} max={total} />}
+    {!!total && <progress className="progress-bar" aria-label={label} value={Math.min(value, total)} max={total} />}
   </div>;
 }
 
