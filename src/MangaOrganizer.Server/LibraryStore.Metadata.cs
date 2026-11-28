@@ -468,18 +468,22 @@ internal sealed partial class LibraryStore
     private static string? ReadText(SqliteDataReader rows, int index) => rows.IsDBNull(index) ? null : rows.GetString(index);
     private static int? ReadInt(SqliteDataReader rows, int index) => rows.IsDBNull(index) ? null : rows.GetInt32(index);
 
-    private static void StageKnownSeries(SqliteConnection database, Guid root)
+    private static int StageKnownSeries(SqliteConnection database, Guid root, SqliteTransaction? transaction = null)
     {
         using var command = database.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             UPDATE scan_file AS f SET series_key = m.series_key
             FROM scan_hash h JOIN library_content c ON c.sha256 = h.sha256
             JOIN content_metadata cm ON cm.content_id = c.id JOIN series_metadata m ON m.id = cm.metadata_id
-            WHERE f.relative_path = h.relative_path AND NOT EXISTS (
+            WHERE f.relative_path = h.relative_path AND f.series_key <> m.series_key AND NOT EXISTS (
                 SELECT 1 FROM series_metadata_binding alias
-                WHERE alias.root_id = $root AND alias.series_key = f.series_key AND alias.metadata_id = m.id);
+                WHERE alias.root_id = $root AND alias.series_key = f.series_key AND alias.metadata_id = m.id)
+            AND NOT EXISTS (
+                SELECT 1 FROM library_file previous JOIN import_file_split split ON split.file_id = previous.id
+                WHERE previous.root_id = $root AND previous.relative_path = f.relative_path AND split.content_id = c.id);
             """;
         command.Parameters.AddWithValue("$root", root);
-        command.ExecuteNonQuery();
+        return command.ExecuteNonQuery();
     }
 }

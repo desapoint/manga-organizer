@@ -260,15 +260,34 @@ internal sealed partial class LibraryStore
             StageHashes(database, root, scan, cancellationToken);
             StageKnownSeries(database, root.Id);
             StageIntakeSplits(database, root.Id);
-            StageCovers(database, root, scan, cancellationToken);
         }
-        LibraryScanner.RequireRoot(root.Path);
-        cancellationToken.ThrowIfCancellationRequested();
-        scan.StartPhase("publishing");
+        do
+        {
+            if (count > 0)
+            {
+                using var artwork = OpenCoverDatabase();
+                StageCovers(database, artwork, root, scan, cancellationToken);
+            }
+            LibraryScanner.RequireRoot(root.Path);
+            cancellationToken.ThrowIfCancellationRequested();
+            scan.StartPhase("publishing");
+        } while (!PublishScan(database, root.Id, count, skippedLinks, scan, cancellationToken));
+    }
 
+    private static bool PublishScan(SqliteConnection database, Guid rootId, long count, long skippedLinks, ScanProgress scan,
+        CancellationToken cancellationToken)
+    {
         using var transaction = database.BeginTransaction();
+        // A confirmation can change the series key while artwork is being extracted. Reuse the artwork with the updated grouping.
+        if (count > 0 && StageKnownSeries(database, rootId, transaction) != 0)
+        {
+            transaction.Commit();
+            return false;
+        }
+
+        using var command = database.CreateCommand();
         command.Transaction = transaction;
-        command.Parameters.AddWithValue("$id", root.Id);
+        command.Parameters.AddWithValue("$id", rootId);
         command.CommandText = "SELECT file_count FROM library_root WHERE id = $id;";
         var previousCount = (long)command.ExecuteScalar()!;
         var published = count != 0 || previousCount == 0;
@@ -362,6 +381,7 @@ internal sealed partial class LibraryStore
         }
         cancellationToken.ThrowIfCancellationRequested();
         transaction.Commit();
+        return true;
     }
 
     private static (long Count, long SkippedLinks) StageFiles(SqliteConnection database, string path, ScanProgress scan,

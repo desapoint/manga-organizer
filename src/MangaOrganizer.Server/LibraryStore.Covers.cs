@@ -97,25 +97,38 @@ internal sealed partial class LibraryStore
         }
     }
 
-    private static void StageCovers(SqliteConnection database, LibraryRoot root, ScanProgress scan, CancellationToken cancellationToken)
+    private static void StageCovers(SqliteConnection database, SqliteConnection artwork, LibraryRoot root, ScanProgress scan,
+        CancellationToken cancellationToken)
     {
+        using var snapshot = database.CreateCommand();
+        snapshot.CommandText = """
+            DELETE FROM scan_cover;
+            DELETE FROM scan_sidecar;
+            CREATE TEMP TABLE scan_cover_input AS
+            WITH directories AS (
+                SELECT directory, COUNT(DISTINCT series_key) = 1 AS unambiguous FROM scan_file GROUP BY directory
+            )
+            SELECT f.series_key, f.directory, d.unambiguous, f.relative_path, f.extension, f.size, f.modified_at,
+                h.sha256 AS archive_sha, f.series_title, h.stamp, cover.entry, image.sha256 AS image_sha,
+                no_pages.archive_sha IS NOT NULL AS without_pages
+            FROM scan_file f JOIN directories d USING(directory)
+            LEFT JOIN scan_hash h ON h.relative_path = f.relative_path
+            LEFT JOIN artwork.archive_cover cover ON cover.archive_sha = h.sha256
+            LEFT JOIN artwork.image image ON image.sha256 = cover.image_sha
+            LEFT JOIN artwork.archive_without_pages no_pages ON no_pages.archive_sha = h.sha256;
+            """;
+        snapshot.ExecuteNonQuery();
+
+        // Keep extraction and encoding outside any transaction on the persistent databases.
         using var transaction = database.BeginTransaction(deferred: true);
         using var query = database.CreateCommand();
         query.Transaction = transaction;
         query.CommandText = "SELECT COUNT(DISTINCT series_key) FROM scan_file;";
         scan.BeginCovers((long)query.ExecuteScalar()!);
         query.CommandText = """
-            WITH directories AS (
-                SELECT directory, COUNT(DISTINCT series_key) = 1 AS unambiguous FROM scan_file GROUP BY directory
-            )
-            SELECT f.series_key, f.directory, d.unambiguous, f.relative_path, f.extension, f.size, f.modified_at,
-                h.sha256, f.series_title, h.stamp, cover.entry, image.sha256, no_pages.archive_sha IS NOT NULL
-            FROM scan_file f JOIN directories d USING(directory)
-            LEFT JOIN scan_hash h ON h.relative_path = f.relative_path
-            LEFT JOIN artwork.archive_cover cover ON cover.archive_sha = h.sha256
-            LEFT JOIN artwork.image image ON image.sha256 = cover.image_sha
-            LEFT JOIN artwork.archive_without_pages no_pages ON no_pages.archive_sha = h.sha256
-            ORDER BY f.series_key, f.relative_path;
+            SELECT series_key, directory, unambiguous, relative_path, extension, size, modified_at, archive_sha, series_title,
+                stamp, entry, image_sha, without_pages
+            FROM scan_cover_input ORDER BY series_key, relative_path;
             """;
         using var insert = database.CreateCommand();
         insert.Transaction = transaction;
@@ -135,8 +148,7 @@ internal sealed partial class LibraryStore
         var candidateImage = rememberSidecar.Parameters.Add("$image", SqliteType.Blob);
         var candidateStamp = rememberSidecar.Parameters.Add("$stamp", SqliteType.Text);
 
-        using var findSidecar = database.CreateCommand();
-        findSidecar.Transaction = transaction;
+        using var findSidecar = artwork.CreateCommand();
         findSidecar.CommandText = """
             SELECT cover.image_sha FROM library_sidecar_stamp saved
             JOIN artwork.folder_cover cover USING(root_id, relative_path)
@@ -147,7 +159,7 @@ internal sealed partial class LibraryStore
         var sidecarPath = findSidecar.Parameters.Add("$path", SqliteType.Text);
         var sidecarStamp = findSidecar.Parameters.Add("$stamp", SqliteType.Text);
 
-        var cache = new CoverCache(database, transaction);
+        var cache = new CoverCache(artwork);
         string? currentKey = null;
         var directories = new HashSet<string>(StringComparer.Ordinal);
         CoverSource? lowestArchiveCover = null;
@@ -200,6 +212,8 @@ internal sealed partial class LibraryStore
 
         PublishCandidate();
         transaction.Commit();
+        snapshot.CommandText = "DROP TABLE scan_cover_input;";
+        snapshot.ExecuteNonQuery();
 
         byte[]? ReuseSidecar(string relativePath, string stamp)
         {

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
@@ -30,10 +31,18 @@ internal static class MetadataQueueEndpoints
         {
             if (!await antiforgery.IsRequestValidAsync(context) || !LibraryEndpoints.IsSeriesKey(series) ||
                 input.Revision is not { Length: 32 } revision || !revision.All(char.IsAsciiHexDigit) || input.ProviderId <= 0)
-                return Results.BadRequest();
-            var saved = store.ConfirmMetadataSuggestion(root, series.ToLowerInvariant(), revision.ToLowerInvariant(), input.ProviderId);
-            return saved is not null ? Results.Ok(saved) :
-                Results.Conflict(new { message = "This match or series changed. Refresh the queue or open manual assignment." });
+                return Results.BadRequest(new { message = "Could not verify this confirmation. Refresh the page and try again." });
+            try
+            {
+                var saved = store.ConfirmMetadataSuggestion(root, series.ToLowerInvariant(), revision.ToLowerInvariant(), input.ProviderId);
+                return saved is not null ? Results.Ok(saved) :
+                    Results.Conflict(new { message = "This match or series changed. Refresh the list and review the current suggestion." });
+            }
+            catch (SqliteException error) when (error.SqliteErrorCode is 5 or 6)
+            {
+                return Results.Json(new { message = "The catalog is finishing another update. Try confirming again in a moment." },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
         }).WithMetadata(new RequestSizeLimitAttribute(4096));
     }
 }

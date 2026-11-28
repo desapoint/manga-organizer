@@ -7,21 +7,31 @@ internal sealed partial class LibraryStore
     private static void StageHashes(SqliteConnection database, LibraryRoot root, ScanProgress scan, CancellationToken cancellationToken)
     {
         scan.StartPhase("hashing");
+        // Copy just the reusable metadata before reading files so the catalog is free for interactive writes.
+        using var snapshot = database.CreateCommand();
+        snapshot.CommandText = """
+            CREATE TEMP TABLE scan_cached_hash AS
+            SELECT f.relative_path, saved.scan_stamp, content.sha256, saved.scan_chapters, saved.scan_chapter_source
+            FROM scan_file f
+            JOIN library_file saved ON saved.root_id = $root AND saved.relative_path = f.relative_path
+                AND saved.scan_stamp IS NOT NULL AND saved.size = f.size AND saved.modified_at = f.modified_at
+                AND saved.volume_hint IS f.volume_hint AND saved.chapter_hint IS f.chapter_hint
+            JOIN library_content content ON content.id = saved.content_id
+            WHERE $reuse;
+            """;
+        snapshot.Parameters.AddWithValue("$root", root.Id);
+        snapshot.Parameters.AddWithValue("$reuse", !scan.Full);
+        snapshot.ExecuteNonQuery();
         using var transaction = database.BeginTransaction(deferred: true);
         using var query = database.CreateCommand();
         query.Transaction = transaction;
         query.CommandText = """
             SELECT f.relative_path, f.size, f.modified_at, f.extension, f.volume_hint, f.chapter_hint,
-                saved.scan_stamp, content.sha256, saved.scan_chapters, saved.scan_chapter_source
+                saved.scan_stamp, saved.sha256, saved.scan_chapters, saved.scan_chapter_source
             FROM scan_file f
-            LEFT JOIN library_file saved ON $reuse AND saved.root_id = $root AND saved.relative_path = f.relative_path
-                AND saved.scan_stamp IS NOT NULL AND saved.size = f.size AND saved.modified_at = f.modified_at
-                AND saved.volume_hint IS f.volume_hint AND saved.chapter_hint IS f.chapter_hint
-            LEFT JOIN library_content content ON content.id = saved.content_id
+            LEFT JOIN scan_cached_hash saved ON saved.relative_path = f.relative_path
             ORDER BY f.relative_path;
             """;
-        query.Parameters.AddWithValue("$root", root.Id);
-        query.Parameters.AddWithValue("$reuse", !scan.Full);
         using var insert = database.CreateCommand();
         insert.Transaction = transaction;
         insert.CommandText = "INSERT INTO scan_hash VALUES ($path, $sha256, $chapters, $source, $stamp);";

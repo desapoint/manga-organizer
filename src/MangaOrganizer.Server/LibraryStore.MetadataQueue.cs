@@ -171,6 +171,7 @@ internal sealed partial class LibraryStore
     public SeriesMetadata? ConfirmMetadataSuggestion(Guid root, string series, string revision, int providerId)
     {
         using var database = OpenDatabase();
+        database.DefaultTimeout = 2;
         using var transaction = database.BeginTransaction(deferred: false);
         using var command = GroupCommand(database, transaction, root, series);
         if (!GroupExists(command) || GroupHasActiveIntakeTransfer(command) || ReadMetadata(command) is not null) return null;

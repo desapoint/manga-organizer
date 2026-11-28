@@ -1,4 +1,4 @@
-import { ExternalLink, Search, Save } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff, Search, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { getCsrfToken } from './api';
@@ -58,16 +58,19 @@ function publicationYears({ startYear, endYear }: AniListDetails) {
   return startYear ?? endYear;
 }
 
-function MetadataTags({ names }: { names: string[] }) {
+function MetadataTags({ names, concealedCount = 0 }: { names: string[]; concealedCount?: number }) {
   return <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" role="list">
     {names.map(name => <li key={name} className="rounded-md border border-line px-2 py-1 text-xs wrap-anywhere">{name}</li>)}
+    {Array.from({ length: concealedCount }, (_, index) => <li key={index} aria-hidden="true"
+      className="h-[26px] w-16 rounded-md border border-control/40 bg-control/30 select-none" />)}
   </ul>;
 }
 
 function ProviderFacts({ details }: { details: AniListDetails }) {
   const years = publicationYears(details);
+  if (!details.format && !years && !details.countryOfOrigin && !details.credits.length && !details.genres.length) return null;
   return (
-    <dl className="m-0 grid gap-2 text-sm wrap-anywhere">
+    <dl className="m-0 grid gap-2 border-t border-line pt-3 text-sm wrap-anywhere">
       {details.format && <div><dt className="inline font-semibold">Format</dt> <dd className="inline text-muted">{details.format.toLowerCase().replaceAll('_', ' ')}</dd></div>}
       {years && <div><dt className="inline font-semibold">Publication years</dt> <dd className="inline text-muted">{years}</dd></div>}
       {details.countryOfOrigin && <div><dt className="inline font-semibold">Country of origin</dt> <dd className="inline text-muted">{details.countryOfOrigin}</dd></div>}
@@ -79,20 +82,20 @@ function ProviderFacts({ details }: { details: AniListDetails }) {
 }
 
 function SeriesTagDetails({ tags }: { tags: SeriesTag[] }) {
+  const [revealed, setRevealed] = useState(false);
   const regular = tags.filter(tag => !tag.spoiler).map(tag => tag.name);
   const spoilers = tags.filter(tag => tag.spoiler).map(tag => tag.name);
   if (tags.length === 0) return null;
 
-  return <dl className="m-0 text-sm">
-    <dt className="mb-1 font-semibold">Tags</dt>
-    <dd>
-      {regular.length > 0 && <MetadataTags names={regular} />}
-      {spoilers.length > 0 && <details>
-        <summary className="min-h-11 cursor-pointer py-2 text-muted">Show spoiler tags</summary>
-        <MetadataTags names={spoilers} />
-      </details>}
-    </dd>
-  </dl>;
+  return <section aria-label="Tags" className="grid gap-1.5 border-t border-line pt-3">
+    <div className="flex items-center gap-1.5">
+      <h3 className="m-0 text-sm font-semibold">Tags</h3>
+      {spoilers.length > 0 && <Button variant="ghost" size="compact" icon={revealed ? EyeOff : Eye}
+        aria-label="Show spoiler tags" aria-pressed={revealed} title={revealed ? 'Hide spoiler tags' : 'Show spoiler tags'}
+        onClick={() => setRevealed(value => !value)} />}
+    </div>
+    <MetadataTags names={revealed ? [...regular, ...spoilers] : regular} concealedCount={revealed ? 0 : spoilers.length} />
+  </section>;
 }
 
 function metadataFields(metadata: Metadata | null, title: string) {
@@ -447,15 +450,21 @@ function AniListSearch({ onReview, lookupTitle, ...props }: AniListSearchProps &
   );
 }
 
-export function MetadataDescription({ metadata }: { metadata: Metadata }) {
-  return <div className="grid gap-3 wrap-anywhere">
-    {metadata.alternateTitle && <p className="m-0 text-sm text-muted">{metadata.alternateTitle}</p>}
-    <p className="m-0 text-sm text-muted">{metadata.kind === 'doujin' ? 'Doujin' : 'Manga'}
-      {metadata.status && ' · ' + metadata.status.toLowerCase().replaceAll('_', ' ')}
-      {metadata.providerUrl && <> · <a className="text-accent-readable" href={metadata.providerUrl}
-        target="_blank" rel="noreferrer">Open in AniList</a></>}
-    </p>
-    {metadata.summary && <p className="m-0 max-w-prose text-sm whitespace-pre-line text-detail">{metadata.summary}</p>}
+export function MetadataDescription({ metadata, showProviderLink = true }: { metadata: Metadata; showProviderLink?: boolean }) {
+  const paragraphs = metadata.summary?.split(/\r\n?|\n/).map(paragraph => paragraph.trim()).filter(Boolean) ?? [];
+  return <div className="grid gap-4 wrap-anywhere">
+    <div className="grid gap-1 text-sm text-muted">
+      {metadata.alternateTitle && <p className="m-0">{metadata.alternateTitle}</p>}
+      <p className="m-0">{metadata.kind === 'doujin' ? 'Doujin' : 'Manga'}
+        {metadata.status && ' · ' + metadata.status.toLowerCase().replaceAll('_', ' ')}
+        {showProviderLink && metadata.providerUrl && <> · <a className="text-accent-readable" href={metadata.providerUrl}
+          target="_blank" rel="noreferrer">Open in AniList</a></>}
+      </p>
+    </div>
+    {paragraphs.length > 0 && <section aria-label="Synopsis" className="grid max-w-prose gap-2 border-t border-line pt-3 text-sm text-detail">
+      <h3 className="m-0 font-semibold text-ink">Synopsis</h3>
+      {paragraphs.map((paragraph, index) => <p key={index} className="m-0">{paragraph}</p>)}
+    </section>}
     {metadata.providerDetails && <ProviderFacts details={metadata.providerDetails} />}
     <SeriesTagDetails tags={metadata.tags} />
   </div>;

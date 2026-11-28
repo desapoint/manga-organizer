@@ -52,8 +52,8 @@ export function IntakeSeriesMatch({ series, onSignedOut, onSaved }: Props) {
   }
 
   return <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
-    {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
-    {metadata ? <button type="button" onClick={() => setDetails(true)} aria-label={`AniList details for ${metadata.title}`}
+    {!details && error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
+    {metadata ? <button type="button" onClick={() => { setError(''); setDetails(true); }} aria-label={`AniList details for ${metadata.title}`}
       className="flex min-h-11 min-w-0 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent p-1 text-start text-ink hover:bg-nav-hover">
       <CoverImage src={metadata.providerDetails?.coverUrl ?? undefined} className="h-12 w-8 shrink-0 rounded-sm" />
       <span className="min-w-0 wrap-anywhere">
@@ -61,18 +61,18 @@ export function IntakeSeriesMatch({ series, onSignedOut, onSaved }: Props) {
         <span className="text-xs text-muted">{match.revision ? match.close ? 'Close AniList match' : 'AniList suggestion' : 'Linked to AniList'}</span>
       </span>
     </button> : series.lookupQueued && <span className="text-xs text-muted">AniList lookup queued</span>}
-    {match?.revision && <Button icon={Check} variant="secondary" disabled={busy} onClick={() => void apply()}>Confirm match</Button>}
+    {match?.revision && <Button icon={Check} variant="secondary" disabled={busy} onClick={() => void apply()}>{busy ? 'Confirming…' : 'Confirm match'}</Button>}
     <AniListSearchAction rootId={series.rootId} seriesKey={series.key} title={series.title} lookupTitle={series.lookupTitle} iconOnly
       onChange={onSaved} onSignedOut={onSignedOut} />
     {details && metadata && <Modal title={metadata.title} wide onClose={() => { if (!busy) setDetails(false); }}>
       <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
         <CoverImage src={metadata.providerDetails?.coverUrl ?? undefined} className="h-36 w-24 rounded-lg" />
-        <MetadataDescription metadata={metadata} />
+        <MetadataDescription metadata={metadata} showProviderLink={false} />
       </div>
-      <div className="action-row">
+      <div className="action-row mt-4 border-t border-line pt-4">
         {metadata.providerUrl && <ActionLink variant="secondary" icon={ExternalLink} href={metadata.providerUrl}
           target="_blank" rel="noreferrer">Open AniList</ActionLink>}
-        {match.revision && <Button icon={Check} disabled={busy} onClick={() => void apply()}>Confirm match</Button>}
+        {match.revision && <Button icon={Check} disabled={busy} onClick={() => void apply()}>{busy ? 'Confirming…' : 'Confirm match'}</Button>}
       </div>
       {error && <p role="alert" className="m-0 text-sm text-danger">{error}</p>}
     </Modal>}

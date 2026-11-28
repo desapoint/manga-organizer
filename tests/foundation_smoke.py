@@ -2424,7 +2424,12 @@ def verify_metadata_queue(executable, fixture):
                 match = {"providerId": 21, "revision": alpha["revision"]}
                 browser.request(target, 409, method="POST", token=browser.csrf(), body=match)
                 match["revision"] = refreshed["Alpha Shelf"]["revision"]
-                saved = json.loads(browser.request(target, 200, method="POST", token=browser.csrf(), body=match))
+                token = browser.csrf()
+                with closing(sqlite3.connect(data / "organizer.sqlite")) as publisher, publisher:
+                    publisher.execute("BEGIN IMMEDIATE")
+                    busy = json.loads(browser.request(target, 503, method="POST", token=token, body=match))
+                    assert "Try confirming again" in busy["message"]
+                saved = json.loads(browser.request(target, 200, method="POST", token=token, body=match))
                 assert saved["title"] == "Alpha release" and saved["providerId"] == 21
                 published = browser.files(root, f"?view=library&seriesKey={alpha['seriesKey']}")
                 assert published["total"] == 2 and all(file["associationConfirmed"] for file in published["items"])
