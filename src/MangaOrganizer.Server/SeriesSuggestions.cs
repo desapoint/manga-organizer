@@ -113,7 +113,7 @@ internal static partial class SeriesSuggestions
 
     private static string? SeriesFolderTitle(string folder)
     {
-        var title = ParseTitle(folder);
+        var title = DoujinFilename.Parse(folder)?.Title ?? ParseTitle(folder);
         var normalized = Normalize(title);
         return normalized.Length == 0 || GenericFolders.Contains(normalized) || NumberOnly().IsMatch(title) ? null : title;
     }

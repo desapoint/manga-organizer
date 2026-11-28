@@ -164,9 +164,16 @@ internal sealed partial class LibraryStore
         {
             var title = rows.GetString(2);
             var matched = includeMatches ? ReadCatalogAniList(rows, title) : null;
+            var suggested = rows.GetBoolean(4);
             var hasMetadata = rows.GetBoolean(6);
-            var lookupTitle = includeMatches && !hasMetadata ? DoujinFilename.LookupOverride(rows.GetBoolean(4) ? title : null) : null;
-            items.Add(new(rows.GetGuid(0), rows.GetString(1), title, rows.GetInt64(3), rows.GetBoolean(4), rows.GetBoolean(5),
+            string? lookupTitle = null;
+            if (includeMatches && !hasMetadata)
+            {
+                lookupTitle = suggested ? DoujinFilename.LookupOverride(title)
+                    : DoujinFilename.Parse(Path.GetFileNameWithoutExtension(title))?.Title ?? "";
+            }
+            var displayTitle = lookupTitle switch { null => title, "" => "Unidentified series", _ => lookupTitle };
+            items.Add(new(rows.GetGuid(0), rows.GetString(1), displayTitle, rows.GetInt64(3), suggested, rows.GetBoolean(5),
                 hasMetadata, matched, includeMatches && rows.GetBoolean(18) && rows.GetBoolean(17),
                 published ? ReadText(rows, 7) : null, lookupTitle));
         }

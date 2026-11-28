@@ -382,8 +382,17 @@ def verify_series_groups(owner, root_id, path):
         "Tea Time - At Dawn": "(COMIKET104) [Studio] Tea Time - At Dawn [English].cbz",
         "Koi no Silver Himitsu": "(COMITIA137) [Studio (Artist)] Koi no Silver Himitsu The Secret of Silver (English).cbz",
         "Haru no Tabiji The Animation": "(COMITIA142) [Studio] Haru no Tabiji The Animation (English).cbz",
+        "Hoshi no Machi 2": "(CR31) [Studio (Artist)] Hoshi no Machi 2 - Star Town 2 [English] =Translator=.cbz",
+        "Little Lantern": "(Doujinshi) [Studio (Artist)] Little Lantern + Omake.cbz",
+        "Ore no Harbor": "(Puniket 15) [Studio (Artist)] Ore no Harbor (Fixture Franchise) [English].cbz",
+        "Night Flight!": "(SC2018 Summer) [Studio (Artist)] Night Flight! _Yoru no Hiko_ [English] [Translator].cbz",
+        "A Quiet Workshop": "(SC61) [Studio (Artist)] A Quiet Workshop (Fixture Franchise) [English] {Translator}.cbz",
+        "Mountain Post": "01. [Artist] Mountain Post (Publisher) [English] [Translator].cbz",
+        "Paper Lamps": "(Local Book Fair 9) [Studio] Paper Lamps [English].cbz",
     }
+    folder_named_release = "(SC61) [Studio] Bright Harbor (Guidebook) [English]/001.cbz"
     fixtures.extend(doujin_releases.values())
+    fixtures.append(folder_named_release)
     for relative in fixtures:
         file = path / relative
         file.parent.mkdir(parents=True, exist_ok=True)
@@ -397,12 +406,16 @@ def verify_series_groups(owner, root_id, path):
         assert group["fileCount"] == len(releases)
         files = owner.files(root_id, f"?{urlencode({'seriesKey': group['key']})}")
         assert {row["relativePath"] for row in files["items"]} == set(releases)
-    assert groups["total"] == len(by_title) == 14 + len(doujin_releases)
+    assert groups["total"] == len(by_title) == 15 + len(doujin_releases)
     for title, filename in doujin_releases.items():
         path_query = urlencode({"seriesKey": by_title[title]["key"], "view": "all"})
         (entry,) = owner.files(root_id, "?" + path_query)["items"]
         assert entry["relativePath"] == filename and entry["filenameEvidence"]["title"] == title
-        assert entry["filenameEvidence"]["event"] and entry["filenameEvidence"]["creator"]
+        assert entry["filenameEvidence"]["creator"]
+        if filename.startswith("("):
+            assert entry["filenameEvidence"]["event"]
+        else:
+            assert entry["filenameEvidence"]["event"] is None and "01." in entry["filenameEvidence"]["notes"]
         assert not entry["associationConfirmed"]
     arc = owner.files(root_id, "?seriesKey=" + by_title["Archive Route 2"]["key"])["items"][0]["filenameEvidence"]
     assert arc["alternateTitle"] == "The Archive Arc" and "Fixture Franchise" in arc["notes"]
@@ -411,7 +424,16 @@ def verify_series_groups(owner, root_id, path):
     assert garden["event"] == "COMITIA130" and garden["creator"] == "Studio (Artist)"
     bilingual = owner.files(root_id, "?seriesKey=" + by_title["Koi no Silver Himitsu"]["key"])["items"][0]["filenameEvidence"]
     assert bilingual["alternateTitle"] == "The Secret of Silver"
-    assert owner.series(root_id, "?view=all&search=Incoming%2F001.cbz")["items"][0]["lookupTitle"] == ""
+    for title, alternate in [("Hoshi no Machi 2", "Star Town 2"), ("Night Flight!", "Yoru no Hiko")]:
+        (version,) = owner.files(root_id, "?seriesKey=" + by_title[title]["key"])["items"]
+        assert version["filenameEvidence"]["alternateTitle"] == alternate
+    (extra,) = owner.files(root_id, "?seriesKey=" + by_title["Little Lantern"]["key"])["items"]
+    assert "Omake" in extra["filenameEvidence"]["notes"]
+    (from_folder,) = owner.files(root_id, "?seriesKey=" + by_title["Bright Harbor"]["key"])["items"]
+    assert from_folder["relativePath"] == folder_named_release
+    assert from_folder["seriesTitle"] == "Bright Harbor"
+    unidentified = owner.series(root_id, "?view=all&search=Incoming%2F001.cbz")["items"][0]
+    assert unidentified["lookupTitle"] == "" and unidentified["title"] == "Unidentified series"
     assert by_title[series_title]["fileCount"] == 53
     assert by_title["Northbound"]["fileCount"] == 6
     assert by_title["Incoming/001.cbz"]["fileCount"] == by_title["Incoming/002.cbz"]["fileCount"] == 1
@@ -420,7 +442,7 @@ def verify_series_groups(owner, root_id, path):
     assert by_title["Another Series"]["fileCount"] == 1
     assert by_title["Different Title 2"]["key"] != by_title["Different Title 3"]["key"]
     assert by_title["Different Title 2 (2022)"]["fileCount"] == 1
-    assert owner.series(root_id, "?limit=1") == {"total": 14 + len(doujin_releases), "items": groups["items"][:1]}
+    assert owner.series(root_id, "?limit=1") == {"total": 15 + len(doujin_releases), "items": groups["items"][:1]}
     query = urlencode({"seriesKey": by_title[series_title]["key"], "limit": 50})
     first = owner.files(root_id, f"?{query}")
     second = owner.files(root_id, f"?{query}&offset=50")
@@ -2478,7 +2500,7 @@ def verify_metadata_queue(executable, fixture):
 
                 browser = Browser(address)
                 browser.sign_in(password)
-                prefix = "(COMITIA101) [Studio (Artist)] "
+                prefix = "(SC2018 Summer) [Studio (Artist)] "
                 note = " & [English] [Translator]"
                 old_title = prefix + "Lantern Evening" + note
                 old_key = sha256(old_title.encode()).hexdigest()
@@ -2504,7 +2526,7 @@ def verify_metadata_queue(executable, fixture):
 
                 before = len(calls)
                 (legacy,) = browser.series(root, f"?view=all&seriesKey={old_key}")["items"]
-                assert legacy["title"] == old_title and legacy["lookupTitle"] == "Lantern Evening"
+                assert legacy["title"] == legacy["lookupTitle"] == "Lantern Evening"
                 (file,) = browser.files(root, f"?view=all&seriesKey={old_key}")["items"]
                 assert file["relativePath"] == old_path and file["lookupTitle"] == "Lantern Evening"
                 (row,) = json.loads(browser.request(queue + "?search=Lantern+Evening", 200))["items"]

@@ -51,7 +51,8 @@ type Page<T> = { total: number; items: T[]; lookupQueued?: boolean };
 type InventoryProps = { rootId: string; version: string; onSignedOut: () => void };
 type FileManagement = { onDataChanged: () => void; managedFolders: LibraryRoot[]; intakeTarget?: LibraryRoot; onMoved: () => void };
 type InventoryActions = InventoryProps & FileManagement;
-type Inspection = { kind: 'series'; series: Series } | { kind: 'file'; file: CatalogEntry };
+type Inspection = { kind: 'series'; series: Series } | { kind: 'file'; file: CatalogEntry }
+  | { kind: 'folder'; directory: string };
 type Inspect = (item: Inspection) => void;
 type InventoryView = 'covers' | 'series' | 'files';
 type SeriesSort = 'title' | 'recent' | 'files';
@@ -132,12 +133,19 @@ function InventoryError({ children, retry }: { children: string; retry: () => vo
   );
 }
 
-function FileAssociationAction({ file, rootId, onSignedOut, onChange }: {
-  file: CatalogEntry; rootId: string; onSignedOut: () => void; onChange: () => void;
+function intakeFileTitle(file: CatalogEntry) {
+  if (file.hasSeriesMetadata && file.seriesTitle) return file.seriesTitle;
+  return file.filenameEvidence?.title || file.lookupTitle || file.seriesTitle || undefined;
+}
+
+function FileAssociationAction({ file, rootId, onSignedOut, onChange, intake }: {
+  file: CatalogEntry; rootId: string; onSignedOut: () => void; onChange: () => void; intake: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const title = file.seriesTitle ?? file.relativePath.split('/').at(-1) ?? file.relativePath;
+  const intakeTitle = intake ? intakeFileTitle(file) : undefined;
+  const title = intake ? intakeTitle ?? 'Unidentified file' : file.seriesTitle ?? file.relativePath.split('/').at(-1) ?? file.relativePath;
+  const lookupTitle = intake ? file.lookupTitle || file.seriesTitle || intakeTitle || '' : file.lookupTitle;
 
   async function confirm() {
     setBusy(true);
@@ -162,7 +170,7 @@ function FileAssociationAction({ file, rootId, onSignedOut, onChange }: {
     <Button variant="secondary" title={`Confirm association with ${title}`} disabled={busy} onClick={confirm}>Confirm association</Button>
     {error && <span role="alert" className="text-sm text-danger">{error}</span>}
   </> : <>
-    <AniListSearchAction rootId={rootId} seriesKey={file.seriesKey} title={title} lookupTitle={file.lookupTitle} onSignedOut={onSignedOut} onChange={onChange} />
+    <AniListSearchAction rootId={rootId} seriesKey={file.seriesKey} title={title} lookupTitle={lookupTitle} onSignedOut={onSignedOut} onChange={onChange} />
     <MetadataDialogAction rootId={rootId} seriesKey={file.seriesKey} title={title} metadata={null}
     onChange={onChange} onSignedOut={onSignedOut} actionLabel="Assign series metadata" />
   </>;
@@ -211,16 +219,17 @@ function SplitIntakeFile({ rootId, file, onSignedOut, onChange }: {
   </>;
 }
 
-function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut, selection, onAssociationChanged, importGroupSize, onCoverageChanged, grouped }:
+function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut, selection, onAssociationChanged, importGroupSize, onCoverageChanged }:
   Pick<InventoryProps, 'rootId' | 'version'> & {
   file: CatalogEntry; seriesKey?: string; onInspect?: Inspect; onSignedOut: () => void; management?: FileManagement;
-  selection: ReturnType<typeof useReleaseSelection>; onAssociationChanged?: () => void; importGroupSize?: number; onCoverageChanged?: () => void; grouped?: boolean;
+  selection: ReturnType<typeof useReleaseSelection>; onAssociationChanged?: () => void; importGroupSize?: number; onCoverageChanged?: () => void;
 }) {
   const [showCoverage, setShowCoverage] = useState(false);
   const [move, setMove] = useState<'organize' | 'transfer' | null>(null);
   const [moving, setMoving] = useState(false);
   const separator = file.relativePath.lastIndexOf('/');
-  const name = file.relativePath.slice(separator + 1);
+  const name = onInspect ? intakeFileTitle(file) ?? 'Unidentified file' : file.relativePath.slice(separator + 1);
+  const coverage = [file.volume && `Vol. ${file.volume}`, file.chapter && `Ch. ${file.chapter}`].filter(Boolean).join(' · ');
   const readable = file.contentId && isReadableArchive(file.extension);
   const saveCoverage = onCoverageChanged ?? management?.onDataChanged;
   const coverageUrl = saveCoverage && ROOTS_URL + '/' + rootId + '/series/' + (seriesKey ?? file.seriesKey) + '/coverage';
@@ -234,19 +243,18 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   return (
     <li>
       <span className="flex min-w-0 items-center gap-3 max-[36rem]:col-span-full">
-        {selection.enabled && <SelectReleaseCheckbox label={`Select ${file.relativePath}`} disabled={!file.contentId}
+        {selection.enabled && <SelectReleaseCheckbox label={`Select ${onInspect ? [name, coverage].filter(Boolean).join(', ') : file.relativePath}`} disabled={!file.contentId}
           checked={selection.selected.has(file.id)} onChange={() => selection.toggle([file.id])} />}
         <FileCover rootId={rootId} fileId={file.id} available={file.hasCover} seriesCoverKey={file.seriesCoverKey} revision={version}
           className="h-12 w-8 shrink-0 rounded-sm" />
-        <span className="file-path" title={file.relativePath}>
+        <span className="file-path" title={onInspect ? undefined : file.relativePath}>
           {onInspect ? <button type="button" className="min-h-11 cursor-pointer rounded-sm border-0 bg-transparent p-0 text-start
             text-inherit wrap-anywhere hover:text-accent-readable hover:underline desktop:min-h-0"
             onClick={() => onInspect({ kind: 'file', file })}>{name}</button> : name}
-          {separator >= 0 && !grouped && <small>{file.relativePath.slice(0, separator)}</small>}
-          {management && file.filenameEvidence && <small>{[file.filenameEvidence.alternateTitle, file.filenameEvidence.event,
+          {separator >= 0 && !onInspect && <small>{file.relativePath.slice(0, separator)}</small>}
+          {management && !onInspect && file.filenameEvidence && <small>{[file.filenameEvidence.alternateTitle, file.filenameEvidence.event,
             file.filenameEvidence.creator, ...file.filenameEvidence.notes].filter(Boolean).join(' · ')}</small>}
-          {(file.volume || file.chapter) && <small>{file.volume && `Vol. ${file.volume}`}{file.volume && file.chapter && ' · '}
-            {file.chapter && `Ch. ${file.chapter}`}</small>}
+          {coverage && <small>{coverage}</small>}
           {file.indexedLocations === null && <small>Content identity unavailable</small>}
           {file.indexedLocations !== null && file.indexedLocations > 1 && (
             <small>Same bytes at {file.indexedLocations.toLocaleString()} indexed locations</small>
@@ -264,7 +272,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
         {!onAssociationChanged && !onInspect && <ActionLink variant="ghost"
           href={duplicateToolsHref({ rootId, seriesKey: file.seriesKey }, file.id)}>Compare in Tools</ActionLink>}
         {updateAssociation && importGroupSize === undefined && !file.associationConfirmed && <FileAssociationAction file={file} rootId={rootId}
-          onChange={() => finish(updateAssociation)} onSignedOut={onSignedOut} />}
+          intake={!!onInspect} onChange={() => finish(updateAssociation)} onSignedOut={onSignedOut} />}
         {updateAssociation && importGroupSize === undefined && <FileAssociationEditor key={file.contentId + file.seriesKey} rootId={rootId} fileId={file.id}
           contentId={file.contentId} seriesKey={file.seriesKey} relativePath={file.relativePath} confirmed={file.associationConfirmed}
           onSignedOut={onSignedOut} onSaved={() => finish(updateAssociation)} />}
@@ -340,7 +348,8 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
     if (entries) entries.push(file);
     else visibleFolders.set(directory, [file]);
   }
-  const idsByFolder = new Map(folders?.map(folder => [folder.directory, folder.fileIds]));
+  const folderInfo = new Map(folders?.map((folder, index) => [folder.directory,
+    { ids: folder.fileIds, label: folder.directory ? `Folder ${index + 1}` : 'Intake root' }]));
 
   return (
     <>
@@ -358,18 +367,21 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
           </div>
           <ul className={`catalog-files${rowActions}`} role="list" aria-label={label}>
             {[...visibleFolders].flatMap(([directory, entries]) => {
-              const folderIds = idsByFolder.get(directory) ?? [];
+              const folder = folderInfo.get(directory);
+              const folderIds = folder?.ids ?? [];
               const count = folderIds.filter(id => selection.selected.has(id)).length;
               const checked = count === 0 ? false : count === folderIds.length ? true : 'mixed' as const;
-              const folderLabel = directory || 'Intake root';
+              const folderLabel = folder?.label ?? 'Folder';
               return [
-                showFolders && <li key={`folder:${directory}`} className="catalog-folder-heading">
+                showFolders && onInspect && <li key={`folder:${directory}`} className="catalog-folder-heading">
                   <SelectReleaseCheckbox label={`Select all eligible files in ${folderLabel}`} checked={checked}
                     disabled={!folderIds.length} onChange={() => selection.toggle(folderIds)} />
-                  <span className="min-w-0 wrap-anywhere" title={folderLabel}>{folderLabel}</span>
+                  <span className="min-w-0 wrap-anywhere">{folderLabel}</span>
+                  <Button variant="ghost" icon={Info} aria-label={`Open ${folderLabel} details`} title="Folder details"
+                    onClick={() => onInspect({ kind: 'folder', directory })} />
                 </li>,
                 ...entries.map(file => <FileRow key={file.id} file={file} rootId={rootId} seriesKey={seriesKey} version={version}
-                  onInspect={onInspect} onSignedOut={onSignedOut} management={management} selection={selection} grouped={showFolders}
+                  onInspect={onInspect} onSignedOut={onSignedOut} management={management} selection={selection}
                   onAssociationChanged={onAssociationChanged} importGroupSize={importGroupSize} onCoverageChanged={onCoverageChanged} />),
               ];
             })}
@@ -641,34 +653,58 @@ function GroupedInventory({ scanComplete, onInspect, coverVersion, coverGrid, se
   );
 }
 
-function IntakeDetails({ item, rootId, rootPath, onClose }: { item: Inspection; rootId: string; rootPath: string; onClose: () => void }) {
+function IntakeDetails({ item, rootId, rootPath, version, onSignedOut, onClose }: InventoryProps & {
+  item: Inspection; rootPath: string; onClose: () => void;
+}) {
+  const fileList = item.kind === 'series' ? `${ROOTS_URL}/${rootId}/files` : '';
+  const originals = useInventoryPage<CatalogEntry>(fileList, version, onSignedOut,
+    item.kind === 'series' ? { seriesKey: item.series.key, view: 'all' } : undefined);
+  const separator = item.kind === 'file' ? item.file.relativePath.lastIndexOf('/') : -1;
+  const evidence = item.kind === 'file' ? item.file.filenameEvidence : null;
+  const title = item.kind === 'series' ? 'Series intake details' : item.kind === 'folder' ? 'Folder intake details' : 'File intake details';
   return (
-    <Modal title={item.kind === 'series' ? 'Series intake details' : 'File intake details'} onClose={onClose}>
+    <Modal title={title} onClose={onClose}>
       <dl className="m-0 grid gap-3 text-sm wrap-anywhere">
         <div>
-          <dt className="text-muted">Source folder</dt>
+          <dt className="text-muted">Intake root</dt>
           <dd><code>{rootPath}</code></dd>
         </div>
-        {item.kind === 'series' ? (
-          <>
-            <div><dt className="text-muted">Series</dt><dd className="font-semibold">{item.series.title}</dd></div>
-            <div><dt className="text-muted">Indexed files</dt><dd>{item.series.fileCount.toLocaleString()}</dd></div>
-            <div><dt className="text-muted">Metadata</dt>
-              <dd>{item.series.hasMetadata ? 'Saved' : 'Awaiting review'}</dd>
-            </div>
-            <div><dt className="text-muted">Artwork</dt><dd>{item.series.hasCover ? 'Available' : 'Missing cover'}</dd></div>
-          </>
-        ) : (
-          <>
-            <div><dt className="text-muted">File</dt><dd><code>{item.file.relativePath}</code></dd></div>
-            <div><dt className="text-muted">Format and size</dt><dd>{item.file.extension.toUpperCase()} · {formatSize(item.file.size)}</dd></div>
-            <div><dt className="text-muted">SHA-256</dt><dd>{item.file.sha256 ? <code>{item.file.sha256}</code> : 'Unavailable'}</dd></div>
-            <div><dt className="text-muted">Series association</dt>
-              <dd>{item.file.associationConfirmed ? 'Confirmed' : item.file.hasSeriesSuggestion ? 'Unconfirmed' : 'No series suggestion'}</dd></div>
-            {!item.file.hasSeriesMetadata && <div><dt className="text-muted">Metadata</dt><dd>Missing series metadata</dd></div>}
-            {!item.file.hasCover && !item.file.seriesCoverKey && <div><dt className="text-muted">Artwork</dt><dd>Missing cover</dd></div>}
-          </>
-        )}
+        {item.kind === 'folder' && <div>
+          <dt className="text-muted">Original folder</dt><dd><code>{item.directory || rootPath}</code></dd>
+        </div>}
+        {item.kind === 'series' && <>
+          <div><dt className="text-muted">Series</dt><dd className="font-semibold">{item.series.title}</dd></div>
+          <div><dt className="text-muted">Indexed files</dt><dd>{item.series.fileCount.toLocaleString()}</dd></div>
+          <div><dt className="text-muted">Original locations</dt><dd>
+            {originals.error && <InventoryError retry={originals.retry}>Could not load original locations.</InventoryError>}
+            {!originals.page && !originals.error && <span role="status">Loading original locations…</span>}
+            {originals.page && <>
+              <ul className="m-0 grid max-h-48 list-none gap-1 overflow-auto p-0" aria-label="Original file paths" role="list">
+                {originals.page.items.map(file => <li key={file.id}><code>{file.relativePath}</code></li>)}
+              </ul>
+              <PageControls label="Original locations pages" offset={originals.offset} count={originals.page.items.length}
+                total={originals.page.total} onChange={originals.setOffset} />
+            </>}
+          </dd></div>
+          <div><dt className="text-muted">Metadata</dt><dd>{item.series.hasMetadata ? 'Saved' : 'Awaiting review'}</dd></div>
+          <div><dt className="text-muted">Artwork</dt><dd>{item.series.hasCover ? 'Available' : 'Missing cover'}</dd></div>
+        </>}
+        {item.kind === 'file' && <>
+          <div><dt className="text-muted">Detected title</dt><dd className="font-semibold">{intakeFileTitle(item.file) ?? 'Unidentified file'}</dd></div>
+          <div><dt className="text-muted">Original filename</dt><dd><code>{item.file.relativePath.slice(separator + 1)}</code></dd></div>
+          <div><dt className="text-muted">Original folder</dt>
+            <dd><code>{separator < 0 ? rootPath : item.file.relativePath.slice(0, separator)}</code></dd></div>
+          {evidence?.alternateTitle && <div><dt className="text-muted">Alternate title</dt><dd>{evidence.alternateTitle}</dd></div>}
+          {evidence && (evidence.event || evidence.creator || evidence.notes.length > 0) && <div>
+            <dt className="text-muted">Filename notes</dt><dd>{[evidence.event, evidence.creator, ...evidence.notes].filter(Boolean).join(' · ')}</dd>
+          </div>}
+          <div><dt className="text-muted">Format and size</dt><dd>{item.file.extension.toUpperCase()} · {formatSize(item.file.size)}</dd></div>
+          <div><dt className="text-muted">SHA-256</dt><dd>{item.file.sha256 ? <code>{item.file.sha256}</code> : 'Unavailable'}</dd></div>
+          <div><dt className="text-muted">Series association</dt>
+            <dd>{item.file.associationConfirmed ? 'Confirmed' : item.file.hasSeriesSuggestion ? 'Unconfirmed' : 'No series suggestion'}</dd></div>
+          {!item.file.hasSeriesMetadata && <div><dt className="text-muted">Metadata</dt><dd>Missing series metadata</dd></div>}
+          {!item.file.hasCover && !item.file.seriesCoverKey && <div><dt className="text-muted">Artwork</dt><dd>Missing cover</dd></div>}
+        </>}
       </dl>
       {item.kind === 'file' && (item.file.indexedLocations ?? 0) > 1 &&
         <ActionLink variant="secondary" className="mt-4"
@@ -760,7 +796,7 @@ export function CatalogInventory({ scanComplete, intake, rootPath, hasCovers, co
         <GroupedInventory key={JSON.stringify([view, catalogView, query, sort, coverOnly, rules.includeTags, rules.excludeTags])}
           {...catalog} scanComplete={scanComplete} onInspect={onInspect} catalogView={catalogView}
           coverVersion={coverVersion} coverGrid={view === 'covers'} search={query} sort={sort} coverOnly={coverOnly && hasCovers} rules={rules} />}
-      {intake && item && <IntakeDetails item={item} rootId={inventory.rootId} rootPath={rootPath} onClose={() => setItem(null)} />}
+      {intake && item && <IntakeDetails item={item} {...inventory} rootPath={rootPath} onClose={() => setItem(null)} />}
     </section>
   );
 }
