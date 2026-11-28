@@ -1,14 +1,22 @@
 import { BookOpen } from 'lucide-react';
 import { useState } from 'react';
 import { ROOTS_URL } from './library';
+import { Modal } from './ui';
 
 type CoverProps = { rootId: string; revision: string; className?: string };
+type SeriesCoverProps = CoverProps & { seriesKey: string; available: boolean; preferredSrc?: string };
 
-export function SeriesCover({ seriesKey, available, preferredSrc, ...props }: CoverProps & {
-  seriesKey: string; available: boolean; preferredSrc?: string;
-}) {
+export function SeriesCover({ seriesKey, available, preferredSrc, ...props }: SeriesCoverProps) {
   if (preferredSrc) return <CoverImage src={preferredSrc} className={props.className} />;
   return <Cover {...props} path={`series/${seriesKey}`} available={available} />;
+}
+
+export function SeriesCoverDialog({ title, onClose, wide, ...artwork }: Omit<SeriesCoverProps, 'className'> & {
+  title: string; onClose: () => void; wide?: boolean;
+}) {
+  return <Modal title={title} onClose={onClose} wide={wide}>
+    <SeriesCover {...artwork} className="rounded-lg [&_img]:max-h-[70dvh] [&_img]:object-contain" />
+  </Modal>;
 }
 
 export function FileCover({ fileId, available, seriesCoverKey, ...props }: CoverProps & {

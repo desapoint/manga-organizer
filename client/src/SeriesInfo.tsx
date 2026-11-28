@@ -70,17 +70,25 @@ function MetadataTags({ names, spoilers = [], revealed = false }: { names: strin
   </ul>;
 }
 
-function ProviderFacts({ details }: { details: AniListDetails }) {
+function ProviderFacts({ details, tiles = false }: { details: AniListDetails; tiles?: boolean }) {
   const years = publicationYears(details);
-  if (!details.format && !years && !details.countryOfOrigin && !details.credits.length && !details.genres.length) return null;
+  const facts = [
+    { label: 'Format', value: details.format?.toLowerCase().replaceAll('_', ' ') },
+    { label: 'Publication years', value: years },
+    { label: 'Country of origin', value: details.countryOfOrigin },
+    { label: 'Credits', value: details.credits.map(credit => credit.role ? `${credit.name} (${credit.role})` : credit.name).join(' · ') },
+  ].filter(fact => fact.value);
+  if (!facts.length && !details.genres.length) return null;
   return (
-    <dl className="m-0 grid gap-2 border-t border-line pt-3 text-sm wrap-anywhere">
-      {details.format && <div><dt className="inline font-semibold">Format</dt> <dd className="inline text-muted">{details.format.toLowerCase().replaceAll('_', ' ')}</dd></div>}
-      {years && <div><dt className="inline font-semibold">Publication years</dt> <dd className="inline text-muted">{years}</dd></div>}
-      {details.countryOfOrigin && <div><dt className="inline font-semibold">Country of origin</dt> <dd className="inline text-muted">{details.countryOfOrigin}</dd></div>}
-      {details.credits.length > 0 && <div><dt className="inline font-semibold">Credits</dt> <dd className="inline text-muted">
-        {details.credits.map(credit => credit.role ? `${credit.name} (${credit.role})` : credit.name).join(' · ')}</dd></div>}
-      {details.genres.length > 0 && <div><dt className="mb-1 font-semibold">Genres</dt><dd><MetadataTags names={details.genres} /></dd></div>}
+    <dl className={`m-0 grid gap-2 border-t border-line pt-3 text-sm wrap-anywhere ${tiles ? 'grid-cols-2' : ''}`}>
+      {facts.map(({ label, value }) => <div key={label}
+        className={tiles ? 'min-w-0 rounded-lg border border-line bg-inset px-3 py-2' : undefined}>
+        <dt className={`font-semibold ${tiles ? '' : 'inline'}`}>{label}</dt>{' '}
+        <dd className={`text-muted ${tiles ? '' : 'inline'}`}>{value}</dd>
+      </div>)}
+      {details.genres.length > 0 && <div className="col-span-full">
+        <dt className="mb-1 font-semibold">Genres</dt><dd><MetadataTags names={details.genres} /></dd>
+      </div>}
     </dl>
   );
 }
@@ -459,22 +467,31 @@ function AniListSearch({ onReview, onAssigningChange, lookupTitle, ...props }: A
   );
 }
 
-export function MetadataDescription({ metadata, showProviderLink = true }: { metadata: Metadata; showProviderLink?: boolean }) {
+export function MetadataStatus({ metadata, showProviderLink = false }: { metadata: Metadata; showProviderLink?: boolean }) {
+  return <p className="m-0 text-sm text-muted">{metadata.kind === 'doujin' ? 'Doujin' : 'Manga'}
+    {metadata.status && ' · ' + metadata.status.toLowerCase().replaceAll('_', ' ')}
+    {showProviderLink && metadata.providerUrl && <> · <a className="text-accent-readable" href={metadata.providerUrl}
+      target="_blank" rel="noreferrer">Open in AniList</a></>}
+  </p>;
+}
+
+export function MetadataDescription({ metadata, layout = 'standard' }: { metadata: Metadata; layout?: 'standard' | 'preview' }) {
+  const preview = layout === 'preview';
   const paragraphs = metadata.summary?.split(/\r\n?|\n/).map(paragraph => paragraph.trim()).filter(Boolean) ?? [];
-  return <div className="grid gap-4 wrap-anywhere">
-    <div className="grid gap-1 text-sm text-muted">
+  return <div className="grid min-w-0 gap-4 wrap-anywhere">
+    {preview ? metadata.alternateTitle && <section aria-label="Alternate titles" className="grid gap-1 text-sm">
+      <h3 className="m-0 font-semibold text-ink">Alternate titles</h3>
+      <p className="m-0 text-muted">{metadata.alternateTitle}</p>
+    </section> : <div className="grid gap-1 text-sm text-muted">
       {metadata.alternateTitle && <p className="m-0">{metadata.alternateTitle}</p>}
-      <p className="m-0">{metadata.kind === 'doujin' ? 'Doujin' : 'Manga'}
-        {metadata.status && ' · ' + metadata.status.toLowerCase().replaceAll('_', ' ')}
-        {showProviderLink && metadata.providerUrl && <> · <a className="text-accent-readable" href={metadata.providerUrl}
-          target="_blank" rel="noreferrer">Open in AniList</a></>}
-      </p>
-    </div>
-    {paragraphs.length > 0 && <section aria-label="Synopsis" className="grid max-w-prose gap-2 border-t border-line pt-3 text-sm text-detail">
+      <MetadataStatus metadata={metadata} showProviderLink />
+    </div>}
+    {paragraphs.length > 0 && <section aria-label="Synopsis" className={`grid max-w-prose gap-2 text-sm text-detail
+      ${!preview || metadata.alternateTitle ? 'border-t border-line pt-3' : ''}`}>
       <h3 className="m-0 font-semibold text-ink">Synopsis</h3>
       {paragraphs.map((paragraph, index) => <p key={index} className="m-0">{paragraph}</p>)}
     </section>}
-    {metadata.providerDetails && <ProviderFacts details={metadata.providerDetails} />}
+    {metadata.providerDetails && <ProviderFacts details={metadata.providerDetails} tiles={preview} />}
     <SeriesTagDetails tags={metadata.tags} />
   </div>;
 }

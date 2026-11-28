@@ -16,7 +16,7 @@ import type { LibraryRoot } from './library';
 import type { ReviewedFile } from './SeriesInfo';
 import { AniListSearchAction, MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
 import { EditionCoverage, SeriesChapterList, SeriesVolumeList } from './EditionCoverage';
-import { FileCover, SeriesCover } from './SeriesCover';
+import { FileCover, SeriesCover, SeriesCoverDialog } from './SeriesCover';
 import { duplicateFoldersHref, duplicateToolsHref, formatSize, isReadableArchive, organizeToolsHref, ROOTS_URL,
   seriesHref, seriesReaderHref } from './library';
 import { Select } from './Select';
@@ -451,7 +451,7 @@ function SeriesRow({ series, onInspect, coverVersion, catalogView, selection, ..
           <ChevronRight aria-hidden="true" className={`size-4 shrink-0 text-muted ${open ? 'rotate-90' : ''}`} />
         </button>
       </div>
-      <IntakeSeriesMatch series={series} onSignedOut={inventory.onSignedOut} onSaved={inventory.onDataChanged} />
+      <IntakeSeriesMatch series={series} coverVersion={coverVersion} onSignedOut={inventory.onSignedOut} onSaved={inventory.onDataChanged} />
       <Button variant="ghost" icon={Info} className="intake-series-info size-11 px-0 py-0" aria-label={`Intake details for ${series.title}`}
         title="Intake details" onClick={() => onInspect({ kind: 'series', series })} />
     </div>
@@ -463,10 +463,8 @@ function SeriesRow({ series, onInspect, coverVersion, catalogView, selection, ..
             suggestion={series.aniList?.revision ? series.aniList.metadata : undefined} reviewFiles={series.reviewFiles} actions={actions} />} />
       </>}
     </div>
-    {coverOpen && <Modal title={series.title} wide onClose={() => setCoverOpen(false)}>
-      <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available={series.hasCover} preferredSrc={matchCover} revision={coverVersion}
-        className="rounded-lg [&_img]:max-h-[70dvh] [&_img]:object-contain" />
-    </Modal>}
+    {coverOpen && <SeriesCoverDialog title={series.title} wide onClose={() => setCoverOpen(false)}
+      rootId={inventory.rootId} seriesKey={series.key} available={series.hasCover} preferredSrc={matchCover} revision={coverVersion} />}
   </li>;
 
   return (
@@ -593,10 +591,8 @@ export function SeriesPage({ seriesKey, coverVersion, rootPath, onInventoryChang
           {rootPath && <p className="m-0 text-sm wrap-anywhere">Library folder <code>{rootPath}</code></p>}
         </div>
       </Modal>}
-      {dialog === 'cover' && <Modal title={title} onClose={() => setDialog(null)}>
-        <SeriesCover rootId={rootId} seriesKey={series?.coverSeriesKey ?? seriesKey} available revision={coverVersion}
-          className="rounded-lg [&_img]:max-h-[70dvh] [&_img]:object-contain" />
-      </Modal>}
+      {dialog === 'cover' && <SeriesCoverDialog title={title} onClose={() => setDialog(null)}
+        rootId={rootId} seriesKey={series?.coverSeriesKey ?? seriesKey} available revision={coverVersion} />}
     </section>
   );
 }
