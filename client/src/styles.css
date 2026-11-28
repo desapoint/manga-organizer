@@ -184,7 +184,8 @@
     grid-template-columns: minmax(0, 1fr) 4rem 6rem 7rem;
   }
   .catalog-columns.with-file-actions, .catalog-files.with-file-actions > li:not(.catalog-folder-heading) {
-    grid-template-columns: minmax(0, 1fr) 4rem 6rem 7rem 2.75rem;
+    @apply items-center;
+    grid-template-columns: minmax(0, 1fr) 9rem 4rem 6rem 7rem 9rem;
   }
   .catalog-folder-heading {
     @apply flex min-w-0 items-center gap-3 border-b border-line bg-panel px-4 text-sm font-semibold text-label;
@@ -204,9 +205,24 @@
     .catalog-columns:not(.with-series-selection), .catalog-columns.with-series-selection > span:not(:first-child) { @apply hidden; }
     .catalog-columns.with-series-selection { @apply block; }
     .catalog-files > li:not(.catalog-folder-heading) { grid-template-columns: 3rem max-content 1fr; }
-    .catalog-files.with-file-actions > li:not(.catalog-folder-heading) { grid-template-columns: 3rem max-content minmax(0, 1fr) 2.75rem; }
     .catalog-files .file-path { @apply col-span-full; }
     .catalog-files time { @apply text-end; }
+  }
+
+  @container intake-files (width < 44rem) {
+    .catalog-columns.with-file-actions:not(.with-series-selection),
+    .catalog-columns.with-file-actions > span:not(:first-child) { @apply hidden; }
+    .catalog-columns.with-file-actions.with-series-selection { @apply block; }
+    .catalog-files.with-file-actions > li:not(.catalog-folder-heading) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas: "name name name" "format size modified" "numbering actions actions";
+    }
+    .catalog-files.with-file-actions .file-name { grid-area: name; }
+    .catalog-files.with-file-actions .file-format { grid-area: format; }
+    .catalog-files.with-file-actions .file-size { grid-area: size; }
+    .catalog-files.with-file-actions time { grid-area: modified; @apply text-end; }
+    .catalog-files.with-file-actions .file-numbering { grid-area: numbering; }
+    .catalog-files.with-file-actions .file-icon-actions { grid-area: actions; @apply w-36 justify-self-end; }
   }
 }
 

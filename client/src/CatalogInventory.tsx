@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Info, Library, Split, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Info, Library, ListOrdered, Split, X } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getCsrfToken } from './api';
@@ -244,6 +244,11 @@ function SplitIntakeFile({ rootId, file, onSignedOut, onChange }: {
   </>;
 }
 
+function formatReleaseNumber(number: string) {
+  const [whole = '', fraction] = number.split('.');
+  return whole.padStart(2, '0') + (fraction ? `.${fraction}` : '');
+}
+
 function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSignedOut, selection, onAssociationChanged, importGroupSize, onCoverageChanged }:
   Pick<InventoryProps, 'rootId' | 'version'> & {
   file: CatalogEntry; seriesKey?: string; onInspect?: Inspect; onSignedOut: () => void; management?: FileManagement;
@@ -252,10 +257,14 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   const [showCoverage, setShowCoverage] = useState(false);
   const [move, setMove] = useState<'organize' | 'transfer' | null>(null);
   const [moving, setMoving] = useState(false);
+  const intake = !!onInspect;
   const separator = file.relativePath.lastIndexOf('/');
   const name = onInspect ? intakeFileTitle(file) ?? 'Unidentified file' : file.relativePath.slice(separator + 1);
   const coverage = [file.volume && `Vol. ${file.volume}`, file.chapter && `Ch. ${file.chapter}`].filter(Boolean).join(' · ');
-  const readable = file.contentId && isReadableArchive(file.extension);
+  const detectedCoverage = [file.volume && `Vol.${formatReleaseNumber(file.volume)}`, file.chapter && `Ch.${formatReleaseNumber(file.chapter)}`]
+    .filter(Boolean).join(' - ');
+  const readerHref = file.contentId && isReadableArchive(file.extension) ? (intake ? `#read/${file.contentId}/intake` :
+    seriesKey ? seriesReaderHref(file.contentId, rootId, seriesKey) : `#read/${file.contentId}`) : null;
   const saveCoverage = onCoverageChanged ?? management?.onDataChanged;
   const coverageUrl = saveCoverage && ROOTS_URL + '/' + rootId + '/series/' + (seriesKey ?? file.seriesKey) + '/coverage';
   const coverageLabel = onCoverageChanged ? 'Assign volume or chapters' : 'Set chapter coverage';
@@ -267,11 +276,11 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
   }
   return (
     <li>
-      <span className="flex min-w-0 items-center gap-3 max-[36rem]:col-span-full">
+      <span className="file-name flex min-w-0 items-center gap-3 max-[36rem]:col-span-full">
         {selection.enabled && <SelectReleaseCheckbox label={`Select ${onInspect ? [name, coverage].filter(Boolean).join(', ') : file.relativePath}`} disabled={!file.contentId}
           checked={selection.selected.has(file.id)} onChange={() => selection.toggle([file.id])} />}
         <FileCover rootId={rootId} fileId={file.id} available={file.hasCover} seriesCoverKey={file.seriesCoverKey} revision={version}
-          className="h-12 w-8 shrink-0 rounded-sm" />
+          className={`shrink-0 rounded-sm ${intake ? 'h-15 w-10' : 'h-12 w-8'}`} />
         <span className="file-path" title={onInspect ? undefined : file.relativePath}>
           {onInspect ? <button type="button" className="min-h-11 cursor-pointer rounded-sm border-0 bg-transparent p-0 text-start
             text-inherit wrap-anywhere hover:text-accent-readable hover:underline desktop:min-h-0"
@@ -279,38 +288,45 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
           {separator >= 0 && !onInspect && <small>{file.relativePath.slice(0, separator)}</small>}
           {management && !onInspect && file.filenameEvidence && <small>{[file.filenameEvidence.alternateTitle, file.filenameEvidence.event,
             file.filenameEvidence.creator, ...file.filenameEvidence.notes].filter(Boolean).join(' · ')}</small>}
-          {coverage && <small>{coverage}</small>}
+          {!intake && coverage && <small>{coverage}</small>}
           {file.indexedLocations === null && <small>Content identity unavailable</small>}
           {file.indexedLocations !== null && file.indexedLocations > 1 && (
             <small>Same bytes at {file.indexedLocations.toLocaleString()} indexed locations</small>
           )}
         </span>
       </span>
+      {intake && <span className="file-numbering min-w-0 wrap-anywhere tabular-nums">{detectedCoverage}</span>}
       <span className="file-format">{file.extension.toUpperCase()}</span>
-      <span>{formatSize(file.size)}</span>
+      <span className="file-size">{formatSize(file.size)}</span>
       <time dateTime={file.modifiedAt}>{new Date(file.modifiedAt).toLocaleDateString()}</time>
-      {onInspect && management && file.contentId && <EditReleaseTags rootId={rootId} fileId={file.id} iconOnly
-        onSignedOut={onSignedOut} onSaved={() => finish(management.onDataChanged)} />}
-      {file.contentId && <div className="action-row col-span-full">
-        {readable && <ActionLink variant="ghost" icon={BookOpen} href={onInspect ? `#read/${file.contentId}/intake` :
-          seriesKey ? seriesReaderHref(file.contentId, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>}
-        {!onAssociationChanged && !onInspect && <ActionLink variant="ghost"
-          href={duplicateToolsHref({ rootId, seriesKey: file.seriesKey }, file.id)}>Compare in Tools</ActionLink>}
-        {updateAssociation && !file.associationConfirmed && (importGroupSize === undefined || !!onInspect && file.hasSeriesMetadata) &&
-          <FileAssociationAction file={file} rootId={rootId}
-          intake={!!onInspect} onChange={() => finish(updateAssociation)} onSignedOut={onSignedOut} />}
-        {updateAssociation && importGroupSize === undefined && <FileAssociationEditor key={file.contentId + file.seriesKey} rootId={rootId} fileId={file.id}
-          contentId={file.contentId} seriesKey={file.seriesKey} relativePath={file.relativePath} confirmed={file.associationConfirmed}
-          onSignedOut={onSignedOut} onSaved={() => finish(updateAssociation)} />}
-        {updateAssociation && (importGroupSize ?? 0) > 1 &&
-          <SplitIntakeFile rootId={rootId} file={file} onSignedOut={onSignedOut} onChange={() => finish(updateAssociation)} />}
-        {management && !onInspect && <EditReleaseTags rootId={rootId} fileId={file.id} onSignedOut={onSignedOut}
-          onSaved={() => finish(management.onDataChanged)} />}
-        {coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>{coverageLabel}</Button>}
-        {management?.intakeTarget && file.associationConfirmed && !file.intakePath &&
-          <span className="text-sm text-muted">Set a chapter or volume before transfer.</span>}
-        {transferTarget && <Button variant="secondary" onClick={() => setMove('transfer')}>Transfer to library</Button>}
-        {!!management?.managedFolders.length && <Button variant="ghost" onClick={() => setMove('organize')}>Move or rename</Button>}
+      {intake && <div className="file-icon-actions grid grid-cols-3 justify-items-center">
+        <div>{readerHref && <ActionLink variant="ghost" icon={BookOpen} href={readerHref} aria-label="Read file" title="Read file" />}</div>
+        <div>{file.contentId && coverageUrl && <Button variant="ghost" icon={ListOrdered} aria-label={coverageLabel}
+          title={coverageLabel} onClick={() => setShowCoverage(true)} />}</div>
+        <div>{management && file.contentId && <EditReleaseTags rootId={rootId} fileId={file.id} iconOnly
+          onSignedOut={onSignedOut} onSaved={() => finish(management.onDataChanged)} />}</div>
+      </div>}
+      {file.contentId && <>
+        <div className="action-row col-span-full empty:hidden">
+          {!intake && readerHref && <ActionLink variant="ghost" icon={BookOpen} href={readerHref}>Read file</ActionLink>}
+          {!onAssociationChanged && !intake && <ActionLink variant="ghost"
+            href={duplicateToolsHref({ rootId, seriesKey: file.seriesKey }, file.id)}>Compare in Tools</ActionLink>}
+          {updateAssociation && !file.associationConfirmed && (importGroupSize === undefined || intake && file.hasSeriesMetadata) &&
+            <FileAssociationAction file={file} rootId={rootId}
+              intake={intake} onChange={() => finish(updateAssociation)} onSignedOut={onSignedOut} />}
+          {updateAssociation && importGroupSize === undefined && <FileAssociationEditor key={file.contentId + file.seriesKey} rootId={rootId} fileId={file.id}
+            contentId={file.contentId} seriesKey={file.seriesKey} relativePath={file.relativePath} confirmed={file.associationConfirmed}
+            onSignedOut={onSignedOut} onSaved={() => finish(updateAssociation)} />}
+          {updateAssociation && (importGroupSize ?? 0) > 1 &&
+            <SplitIntakeFile rootId={rootId} file={file} onSignedOut={onSignedOut} onChange={() => finish(updateAssociation)} />}
+          {management && !intake && <EditReleaseTags rootId={rootId} fileId={file.id} onSignedOut={onSignedOut}
+            onSaved={() => finish(management.onDataChanged)} />}
+          {!intake && coverageUrl && <Button variant="ghost" onClick={() => setShowCoverage(true)}>{coverageLabel}</Button>}
+          {management?.intakeTarget && file.associationConfirmed && !file.intakePath &&
+            <span className="text-sm text-muted">Set a chapter or volume before transfer.</span>}
+          {transferTarget && <Button variant="secondary" onClick={() => setMove('transfer')}>Transfer to library</Button>}
+          {!!management?.managedFolders.length && <Button variant="ghost" onClick={() => setMove('organize')}>Move or rename</Button>}
+        </div>
         {showCoverage && coverageUrl && saveCoverage && <Modal title={coverageLabel} onClose={() => setShowCoverage(false)}>
           <p className="m-0 mb-3 text-sm"><code>{file.relativePath}</code></p>
           <ChapterCoverage url={coverageUrl} contentId={file.contentId} volumeHint={file.volume}
@@ -322,7 +338,7 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
             intakeTarget={move === 'transfer' ? transferTarget : undefined} intakePath={file.intakePath}
             onSignedOut={onSignedOut} onApplying={setMoving} onApplied={() => { setMove(null); finish(management.onMoved); }} />
         </Modal>}
-      </div>}
+      </>}
     </li>
   );
 }
@@ -365,7 +381,7 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
   const selection = useReleaseSelection(foldersUrl || `${rootId}:${params}:${offset}`,
     seriesFileIds ?? pageIds, persistent);
   const label = seriesKey ? 'Series files' : 'Catalog files';
-  const rowActions = persistent ? ' with-file-actions' : '';
+  const rowActions = onInspect ? ' with-file-actions' : '';
   const tagActions = management && (persistent || pageIds.length > 0) ? <ReleaseSelectionActions selection={selection}
     pageIds={pageIds} rootId={rootId} onSignedOut={onSignedOut} onSaved={management.onDataChanged} persistent={persistent} /> : null;
   const visibleFolders = new Map<string, CatalogEntry[]>();
@@ -392,7 +408,7 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
       {page?.total === 0 && <p className="px-4">{search ? 'No files match this search.' : catalogView === 'all' ?
         'No files in the current inventory.' : 'No files match this view.'}</p>}
       {page && page.total > 0 && (
-        <div className={seriesKey ? 'min-w-0 rounded-b-xl border-t border-line bg-inset' : 'surface'}>
+        <div className={`${seriesKey ? 'min-w-0 rounded-b-xl border-t border-line bg-inset' : 'surface'}${onInspect ? ' @container/intake-files' : ''}`}>
           {!seriesToolbar && tagActions && <div className="action-row border-b border-line px-4 py-2">{tagActions}</div>}
           <div className={`catalog-columns${rowActions}${foldersUrl ? ' with-series-selection' : ''}`}>
             {foldersUrl ? <span className="flex min-w-0 items-center gap-3">
@@ -400,7 +416,9 @@ export function FileInventory({ rootId, seriesKey, volume, version, onSignedOut,
                 disabled={!seriesFileIds?.length} onChange={() => selection.toggle(seriesFileIds ?? [])} />
               <span aria-hidden="true">Select all files</span>
             </span> : <span aria-hidden="true">File</span>}
+            {onInspect && <span aria-hidden="true">Vol. / Ch.</span>}
             <span aria-hidden="true">Type</span><span aria-hidden="true">Size</span><span aria-hidden="true">Modified</span>
+            {onInspect && <span aria-hidden="true" className="text-center">Actions</span>}
           </div>
           <ul className={`catalog-files${rowActions}`} role="list" aria-label={label}>
             {[...visibleFolders].flatMap(([directory, entries]) => {
