@@ -1,14 +1,18 @@
 import { ExternalLink, Eye, EyeOff, Link2, Search, Save, Undo2, Unlink2 } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import { AniListComparison } from './AniListComparison';
+import type { ComparisonFile } from './AniListComparison';
 import { getCsrfToken } from './api';
 import { ROOTS_URL } from './library';
 import { MultiValueField } from './MultiValueField';
 import { Select } from './Select';
-import { CoverImage } from './SeriesCover';
+import { ProviderCoverPreview } from './SeriesCover';
 import { SeriesCoverEditor } from './SeriesCoverEditor';
 import { draftForTags, SeriesTagFields, tagsFromDraft } from './SeriesTags';
 import type { SeriesTag, TagDraft } from './SeriesTags';
+import { SummaryEditor, summaryStyle } from './SummaryEditor';
+import { formatSummary } from './summaryMarkup';
 import { useToast } from './Toast';
 import { ActionLink, Button, Modal, SearchField, SectionHeader } from './ui';
 
@@ -20,6 +24,7 @@ export type Metadata = {
   alternateTitle: string | null;
   alternateTitles: string[];
   summary: string | null;
+  summaryMarkup?: string | null;
   status: string | null;
   totalChapters: number | null;
   totalVolumes: number | null;
@@ -31,6 +36,7 @@ export type Metadata = {
 };
 type AniListDetails = {
   coverUrl: string | null;
+  coverLargeUrl?: string | null;
   format: string | null;
   countryOfOrigin: string | null;
   startYear: number | null;
@@ -135,13 +141,15 @@ function metadataFields(metadata: Metadata | null, title: string) {
     totalVolumes: metadata?.totalVolumes?.toString() ?? '',
     status: metadata?.status ?? '',
     summary: metadata?.summary ?? '',
+    summaryMarkup: metadata?.summaryMarkup ?? '',
   };
 }
 
-function SeriesMetadataForm({ context, metadata, suggestion, linkSuggestion, loadProvider, save }: {
+function SeriesMetadataForm({ context, metadata, suggestion, linkSuggestion, loadProvider, save, coverEditor }: {
   context: AniListSearchProps; metadata: Metadata | null; suggestion?: Metadata; linkSuggestion?: boolean;
   loadProvider: (id: number) => Promise<Metadata>;
   save: (values: object) => Promise<void>;
+  coverEditor?: ReactNode;
 }) {
   const { title } = context;
   const titleId = useId();
@@ -154,7 +162,6 @@ function SeriesMetadataForm({ context, metadata, suggestion, linkSuggestion, loa
   const notify = useToast();
   const [tagDraft, setTagDraft] = useState(() => draftForTags(metadata?.tags ?? []));
   const [tagMode, setTagMode] = useState<'preserve' | 'manual' | 'provider'>('preserve');
-  const [providerTags, setProviderTags] = useState(metadata?.providerDetails?.tags);
 
   const linked = metadata?.providerId ? metadata : undefined;
   const match = removeMatch ? undefined : draftLink ?? linked ?? suggestion;
@@ -163,7 +170,6 @@ function SeriesMetadataForm({ context, metadata, suggestion, linkSuggestion, loa
     draftLink && !removeMatch && draftLink.providerId !== linked?.providerId ? 'AniList link will be saved' :
     linked && !removeMatch ? 'Linked to AniList' :
     suggestion && !removeMatch ? 'Suggested AniList match · Unlinked' : 'Unlinked from AniList';
-  const hasTagOverride = tagMode === 'manual' || (tagMode === 'preserve' && metadata?.hasManualTags);
   const statuses = fields.status && !publicationStatuses.some(option => option.value === fields.status)
     ? [...publicationStatuses, { value: fields.status, label: fields.status }] : publicationStatuses;
 
@@ -190,21 +196,20 @@ function SeriesMetadataForm({ context, metadata, suggestion, linkSuggestion, loa
     setSearchTitle(null);
     setRemoveMatch(false);
     setDraftLink(candidate);
-    const tags = candidate.providerDetails?.tags ?? [];
-    setProviderTags(tags);
-    if (!hasTagOverride) useLinkedTags(tags);
+    if (candidate.providerId !== match?.providerId && tagsFromDraft(tagDraft).length > 0) setTagMode('manual');
   }
 
-  async function applyProvider(replace: boolean) {
+  async function applyProvider(action: 'fill' | 'replace' | 'tags') {
     if (!sourceId) return;
     setBusy(true);
     try {
       const staged = draftLink ?? suggestion;
       const source = staged?.providerId === sourceId ? staged : await loadProvider(sourceId);
       const incoming = metadataFields(source, title);
-      setFields(current => {
-        if (replace) return incoming;
+      if (action !== 'tags') setFields(current => {
+        if (action === 'replace') return incoming;
         const existingTitles = new Set(current.alternateTitles.map(value => value.toLowerCase()));
+        const hasSummary = current.summary.trim() || current.summaryMarkup.trim();
         return {
           title: current.title.trim() ? current.title : incoming.title,
           kind: hasKind ? current.kind : incoming.kind,
@@ -213,13 +218,18 @@ function SeriesMetadataForm({ context, metadata, suggestion, linkSuggestion, loa
           totalChapters: current.totalChapters || incoming.totalChapters,
           totalVolumes: current.totalVolumes || incoming.totalVolumes,
           status: current.status.trim() ? current.status : incoming.status,
-          summary: current.summary.trim() ? current.summary : incoming.summary,
+          summary: hasSummary ? current.summary : incoming.summary,
+          summaryMarkup: hasSummary ? current.summaryMarkup : incoming.summaryMarkup,
         };
       });
       const sourceTags = source.providerDetails?.tags ?? [];
-      setProviderTags(sourceTags);
-      if (replace || !hasTagOverride || tagsFromDraft(tagDraft).length === 0) useLinkedTags(sourceTags);
-      setHasKind(true);
+      const currentTags = tagsFromDraft(tagDraft);
+      if (action !== 'fill' || currentTags.length === 0) {
+        useLinkedTags(sourceTags);
+      } else if (JSON.stringify(currentTags) !== JSON.stringify(tagsFromDraft(draftForTags(sourceTags)))) {
+        setTagMode('manual');
+      }
+      if (action !== 'tags') setHasKind(true);
       setDraftLink(source);
       notify('success', 'Draft updated. Review the fields and save to apply them.');
     } catch (reason) {
@@ -290,18 +300,18 @@ function SeriesMetadataForm({ context, metadata, suggestion, linkSuggestion, loa
       </div>
       <Select label="Publication status" value={fields.status || unsetStatus} options={statuses}
         onChange={value => update('status', value === unsetStatus ? '' : value)} />
-      <label className="grid gap-1">Summary<textarea name="summary" rows={3} maxLength={6000} value={fields.summary}
-        onChange={event => update('summary', event.target.value)} className="min-w-0 rounded-lg border border-control bg-field p-3 text-base text-ink" /></label>
+      <SummaryEditor summary={fields.summary} markup={fields.summaryMarkup} disabled={busy}
+        onChange={(summary, summaryMarkup) => setFields(current => ({ ...current, summary, summaryMarkup }))} />
       <SeriesTagFields draft={tagDraft} onChange={updateTags} disabled={busy} />
-      {providerTags && match && <Button variant="secondary" className="justify-self-start" disabled={busy}
-        onClick={() => useLinkedTags(providerTags)}>Use AniList tags</Button>}
-      <div className="action-row">
-        <Button type="submit" icon={Save} disabled={busy}>Save details</Button>
+      {coverEditor}
+      <footer className="action-row justify-end border-t border-line pt-3">
         {sourceId && <>
-          <Button variant="secondary" disabled={busy} onClick={() => void applyProvider(false)}>Fill missing from AniList</Button>
-          <Button variant="secondary" disabled={busy} onClick={() => void applyProvider(true)}>Replace from AniList</Button>
+          <Button variant="secondary" disabled={busy} onClick={() => void applyProvider('tags')}>Use AniList tags</Button>
+          <Button variant="secondary" disabled={busy} onClick={() => void applyProvider('fill')}>Fill missing from AniList</Button>
+          <Button variant="secondary" disabled={busy} onClick={() => void applyProvider('replace')}>Replace from AniList</Button>
         </>}
-      </div>
+        <Button type="submit" icon={Save} disabled={busy}>Save details</Button>
+      </footer>
     </form>
     {searchTitle !== null && <Modal title="Find on AniList" wide onClose={() => setSearchTitle(null)}>
       <AniListSearch {...context} lookupTitle={searchTitle} onPick={stageMatch} autoSearch />
@@ -337,6 +347,7 @@ export function useSeriesDetails({ rootId, seriesKey, version, onSignedOut, publ
 
 type EditorProps = Omit<SeriesContext, 'version'> & {
   metadata: Metadata | null; onChange: () => void; published?: boolean; reviewFiles?: ReviewedFile[]; lookupTitle?: string;
+  localFile?: ComparisonFile;
 };
 
 export function MetadataDialogAction({ actionLabel = 'Edit metadata', ...props }: EditorProps & {
@@ -361,16 +372,16 @@ function MetadataDraftDialog({ onClose, suggestion, linkSuggestion, ...props }: 
 
   return <Modal title="Edit series metadata" wide onClose={onClose}>
     <SeriesMetadataForm context={props} metadata={props.metadata} suggestion={suggestion} linkSuggestion={linkSuggestion} loadProvider={loadProvider}
+      coverEditor={props.metadata && <details className="border-t border-line" onToggle={event => setCoversOpen(event.currentTarget.open)}>
+        <summary className="min-h-11 cursor-pointer py-3 font-semibold">Series cover</summary>
+        {coversOpen && <SeriesCoverEditor url={metadataUrl(props)} published={props.published} onSaved={props.onChange} onSignedOut={props.onSignedOut} />}
+      </details>}
       save={async values => {
         await saveMetadata(props, values);
         notify('success', 'Series metadata saved.');
         onClose();
         props.onChange();
       }} />
-    {props.metadata && <details className="mt-4 border-t border-line" onToggle={event => setCoversOpen(event.currentTarget.open)}>
-      <summary className="min-h-11 cursor-pointer py-3 font-semibold">Series cover</summary>
-      {coversOpen && <SeriesCoverEditor url={metadataUrl(props)} published={props.published} onSaved={props.onChange} onSignedOut={props.onSignedOut} />}
-    </details>}
   </Modal>;
 }
 
@@ -430,6 +441,7 @@ function AniListSearch({ onPick, onReview, onAssigningChange, lookupTitle, autoS
   const [matches, setMatches] = useState<Metadata[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<{ id: number; action: 'choose' | 'review' } | null>(null);
+  const [comparison, setComparison] = useState<Metadata | null>(null);
   const notify = useToast();
 
   useEffect(() => {
@@ -501,10 +513,17 @@ function AniListSearch({ onPick, onReview, onAssigningChange, lookupTitle, autoS
       {!!matches?.length && <ul className="m-0 grid list-none gap-2 p-0" role="list" aria-label="Metadata results">
         {matches.map(candidate => <li key={candidate.providerId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line p-3">
           <div className="flex min-w-0 flex-[1_1_14rem] items-center gap-3">
-            <CoverImage src={candidate.providerDetails?.coverUrl ?? undefined} className="h-21 w-14 shrink-0 rounded-md" />
+            <div className="shrink-0">
+              <ProviderCoverPreview src={candidate.providerDetails?.coverUrl ?? undefined} title={candidate.title}
+                largeSrc={candidate.providerDetails?.coverLargeUrl ?? undefined}
+                className="h-21 w-14 rounded-md" />
+            </div>
             <div className="grid min-w-0 gap-1 wrap-anywhere">
               <strong>{candidate.title}</strong>
-              {alternateTitles(candidate).length > 0 && <span className="text-sm text-muted">{alternateTitles(candidate).join(' · ')}</span>}
+              {alternateTitles(candidate).length > 0 && <span className="line-clamp-2 text-sm text-muted">
+                {alternateTitles(candidate).slice(0, 2).join(' · ')}
+                {alternateTitles(candidate).length > 2 && ` · +${alternateTitles(candidate).length - 2} more`}
+              </span>}
               <span className="text-sm text-muted">
                 {[candidate.kind === 'doujin' ? 'Doujin' : 'Manga', candidate.providerDetails && publicationYears(candidate.providerDetails),
                   candidate.status?.toLowerCase().replaceAll('_', ' ')].filter(Boolean).join(' · ')}
@@ -512,6 +531,7 @@ function AniListSearch({ onPick, onReview, onAssigningChange, lookupTitle, autoS
             </div>
           </div>
           <div className="action-row">
+            <Button variant="secondary" disabled={saving !== null} onClick={() => setComparison(candidate)}>Compare</Button>
             {candidate.providerUrl && <ActionLink variant="ghost" icon={ExternalLink} href={candidate.providerUrl} target="_blank" rel="noreferrer">
               Open in AniList
             </ActionLink>}
@@ -524,6 +544,7 @@ function AniListSearch({ onPick, onReview, onAssigningChange, lookupTitle, autoS
           </div>
         </li>)}
       </ul>}
+      {comparison && <AniListComparison {...props} candidate={comparison} onClose={() => setComparison(null)} />}
     </div>
   );
 }
@@ -539,17 +560,20 @@ export function MetadataStatus({ metadata, showProviderLink = false }: { metadat
 export function MetadataDescription({ metadata, layout = 'standard' }: { metadata: Metadata; layout?: 'standard' | 'preview' }) {
   const preview = layout === 'preview';
   const titles = alternateTitles(metadata);
-  const paragraphs = metadata.summary?.split(/\r\n?|\n/).map(paragraph => paragraph.trim()).filter(Boolean) ?? [];
+  const summary = formatSummary(metadata.summary ?? '', metadata.summaryMarkup);
   return <div className="grid min-w-0 gap-4 wrap-anywhere">
     {titles.length > 0 && <section aria-label="Alternate titles" className="grid gap-1 text-sm">
       <h3 className="m-0 font-semibold text-ink">Alternate titles</h3>
-      <MetadataTags names={titles} />
+      {preview && titles.length > 4 ? <details>
+        <summary className="cursor-pointer text-muted">Show all {titles.length} alternate titles</summary>
+        <div className="mt-2"><MetadataTags names={titles} /></div>
+      </details> : <MetadataTags names={titles} />}
     </section>}
     {!preview && <MetadataStatus metadata={metadata} showProviderLink />}
-    {paragraphs.length > 0 && <section aria-label="Synopsis" className={`grid max-w-prose gap-2 text-sm text-detail
+    {summary && <section aria-label="Synopsis" className={`grid max-w-prose gap-2 text-sm leading-relaxed text-detail
       ${!preview || titles.length > 0 ? 'border-t border-line pt-3' : ''}`}>
       <h3 className="m-0 font-semibold text-ink">Synopsis</h3>
-      {paragraphs.map((paragraph, index) => <p key={index} className="m-0">{paragraph}</p>)}
+      <div className={summaryStyle} dangerouslySetInnerHTML={{ __html: summary }} />
     </section>}
     {metadata.providerDetails && <ProviderFacts details={metadata.providerDetails} tiles={preview} />}
     <SeriesTagDetails tags={metadata.tags} />

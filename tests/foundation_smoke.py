@@ -780,20 +780,34 @@ def verify_external_metadata(executable, fixture):
     (media / "archive").mkdir()
     (media / "primary" / "Issue 01.pdf").write_bytes(b"Unique synthetic issue for matching tests")
     cover = "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/fixture.jpg"
+    larger_cover = "https://s4.anilist.co/file/anilistcdn/media/manga/cover/large/fixture.jpg"
     media_result = {"id": 123, "title": {"english": "Synthetic provider title", "romaji": "Hon", "native": "本"},
                     "synonyms": ["Synthetic provider title", "Fixture Alias", "fixture alias", "Legacy Alternate"],
                     "description": "Metadata &amp; tags<br><br><i>Second paragraph</i>", "status": "FINISHED", "chapters": 12, "volumes": 3,
                     "format": "ONE_SHOT", "countryOfOrigin": "JP", "startDate": {"year": 2011},
                     "endDate": {"year": 2012}, "genres": ["Drama", "drama"],
-                    "coverImage": {"medium": cover}, "staff": {"edges": [
+                    "coverImage": {"medium": cover, "extraLarge": larger_cover}, "staff": {"edges": [
                         {"role": "Story & Art", "node": {"name": {"full": "Fixture Author"}}}]},
                     "tags": [{"name": "Doujinshi"}, {"name": "Hidden outcome", "isMediaSpoiler": True}]}
     no_cover = {"id": 456, "title": {"romaji": "Cover fallback"}, "status": "FINISHED", "chapters": 1,
                 "coverImage": {"medium": "https://s4.anilist.co.invalid/file/anilistcdn/media/manga/cover/fake.jpg"}}
 
     shared_work = {"id": 789, "title": {"english": "Shared work fixture"}, "chapters": 4, "volumes": 2}
+    cover_requests = []
 
     class Provider(BaseHTTPRequestHandler):
+        def do_GET(self):
+            cover_requests.append(self.path)
+            if not self.path.endswith("/large/fixture.jpg"):
+                self.send_error(404)
+                return
+            data = synthetic_png(35, 65, 120)
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
         def do_POST(self):
             request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             variables = request["variables"]
@@ -849,14 +863,20 @@ def verify_external_metadata(executable, fixture):
                 assert result["alternateTitle"] == "Hon"
                 assert result["alternateTitles"] == ["Hon", "本", "Fixture Alias", "Legacy Alternate"]
                 assert result["summary"] == "Metadata & tags\n\nSecond paragraph"
+                assert result["summaryMarkup"] == media_result["description"]
                 assert result["providerDetails"] == {
-                    "coverUrl": cover, "format": "ONE_SHOT", "countryOfOrigin": "JP", "startYear": 2011, "endYear": 2012,
+                    "coverUrl": cover, "coverLargeUrl": larger_cover, "format": "ONE_SHOT", "countryOfOrigin": "JP", "startYear": 2011, "endYear": 2012,
                     "genres": ["Drama"], "tags": [{"name": "Doujinshi", "spoiler": False}, {"name": "Hidden outcome", "spoiler": True}],
                     "credits": [{"name": "Fixture Author", "role": "Story & Art"}],
                 }
                 assert fallback["providerDetails"]["coverUrl"] is None and fallback["providerDetails"]["tags"] == []
                 saved = json.loads(browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 123}))
                 assert saved == result and json.loads(browser.request(f"{url}/details", 200))["metadata"] == result
+                browser.request(url + "/cover-preference", 204, method="PUT", token=browser.csrf(), body={"useProvider": True})
+                cached_cover = browser.request(url + "/cover", 200)
+                assert cached_cover.startswith(b"RIFF") and cached_cover[8:12] == b"WEBP"
+                assert browser.request(url + "/cover?highResolution=true", 200) == cached_cover
+                assert cover_requests == ["/file/anilistcdn/media/manga/cover/large/fixture.jpg"]
                 assert browser.series(root_id, "?view=library&search=fixture+alias")["total"] == 1
                 assert browser.files(root_id, "?view=library&search=legacy+alternate")["total"] == 1
                 aliases = ["Custom shorthand", "Different, local name"]
@@ -869,6 +889,7 @@ def verify_external_metadata(executable, fixture):
                     body={**edit, "providerId": 123, "useEditedFields": True, "summary": result["summary"]}))
                 assert corrected["title"] == edit["title"] and corrected["providerUrl"] == result["providerUrl"]
                 assert corrected["providerDetails"] == result["providerDetails"] and corrected["summary"] == result["summary"]
+                assert corrected["summaryMarkup"] == result["summaryMarkup"]
                 assert corrected["alternateTitles"] == aliases and corrected["alternateTitle"] == aliases[0]
                 assert browser.series(root_id, "?search=fixture+alias")["total"] == 0
                 (association_target,) = json.loads(browser.request("/api/file-associations/series?search=different%2C+local", 200))["items"]
@@ -946,6 +967,8 @@ def verify_external_metadata(executable, fixture):
                 stored = json.loads(browser.request(url + "/details?published=true", 200))["metadata"]
                 assert stored["tags"] == expected_tags
                 assert stored["alternateTitles"] == aliases
+                assert browser.request(url + "/cover?highResolution=true", 200) == cached_cover
+                assert len(cover_requests) == 1
                 assert json.loads(browser.request(f"{collections}/tags", 200)) == ["Doujinshi", "Slow burn"]
                 cleared = json.loads(browser.request(url + "/metadata?published=true", 200, method="PUT", token=browser.csrf(),
                     body={**edit, "tags": []}))
@@ -1400,6 +1423,35 @@ def verify_volume_chapters(owner, root_id, path):
     assert len(coverage(moved, new_url)) == 3
 
 
+def verify_bulk_file_coverage(owner, root, series_key, first, later):
+    endpoint = f"{LIBRARY_ROOTS}/{root}/file-coverage?published=true"
+
+    def rows():
+        items = owner.files(root, f"?seriesKey={series_key}&view=library&includeCoverage=true")["items"]
+        return {item["relativePath"]: item for item in items}
+
+    def edit(file, volume, chapters):
+        return {"fileId": file["id"], "contentId": file["contentId"], "seriesKey": file["seriesKey"],
+                "revision": file["coverage"]["revision"], "volume": volume, "chapters": chapters}
+
+    original = rows()
+    edits = [edit(original[first], "08", ["2.50", "3"]), edit(original[later], "9", [])]
+    owner.request(endpoint, 400, method="PUT", body={"changes": edits})
+    owner.request(endpoint, 400, method="PUT", token=owner.csrf(),
+                  body={"changes": [edits[0], {**edits[1], "chapters": ["2-5"]}]})
+    owner.request(endpoint, 409, method="PUT", token=owner.csrf(),
+                  body={"changes": [edits[0], {**edits[1], "revision": "0" * 64}]})
+    assert rows() == original
+    owner.request(endpoint, 204, method="PUT", token=owner.csrf(), body={"changes": edits})
+    applied = rows()
+    assert applied[first]["coverage"]["volume"] == "8" and applied[first]["coverage"]["chapters"] == ["2.5", "3"]
+    assert applied[later]["coverage"]["volume"] == "9" and applied[later]["coverage"]["chapters"] == []
+    owner.request(endpoint, 409, method="PUT", token=owner.csrf(), body={"changes": edits})
+    owner.request(endpoint, 204, method="PUT", token=owner.csrf(),
+                  body={"changes": [edit(applied[first], "", []), edit(applied[later], "", [])]})
+    assert rows() == original
+
+
 def verify_catalog_visibility(owner, root, path):
     def comic(name, color):
         with ZipFile(path / name, "w") as archive:
@@ -1477,6 +1529,7 @@ def verify_catalog_visibility(owner, root, path):
     assert total == 2 and page[later]["id"] == release["id"]
     assert page[later]["associationConfirmed"]
     assert files("attention", f"seriesKey={parchment}")[0] == 0
+    verify_bulk_file_coverage(owner, root, parchment, first, later)
     assert json.loads(owner.request(version, 200))["tags"] == {
         "language": "ja", "color": "black-and-white", "censorship": "uncensored",
         "edition": None, "group": "Batch Fixture", "revision": 2,

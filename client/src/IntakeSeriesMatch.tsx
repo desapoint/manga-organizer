@@ -88,7 +88,8 @@ function IntakeMatchDialog({ series, match, coverVersion, busy, onClose, onConfi
   const [coverOpen, setCoverOpen] = useState(false);
   const { metadata } = match;
   const preferredSrc = metadata.providerDetails?.coverUrl ?? undefined;
-  const artwork = { rootId: series.rootId, seriesKey: series.key, available: series.hasCover, preferredSrc, revision: coverVersion };
+  const artwork = { rootId: series.rootId, seriesKey: series.key, available: series.hasCover, preferredSrc,
+    preferredLargeSrc: metadata.providerDetails?.coverLargeUrl ?? undefined, revision: coverVersion };
   const canEnlarge = !!preferredSrc || series.hasCover;
   const cover = <SeriesCover {...artwork}
     className="h-36 max-h-[45dvh] w-24 rounded-lg sm:h-54 sm:w-36 [&_img]:object-top" />;

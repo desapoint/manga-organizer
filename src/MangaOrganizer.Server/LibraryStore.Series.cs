@@ -70,7 +70,7 @@ internal sealed partial class LibraryStore
                     SELECT 1 FROM series_cover_preference pref
                     WHERE pref.series_id = m.id
                 ) AS has_cover, m.id IS NOT NULL AS has_metadata,
-                m.kind, m.summary, m.status, m.total_chapters, m.total_volumes, m.provider_id, g.linked_metadata AS shared_work,
+                m.kind, m.summary, m.summary_markup, m.status, m.total_chapters, m.total_volumes, m.provider_id, g.linked_metadata AS shared_work,
                 binding.metadata_id IS NULL AND NOT EXISTS (
                     SELECT 1 FROM library_file peer JOIN content_metadata linked ON linked.content_id = peer.content_id
                     WHERE peer.root_id = g.root_id AND peer.series_key = g.series_key) AS can_confirm_match
@@ -158,7 +158,7 @@ internal sealed partial class LibraryStore
                 (SELECT revision FROM metadata_suggestion s WHERE s.series_key = candidate.series_key),
                 (SELECT candidates FROM metadata_suggestion s WHERE s.series_key = candidate.series_key),
                 COALESCE((SELECT queued FROM metadata_suggestion s WHERE s.series_key = candidate.series_key), 0), can_confirm_match, manual_tags, review_files,
-                alternate_titles
+                alternate_titles, summary_markup
             """;
         command.CommandText = query + " SELECT root_id, series_key, title, file_count, suggested, has_cover, has_metadata"
             + (includeMatches ? matchFields : ", cover_key") + filter +
@@ -196,7 +196,7 @@ internal sealed partial class LibraryStore
             var details = ReadText(rows, 14) is { } json ? JsonSerializer.Deserialize<AniListDetails>(json) : null;
             return new(new(title, rows.GetString(8), ReadText(rows, 7), MetadataAgent.PlainDescription(ReadText(rows, 9)),
                 ReadText(rows, 10), ReadInt(rows, 11), ReadInt(rows, 12), provider, details, ReadManualTags(rows, 19))
-                { AlternateTitles = ReadAlternateTitles(rows, 21) }, null, false);
+                { AlternateTitles = ReadAlternateTitles(rows, 21), SummaryMarkup = ReadText(rows, 22) }, null, false);
         }
         if (!rows.GetBoolean(18) || ReadText(rows, 15) is not { } revision || ReadText(rows, 16) is not { } candidates) return null;
         if (JsonSerializer.Deserialize<MetadataProposal[]>(candidates) is not { Length: > 0 } proposals) return null;

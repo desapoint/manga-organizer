@@ -49,6 +49,7 @@ def verify_canonical_upgrade(app, fresh, data, target_version):
           closing(sqlite3.connect(data / "organizer.sqlite")) as database):
         source.backup(database)
         database.executescript("""
+            ALTER TABLE series_metadata DROP COLUMN summary_markup;
             ALTER TABLE series_metadata DROP COLUMN alternate_titles;
             DROP TABLE file_association_review;
             ALTER TABLE content_metadata DROP COLUMN reviewed_locations_only;
@@ -132,6 +133,7 @@ def verify(app, fixture, previous_app=None):
     with closing(sqlite3.connect(fresh / "organizer.sqlite")) as database:
         assert database.execute("PRAGMA journal_mode = WAL").fetchone() == ("wal",)
         database.execute("PRAGMA wal_autocheckpoint = 0")
+        database.execute("ALTER TABLE series_metadata DROP COLUMN summary_markup")
         database.execute("ALTER TABLE series_metadata DROP COLUMN alternate_titles")
         database.execute("DROP TABLE file_association_review")
         database.execute("ALTER TABLE content_metadata DROP COLUMN reviewed_locations_only")

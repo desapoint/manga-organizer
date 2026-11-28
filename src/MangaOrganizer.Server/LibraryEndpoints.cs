@@ -12,6 +12,7 @@ internal static class LibraryEndpoints
     {
         var library = api.MapGroup("/library/roots").RequireAuthorization();
         library.MapSeriesMetadata();
+        library.MapFileCoverage();
         library.MapSeriesCovers();
         library.MapChapterEditions();
         api.MapCollections();
@@ -56,7 +57,8 @@ internal static class LibraryEndpoints
             }
         });
 
-        library.MapGet("/{id:guid}/files", (Guid id, int? offset, int? limit, string? seriesKey, string? search, string? volume, string? view, LibraryStore store) =>
+        library.MapGet("/{id:guid}/files", (Guid id, int? offset, int? limit, string? seriesKey, string? search, string? volume,
+            string? view, bool? includeCoverage, LibraryStore store) =>
         {
             if (!store.TryGetRoot(id, out _))
             {
@@ -68,7 +70,7 @@ internal static class LibraryEndpoints
                 return Results.BadRequest();
             }
             return Results.Ok(store.ReadFiles(id, offset ?? 0, limit ?? 50, seriesKey?.ToLowerInvariant(), search?.Trim() ?? "",
-                volume is null ? null : BookNumbers.Canonical(volume), view));
+                volume is null ? null : BookNumbers.Canonical(volume), view, includeCoverage == true));
         });
 
         library.MapGet("/{id:guid}/series/{key}/release-folders", (Guid id, string key, string? view, LibraryStore store) =>
@@ -115,8 +117,8 @@ internal static class LibraryEndpoints
         library.MapGet("/{id:guid}/tags", (Guid id, LibraryStore store) =>
             store.TryGetRoot(id, out _) ? Results.Ok(store.ReadSeriesTags(id)) : Results.NotFound());
 
-        library.MapGet("/{id:guid}/series/{seriesKey}/cover", (Guid id, string seriesKey, LibraryStore store, HttpContext context) =>
-            IsSeriesKey(seriesKey) && store.ReadCover(id, seriesKey.ToLowerInvariant()) is { } cover
+        library.MapGet("/{id:guid}/series/{seriesKey}/cover", (Guid id, string seriesKey, bool? highResolution, LibraryStore store, HttpContext context) =>
+            IsSeriesKey(seriesKey) && store.ReadCover(id, seriesKey.ToLowerInvariant(), highResolution == true) is { } cover
                 ? SeriesCoverResult(context, cover) : Results.NotFound());
 
         library.MapGet("/{id:guid}/files/{fileId}/cover", (Guid id, string fileId, LibraryStore store, HttpContext context) =>

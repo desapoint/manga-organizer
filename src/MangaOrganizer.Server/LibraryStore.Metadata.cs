@@ -10,6 +10,8 @@ internal sealed record SeriesMetadata(string Title, string Kind, string? Alterna
     [property: JsonIgnore] SeriesTag[]? ManualTags = null)
 {
     public string[] AlternateTitles { get; init; } = AlternateTitle is null ? [] : [AlternateTitle];
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SummaryMarkup { get; init; }
     public SeriesTag[] Tags => ManualTags ?? ProviderDetails?.Tags ?? [];
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool HasManualTags => ManualTags is not null;
@@ -280,6 +282,8 @@ internal sealed partial class LibraryStore
         {
             metadata = metadata with { ProviderId = existing.ProviderId, ProviderDetails = existing.ProviderDetails };
         }
+        if (metadata.SummaryMarkup is null && metadata.Summary is { } summary && summary == existing?.Summary)
+            metadata = metadata with { SummaryMarkup = existing.SummaryMarkup };
         var previousTags = removeAniListLink ? existing?.Tags : existing?.ManualTags;
         metadata = metadata with { ManualTags = useProviderTags ? null : metadata.ManualTags ?? previousTags };
 
@@ -290,6 +294,7 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$alternate", (object?)metadata.AlternateTitle ?? DBNull.Value);
         command.Parameters.AddWithValue("$alternates", JsonSerializer.Serialize(metadata.AlternateTitles));
         command.Parameters.AddWithValue("$summary", (object?)metadata.Summary ?? DBNull.Value);
+        command.Parameters.AddWithValue("$markup", (object?)metadata.SummaryMarkup ?? DBNull.Value);
         command.Parameters.AddWithValue("$status", (object?)metadata.Status ?? DBNull.Value);
         command.Parameters.AddWithValue("$chapters", (object?)metadata.TotalChapters ?? DBNull.Value);
         command.Parameters.AddWithValue("$volumes", (object?)metadata.TotalVolumes ?? DBNull.Value);
@@ -301,13 +306,13 @@ internal sealed partial class LibraryStore
         command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow);
         command.CommandText = """
             INSERT INTO series_metadata(id, series_key, title, alternate_title, kind, summary, status, total_chapters, total_volumes,
-                provider_id, provider_details, manual_tags, updated_at, alternate_titles)
-                VALUES ($id, $series, $title, $alternate, $kind, $summary, $status, $chapters, $volumes, $provider, $providerDetails, $manualTags, $now, $alternates)
+                provider_id, provider_details, manual_tags, updated_at, alternate_titles, summary_markup)
+                VALUES ($id, $series, $title, $alternate, $kind, $summary, $status, $chapters, $volumes, $provider, $providerDetails, $manualTags, $now, $alternates, $markup)
             ON CONFLICT(id) DO UPDATE SET title = excluded.title, kind = excluded.kind, alternate_title = excluded.alternate_title,
                 summary = excluded.summary, status = excluded.status, total_chapters = excluded.total_chapters,
                 total_volumes = excluded.total_volumes, provider_id = excluded.provider_id,
                 provider_details = excluded.provider_details, manual_tags = excluded.manual_tags, updated_at = excluded.updated_at,
-                alternate_titles = excluded.alternate_titles;
+                alternate_titles = excluded.alternate_titles, summary_markup = excluded.summary_markup;
             """;
         command.ExecuteNonQuery();
         BindMetadataToGroup(command, previousId, attachFiles, scoped);
@@ -356,7 +361,7 @@ internal sealed partial class LibraryStore
 
     private const string MetadataColumns = """
         m.title, m.kind, m.alternate_title, m.summary, m.status, m.total_chapters, m.total_volumes,
-        m.provider_id, m.provider_details, m.manual_tags, m.alternate_titles
+        m.provider_id, m.provider_details, m.manual_tags, m.alternate_titles, m.summary_markup
         """;
 
     public SeriesMetadata? ReadLinkedProviderMetadata(int provider)
@@ -392,11 +397,13 @@ internal sealed partial class LibraryStore
         var details = ReadText(rows, 8) is { } stored ? JsonSerializer.Deserialize<AniListDetails>(stored) : null;
         var providerId = ReadInt(rows, 7);
         var summary = ReadText(rows, 3);
+        var summaryMarkup = ReadText(rows, 11);
         return new(rows.GetString(0), rows.GetString(1), ReadText(rows, 2),
-            providerId.HasValue ? MetadataAgent.PlainDescription(summary) : summary, ReadText(rows, 4),
+            providerId.HasValue && summaryMarkup is null ? MetadataAgent.PlainDescription(summary) : summary, ReadText(rows, 4),
             ReadInt(rows, 5), ReadInt(rows, 6), providerId, details, ReadManualTags(rows, 9))
         {
             AlternateTitles = ReadAlternateTitles(rows, 10),
+            SummaryMarkup = summaryMarkup,
         };
     }
 
@@ -419,6 +426,13 @@ internal sealed partial class LibraryStore
             """;
         if (command.ExecuteScalar() is not null) return false;
 
+        WriteCoverage(command, volume, chapters, wholeVolume);
+        transaction.Commit();
+        return true;
+    }
+
+    private static void WriteCoverage(SqliteCommand command, string volume, IReadOnlyList<string> chapters, bool wholeVolume)
+    {
         command.Parameters.AddWithValue("$wholeVolume", wholeVolume ? volume : DBNull.Value);
         command.CommandText = """
             DELETE FROM content_chapter WHERE content_id = $content;
@@ -433,8 +447,6 @@ internal sealed partial class LibraryStore
             chapterParameter.Value = chapter;
             command.ExecuteNonQuery();
         }
-        transaction.Commit();
-        return true;
     }
 
     public IReadOnlyList<SeriesChapter>? ReadCoverage(Guid root, string seriesKey, string contentId, bool published)
