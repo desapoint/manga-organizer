@@ -7,6 +7,8 @@ export const scanLabels = {
   idle: 'Ready to scan.',
   queued: 'Scan queued.',
   scanning: 'Scanning…',
+  paused: 'Scan paused.',
+  stopped: 'Scan stopped.',
   complete: 'Scan complete.',
   unavailable: 'Folder unavailable. Any previous inventory is still shown.',
   incomplete: 'Scan could not finish. Any previous inventory is still shown.',
@@ -31,6 +33,7 @@ export type ScanSnapshot = {
   reusedFiles: number;
   elapsedMilliseconds: number;
   full: boolean;
+  requestedAction?: 'pause' | 'stop' | null;
 };
 
 export type LibraryRoot = {
@@ -46,6 +49,7 @@ export type LibraryRoot = {
   managed: boolean;
   scanProgress: ScanSnapshot | null;
   lastScan: ScanSnapshot | null;
+  metadataProgress?: { total: number; completed: number } | null;
   intakeTargetId: string | null;
 };
 
@@ -60,6 +64,10 @@ export function canTransferTo(source: LibraryRoot, target: LibraryRoot | undefin
 
 export function scanIsActive(root: LibraryRoot) {
   return root.state === 'queued' || root.state === 'scanning';
+}
+
+export function hasPendingScanLookups(root: LibraryRoot) {
+  return !!root.metadataProgress && root.metadataProgress.completed < root.metadataProgress.total;
 }
 
 export function isReadableArchive(format: string) {

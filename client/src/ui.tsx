@@ -129,6 +129,8 @@ const statusStyles = {
   idle: { label: 'Ready', style: 'text-muted' },
   queued: { label: 'Queued', style: 'text-accent-readable' },
   scanning: { label: 'Scanning', style: 'text-accent-readable' },
+  paused: { label: 'Paused', style: 'text-warning' },
+  stopped: { label: 'Stopped', style: 'text-muted' },
   complete: { label: 'Indexed', style: 'text-positive' },
   unavailable: { label: 'Unavailable', style: 'text-warning' },
   incomplete: { label: 'Incomplete', style: 'text-warning' },

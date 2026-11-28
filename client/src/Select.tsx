@@ -9,12 +9,13 @@ export type SelectOption<Value extends string> = {
   description?: string;
 };
 
-export function Select<Value extends string>({ label, value, options, onChange, disabled, className = '' }: {
+export function Select<Value extends string>({ label, value, options, onChange, disabled, hideLabel = false, className = '' }: {
   label: string;
   value: Value;
   options: readonly SelectOption<Value>[];
   onChange: (value: Value) => void;
   disabled?: boolean;
+  hideLabel?: boolean;
   className?: string;
 }) {
   const id = useId();
@@ -22,7 +23,7 @@ export function Select<Value extends string>({ label, value, options, onChange, 
 
   return (
     <div className={`grid min-w-0 gap-1.5 ${className}`}>
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id} className={hideLabel ? 'sr-only' : undefined}>{label}</label>
       <SelectPrimitive.Root value={value} disabled={disabled} onValueChange={value => {
         const option = options.find(option => option.value === value);
         if (option) onChange(option.value);

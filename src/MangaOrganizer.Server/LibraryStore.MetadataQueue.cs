@@ -53,8 +53,19 @@ internal sealed partial class LibraryStore
                 requested_at = excluded.requested_at, retry_at = NULL, message = NULL
             WHERE metadata_suggestion.queued = 0 AND COALESCE(metadata_suggestion.candidates, '[]') = '[]'
                 AND metadata_suggestion.title <> excluded.title
-                AND metadata_lookup_title(metadata_suggestion.title) = excluded.title;
+                AND metadata_lookup_title(metadata_suggestion.title) = excluded.title
+            RETURNING series_key;
             """;
+        var queued = new List<string>();
+        using (var rows = command.ExecuteReader())
+        {
+            while (rows.Read()) queued.Add(rows.GetString(0));
+        }
+        command.CommandText = """
+            DELETE FROM library_scan_metadata WHERE root_id = $id;
+            INSERT INTO library_scan_metadata(root_id, series_key) SELECT $id, value FROM json_each($lookupKeys);
+            """;
+        command.Parameters.AddWithValue("$lookupKeys", JsonSerializer.Serialize(queued));
         command.ExecuteNonQuery();
     }
 

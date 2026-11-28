@@ -1,18 +1,18 @@
-import { FolderCog, ScanSearch } from 'lucide-react';
+import { FolderCog, Pause, Play, ScanSearch, Square } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getCsrfToken } from './api';
 import { IntakeTransfer } from './BatchOrganizer';
 import { CatalogInventory, SeriesPage } from './CatalogInventory';
 import { Collections } from './Collections';
-import { canTransferTo, intakeTargetFor, organizeToolsHref, ROOTS_URL, scanIsActive } from './library';
+import { canTransferTo, hasPendingScanLookups, intakeTargetFor, organizeToolsHref, ROOTS_URL, scanIsActive } from './library';
 import type { FolderRole, LibraryRoot, SeriesLocation, toolsLocation } from './library';
 import { LibrarySettings } from './LibrarySettings';
 import { Overview } from './Overview';
-import { ScanStatus } from './ScanStatus';
+import { ScanFolderInfo, ScanStatus } from './ScanStatus';
 import { Select } from './Select';
 import { ToolsHub } from './ToolsHub';
-import { ActionLink, Button, PageHeader } from './ui';
+import { ActionLink, Button, PageHeader, SectionHeader } from './ui';
 
 export type CatalogView = FolderRole | 'settings' | 'overview' | 'collections' | 'tools';
 
@@ -51,7 +51,7 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
         if (request.signal.aborted) return;
         setRoots(available);
         setRootsError('');
-        timer = window.setTimeout(loadRoots, available.some(scanIsActive) ? 500 : 4500);
+        timer = window.setTimeout(loadRoots, available.some(scanIsActive) ? 500 : available.some(hasPendingScanLookups) ? 1500 : 4500);
       } catch {
         if (request.signal.aborted) return;
         setRootsError('Could not load library folders. Retrying…');
@@ -66,19 +66,23 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
     };
   }, [refresh, onSignedOut]);
 
-  async function startScan(full: boolean) {
+  async function scanRequest(action: 'quick' | 'full' | 'pause' | 'resume' | 'stop') {
     if (!rootId) return;
     setScanPending(true);
     setScanError('');
     try {
-      const response = await fetch(`${ROOTS_URL}/${rootId}/scan?full=${full}`, {
+      const suffix = action === 'quick' || action === 'full' ? `?full=${action === 'full'}` : '/' + action;
+      const response = await fetch(`${ROOTS_URL}/${rootId}/scan${suffix}`, {
         method: 'POST', headers: { 'X-CSRF-Token': await getCsrfToken() },
       });
       if (response.status === 401) return onSignedOut();
-      if (!response.ok && response.status !== 409) throw new Error();
       setRefresh(value => value + 1);
-    } catch {
-      setScanError('Could not start the scan. Try again.');
+      if (!response.ok) {
+        const problem = await response.json().catch(() => null) as { message?: string } | null;
+        throw new Error(problem?.message ?? 'Could not update the scan. Check its status and try again.');
+      }
+    } catch (reason) {
+      setScanError(reason instanceof Error ? reason.message : 'Could not update the scan.');
     } finally {
       setScanPending(false);
     }
@@ -95,6 +99,10 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
     onChanged={() => setRefresh(value => value + 1)} />;
 
   const intakeTarget = view === 'import' && selected && roots ? intakeTargetFor(selected, roots) : undefined;
+  const folderTitle = view === 'import' ? 'Import folder' : 'Library folder';
+  const paused = selected?.state === 'paused';
+  const scanActive = selected && scanIsActive(selected);
+  const controlPending = scanPending || !!selected?.scanProgress?.requestedAction || selected?.scanProgress?.phase === 'publishing';
   return (
     <section className="workspace-page" aria-labelledby="catalog-heading">
       <PageHeader id="catalog-heading" section={section} title={title} />
@@ -117,25 +125,30 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
       {selected && (
         <>
           <div className="surface catalog-surface">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <SectionHeader title={folderTitle} />
+              <ScanFolderInfo root={selected} title={folderTitle} />
+            </div>
             <div className="catalog-controls">
-              <Select className="flex-[1_1_13rem]" label={view === 'import' ? 'Import folder' : 'Library folder'}
+              <Select className="flex-[1_1_13rem]" label={folderTitle} hideLabel
                 value={selected.id} options={folderOptions} onChange={id => {
                   setSelectedId(id);
                   setScanError('');
                 }} />
               <div className="action-row">
-                <Button icon={ScanSearch} onClick={() => void startScan(false)}
-                  disabled={scanPending || scanIsActive(selected)}>Quick scan</Button>
-                <Button variant="secondary" onClick={() => void startScan(true)}
-                  disabled={scanPending || scanIsActive(selected)}>Full verification</Button>
+                {paused || scanActive ? <>
+                  {paused ? <Button icon={Play} aria-label="Resume scan" title="Resume scan" disabled={controlPending}
+                    onClick={() => void scanRequest('resume')} /> : selected.state === 'scanning' && <Button icon={Pause}
+                    aria-label="Pause scan" title="Pause scan" disabled={controlPending} onClick={() => void scanRequest('pause')} />}
+                  <Button icon={Square} variant="secondary" aria-label="Stop scan" title="Stop scan"
+                    disabled={controlPending} onClick={() => void scanRequest('stop')} />
+                </> : <>
+                  <Button icon={ScanSearch} disabled={scanPending} onClick={() => void scanRequest('quick')}>Quick scan</Button>
+                  <Button variant="secondary" disabled={scanPending} onClick={() => void scanRequest('full')}>Full verification</Button>
+                </>}
               </div>
             </div>
             <ScanStatus root={selected} />
-            <div className="catalog-summary">
-              <span>{selected.fileCount.toLocaleString()} {selected.fileCount === 1 ? 'scanned file' : 'scanned files'}</span>
-              {selected.lastScannedAt && <span>Last indexed {new Date(selected.lastScannedAt).toLocaleString()}</span>}
-              {selected.skippedLinks > 0 && <span>{selected.skippedLinks.toLocaleString()} linked {selected.skippedLinks === 1 ? 'path' : 'paths'} skipped</span>}
-            </div>
           </div>
           {scanError && <p role="alert" className="error">{scanError}</p>}
           {view === 'import' && roots && <>
@@ -144,7 +157,7 @@ export function Catalog({ view, title, section, onSignedOut, series, tools, chil
             <ActionLink variant="secondary" href={organizeToolsHref(selected.id)} className="justify-self-start">Organize intake in Tools</ActionLink>
           </>}
           <CatalogInventory key={`${view}:${selected.id}`} rootId={selected.id} version={`${inventoryVersion}:${refresh}`}
-            onSignedOut={onSignedOut} scanComplete={selected.state === 'complete'} intake={view === 'import'} rootPath={selected.path}
+            onSignedOut={onSignedOut} scanComplete={selected.lastScannedAt !== null} intake={view === 'import'} rootPath={selected.path}
             hasCovers={selected.hasCovers} coverVersion={`${selected.lastScannedAt ?? ''}:${refresh}`}
             managedFolders={selected.managed && view === 'import' ? [selected] : []}
             intakeTarget={canTransferTo(selected, intakeTarget) ? intakeTarget : undefined}

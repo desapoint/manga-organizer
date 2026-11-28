@@ -138,6 +138,23 @@ internal static class LibraryEndpoints
             }
             return scans.Queue(root, full == true) is { } queued ? Results.Accepted(value: queued) : Results.Conflict();
         });
+
+        library.MapPost("/{id:guid}/scan/{action}", async (Guid id, string action, LibraryStore store, LibraryScanQueue scans,
+            HttpContext context, IAntiforgery antiforgery) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context)) return Results.BadRequest();
+            if (!store.TryGetRoot(id, out var root) || root is null) return Results.NotFound();
+            var accepted = action switch
+            {
+                "pause" or "stop" => scans.Control(id, action),
+                "resume" => scans.Queue(root, resume: true) is not null,
+                _ => false,
+            };
+            return accepted ? Results.Accepted() : Results.Conflict(new
+            {
+                message = "The scan changed or the folder is in use. Check its current status and try again.",
+            });
+        });
     }
 
     internal static bool IsValidPage(int? offset, int? limit) => offset is not < 0 && limit is not (< 1 or > 100);

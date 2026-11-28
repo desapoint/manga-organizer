@@ -4,7 +4,8 @@ namespace MangaOrganizer.Server;
 
 internal sealed partial class LibraryStore
 {
-    private static void StageHashes(SqliteConnection database, LibraryRoot root, ScanProgress scan, CancellationToken cancellationToken)
+    private static void StageHashes(SqliteConnection database, LibraryRoot root, ScanProgress scan, bool resume,
+        CancellationToken cancellationToken)
     {
         scan.StartPhase("hashing");
         // Copy just the reusable metadata before reading files so the catalog is free for interactive writes.
@@ -18,9 +19,18 @@ internal sealed partial class LibraryStore
                 AND saved.volume_hint IS f.volume_hint AND saved.chapter_hint IS f.chapter_hint
             JOIN library_content content ON content.id = saved.content_id
             WHERE $reuse;
+            CREATE UNIQUE INDEX temp.scan_cached_hash_path ON scan_cached_hash(relative_path);
+            INSERT OR REPLACE INTO scan_cached_hash
+            SELECT file.relative_path, saved.value ->> 8, unhex(saved.value ->> 5), saved.value ->> 6, saved.value ->> 7
+            FROM library_scan_checkpoint checkpoint, json_each(checkpoint.digests) saved
+            JOIN scan_file file ON file.relative_path = saved.value ->> 0
+                AND file.size = saved.value ->> 1 AND file.modified_at = saved.value ->> 2
+                AND file.volume_hint IS saved.value ->> 3 AND file.chapter_hint IS saved.value ->> 4
+            WHERE checkpoint.root_id = $root AND $checkpoint;
             """;
         snapshot.Parameters.AddWithValue("$root", root.Id);
         snapshot.Parameters.AddWithValue("$reuse", !scan.Full);
+        snapshot.Parameters.AddWithValue("$checkpoint", resume || !scan.Full);
         snapshot.ExecuteNonQuery();
         using var transaction = database.BeginTransaction(deferred: true);
         using var query = database.CreateCommand();
@@ -43,8 +53,9 @@ internal sealed partial class LibraryStore
         insert.Prepare();
 
         var buffer = new byte[64 * 1024];
-        using (var rows = query.ExecuteReader())
+        try
         {
+            using var rows = query.ExecuteReader();
             while (rows.Read())
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -64,6 +75,11 @@ internal sealed partial class LibraryStore
                 insert.ExecuteNonQuery();
                 scan.FinishedFile(result is not null, result?.Reused == true);
             }
+        }
+        catch (OperationCanceledException) when (scan.RequestedAction is not null)
+        {
+            transaction.Commit();
+            throw;
         }
 
         transaction.Commit();

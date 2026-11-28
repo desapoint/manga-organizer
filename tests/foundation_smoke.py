@@ -211,6 +211,8 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE library_scan_metadata;
+            DROP TABLE library_scan_checkpoint;
             DROP TABLE library_sidecar_stamp;
             ALTER TABLE library_file DROP COLUMN scan_stamp;
             ALTER TABLE library_file DROP COLUMN scan_chapters;
@@ -659,6 +661,84 @@ def verify_live_scan(owner, root_id, path):
         assert 0 <= snapshot["coversFound"] <= snapshot["seriesChecked"] <= snapshot["seriesTotal"]
     probe.unlink()
     owner.scan(root_id)
+
+
+def verify_scan_checkpoints(executable, fixture):
+    media, data = fixture / "checkpoint-media", fixture / "checkpoint-data"
+    primary = media / "primary"
+    primary.mkdir(parents=True)
+    (media / "archive").mkdir()
+    first = primary / "A Cabin Ch.1.pdf"
+    first.write_bytes(b"original small digest")
+    slow = primary / "Z Large fixture.pdf"
+    password = uuid4().hex
+    reuse = supports_quick_scan(primary)
+
+    def state():
+        return next(root for root in owner.roots() if root["id"] == root_id)
+
+    def wait_for(predicate):
+        deadline = time.monotonic() + 25
+        while time.monotonic() < deadline:
+            current = state()
+            if predicate(current):
+                return current
+            time.sleep(0.01)
+        raise AssertionError(current)
+
+    def control(action, expected=202):
+        owner.request(f"{route}/{action}", expected, method="POST", token=owner.csrf())
+
+    def verify_in_progress():
+        owner.request(route + "?full=true", 202, method="POST", token=owner.csrf())
+        wait_for(lambda root: (root["scanProgress"] or {}).get("currentPath") == slow.name
+                 and root["scanProgress"]["phase"] == "hashing")
+
+    with start_app(executable, data, media, password) as address:
+        wait_for_server(address)
+        owner = Browser(address)
+        owner.sign_in(password)
+        root_id = owner.roots()[0]["id"]
+        route = f"{LIBRARY_ROOTS}/{root_id}/scan"
+        owner.scan(root_id)
+        digest = owner.files(root_id)["items"][0]["sha256"]
+        with slow.open("wb") as stream:
+            stream.truncate(1024 ** 3)
+        verify_in_progress()
+        owner.request(route + "/pause", 400, method="POST")
+        control("pause")
+        paused = wait_for(lambda root: root["state"] == "paused")
+        assert paused["fileCount"] == 1 and paused["scanProgress"]["processedFiles"] == 1, paused
+        owner.request(route, 409, method="POST", token=owner.csrf())
+        owner.request("/api/maintenance/artwork-cache/clear", 200, method="POST", token=owner.csrf())
+
+    arrived = primary / "B New arrival Ch.1.pdf"
+    arrived.write_bytes(b"new file after discovery")
+    with start_app(executable, data, media, None) as address:
+        wait_for_server(address)
+        owner = Browser(address)
+        owner.sign_in(password)
+        assert state()["scanProgress"] == paused["scanProgress"]
+        control("resume")
+        completed = wait_for(lambda root: root["state"] == "complete")
+        assert completed["fileCount"] == 2 and completed["lastScan"]["full"], completed
+        assert completed["lastScan"]["reusedFiles"] == int(reuse), completed
+        assert owner.files(root_id)["items"][0]["sha256"] == digest
+
+        verify_in_progress()
+        control("stop")
+        stopped = wait_for(lambda root: root["state"] == "stopped")
+        assert stopped["fileCount"] == 2 and stopped["scanProgress"]["processedFiles"] == 2, stopped
+        control("resume", 409)
+        slow.unlink()
+        older = first.stat()
+        first.write_bytes(b"CHANGED small digest!")
+        os.utime(first, ns=(older.st_atime_ns, older.st_mtime_ns))
+        fresh = owner.scan(root_id)["lastScan"]
+        assert fresh["reusedFiles"] == int(reuse) and fresh["discoveredFiles"] == 2, fresh
+        files = owner.files(root_id)["items"]
+        assert {file["relativePath"] for file in files} == {first.name, arrived.name}
+        assert files[0]["sha256"] != digest
 
 
 def verify_series_metadata(owner, root_id, path):
@@ -2391,6 +2471,7 @@ def verify_metadata_queue(executable, fixture):
                 root = browser.roots()[0]["id"]
                 browser.scan(root)
                 rows = settled(browser, 3)
+                assert browser.roots()[0]["metadataProgress"] == {"total": 3, "completed": 3}
                 assert sorted(name for name, _ in calls) == ["Alpha Shelf", "Beta Shelf", "Gamma Shelf"]
                 alpha = rows["Alpha Shelf"]
                 assert alpha["candidates"][0]["matchingTitle"] == "Alpha Shelf"
@@ -2470,6 +2551,7 @@ def verify_metadata_queue(executable, fixture):
                     (media / "primary" / f"{title} Vol.01.pdf").write_bytes(title.encode())
                 browser.scan(root)
                 assert page_started.wait(timeout=8)
+                assert browser.roots()[0]["metadataProgress"] == {"total": 3, "completed": 0}
                 running = calls[-1][0]
                 wanted = max(priority_titles - {running}, key=lambda title: sha256(("series\0" + title.lower()).encode()).digest())
                 page = json.loads(browser.request(queue + "?" + urlencode({"search": wanted, "limit": 1}), 200))
@@ -2680,6 +2762,7 @@ if __name__ == "__main__":
             verify_web_setup(executable, Path(fixture), media)
             verify_external_metadata(executable, Path(fixture))
             verify_metadata_queue(executable, Path(fixture))
+            verify_scan_checkpoints(executable, Path(fixture))
             verify_maintenance_resets(executable, Path(fixture))
             data_dir = Path(fixture) / "data"
             smoke(lambda password: start_app(executable, data_dir, media, password), media)
