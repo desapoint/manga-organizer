@@ -7,7 +7,7 @@ import { MultiValueField } from './MultiValueField';
 import { Select } from './Select';
 import { CoverImage } from './SeriesCover';
 import { SeriesCoverEditor } from './SeriesCoverEditor';
-import { draftForTags, SeriesTagFields, tagsFromDraft } from './SeriesTags';
+import { draftForTags, fillMissingTags, SeriesTagFields, tagsFromDraft } from './SeriesTags';
 import type { SeriesTag, TagDraft } from './SeriesTags';
 import { useToast } from './Toast';
 import { ActionLink, Button, Modal, SearchField, SectionHeader } from './ui';
@@ -218,7 +218,12 @@ function SeriesMetadataForm({ context, metadata, suggestion, linkSuggestion, loa
       });
       const sourceTags = source.providerDetails?.tags ?? [];
       setProviderTags(sourceTags);
-      if (replace || !hasTagOverride || tagsFromDraft(tagDraft).length === 0) useLinkedTags(sourceTags);
+      const currentTags = tagsFromDraft(tagDraft);
+      if (replace || !hasTagOverride || currentTags.length === 0) {
+        useLinkedTags(sourceTags);
+      } else {
+        updateTags(fillMissingTags(currentTags, sourceTags));
+      }
       setHasKind(true);
       setDraftLink(source);
       notify('success', 'Draft updated. Review the fields and save to apply them.');
