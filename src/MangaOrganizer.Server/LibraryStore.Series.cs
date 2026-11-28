@@ -10,7 +10,8 @@ internal sealed record CatalogSeries(Guid RootId, string Key, string Title, long
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] CatalogAniList? AniList = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool LookupQueued = false,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? CoverSeriesKey = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? LookupTitle = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? LookupTitle = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<SeriesFileReview>? ReviewFiles = null);
 
 internal sealed partial class LibraryStore
 {
@@ -40,16 +41,20 @@ internal sealed partial class LibraryStore
         command.ExecuteNonQuery();
     }
 
-    private static string SeriesQuery(string? view = null)
+    private static string SeriesQuery(string? view = null, bool review = false)
     {
         var published = view == "library";
+        var files = review ? """
+            , json_group_array(json_object('FileId', f.id, 'ContentId', f.content_id) ORDER BY f.id)
+                  FILTER (WHERE f.content_id IS NOT NULL) AS review_files
+            """ : "";
         var groups = """
         WITH file_groups AS (
             SELECT f.root_id, f.series_key, MIN(COALESCE(f.series_title, f.relative_path)) AS path_title, COUNT(*) AS file_count,
                 MAX(f.series_title IS NOT NULL) AS suggested, MAX(f.modified_at) AS latest,
                 EXISTS(SELECT 1 FROM library_series_cover cover WHERE cover.root_id = f.root_id AND cover.series_key = f.series_key) AS has_cover,
-        """ + " " + SharedSeriesId + """
-             AS linked_metadata
+        """ + " " + SharedSeriesId + " AS linked_metadata" + files + """
+
             FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
             LEFT JOIN content_metadata cm ON cm.content_id = f.content_id
             LEFT JOIN series_metadata linked ON linked.id = cm.metadata_id AND
@@ -69,6 +74,7 @@ internal sealed partial class LibraryStore
                 binding.metadata_id IS NULL AND NOT EXISTS (
                     SELECT 1 FROM library_file peer JOIN content_metadata linked ON linked.content_id = peer.content_id
                     WHERE peer.root_id = g.root_id AND peer.series_key = g.series_key) AS can_confirm_match
+        """ + (review ? ", g.review_files" : "") + """
             FROM file_groups g LEFT JOIN series_metadata_binding binding ON binding.root_id = g.root_id AND binding.series_key = g.series_key
             LEFT JOIN series_metadata m ON m.id = COALESCE(binding.metadata_id, g.linked_metadata)
         )
@@ -126,7 +132,8 @@ internal sealed partial class LibraryStore
                     ON member.root_id = i.root_id AND member.series_key = i.series_key
                     WHERE i.collection_id = $collection AND member.root_id = candidate.root_id AND member.library_key = candidate.series_key))
                 """ : " AND " + TitleMatch("candidate") + " AND " + collectionMatch);
-        var query = SeriesQuery(view);
+        var includeMatches = view is "all" or "attention" or "association" or "series" or "metadata" or "cover" or "close";
+        var query = SeriesQuery(view, review: includeMatches);
         command.CommandText = query + " SELECT COUNT(*)" + filter;
         command.Parameters.AddWithValue("$id", (object?)id ?? DBNull.Value);
         command.Parameters.AddWithValue("$seriesKey", (object?)seriesKey ?? DBNull.Value);
@@ -150,9 +157,8 @@ internal sealed partial class LibraryStore
             , alternate_title, kind, summary, status, total_chapters, total_volumes, provider_id, provider_details,
                 (SELECT revision FROM metadata_suggestion s WHERE s.series_key = candidate.series_key),
                 (SELECT candidates FROM metadata_suggestion s WHERE s.series_key = candidate.series_key),
-                COALESCE((SELECT queued FROM metadata_suggestion s WHERE s.series_key = candidate.series_key), 0), can_confirm_match, manual_tags
+                COALESCE((SELECT queued FROM metadata_suggestion s WHERE s.series_key = candidate.series_key), 0), can_confirm_match, manual_tags, review_files
             """;
-        var includeMatches = view is "all" or "attention" or "association" or "series" or "metadata" or "cover" or "close";
         command.CommandText = query + " SELECT root_id, series_key, title, file_count, suggested, has_cover, has_metadata"
             + (includeMatches ? matchFields : ", cover_key") + filter +
             " ORDER BY " + order + "title COLLATE NOCASE, series_key, root_id LIMIT $limit OFFSET $offset;";
@@ -175,7 +181,8 @@ internal sealed partial class LibraryStore
             var displayTitle = lookupTitle switch { null => title, "" => "Unidentified series", _ => lookupTitle };
             items.Add(new(rows.GetGuid(0), rows.GetString(1), displayTitle, rows.GetInt64(3), suggested, rows.GetBoolean(5),
                 hasMetadata, matched, includeMatches && rows.GetBoolean(18) && rows.GetBoolean(17),
-                published ? ReadText(rows, 7) : null, lookupTitle));
+                published ? ReadText(rows, 7) : null, lookupTitle,
+                includeMatches ? JsonSerializer.Deserialize<SeriesFileReview[]>(rows.GetString(20)) ?? [] : null));
         }
 
         return new(total, items, lookupQueued);

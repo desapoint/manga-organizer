@@ -7,7 +7,7 @@ import type { LibraryRoot } from './library';
 import { Select } from './Select';
 import { CoverImage, SeriesCover } from './SeriesCover';
 import { AniListSearchAction, MetadataDialogAction } from './SeriesInfo';
-import type { Metadata } from './SeriesInfo';
+import type { Metadata, ReviewedFile } from './SeriesInfo';
 import { ActionLink, Button, Modal, SearchField, SegmentedControl } from './ui';
 
 const endpoint = '/api/metadata-suggestions';
@@ -17,7 +17,7 @@ type ToolProps = { roots: LibraryRoot[] | null; version: string; onSignedOut: ()
 type Proposal = { match: Metadata & { providerId: number }; matchingTitle: string | null };
 type QueueRow = {
   rootId: string; seriesKey: string; title: string; hasCover: boolean; queued: boolean; revision: string | null;
-  lookupTitle?: string; candidates: Proposal[] | null; message: string | null; conflictingMetadata: boolean; pagePriority: boolean;
+  lookupTitle?: string; candidates: Proposal[] | null; message: string | null; conflictingMetadata: boolean; pagePriority: boolean; reviewFiles: ReviewedFile[];
 };
 
 export function MetadataQueue(props: ToolProps) {
@@ -129,19 +129,19 @@ function SuggestionRow({ item, version, folder, onSignedOut, onSaved }: {
   item: QueueRow; version: string; folder?: LibraryRoot; onSignedOut: () => void; onSaved: () => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [showCandidates, setShowCandidates] = useState(false);
+  const [review, setReview] = useState<QueueRow | null>(null);
   const [error, setError] = useState('');
   const exact = item.candidates?.filter(candidate => candidate.matchingTitle !== null) ?? [];
   const suggestion = exact.length === 1 ? exact[0] : undefined;
 
-  async function confirm(proposal: Proposal) {
+  async function confirm(proposal: Proposal, snapshot: QueueRow = item) {
     setBusy(true);
     setError('');
     try {
-      const saved = await post<Metadata>(`${endpoint}/${item.rootId}/${item.seriesKey}`,
-        { revision: item.revision, providerId: proposal.match.providerId }, onSignedOut);
+      const saved = await post<Metadata>(`${endpoint}/${snapshot.rootId}/${snapshot.seriesKey}`,
+        { revision: snapshot.revision, providerId: proposal.match.providerId, reviewFiles: snapshot.reviewFiles }, onSignedOut);
       if (saved) {
-        setShowCandidates(false);
+        setReview(null);
         onSaved();
       }
     } catch (reason) {
@@ -173,19 +173,19 @@ function SuggestionRow({ item, version, folder, onSignedOut, onSaved }: {
         {!item.conflictingMetadata && suggestion && <Button variant="primary" icon={Check} disabled={busy}
           onClick={() => void confirm(suggestion)}>Confirm match</Button>}
         {!item.conflictingMetadata && !!item.candidates?.length && (item.candidates.length > 1 || !suggestion) &&
-          <Button variant="secondary" disabled={busy} onClick={() => setShowCandidates(true)}>Review matches ({item.candidates.length})</Button>}
-        <AniListSearchAction rootId={item.rootId} seriesKey={item.seriesKey} title={item.title} lookupTitle={item.lookupTitle}
+          <Button variant="secondary" disabled={busy} onClick={() => setReview(item)}>Review matches ({item.candidates.length})</Button>}
+        <AniListSearchAction rootId={item.rootId} seriesKey={item.seriesKey} title={item.title} lookupTitle={item.lookupTitle} reviewFiles={item.reviewFiles}
           onSignedOut={onSignedOut} onChange={onSaved} />
-        <MetadataDialogAction rootId={item.rootId} seriesKey={item.seriesKey} title={item.title} metadata={null}
+        <MetadataDialogAction rootId={item.rootId} seriesKey={item.seriesKey} title={item.title} metadata={null} reviewFiles={item.reviewFiles}
           onSignedOut={onSignedOut} onChange={onSaved} actionLabel="Assign manually" />
       </div>
     </div>
-    {showCandidates && <Modal title={`AniList matches for ${item.title}`} wide onClose={() => { if (!busy) setShowCandidates(false); }}>
+    {review && <Modal title={`AniList matches for ${review.title}`} wide onClose={() => { if (!busy) setReview(null); }}>
       {error && <p role="alert" className="text-danger">{error}</p>}
       <ul className="m-0 list-none divide-y divide-line p-0" role="list">
-        {item.candidates?.map(proposal => <li key={proposal.match.providerId} className="flex flex-wrap items-center justify-between gap-2 py-3">
+        {review.candidates?.map(proposal => <li key={proposal.match.providerId} className="flex flex-wrap items-center justify-between gap-2 py-3">
           <ProposalSummary proposal={proposal} />
-          <Button variant="secondary" icon={Check} disabled={busy} onClick={() => void confirm(proposal)}>Choose match</Button>
+          <Button variant="secondary" icon={Check} disabled={busy} onClick={() => void confirm(proposal, review)}>Choose match</Button>
         </li>)}
       </ul>
     </Modal>}

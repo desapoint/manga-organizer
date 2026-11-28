@@ -211,6 +211,7 @@ def verify_web_setup(executable, fixture, media):
     with closing(sqlite3.connect(appdata / "organizer.sqlite")) as database:
         database.executescript("""
             DROP TABLE schema_migration;
+            DROP TABLE file_association_review;
             DROP TABLE library_scan_metadata;
             DROP TABLE library_scan_checkpoint;
             DROP TABLE library_sidecar_stamp;
@@ -2505,6 +2506,16 @@ def verify_metadata_queue(executable, fixture):
                 match = {"providerId": 21, "revision": alpha["revision"]}
                 browser.request(target, 409, method="POST", token=browser.csrf(), body=match)
                 match["revision"] = refreshed["Alpha Shelf"]["revision"]
+                match["reviewFiles"] = alpha["reviewFiles"]
+                assert len(match["reviewFiles"]) == 2 and close["items"][0]["reviewFiles"] == match["reviewFiles"]
+                primary = media / "primary"
+                newcomer = primary / "Alpha Shelf Vol.03.pdf"
+                copy = primary / "Alpha Shelf Vol.04.pdf"
+                newcomer.write_bytes(b"Unreviewed third volume")
+                copy.write_bytes((primary / "Alpha Shelf Vol.01.pdf").read_bytes())
+                browser.scan(root)
+                updated = browser.series(root, f"?view=all&seriesKey={alpha['seriesKey']}")["items"][0]
+                assert len(updated["reviewFiles"]) == 4 and updated["aniList"]["revision"] == match["revision"]
                 token = browser.csrf()
                 with closing(sqlite3.connect(data / "organizer.sqlite")) as publisher, publisher:
                     publisher.execute("BEGIN IMMEDIATE")
@@ -2514,6 +2525,20 @@ def verify_metadata_queue(executable, fixture):
                 assert saved["title"] == "Alpha release" and saved["providerId"] == 21
                 published = browser.files(root, f"?view=library&seriesKey={alpha['seriesKey']}")
                 assert published["total"] == 2 and all(file["associationConfirmed"] for file in published["items"])
+                pending = browser.files(root, f"?view=association&seriesKey={alpha['seriesKey']}")["items"]
+                assert {file["relativePath"] for file in pending} == {newcomer.name, copy.name}
+                assert all(file["hasSeriesMetadata"] and not file["associationConfirmed"] for file in pending)
+                assert browser.series(root, f"?view=close&seriesKey={alpha['seriesKey']}")["total"] == 0
+                original = primary / "Alpha Shelf Vol.02.pdf"
+                moved = original.with_name("Alpha Shelf Vol.02 [Archived].pdf")
+                original.rename(moved)
+                browser.scan(root)
+                published = browser.files(root, f"?view=library&seriesKey={alpha['seriesKey']}")
+                assert {file["relativePath"] for file in published["items"]} == {"Alpha Shelf Vol.01.pdf", moved.name}
+                (duplicate,) = [file for file in pending if file["relativePath"] == copy.name]
+                browser.request(f"{LIBRARY_ROOTS}/{root}/series/{alpha['seriesKey']}/association", 204,
+                                method="POST", token=browser.csrf(), body={"fileId": duplicate["id"], "contentId": duplicate["contentId"]})
+                assert browser.files(root, f"?view=library&seriesKey={alpha['seriesKey']}")["total"] == 3
                 browser.request(target, 409, method="POST", token=browser.csrf(), body=match)
                 assert [name for name, _ in calls][3:] == ["Alpha Shelf"]
                 assert json.loads(browser.request(queue + "?limit=1", 200))["total"] == 2

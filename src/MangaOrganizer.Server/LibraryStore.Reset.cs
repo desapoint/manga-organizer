@@ -33,6 +33,9 @@ internal sealed partial class LibraryStore
 
     private static readonly ResetStep[] CatalogReset =
     [
+        new("file_association_review", "Reviewed file associations",
+            "file_id IN (SELECT id FROM library_file WHERE " + SelectedRoot + ") OR file_id IN (SELECT file_id FROM file_operation WHERE "
+                + SelectedSource + ")", "file_id, content_id"),
         new("content_metadata", "Series associations for files exclusive to the selected folders", ExclusiveContent, "content_id"),
         new("series_metadata_binding", "Series bindings for selected folders", SelectedRoot, "root_id, series_key"),
         new("library_series_cover", "Indexed series covers", SelectedRoot, "root_id, series_key"),

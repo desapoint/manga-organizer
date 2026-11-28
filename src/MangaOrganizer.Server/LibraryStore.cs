@@ -327,6 +327,7 @@ internal sealed partial class LibraryStore
         else
         {
             QueueArrivingSeries(command);
+            StageRenamedReviews(command);
             command.CommandText = """
                 INSERT INTO library_content(sha256)
                     SELECT DISTINCT sha256 FROM scan_hash WHERE sha256 IS NOT NULL
@@ -356,6 +357,9 @@ internal sealed partial class LibraryStore
                         IS NOT (excluded.extension, excluded.size, excluded.modified_at, excluded.content_id, excluded.series_key,
                                 excluded.series_title, excluded.volume_hint, excluded.chapter_hint, excluded.scan_stamp,
                                 excluded.scan_chapters, excluded.scan_chapter_source);
+                INSERT OR IGNORE INTO file_association_review(file_id, content_id)
+                SELECT f.id, f.content_id FROM scan_renamed_review moved JOIN library_file f ON f.root_id = $id
+                    AND f.relative_path = moved.relative_path AND f.content_id = moved.content_id;
                 DELETE FROM import_file_split WHERE EXISTS (
                     SELECT 1 FROM library_file f WHERE f.id = import_file_split.file_id AND f.root_id = $id
                         AND f.content_id IS NOT import_file_split.content_id);

@@ -13,6 +13,7 @@ import { useToast } from './Toast';
 import type { IntakeAniListMatch } from './IntakeSeriesMatch';
 import { EditReleaseTags, ReleaseSelectionActions, SelectReleaseCheckbox, useReleaseSelection } from './ReleaseTagsEditor';
 import type { LibraryRoot } from './library';
+import type { ReviewedFile } from './SeriesInfo';
 import { AniListSearchAction, MetadataDescription, MetadataDialogAction, SeriesInfo, useSeriesDetails } from './SeriesInfo';
 import { EditionCoverage, SeriesChapterList, SeriesVolumeList } from './EditionCoverage';
 import { FileCover, SeriesCover } from './SeriesCover';
@@ -47,7 +48,7 @@ type CatalogEntry = {
 };
 
 export type Series = { rootId: string; key: string; title: string; fileCount: number; suggested: boolean; hasCover: boolean; hasMetadata: boolean;
-  aniList?: IntakeAniListMatch; lookupQueued?: boolean; coverSeriesKey?: string; lookupTitle?: string };
+  aniList?: IntakeAniListMatch; lookupQueued?: boolean; coverSeriesKey?: string; lookupTitle?: string; reviewFiles?: ReviewedFile[] };
 type Page<T> = { total: number; items: T[]; lookupQueued?: boolean };
 type InventoryProps = { rootId: string; version: string; onSignedOut: () => void };
 type FileManagement = { onDataChanged: () => void; managedFolders: LibraryRoot[]; intakeTarget?: LibraryRoot; onMoved: () => void };
@@ -147,6 +148,7 @@ function FileAssociationAction({ file, rootId, onSignedOut, onChange, intake }: 
   const intakeTitle = intake ? intakeFileTitle(file) : undefined;
   const title = intake ? intakeTitle ?? 'Unidentified file' : file.seriesTitle ?? file.relativePath.split('/').at(-1) ?? file.relativePath;
   const lookupTitle = intake ? file.lookupTitle || file.seriesTitle || intakeTitle || '' : file.lookupTitle;
+  const reviewFiles = file.contentId ? [{ fileId: file.id, contentId: file.contentId }] : [];
 
   async function confirm() {
     setBusy(true);
@@ -170,8 +172,8 @@ function FileAssociationAction({ file, rootId, onSignedOut, onChange, intake }: 
   return file.hasSeriesMetadata
     ? <Button variant="secondary" title={`Confirm association with ${title}`} disabled={busy} onClick={confirm}>Confirm association</Button>
     : <>
-    <AniListSearchAction rootId={rootId} seriesKey={file.seriesKey} title={title} lookupTitle={lookupTitle} onSignedOut={onSignedOut} onChange={onChange} />
-    <MetadataDialogAction rootId={rootId} seriesKey={file.seriesKey} title={title} metadata={null}
+    <AniListSearchAction rootId={rootId} seriesKey={file.seriesKey} title={title} lookupTitle={lookupTitle} reviewFiles={reviewFiles} onSignedOut={onSignedOut} onChange={onChange} />
+    <MetadataDialogAction rootId={rootId} seriesKey={file.seriesKey} title={title} metadata={null} reviewFiles={reviewFiles}
     onChange={onChange} onSignedOut={onSignedOut} actionLabel="Assign series metadata" />
   </>;
 }
@@ -270,7 +272,8 @@ function FileRow({ file, rootId, seriesKey, version, onInspect, management, onSi
           seriesKey ? seriesReaderHref(file.contentId, rootId, seriesKey) : `#read/${file.contentId}`}>Read file</ActionLink>}
         {!onAssociationChanged && !onInspect && <ActionLink variant="ghost"
           href={duplicateToolsHref({ rootId, seriesKey: file.seriesKey }, file.id)}>Compare in Tools</ActionLink>}
-        {updateAssociation && importGroupSize === undefined && !file.associationConfirmed && <FileAssociationAction file={file} rootId={rootId}
+        {updateAssociation && !file.associationConfirmed && (importGroupSize === undefined || !!onInspect && file.hasSeriesMetadata) &&
+          <FileAssociationAction file={file} rootId={rootId}
           intake={!!onInspect} onChange={() => finish(updateAssociation)} onSignedOut={onSignedOut} />}
         {updateAssociation && importGroupSize === undefined && <FileAssociationEditor key={file.contentId + file.seriesKey} rootId={rootId} fileId={file.id}
           contentId={file.contentId} seriesKey={file.seriesKey} relativePath={file.relativePath} confirmed={file.associationConfirmed}
@@ -455,7 +458,7 @@ function SeriesRow({ series, onInspect, coverVersion, catalogView, selection, ..
         <FileInventory {...inventory} seriesKey={series.key} onInspect={onInspect} management={inventory} catalogView={catalogView}
           importGroupSize={series.fileCount} seriesToolbar={actions => <SeriesInfo rootId={inventory.rootId} seriesKey={series.key}
             title={series.title} version={inventory.version} onChange={inventory.onDataChanged} onSignedOut={inventory.onSignedOut}
-            suggestion={series.aniList?.revision ? series.aniList.metadata : undefined} actions={actions} />} />
+            suggestion={series.aniList?.revision ? series.aniList.metadata : undefined} reviewFiles={series.reviewFiles} actions={actions} />} />
       </>}
     </div>
     {coverOpen && <Modal title={series.title} wide onClose={() => setCoverOpen(false)}>

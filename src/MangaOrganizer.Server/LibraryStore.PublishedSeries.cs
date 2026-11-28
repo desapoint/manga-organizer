@@ -27,7 +27,7 @@ internal sealed partial class LibraryStore
                     FROM library_file f JOIN library_folder folder ON folder.root_id = f.root_id
                     JOIN content_metadata cm ON cm.content_id = f.content_id
                     JOIN series_metadata linked ON linked.id = cm.metadata_id AND
-                """ + " " + LinkedSeriesScope("f", "linked") + """
+                """ + " " + LinkedSeriesScope("f", "linked") + " AND " + ReviewedLocation("f", "cm") + """
 
                     WHERE f.root_id = $root AND folder.kind IN ('library', 'both')
                     GROUP BY f.series_key

@@ -13,7 +13,13 @@ internal sealed partial class LibraryStore
     private static string ConfirmedSeries => """
         EXISTS (SELECT 1 FROM content_metadata link JOIN series_metadata metadata ON metadata.id = link.metadata_id
             WHERE link.content_id = f.content_id AND
-        """ + " " + LinkedSeriesScope("f", "metadata") + ")";
+        """ + " " + LinkedSeriesScope("f", "metadata") + " AND " + ReviewedLocation("f", "link") + ")";
+
+    private static string ReviewedLocation(string file, string link) => $$"""
+        ({{link}}.reviewed_locations_only = 0 OR EXISTS (
+            SELECT 1 FROM file_association_review review WHERE review.file_id = {{file}}.id AND review.content_id = {{file}}.content_id
+        ))
+        """;
 
     private static string LibraryVisibility => """
          AND EXISTS (SELECT 1 FROM library_folder role WHERE role.root_id = f.root_id AND role.kind IN ('library', 'both'))

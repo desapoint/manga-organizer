@@ -5,7 +5,7 @@ using Microsoft.Data.Sqlite;
 namespace MangaOrganizer.Server;
 
 internal sealed record MetadataQueueRefresh(MetadataQueueLocation[]? Items);
-internal sealed record MetadataSuggestionConfirmation(string? Revision, int ProviderId);
+internal sealed record MetadataSuggestionConfirmation(string? Revision, int ProviderId, SeriesFileReview[]? ReviewFiles = null);
 
 internal static class MetadataQueueEndpoints
 {
@@ -30,11 +30,11 @@ internal static class MetadataQueueEndpoints
             LibraryStore store, HttpContext context, IAntiforgery antiforgery) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context) || !LibraryEndpoints.IsSeriesKey(series) ||
-                input.Revision is not { Length: 32 } revision || !revision.All(char.IsAsciiHexDigit) || input.ProviderId <= 0)
+                input.Revision is not { Length: 32 } revision || !revision.All(char.IsAsciiHexDigit) || input.ProviderId <= 0 || !SeriesFileReview.IsValid(input.ReviewFiles))
                 return Results.BadRequest(new { message = "Could not verify this confirmation. Refresh the page and try again." });
             try
             {
-                var saved = store.ConfirmMetadataSuggestion(root, series.ToLowerInvariant(), revision.ToLowerInvariant(), input.ProviderId);
+                var saved = store.ConfirmMetadataSuggestion(root, series.ToLowerInvariant(), revision.ToLowerInvariant(), input.ProviderId, input.ReviewFiles);
                 return saved is not null ? Results.Ok(saved) :
                     Results.Conflict(new { message = "This match or series changed. Refresh the list and review the current suggestion." });
             }
@@ -43,6 +43,6 @@ internal static class MetadataQueueEndpoints
                 return Results.Json(new { message = "The catalog is finishing another update. Try confirming again in a moment." },
                     statusCode: StatusCodes.Status503ServiceUnavailable);
             }
-        }).WithMetadata(new RequestSizeLimitAttribute(4096));
+        }).WithMetadata(new RequestSizeLimitAttribute(16 * 1024 * 1024));
     }
 }

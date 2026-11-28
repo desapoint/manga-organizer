@@ -12,6 +12,7 @@ import { useToast } from './Toast';
 import { ActionLink, Button, Modal, SearchField, SectionHeader } from './ui';
 
 type BookKind = 'manga' | 'doujin';
+export type ReviewedFile = { fileId: string; contentId: string };
 export type Metadata = {
   title: string;
   kind: BookKind;
@@ -276,15 +277,15 @@ export function useSeriesDetails({ rootId, seriesKey, version, onSignedOut, publ
   return { details, error };
 }
 
-type EditorProps = Omit<SeriesContext, 'version'> & { metadata: Metadata | null; onChange: () => void; published?: boolean };
+type EditorProps = Omit<SeriesContext, 'version'> & { metadata: Metadata | null; onChange: () => void; published?: boolean; reviewFiles?: ReviewedFile[] };
 
 export function MetadataDialogAction({ actionLabel = 'Edit metadata', ...props }: EditorProps & {
   actionLabel?: string; suggestion?: Metadata;
 }) {
-  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<typeof props | null>(null);
   return <>
-    <Button variant="secondary" className="justify-self-start" onClick={() => setOpen(true)}>{actionLabel}</Button>
-    {open && <MetadataDraftDialog {...props} onClose={() => setOpen(false)} />}
+    <Button variant="secondary" className="justify-self-start" onClick={() => setDraft(props)}>{actionLabel}</Button>
+    {draft && <MetadataDraftDialog {...draft} onClose={() => setDraft(null)} />}
   </>;
 }
 
@@ -318,20 +319,20 @@ type AniListSearchProps = Omit<EditorProps, 'metadata'> & { lookupTitle?: string
 export function AniListSearchAction({ iconOnly, disabled, onAssigningChange, ...props }: AniListSearchProps & {
   iconOnly?: boolean; disabled?: boolean; onAssigningChange?: (assigning: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState<AniListSearchProps | null>(null);
   const [assigning, setAssigning] = useState(false);
-  const [draft, setDraft] = useState<{ metadata: Metadata | null; suggestion: Metadata } | null>(null);
+  const [draft, setDraft] = useState<(AniListSearchProps & { metadata: Metadata | null; suggestion: Metadata }) | null>(null);
 
   return <>
     <Button variant="ghost" icon={Search} aria-label="Find on AniList" title="Find on AniList" disabled={disabled || assigning}
       className={iconOnly ? 'size-11 px-0 py-0' : undefined}
-      onClick={() => setOpen(true)}>{!iconOnly && 'Find on AniList'}</Button>
-    {open && <Modal title="Find on AniList" wide onClose={() => { if (!assigning) setOpen(false); }}>
-      <AniListSearch {...props} onChange={() => { setOpen(false); props.onChange(); }}
+      onClick={() => setSearch(props)}>{!iconOnly && 'Find on AniList'}</Button>
+    {search && <Modal title="Find on AniList" wide onClose={() => { if (!assigning) setSearch(null); }}>
+      <AniListSearch {...search} onChange={() => { setSearch(null); props.onChange(); }}
         onAssigningChange={value => { setAssigning(value); onAssigningChange?.(value); }}
-        onReview={(metadata, suggestion) => { setOpen(false); setDraft({ metadata, suggestion }); }} />
+        onReview={(metadata, suggestion) => { setSearch(null); setDraft({ ...search, metadata, suggestion }); }} />
     </Modal>}
-    {draft && <MetadataDraftDialog {...props} {...draft} linkSuggestion onClose={() => setDraft(null)} />}
+    {draft && <MetadataDraftDialog {...draft} linkSuggestion onClose={() => setDraft(null)} />}
   </>;
 }
 
@@ -351,7 +352,7 @@ async function metadataResponse(response: Response, onSignedOut: () => void, fal
 async function saveMetadata(props: Omit<EditorProps, 'metadata'>, body: object) {
   const response = await fetch(metadataUrl(props) + '/metadata' + (props.published ? '?published=true' : ''), {
     method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': await getCsrfToken() },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, reviewFiles: props.reviewFiles }),
   });
   return metadataResponse(response, props.onSignedOut, 'Could not save series metadata.');
 }
@@ -476,8 +477,8 @@ export function MetadataDescription({ metadata, showProviderLink = true }: { met
   </div>;
 }
 
-export function SeriesInfo({ onChange, suggestion, actions, ...context }: SeriesContext & {
-  onChange: () => void; suggestion?: Metadata; actions?: ReactNode;
+export function SeriesInfo({ onChange, suggestion, actions, reviewFiles, ...context }: SeriesContext & {
+  onChange: () => void; suggestion?: Metadata; actions?: ReactNode; reviewFiles?: ReviewedFile[];
 }) {
   const { details, error } = useSeriesDetails(context);
   const metadata = details?.metadata ?? null;
@@ -496,7 +497,7 @@ export function SeriesInfo({ onChange, suggestion, actions, ...context }: Series
       </details>}
     </>}
     <div className="action-row">
-      {details && <MetadataDialogAction {...context} metadata={metadata} suggestion={suggestion} onChange={onChange} />}
+      {details && <MetadataDialogAction {...context} metadata={metadata} suggestion={suggestion} reviewFiles={reviewFiles} onChange={onChange} />}
       {actions}
     </div>
   </section>;

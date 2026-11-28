@@ -17,7 +17,7 @@ async function confirmMatch(series: Series, onSignedOut: () => void, token: stri
   const response = await fetch(`/api/metadata-suggestions/${series.rootId}/${series.key}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-    body: JSON.stringify({ revision: match.revision, providerId: match.metadata.providerId }),
+    body: JSON.stringify({ revision: match.revision, providerId: match.metadata.providerId, reviewFiles: series.reviewFiles }),
   });
   if (response.status === 401) {
     onSignedOut();
@@ -33,17 +33,18 @@ async function confirmMatch(series: Series, onSignedOut: () => void, token: stri
 export function IntakeSeriesMatch({ series, onSignedOut, onSaved }: Props) {
   const match = series.aniList;
   const metadata = match?.metadata;
-  const [details, setDetails] = useState(false);
+  const [details, setDetails] = useState<Series | null>(null);
   const [busy, setBusy] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const notify = useToast();
   const saving = busy || assigning;
+  const preview = details?.aniList;
 
-  async function apply() {
+  async function apply(review: Series) {
     setBusy(true);
     try {
-      if (await confirmMatch(series, onSignedOut, await getCsrfToken())) {
-        setDetails(false);
+      if (await confirmMatch(review, onSignedOut, await getCsrfToken())) {
+        setDetails(null);
         notify('success', `Linked ${series.title} to AniList.`);
         onSaved();
       }
@@ -56,7 +57,7 @@ export function IntakeSeriesMatch({ series, onSignedOut, onSaved }: Props) {
 
   return <>
     <div className="intake-series-match flex min-h-12 min-w-0 items-center">
-      {metadata ? <button type="button" onClick={() => setDetails(true)} aria-label={`AniList details for ${metadata.title}`}
+      {metadata ? <button type="button" onClick={() => setDetails(series)} aria-label={`AniList details for ${metadata.title}`}
         title={metadata.title} disabled={saving}
         className="flex min-h-12 w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-1 text-start text-ink
           enabled:hover:bg-nav-hover disabled:cursor-default">
@@ -69,24 +70,27 @@ export function IntakeSeriesMatch({ series, onSignedOut, onSaved }: Props) {
     </div>
     <div className="intake-series-confirm grid min-w-0 justify-items-end">
       {(match?.revision || saving) && <Button icon={Check} variant="secondary" className="w-full max-w-39 px-2"
-        disabled={saving} aria-busy={saving} onClick={() => void apply()}>
+        disabled={saving} aria-busy={saving} onClick={() => void apply(series)}>
         <span className="truncate">{saving ? 'Linking…' : 'Confirm match'}</span>
       </Button>}
     </div>
     <div className="intake-series-search">
       <AniListSearchAction rootId={series.rootId} seriesKey={series.key} title={series.title} lookupTitle={series.lookupTitle} iconOnly
-        disabled={saving} onAssigningChange={setAssigning} onChange={onSaved} onSignedOut={onSignedOut} />
+        reviewFiles={series.reviewFiles} disabled={saving} onAssigningChange={setAssigning} onChange={onSaved} onSignedOut={onSignedOut} />
     </div>
-    {details && metadata && <Modal title={metadata.title} wide onClose={() => { if (!busy) setDetails(false); }}>
+    {details && preview && <Modal title={preview.metadata.title} wide onClose={() => { if (!busy) setDetails(null); }}>
       <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
-        <CoverImage src={metadata.providerDetails?.coverUrl ?? undefined} className="h-36 w-24 rounded-lg" />
-        <MetadataDescription metadata={metadata} showProviderLink={false} />
+        <CoverImage src={preview.metadata.providerDetails?.coverUrl ?? undefined} className="h-36 w-24 rounded-lg" />
+        <MetadataDescription metadata={preview.metadata} showProviderLink={false} />
       </div>
       <div className="action-row mt-4 border-t border-line pt-4">
-        {metadata.providerUrl && <ActionLink variant="secondary" icon={ExternalLink} href={metadata.providerUrl}
+        {preview.metadata.providerUrl && <ActionLink variant="secondary" icon={ExternalLink} href={preview.metadata.providerUrl}
           target="_blank" rel="noreferrer">Open AniList</ActionLink>}
-        {match.revision && <Button icon={Check} disabled={busy} onClick={() => void apply()}>{busy ? 'Confirming…' : 'Confirm match'}</Button>}
+        {preview.revision && <Button icon={Check} disabled={busy} onClick={() => void apply(details)}>{busy ? 'Confirming…' : 'Confirm match'}</Button>}
       </div>
+      {preview.revision && details.reviewFiles && <p className="mt-2 mb-0 text-sm text-muted">
+        This confirms {details.reviewFiles.length.toLocaleString()} reviewed {details.reviewFiles.length === 1 ? 'file' : 'files'}.
+      </p>}
     </Modal>}
   </>;
 }

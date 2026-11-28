@@ -5,7 +5,7 @@ namespace MangaOrganizer.Server;
 
 internal sealed record MetadataChange(int? ProviderId, string? Title, string? Kind, string? AlternateTitle, string? Summary,
     string? Status, int? TotalChapters, int? TotalVolumes, bool UseEditedFields = false, SeriesTag?[]? Tags = null, bool UseProviderTags = false,
-    bool RemoveAniListLink = false, int? ExpectedAniListId = null);
+    bool RemoveAniListLink = false, int? ExpectedAniListId = null, SeriesFileReview[]? ReviewFiles = null);
 internal sealed record CoverageChange(string? ContentId, string? Volume, string[]? Chapters, bool WholeVolume = false);
 internal sealed record AssociationConfirmation(string? FileId, string? ContentId);
 
@@ -72,7 +72,7 @@ internal static class MetadataEndpoints
         series.MapPut("/metadata", async (Guid root, string seriesKey, bool? published, MetadataChange change, LibraryStore store,
             MetadataAgent agent, HttpContext context, IAntiforgery antiforgery, CancellationToken cancellationToken) =>
         {
-            if (!await antiforgery.IsRequestValidAsync(context)) return Results.BadRequest();
+            if (!await antiforgery.IsRequestValidAsync(context) || !SeriesFileReview.IsValid(change.ReviewFiles)) return Results.BadRequest();
             if (!LibraryEndpoints.IsSeriesKey(seriesKey) || !store.TryGetRoot(root, out _)) return Results.NotFound();
             if (change.Kind is not (null or "manga" or "doujin") ||
                 change.RemoveAniListLink && (change.ProviderId is not null || change.UseProviderTags || change.ExpectedAniListId is <= 0) ||
@@ -125,11 +125,13 @@ internal static class MetadataEndpoints
 
             if (tags is not null) metadata = metadata with { ManualTags = tags };
             return store.SaveMetadata(root, seriesKey.ToLowerInvariant(), metadata, published == true, change.UseProviderTags,
-                linkOnly, change.RemoveAniListLink, change.ExpectedAniListId) is { } saved
+                linkOnly, change.RemoveAniListLink, change.ExpectedAniListId, change.ReviewFiles) is { } saved
                 ? Results.Ok(saved) : change.RemoveAniListLink
                     ? Results.Conflict(new { message = "The series or its AniList link changed. Reopen the editor to review the current link." })
-                    : Results.NotFound();
-        }).WithMetadata(new RequestSizeLimitAttribute(128 * 1024));
+                    : change.ReviewFiles is not null
+                        ? Results.Conflict(new { message = "The reviewed files changed. Refresh the inventory and review the files again." })
+                        : Results.NotFound();
+        }).WithMetadata(new RequestSizeLimitAttribute(16 * 1024 * 1024));
 
         series.MapPut("/coverage", async (Guid root, string seriesKey, CoverageChange change, bool? published, LibraryStore store,
             HttpContext context, IAntiforgery antiforgery) =>
