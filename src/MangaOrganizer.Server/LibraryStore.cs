@@ -109,8 +109,9 @@ internal sealed partial class LibraryStore
     }
 
     public CatalogPage<CatalogEntry> ReadFiles(Guid id, int offset, int limit, string? seriesKey, string search, string? volume, string? view,
-        bool includeCoverage = false)
+        bool includeCoverage = false, bool suggestCoverage = false)
     {
+        includeCoverage |= suggestCoverage;
         using var database = OpenCoverDatabase();
         RegisterTitleSearch(database);
         using var transaction = database.BeginTransaction(deferred: true);
@@ -160,7 +161,8 @@ internal sealed partial class LibraryStore
             """ + " " + MissingMetadata + "), f.series_key, " + ConfirmedSeries + ", f.series_title IS NOT NULL, " + IntakeNumbered
             + ", " + FinishedOneShot + ", json_extract(m.provider_details, '$.StartYear'), " + InferredFileVolume + ", " + AssignedFileChapters
             + (includeCoverage ? ", c.manual_volume, " + InferredFileChapters : "")
-            + sources + scope + " ORDER BY f.relative_path LIMIT $limit OFFSET $offset;";
+            + (suggestCoverage ? ", m.title, m.alternate_titles, f.series_title" : "")
+            + " " + sources + scope + " ORDER BY f.relative_path LIMIT $limit OFFSET $offset;";
         command.Parameters.AddWithValue("$limit", limit);
         command.Parameters.AddWithValue("$offset", offset);
         var items = new List<CatalogEntry>(limit);
@@ -176,6 +178,11 @@ internal sealed partial class LibraryStore
             var chapterHint = ReadText(rows, 9);
             var coverage = includeCoverage && verified ? FileCoverage(volumeHint, chapterHint, rows.GetBoolean(18), ReadText(rows, 20),
                 assigned, ReadText(rows, 22), ReadText(rows, 23)) : null;
+            if (suggestCoverage && coverage is not null && assigned.Length == 0 && rows.IsDBNull(22))
+            {
+                coverage = coverage with { Suggestion = SuggestFileCoverage(path, coverage,
+                    ReadText(rows, 24), ReadAlternateTitles(rows, 25), ReadText(rows, 26)) };
+            }
             string? intakePath = null;
             if (view != "library" && confirmed && rows.GetBoolean(17) && title is not null)
             {
@@ -455,9 +462,11 @@ internal sealed partial class LibraryStore
             directory.Value = file.RelativePath[..Math.Max(file.RelativePath.LastIndexOf('/'), 0)];
             var hints = BookNumbers.FromPath(file.RelativePath);
             volume.Value = (object?)hints.Volume ?? DBNull.Value;
-            chapter.Value = (object?)hints.Chapter ?? DBNull.Value;
             var creatorRelease = hints.Volume is null && hints.Chapter is null
                 ? SeriesSuggestions.NumberedCreatorRelease(file.RelativePath) : null;
+            var chapterHint = hints.Chapter ?? (creatorRelease is null && title is not null
+                ? SeriesSuggestions.ChapterForSelectedTitle(file.RelativePath, title) : null);
+            chapter.Value = (object?)chapterHint ?? DBNull.Value;
             creatorKey.Value = (object?)creatorRelease?.Key ?? DBNull.Value;
             creatorTitle.Value = (object?)creatorRelease?.Title ?? DBNull.Value;
             creatorChapter.Value = (object?)creatorRelease?.Chapter ?? DBNull.Value;

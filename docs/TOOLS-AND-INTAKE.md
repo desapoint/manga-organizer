@@ -50,6 +50,8 @@ In an expanded Import series, use the header checkbox to select all eligible fil
 
 Use **Edit volumes and chapters** in Import or Library’s Files view to edit coverage inline. Enter a volume by itself for a whole-volume file, or use comma-separated chapter numbers. Clear both fields to restore detected coverage. Edits follow identical copies of a file and stay in the draft when you switch pages. **Apply changes** saves only changed releases as one batch. **Cancel** discards the draft.
 
+In edit mode, **Suggest assignments** checks filenames across the current file list and fills missing volumes or chapters in the draft. It preserves existing owner assignments and edits already in the draft. Check the rows marked **Suggested from filename**, then use **Apply changes** or **Cancel**.
+
 The metadata editor shows the current AniList link or proposed match and what saving will do. Selecting a suggestion stages the link. Removing a match stages a local-only save and keeps the editable fields and tags. For an already linked series, the change applies to the shared series record and retains its files and reading history.
 
 When confirming manual metadata or editing a series, add regular and spoiler tags with Enter or paste one per line. **Fill missing from AniList** fills the tag set when both tag fields are empty. **Replace from AniList** replaces the tag set along with other metadata. The footer’s **Use AniList tags** action applies the listing’s tags alone. The series cover picker sits above the footer and opens directly from **Change cover** in Library. Regular tags appear in the Library tag picker and work in dynamic collections. Spoiler tags stay behind the reveal control and out of tag suggestions.
