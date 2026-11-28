@@ -6,7 +6,7 @@ import { PageControls, useInventoryPage } from './CatalogInventory';
 import { Button, Modal, SearchField } from './ui';
 
 const endpoint = '/api/file-associations';
-type Match = { id: string; title: string; alternateTitle: string | null; kind: 'manga' | 'doujin'; providerId: number | null };
+type Match = { id: string; title: string; alternateTitles: string[]; kind: 'manga' | 'doujin'; providerId: number | null };
 type Preview = {
   currentTitle: string | null; target: Match; count: number; revision: string;
   locations: { rootId: string; folder: string; relativePath: string }[];
@@ -120,7 +120,7 @@ function AssociationMatches({ search, busy, onSignedOut, onChoose }: {
       {query.page.items.map(match => <li key={match.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
         <div className="min-w-0 wrap-anywhere">
           <strong className="block">{match.title}</strong>
-          <span className="text-sm text-muted">{match.alternateTitle && `${match.alternateTitle} · `}
+          <span className="text-sm text-muted">{match.alternateTitles.length > 0 && `${match.alternateTitles.join(' · ')} · `}
             {match.kind === 'doujin' ? 'Doujin' : 'Manga'} · {match.providerId ? `AniList #${match.providerId}` : 'Manual metadata'}
           </span>
         </div>

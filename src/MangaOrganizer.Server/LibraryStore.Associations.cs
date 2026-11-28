@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 
 namespace MangaOrganizer.Server;
 
-internal sealed record AssociationSeries(string Id, string Title, string? AlternateTitle, string Kind, int? ProviderId);
+internal sealed record AssociationSeries(string Id, string Title, string? AlternateTitle, string Kind, int? ProviderId, string[] AlternateTitles);
 internal sealed record AssociationLocation(Guid RootId, string Folder, string RelativePath);
 internal sealed record AssociationPreview(string? CurrentTitle, AssociationSeries Target, int Count,
     IReadOnlyList<AssociationLocation> Locations, string Revision);
@@ -27,13 +27,13 @@ internal sealed partial class LibraryStore
         using var transaction = database.BeginTransaction(deferred: true);
         using var command = database.CreateCommand();
         command.Transaction = transaction;
-        const string filter = """
-             AND ($search = '' OR title_contains(m.title, $search) OR title_contains(COALESCE(m.alternate_title, ''), $search))
+        var filter = $"""
+             AND ($search = '' OR title_contains(m.title, $search) OR {AlternateTitleSearch("m")})
             """;
         command.Parameters.AddWithValue("$search", search);
         command.CommandText = "SELECT COUNT(*)" + AvailableAssociationSeries + filter;
         var total = (long)command.ExecuteScalar()!;
-        command.CommandText = "SELECT m.id, m.title, m.alternate_title, m.kind, m.provider_id" + AvailableAssociationSeries +
+        command.CommandText = "SELECT m.id, m.title, m.alternate_title, m.kind, m.provider_id, m.alternate_titles" + AvailableAssociationSeries +
             filter + " ORDER BY m.title COLLATE NOCASE, m.id LIMIT $limit OFFSET $offset;";
         command.Parameters.AddWithValue("$limit", limit);
         command.Parameters.AddWithValue("$offset", offset);
@@ -118,7 +118,7 @@ internal sealed partial class LibraryStore
         }
 
         command.CommandText = """
-            SELECT m.id, m.title, m.alternate_title, m.kind, m.provider_id, m.series_key, m.updated_at
+            SELECT m.id, m.title, m.alternate_title, m.kind, m.provider_id, m.alternate_titles, m.series_key, m.updated_at
             """ + AvailableAssociationSeries + " AND m.id = COALESCE((SELECT series_id FROM series_identity_alias WHERE previous_id = $metadata), $metadata);";
         AssociationSeries target;
         string key;
@@ -127,8 +127,8 @@ internal sealed partial class LibraryStore
         {
             if (!rows.Read()) return null;
             target = ReadAssociationSeries(rows);
-            key = rows.GetString(5);
-            updated = rows.GetString(6);
+            key = rows.GetString(6);
+            updated = rows.GetString(7);
         }
 
         command.Parameters.AddWithValue("$targetKey", key);
@@ -187,5 +187,5 @@ internal sealed partial class LibraryStore
     }
 
     private static AssociationSeries ReadAssociationSeries(SqliteDataReader rows) =>
-        new(rows.GetString(0), rows.GetString(1), ReadText(rows, 2), rows.GetString(3), ReadInt(rows, 4));
+        new(rows.GetString(0), rows.GetString(1), ReadText(rows, 2), rows.GetString(3), ReadInt(rows, 4), ReadAlternateTitles(rows, 5));
 }

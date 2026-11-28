@@ -65,7 +65,7 @@ internal sealed partial class LibraryStore
 
             GROUP BY f.root_id, f.series_key
         ), local_series AS (
-            SELECT g.root_id, g.series_key, m.provider_details, m.manual_tags, COALESCE(m.manual_tags, m.provider_details -> '$.Tags') AS tags, COALESCE(m.title, g.path_title) AS title, g.path_title, m.alternate_title, g.file_count,
+            SELECT g.root_id, g.series_key, m.provider_details, m.manual_tags, COALESCE(m.manual_tags, m.provider_details -> '$.Tags') AS tags, COALESCE(m.title, g.path_title) AS title, g.path_title, m.alternate_title, m.alternate_titles, g.file_count,
                 g.suggested AND m.id IS NULL AS suggested, g.latest, g.has_cover OR EXISTS(
                     SELECT 1 FROM series_cover_preference pref
                     WHERE pref.series_id = m.id
@@ -88,7 +88,7 @@ internal sealed partial class LibraryStore
                 FROM local_series s
                 WINDOW cohort AS (PARTITION BY root_id, shared_work, CASE WHEN shared_work IS NULL THEN series_key END)
             ), folder_series AS (
-                SELECT root_id, series_key, tags, title, alternate_title, library_count AS file_count,
+                SELECT root_id, series_key, tags, title, library_count AS file_count,
                     suggested, library_latest AS latest, cover_key IS NOT NULL AS has_cover, has_metadata, cover_key
                 FROM published_members WHERE series_key = library_key AND ($seriesKey IS NULL OR EXISTS(
                     SELECT 1 FROM published_members member WHERE member.root_id = published_members.root_id
@@ -110,7 +110,7 @@ internal sealed partial class LibraryStore
         var published = view == "library";
         static string TitleMatch(string alias) => $"""
             ($search = '' OR title_contains({alias}.title, $search) OR title_contains({alias}.path_title, $search)
-                OR title_contains(COALESCE({alias}.alternate_title, ''), $search))
+                OR {AlternateTitleSearch(alias)})
             """;
         const string collectionMatch = """
             ($collection IS NULL OR EXISTS (SELECT 1 FROM series_collection_item i
@@ -157,7 +157,8 @@ internal sealed partial class LibraryStore
             , alternate_title, kind, summary, status, total_chapters, total_volumes, provider_id, provider_details,
                 (SELECT revision FROM metadata_suggestion s WHERE s.series_key = candidate.series_key),
                 (SELECT candidates FROM metadata_suggestion s WHERE s.series_key = candidate.series_key),
-                COALESCE((SELECT queued FROM metadata_suggestion s WHERE s.series_key = candidate.series_key), 0), can_confirm_match, manual_tags, review_files
+                COALESCE((SELECT queued FROM metadata_suggestion s WHERE s.series_key = candidate.series_key), 0), can_confirm_match, manual_tags, review_files,
+                alternate_titles
             """;
         command.CommandText = query + " SELECT root_id, series_key, title, file_count, suggested, has_cover, has_metadata"
             + (includeMatches ? matchFields : ", cover_key") + filter +
@@ -194,7 +195,8 @@ internal sealed partial class LibraryStore
         {
             var details = ReadText(rows, 14) is { } json ? JsonSerializer.Deserialize<AniListDetails>(json) : null;
             return new(new(title, rows.GetString(8), ReadText(rows, 7), MetadataAgent.PlainDescription(ReadText(rows, 9)),
-                ReadText(rows, 10), ReadInt(rows, 11), ReadInt(rows, 12), provider, details, ReadManualTags(rows, 19)), null, false);
+                ReadText(rows, 10), ReadInt(rows, 11), ReadInt(rows, 12), provider, details, ReadManualTags(rows, 19))
+                { AlternateTitles = ReadAlternateTitles(rows, 21) }, null, false);
         }
         if (!rows.GetBoolean(18) || ReadText(rows, 15) is not { } revision || ReadText(rows, 16) is not { } candidates) return null;
         if (JsonSerializer.Deserialize<MetadataProposal[]>(candidates) is not { Length: > 0 } proposals) return null;
@@ -220,6 +222,10 @@ internal sealed partial class LibraryStore
         while (rows.Read()) tags.Add(rows.GetString(0));
         return tags;
     }
+
+    private static string AlternateTitleSearch(string alias) => $"""
+        EXISTS(SELECT 1 FROM json_each({alias}.alternate_titles) alternate WHERE title_contains(alternate.value, $search))
+        """;
 
     private static void RegisterTitleSearch(SqliteConnection database) =>
         database.CreateFunction<string, string, bool>("title_contains", (title, query) =>

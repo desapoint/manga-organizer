@@ -1,19 +1,38 @@
 import { BookOpen } from 'lucide-react';
 import { useState } from 'react';
 import { ROOTS_URL } from './library';
+import { Modal } from './ui';
 
 type CoverProps = { rootId: string; revision: string; className?: string };
+type SeriesCoverProps = CoverProps & { seriesKey: string; available: boolean; preferredSrc?: string };
+type FileCoverProps = CoverProps & { fileId: string; available: boolean; seriesCoverKey: string | null };
+const enlargedCover = 'rounded-lg [&_img]:max-h-[70dvh] [&_img]:object-contain';
 
-export function SeriesCover({ seriesKey, available, ...props }: CoverProps & { seriesKey: string; available: boolean }) {
+export function SeriesCover({ seriesKey, available, preferredSrc, ...props }: SeriesCoverProps) {
+  if (preferredSrc) return <CoverImage src={preferredSrc} className={props.className} />;
   return <Cover {...props} path={`series/${seriesKey}`} available={available} />;
 }
 
-export function FileCover({ fileId, available, seriesCoverKey, ...props }: CoverProps & {
-  fileId: string; available: boolean; seriesCoverKey: string | null;
+export function SeriesCoverDialog({ title, onClose, wide, ...artwork }: Omit<SeriesCoverProps, 'className'> & {
+  title: string; onClose: () => void; wide?: boolean;
 }) {
+  return <Modal title={title} onClose={onClose} wide={wide}>
+    <SeriesCover {...artwork} className={enlargedCover} />
+  </Modal>;
+}
+
+export function FileCover({ fileId, available, seriesCoverKey, ...props }: FileCoverProps) {
   const path = available ? `files/${fileId}` : seriesCoverKey ? `series/${seriesCoverKey}` : undefined;
   const title = available ? 'File cover' : seriesCoverKey ? 'Series cover' : 'No cover';
   return <Cover {...props} path={path} available={Boolean(path)} title={title} />;
+}
+
+export function FileCoverDialog({ title, onClose, ...artwork }: Omit<FileCoverProps, 'className'> & {
+  title: string; onClose: () => void;
+}) {
+  return <Modal title={`${title} cover`} onClose={onClose}>
+    <FileCover {...artwork} className={enlargedCover} />
+  </Modal>;
 }
 
 function Cover({ rootId, path, available, revision, className, title }: CoverProps & { path?: string; available: boolean; title?: string }) {

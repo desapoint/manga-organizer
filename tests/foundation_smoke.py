@@ -780,7 +780,8 @@ def verify_external_metadata(executable, fixture):
     (media / "archive").mkdir()
     (media / "primary" / "Issue 01.pdf").write_bytes(b"Unique synthetic issue for matching tests")
     cover = "https://s4.anilist.co/file/anilistcdn/media/manga/cover/medium/fixture.jpg"
-    media_result = {"id": 123, "title": {"english": "Synthetic provider title", "native": "本"},
+    media_result = {"id": 123, "title": {"english": "Synthetic provider title", "romaji": "Hon", "native": "本"},
+                    "synonyms": ["Synthetic provider title", "Fixture Alias", "fixture alias", "Legacy Alternate"],
                     "description": "Metadata &amp; tags<br><br><i>Second paragraph</i>", "status": "FINISHED", "chapters": 12, "volumes": 3,
                     "format": "ONE_SHOT", "countryOfOrigin": "JP", "startDate": {"year": 2011},
                     "endDate": {"year": 2012}, "genres": ["Drama", "drama"],
@@ -845,6 +846,8 @@ def verify_external_metadata(executable, fixture):
                 result, fallback = json.loads(browser.request(f"{url}/metadata/search?title=Issue+01", 200))
                 assert result["providerId"] == 123 and result["kind"] == "doujin" and result["totalChapters"] == 12
                 assert result["providerUrl"] == "https://anilist.co/manga/123"
+                assert result["alternateTitle"] == "Hon"
+                assert result["alternateTitles"] == ["Hon", "本", "Fixture Alias", "Legacy Alternate"]
                 assert result["summary"] == "Metadata & tags\n\nSecond paragraph"
                 assert result["providerDetails"] == {
                     "coverUrl": cover, "format": "ONE_SHOT", "countryOfOrigin": "JP", "startYear": 2011, "endYear": 2012,
@@ -854,12 +857,22 @@ def verify_external_metadata(executable, fixture):
                 assert fallback["providerDetails"]["coverUrl"] is None and fallback["providerDetails"]["tags"] == []
                 saved = json.loads(browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(), body={"providerId": 123}))
                 assert saved == result and json.loads(browser.request(f"{url}/details", 200))["metadata"] == result
-                edit = {"title": "My corrected title", "kind": "doujin", "totalChapters": 12}
+                assert browser.series(root_id, "?view=library&search=fixture+alias")["total"] == 1
+                assert browser.files(root_id, "?view=library&search=legacy+alternate")["total"] == 1
+                aliases = ["Custom shorthand", "Different, local name"]
+                edit = {"title": "My corrected title", "kind": "doujin", "totalChapters": 12,
+                        "alternateTitles": [*aliases, "CUSTOM SHORTHAND"]}
+                browser.request(f"{url}/metadata", 400, method="PUT", token=browser.csrf(),
+                                body={**edit, "alternateTitles": [" "]})
                 assert json.loads(browser.request(f"{url}/metadata/anilist/123", 200)) == result
                 corrected = json.loads(browser.request(f"{url}/metadata", 200, method="PUT", token=browser.csrf(),
                     body={**edit, "providerId": 123, "useEditedFields": True, "summary": result["summary"]}))
                 assert corrected["title"] == edit["title"] and corrected["providerUrl"] == result["providerUrl"]
                 assert corrected["providerDetails"] == result["providerDetails"] and corrected["summary"] == result["summary"]
+                assert corrected["alternateTitles"] == aliases and corrected["alternateTitle"] == aliases[0]
+                assert browser.series(root_id, "?search=fixture+alias")["total"] == 0
+                (association_target,) = json.loads(browser.request("/api/file-associations/series?search=different%2C+local", 200))["items"]
+                assert association_target["alternateTitles"] == aliases
                 assert json.loads(browser.request(f"{url}/details", 200))["metadata"] == corrected
                 collections = "/api/library/collections"
                 assert json.loads(browser.request(f"{LIBRARY_ROOTS}/{root_id}/tags", 200)) == ["Doujinshi"]
@@ -932,6 +945,7 @@ def verify_external_metadata(executable, fixture):
                 assert browser.series(root_id, "?includeTag=doujinshi")["total"] == 1
                 stored = json.loads(browser.request(url + "/details?published=true", 200))["metadata"]
                 assert stored["tags"] == expected_tags
+                assert stored["alternateTitles"] == aliases
                 assert json.loads(browser.request(f"{collections}/tags", 200)) == ["Doujinshi", "Slow burn"]
                 cleared = json.loads(browser.request(url + "/metadata?published=true", 200, method="PUT", token=browser.csrf(),
                     body={**edit, "tags": []}))
@@ -948,6 +962,7 @@ def verify_external_metadata(executable, fixture):
                 removed = json.loads(browser.request(url + "/metadata", 200, method="PUT", token=browser.csrf(), body=unlink))
                 assert removed["providerId"] is None and removed["providerDetails"] is None
                 assert removed["tags"] == original_tags and removed["title"] == edit["title"]
+                assert removed["alternateTitles"] == aliases
                 browser.scan(root_id)
                 (published,) = browser.series(root_id, "?view=library&search=My+corrected+title")["items"]
                 assert published["fileCount"] == 1 and "aniList" not in published

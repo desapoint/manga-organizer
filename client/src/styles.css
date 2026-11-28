@@ -176,8 +176,7 @@
   .folder-description span { @apply text-sm text-muted; }
   .settings-form h2 { @apply m-0 text-xl; }
 
-  .catalog-controls, .pagination { @apply flex items-center gap-x-4 gap-y-3; }
-  .pagination { @apply justify-between text-sm; }
+  .catalog-controls { @apply flex items-center gap-x-4 gap-y-3; }
   .catalog-controls { @apply flex-wrap items-end; }
   .catalog-files { @apply m-0 list-none p-0; }
   .catalog-columns, .catalog-files > li:not(.catalog-folder-heading) {
@@ -185,7 +184,8 @@
     grid-template-columns: minmax(0, 1fr) 4rem 6rem 7rem;
   }
   .catalog-columns.with-file-actions, .catalog-files.with-file-actions > li:not(.catalog-folder-heading) {
-    grid-template-columns: minmax(0, 1fr) 4rem 6rem 7rem 2.75rem;
+    @apply items-center;
+    grid-template-columns: minmax(0, 1fr) 9rem 4rem 6rem 7rem 9rem;
   }
   .catalog-folder-heading {
     @apply flex min-w-0 items-center gap-3 border-b border-line bg-panel px-4 text-sm font-semibold text-label;
@@ -205,9 +205,24 @@
     .catalog-columns:not(.with-series-selection), .catalog-columns.with-series-selection > span:not(:first-child) { @apply hidden; }
     .catalog-columns.with-series-selection { @apply block; }
     .catalog-files > li:not(.catalog-folder-heading) { grid-template-columns: 3rem max-content 1fr; }
-    .catalog-files.with-file-actions > li:not(.catalog-folder-heading) { grid-template-columns: 3rem max-content minmax(0, 1fr) 2.75rem; }
     .catalog-files .file-path { @apply col-span-full; }
     .catalog-files time { @apply text-end; }
+  }
+
+  @container intake-files (width < 44rem) {
+    .catalog-columns.with-file-actions:not(.with-series-selection),
+    .catalog-columns.with-file-actions > span:not(:first-child) { @apply hidden; }
+    .catalog-columns.with-file-actions.with-series-selection { @apply block; }
+    .catalog-files.with-file-actions > li:not(.catalog-folder-heading) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas: "name name name" "format size modified" "numbering actions actions";
+    }
+    .catalog-files.with-file-actions .file-name { grid-area: name; }
+    .catalog-files.with-file-actions .file-format { grid-area: format; }
+    .catalog-files.with-file-actions .file-size { grid-area: size; }
+    .catalog-files.with-file-actions time { grid-area: modified; @apply text-end; }
+    .catalog-files.with-file-actions .file-numbering { grid-area: numbering; }
+    .catalog-files.with-file-actions .file-icon-actions { grid-area: actions; @apply w-36 justify-self-end; }
   }
 }
 
@@ -253,6 +268,8 @@
   .intake-series-header[data-selecting=true] { --selection-width: 2.25rem; }
   .intake-series-selection { grid-area: selection; }
   .intake-series-primary { grid-area: primary; }
+  .intake-series-thumbnail { @apply h-16.5 w-11 shrink-0 rounded-md; }
+  .intake-series-title, .intake-series-match { @apply min-h-16.5; }
   .intake-series-match { grid-area: match; }
   .intake-series-confirm { grid-area: confirm; padding-inline-end: .25rem; }
   .intake-series-search { grid-area: search; }

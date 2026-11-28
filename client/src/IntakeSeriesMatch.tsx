@@ -2,8 +2,8 @@ import { Check, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import { getCsrfToken } from './api';
 import type { Series } from './CatalogInventory';
-import { CoverImage } from './SeriesCover';
-import { AniListSearchAction, MetadataDescription } from './SeriesInfo';
+import { CoverImage, SeriesCover, SeriesCoverDialog } from './SeriesCover';
+import { AniListSearchAction, MetadataDescription, MetadataStatus } from './SeriesInfo';
 import type { Metadata } from './SeriesInfo';
 import { useToast } from './Toast';
 import { ActionLink, Button, Modal } from './ui';
@@ -30,7 +30,7 @@ async function confirmMatch(series: Series, onSignedOut: () => void, token: stri
   return true;
 }
 
-export function IntakeSeriesMatch({ series, onSignedOut, onSaved }: Props) {
+export function IntakeSeriesMatch({ series, coverVersion, onSignedOut, onSaved }: Props & { coverVersion: string }) {
   const match = series.aniList;
   const metadata = match?.metadata;
   const [details, setDetails] = useState<Series | null>(null);
@@ -38,7 +38,6 @@ export function IntakeSeriesMatch({ series, onSignedOut, onSaved }: Props) {
   const [assigning, setAssigning] = useState(false);
   const notify = useToast();
   const saving = busy || assigning;
-  const preview = details?.aniList;
 
   async function apply(review: Series) {
     setBusy(true);
@@ -56,12 +55,12 @@ export function IntakeSeriesMatch({ series, onSignedOut, onSaved }: Props) {
   }
 
   return <>
-    <div className="intake-series-match flex min-h-12 min-w-0 items-center">
+    <div className="intake-series-match flex min-w-0 items-center">
       {metadata ? <button type="button" onClick={() => setDetails(series)} aria-label={`AniList details for ${metadata.title}`}
         title={metadata.title} disabled={saving}
-        className="flex min-h-12 w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-1 text-start text-ink
+        className="flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-1 py-0 text-start text-ink
           enabled:hover:bg-nav-hover disabled:cursor-default">
-        <CoverImage src={metadata.providerDetails?.coverUrl ?? undefined} className="h-12 w-8 shrink-0 rounded-sm" />
+        <CoverImage src={metadata.providerDetails?.coverUrl ?? undefined} className="intake-series-thumbnail" />
         <span className="min-w-0">
           <strong className="block truncate text-sm">{metadata.title}</strong>
           <span className="block truncate text-xs text-muted">{match.revision ? match.close ? 'Close AniList match' : 'AniList suggestion' : 'Linked to AniList'}</span>
@@ -78,20 +77,45 @@ export function IntakeSeriesMatch({ series, onSignedOut, onSaved }: Props) {
       <AniListSearchAction rootId={series.rootId} seriesKey={series.key} title={series.title} lookupTitle={series.lookupTitle} iconOnly
         reviewFiles={series.reviewFiles} disabled={saving} onAssigningChange={setAssigning} onChange={onSaved} onSignedOut={onSignedOut} />
     </div>
-    {details && preview && <Modal title={preview.metadata.title} wide onClose={() => { if (!busy) setDetails(null); }}>
-      <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)]">
-        <CoverImage src={preview.metadata.providerDetails?.coverUrl ?? undefined} className="h-36 w-24 rounded-lg" />
-        <MetadataDescription metadata={preview.metadata} showProviderLink={false} />
+    {details?.aniList && <IntakeMatchDialog series={details} match={details.aniList} coverVersion={coverVersion} busy={busy}
+      onClose={() => { if (!busy) setDetails(null); }} onConfirm={() => void apply(details)} />}
+  </>;
+}
+
+function IntakeMatchDialog({ series, match, coverVersion, busy, onClose, onConfirm }: {
+  series: Series; match: IntakeAniListMatch; coverVersion: string; busy: boolean; onClose: () => void; onConfirm: () => void;
+}) {
+  const [coverOpen, setCoverOpen] = useState(false);
+  const { metadata } = match;
+  const preferredSrc = metadata.providerDetails?.coverUrl ?? undefined;
+  const artwork = { rootId: series.rootId, seriesKey: series.key, available: series.hasCover, preferredSrc, revision: coverVersion };
+  const canEnlarge = !!preferredSrc || series.hasCover;
+  const cover = <SeriesCover {...artwork}
+    className="h-36 max-h-[45dvh] w-24 rounded-lg sm:h-54 sm:w-36 [&_img]:object-top" />;
+
+  return <>
+    <Modal title={metadata.title} wide onClose={onClose}
+      headerClassName="border-b border-line pb-3 sm:pb-4 [&_h2]:wrap-anywhere [&_h2]:text-xl sm:[&_h2]:text-2xl">
+      <div className="grid gap-5 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-6">
+        <aside aria-label="Cover and publication status" className="grid min-w-0 justify-items-start self-start gap-2.5">
+          {canEnlarge ? <button type="button" aria-label={`Enlarge cover for ${metadata.title}`}
+            className="group block cursor-pointer rounded-lg border-0 bg-transparent p-0" onClick={() => setCoverOpen(true)}>
+            {cover}
+          </button> : cover}
+          {metadata.providerUrl && <ActionLink variant="secondary" icon={ExternalLink} href={metadata.providerUrl}
+            target="_blank" rel="noreferrer">Open AniList</ActionLink>}
+          <MetadataStatus metadata={metadata} />
+        </aside>
+        <MetadataDescription metadata={metadata} layout="preview" />
       </div>
-      <div className="action-row mt-4 border-t border-line pt-4">
-        {preview.metadata.providerUrl && <ActionLink variant="secondary" icon={ExternalLink} href={preview.metadata.providerUrl}
-          target="_blank" rel="noreferrer">Open AniList</ActionLink>}
-        {preview.revision && <Button icon={Check} disabled={busy} onClick={() => void apply(details)}>{busy ? 'Confirming…' : 'Confirm match'}</Button>}
-      </div>
-      {preview.revision && details.reviewFiles && <p className="mt-2 mb-0 text-sm text-muted">
-        This confirms {details.reviewFiles.length.toLocaleString()} reviewed {details.reviewFiles.length === 1 ? 'file' : 'files'}.
-      </p>}
-    </Modal>}
+      {match.revision && <footer className="action-row mt-4 justify-end border-t border-line pt-4">
+        {series.reviewFiles && <p className="m-0 text-end text-sm text-muted">
+          This confirms {series.reviewFiles.length.toLocaleString()} reviewed {series.reviewFiles.length === 1 ? 'file' : 'files'}.
+        </p>}
+        <Button icon={Check} disabled={busy} onClick={onConfirm}>{busy ? 'Confirming…' : 'Confirm match'}</Button>
+      </footer>}
+    </Modal>
+    {coverOpen && <SeriesCoverDialog {...artwork} title={`${metadata.title} cover`} wide onClose={() => setCoverOpen(false)} />}
   </>;
 }
 

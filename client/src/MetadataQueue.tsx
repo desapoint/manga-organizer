@@ -176,7 +176,7 @@ function SuggestionRow({ item, version, folder, onSignedOut, onSaved }: {
           <Button variant="secondary" disabled={busy} onClick={() => setReview(item)}>Review matches ({item.candidates.length})</Button>}
         <AniListSearchAction rootId={item.rootId} seriesKey={item.seriesKey} title={item.title} lookupTitle={item.lookupTitle} reviewFiles={item.reviewFiles}
           onSignedOut={onSignedOut} onChange={onSaved} />
-        <MetadataDialogAction rootId={item.rootId} seriesKey={item.seriesKey} title={item.title} metadata={null} reviewFiles={item.reviewFiles}
+        <MetadataDialogAction rootId={item.rootId} seriesKey={item.seriesKey} title={item.title} lookupTitle={item.lookupTitle} metadata={null} reviewFiles={item.reviewFiles}
           onSignedOut={onSignedOut} onChange={onSaved} actionLabel="Assign manually" />
       </div>
     </div>
