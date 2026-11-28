@@ -415,6 +415,7 @@ function SeriesRow({ series, onInspect, coverVersion, catalogView, selection, ..
   const [open, setOpen] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
   const filesId = useId();
+  const matchCover = series.aniList?.metadata.providerDetails?.coverUrl ?? undefined;
   const rowClass = 'grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl p-3 hover:bg-nav-hover sm:gap-3 sm:px-4';
   const contents = <>
     {series.hasCover ? <SeriesCover rootId={inventory.rootId} seriesKey={series.coverSeriesKey ?? series.key} available={series.hasCover} revision={coverVersion} className="h-14 w-10 rounded-md" /> :
@@ -433,13 +434,14 @@ function SeriesRow({ series, onInspect, coverVersion, catalogView, selection, ..
           disabled={selection.disabled} onChange={selection.toggle} />
       </label>}
       <div className="intake-series-primary flex min-w-0 items-center gap-2">
-        {series.hasCover ? <Button variant="ghost" className="size-11 shrink-0 px-0 py-0" aria-label={`Enlarge cover for ${series.title}`}
+        {series.hasCover || matchCover ? <button type="button"
+          className="group block shrink-0 cursor-pointer rounded-md border-0 bg-transparent p-0" aria-label={`Enlarge cover for ${series.title}`}
           onClick={() => setCoverOpen(true)}>
-          <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available revision={coverVersion} className="h-12 w-8 rounded-md" />
-        </Button> : <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-nav-active text-nav-icon">
-          <Library className="size-4" aria-hidden="true" />
-        </span>}
-        <button type="button" className="intake-series-title flex min-h-12 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-lg
+          <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available={series.hasCover}
+            preferredSrc={matchCover} revision={coverVersion} className="intake-series-thumbnail" />
+        </button> : <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available={false}
+          revision={coverVersion} className="intake-series-thumbnail" />}
+        <button type="button" className="intake-series-title flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-lg
           border-0 bg-transparent p-1 text-start text-ink hover:bg-nav-hover"
           title={series.title} aria-expanded={open} aria-controls={filesId} onClick={() => setOpen(value => !value)}>
           <span className="min-w-0">
@@ -462,7 +464,7 @@ function SeriesRow({ series, onInspect, coverVersion, catalogView, selection, ..
       </>}
     </div>
     {coverOpen && <Modal title={series.title} wide onClose={() => setCoverOpen(false)}>
-      <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available revision={coverVersion}
+      <SeriesCover rootId={inventory.rootId} seriesKey={series.key} available={series.hasCover} preferredSrc={matchCover} revision={coverVersion}
         className="rounded-lg [&_img]:max-h-[70dvh] [&_img]:object-contain" />
     </Modal>}
   </li>;

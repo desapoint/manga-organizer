@@ -4,7 +4,10 @@ import { ROOTS_URL } from './library';
 
 type CoverProps = { rootId: string; revision: string; className?: string };
 
-export function SeriesCover({ seriesKey, available, ...props }: CoverProps & { seriesKey: string; available: boolean }) {
+export function SeriesCover({ seriesKey, available, preferredSrc, ...props }: CoverProps & {
+  seriesKey: string; available: boolean; preferredSrc?: string;
+}) {
+  if (preferredSrc) return <CoverImage src={preferredSrc} className={props.className} />;
   return <Cover {...props} path={`series/${seriesKey}`} available={available} />;
 }
 

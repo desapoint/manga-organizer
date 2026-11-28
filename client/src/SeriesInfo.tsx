@@ -60,11 +60,13 @@ function publicationYears({ startYear, endYear }: AniListDetails) {
   return startYear ?? endYear;
 }
 
-function MetadataTags({ names, concealedCount = 0 }: { names: string[]; concealedCount?: number }) {
+function MetadataTags({ names, spoilers = [], revealed = false }: { names: string[]; spoilers?: string[]; revealed?: boolean }) {
+  const tags = [...names.map(name => ({ name, concealed: false })), ...spoilers.map(name => ({ name, concealed: !revealed }))];
   return <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0" role="list">
-    {names.map(name => <li key={name} className="rounded-md border border-line px-2 py-1 text-xs wrap-anywhere">{name}</li>)}
-    {Array.from({ length: concealedCount }, (_, index) => <li key={index} aria-hidden="true"
-      className="h-[26px] w-16 rounded-md border border-control/40 bg-control/30 select-none" />)}
+    {tags.map(({ name, concealed }) => <li key={name} aria-hidden={concealed || undefined}
+      className={`rounded-md border px-2 py-1 text-xs wrap-anywhere ${concealed ? 'border-control/40 bg-control/30 select-none' : 'border-line'}`}>
+      <span className={concealed ? 'invisible' : undefined}>{name}</span>
+    </li>)}
   </ul>;
 }
 
@@ -96,7 +98,7 @@ function SeriesTagDetails({ tags }: { tags: SeriesTag[] }) {
         aria-label="Show spoiler tags" aria-pressed={revealed} title={revealed ? 'Hide spoiler tags' : 'Show spoiler tags'}
         onClick={() => setRevealed(value => !value)} />}
     </div>
-    <MetadataTags names={revealed ? [...regular, ...spoilers] : regular} concealedCount={revealed ? 0 : spoilers.length} />
+    <MetadataTags names={regular} spoilers={spoilers} revealed={revealed} />
   </section>;
 }
 

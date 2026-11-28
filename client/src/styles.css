@@ -253,6 +253,8 @@
   .intake-series-header[data-selecting=true] { --selection-width: 2.25rem; }
   .intake-series-selection { grid-area: selection; }
   .intake-series-primary { grid-area: primary; }
+  .intake-series-thumbnail { @apply h-16.5 w-11 shrink-0 rounded-md; }
+  .intake-series-title, .intake-series-match { @apply min-h-16.5; }
   .intake-series-match { grid-area: match; }
   .intake-series-confirm { grid-area: confirm; padding-inline-end: .25rem; }
   .intake-series-search { grid-area: search; }

@@ -56,12 +56,12 @@ export function IntakeSeriesMatch({ series, onSignedOut, onSaved }: Props) {
   }
 
   return <>
-    <div className="intake-series-match flex min-h-12 min-w-0 items-center">
+    <div className="intake-series-match flex min-w-0 items-center">
       {metadata ? <button type="button" onClick={() => setDetails(series)} aria-label={`AniList details for ${metadata.title}`}
         title={metadata.title} disabled={saving}
-        className="flex min-h-12 w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-1 text-start text-ink
+        className="flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-1 py-0 text-start text-ink
           enabled:hover:bg-nav-hover disabled:cursor-default">
-        <CoverImage src={metadata.providerDetails?.coverUrl ?? undefined} className="h-12 w-8 shrink-0 rounded-sm" />
+        <CoverImage src={metadata.providerDetails?.coverUrl ?? undefined} className="intake-series-thumbnail" />
         <span className="min-w-0">
           <strong className="block truncate text-sm">{metadata.title}</strong>
           <span className="block truncate text-xs text-muted">{match.revision ? match.close ? 'Close AniList match' : 'AniList suggestion' : 'Linked to AniList'}</span>
